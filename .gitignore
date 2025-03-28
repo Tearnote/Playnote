@@ -1,2 +1,5 @@
 # IDE config
 .idea/**
+
+# Build artifacts
+build/**
