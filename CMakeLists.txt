@@ -33,6 +33,7 @@ add_executable(Playnote
 target_include_directories(Playnote PRIVATE src) # All includes start from src as root
 
 target_link_libraries(Playnote PRIVATE vk-bootstrap)
+target_link_libraries(Playnote PRIVATE quill)
 target_link_libraries(Playnote PRIVATE glfw)
 target_link_libraries(Playnote PRIVATE volk)
 target_link_libraries(Playnote PRIVATE vuk)
