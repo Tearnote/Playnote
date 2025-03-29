@@ -27,6 +27,10 @@ include(cmake/Dependencies.cmake)
 ### Main target
 
 add_executable(Playnote
+	src/util/service.hpp
+	src/util/logger.hpp
+	src/util/logger.cpp
+	src/config.hpp
 	src/main.cpp
 )
 
