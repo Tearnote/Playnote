@@ -5,12 +5,10 @@ project(Playnote
 	VERSION 0.0.1
 	DESCRIPTION "A BMS player hobby project"
 	LANGUAGES C CXX)
-set(CMAKE_C_STANDARD 11)          # For 3rd party C code
-set(CMAKE_C_STANDARD_REQUIRED ON) # ^
-set(CMAKE_C_EXTENSIONS OFF)       # ^
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
 
 ### Global build settings
 

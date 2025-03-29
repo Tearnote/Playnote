@@ -5,7 +5,7 @@ include(FetchContent)
 ### Local dependencies
 
 find_package(Vulkan REQUIRED
-		COMPONENTS glslc glslangValidator
+	COMPONENTS glslc glslangValidator
 )
 find_package(glfw3 3.4 REQUIRED)
 
