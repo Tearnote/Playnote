@@ -1,7 +1,7 @@
 #pragma once
 
 #include <array>
-#include "quill/LogMacros.h"
+#include "quill/core/LogLevel.h"
 
 inline constexpr auto AppTitle = "Playnote";
 inline constexpr auto AppVersion = std::to_array({0u, 0u, 1u});

@@ -28,8 +28,7 @@ protected:
 
 	Service()
 	{
-		if (!serv)
-			throw std::runtime_error("Service requested but not available");
+		if (!serv) throw std::runtime_error("Service requested but not available");
 	}
 
 public:
@@ -46,8 +45,7 @@ public:
 
 		~Provider()
 		{
-			if (prev)
-				current_serv = prev;
+			if (prev) current_serv = prev;
 		}
 
 		// Moveable

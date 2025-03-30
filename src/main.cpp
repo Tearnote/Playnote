@@ -1,6 +1,3 @@
-#include <utility>
-#include "config.hpp"
-
 #include "util/logger.hpp"
 
 class App:
