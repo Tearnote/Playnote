@@ -10,6 +10,10 @@ public:
 	// Only access via macros below
 	quill::Logger* logger;
 
+private:
+	// Only usable from the service
+	friend class Service<Logger_impl>;
+
 	Logger_impl();
 };
 
