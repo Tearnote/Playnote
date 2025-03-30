@@ -1,4 +1,6 @@
+#include <exception>
 #include <expected>
+#include <cstdio>
 #include "util/logger.hpp"
 #include "sys/os.hpp"
 #include "config.hpp"
@@ -19,10 +21,14 @@ public:
 	}
 };
 
-auto main(int argc, char* argv[]) -> int
+auto main(int argc, char* argv[]) -> int try
 {
 	set_thread_name("input");
 	auto logger = Logger::Provider();
 	auto playnote = Playnote();
 	return playnote.run().error_or(EXIT_SUCCESS);
+}
+catch (std::exception& e)
+{
+	std::fprintf(stderr, "Uncaught exception: %s", e.what());
 }
