@@ -7,11 +7,13 @@ class App:
 	Logger
 {
 public:
-	App() {
+	App()
+	{
 		L_INFO("Hello World!");
 	}
 
-	auto run() -> int {
+	auto run() -> int
+	{
 		return 0;
 	}
 };

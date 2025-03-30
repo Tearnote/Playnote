@@ -16,7 +16,8 @@
 // Access to a provider service is available under Service<T>::serv after
 // inheriting Service<T>.
 template<typename T>
-class Service {
+class Service
+{
 	using Self = Service<T>;
 	using Wrapped = T;
 
@@ -25,10 +26,15 @@ class Service {
 protected:
 	Wrapped*& serv = current_serv;
 
-	Service() { if (!serv) throw std::runtime_error("Service requested but not available"); }
+	Service()
+	{
+		if (!serv)
+			throw std::runtime_error("Service requested but not available");
+	}
 
 public:
-	class Provider {
+	class Provider
+	{
 	public:
 		template<typename... Args>
 		explicit Provider(Args&&... args):
@@ -38,7 +44,11 @@ public:
 			current_serv = &inst;
 		}
 
-		~Provider() { if (prev) current_serv = prev; }
+		~Provider()
+		{
+			if (prev)
+				current_serv = prev;
+		}
 
 		// Moveable
 		Provider(Provider&& other):
@@ -48,7 +58,9 @@ public:
 			other.prev = nullptr;
 			current_serv = &inst;
 		}
-		auto operator=(Provider&& other) -> Provider& {
+
+		auto operator=(Provider&& other) -> Provider&
+		{
 			inst = std::move(other.inst);
 			prev = other.prev;
 			other.prev = nullptr;

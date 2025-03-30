@@ -4,7 +4,8 @@
 #include "quill/Logger.h"
 #include "util/service.hpp"
 
-class Logger_impl {
+class Logger_impl
+{
 public:
 	// Only access via macros below
 	quill::Logger* logger;

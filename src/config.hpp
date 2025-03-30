@@ -4,7 +4,7 @@
 #include "quill/LogMacros.h"
 
 inline constexpr auto AppTitle = "Playnote";
-inline constexpr auto AppVersion = std::to_array({ 0u, 0u, 1u });
+inline constexpr auto AppVersion = std::to_array({0u, 0u, 1u});
 
 // Make sure BUILD_TYPE is specified
 #define BUILD_DEBUG 0
