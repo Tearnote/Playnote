@@ -10,11 +10,13 @@ public:
 
 	~SchedulerPeriod();
 
-	SchedulerPeriod(SchedulerPeriod&& other) {
+	SchedulerPeriod(SchedulerPeriod&& other)
+	{
 		*this = std::move(other);
 	}
 
-	auto operator=(SchedulerPeriod&& other) -> SchedulerPeriod& {
+	auto operator=(SchedulerPeriod&& other) -> SchedulerPeriod&
+	{
 		period = other.period;
 		other.period = -1ns;
 		return *this;

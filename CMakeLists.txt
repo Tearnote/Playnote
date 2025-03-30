@@ -28,6 +28,7 @@ include(cmake/Dependencies.cmake)
 
 add_executable(Playnote
 	src/util/service.hpp
+	src/util/except.hpp
 	src/util/logger.hpp
 	src/util/logger.cpp
 	src/util/time.hpp
@@ -35,8 +36,8 @@ add_executable(Playnote
 	src/sys/os.cpp
 	src/playnote.hpp
 	src/playnote.cpp
-	src/config.hpp
 	src/main.cpp
+	src/config.hpp
 )
 
 target_include_directories(Playnote PRIVATE src) # All includes start from src as root
