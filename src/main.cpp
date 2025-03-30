@@ -2,13 +2,14 @@
 #include "sys/os.hpp"
 #include "config.hpp"
 
-class App:
+class Playnote:
 	Logger
 {
 public:
-	App()
+	Playnote()
 	{
 		L_INFO("{} {}.{}.{} initializing", AppTitle, AppVersion[0], AppVersion[1], AppVersion[2]);
+		auto scheduler_period = SchedulerPeriod(1ms);
 	}
 
 	auto run() -> int
@@ -21,6 +22,6 @@ auto main(int argc, char* argv[]) -> int
 {
 	set_thread_name("input");
 	auto logger = Logger::Provider();
-	auto app = App();
-	return app.run();
+	auto playnote = Playnote();
+	return playnote.run();
 }

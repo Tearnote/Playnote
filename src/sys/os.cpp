@@ -6,10 +6,10 @@
 #if TARGET == TARGET_WINDOWS
 #ifndef NOMINMAX
 #define NOMINMAX
-#endif //NOMINMAX
+#endif
 #ifdef WIN32_LEAN_AND_MEAN
 #undef WIN32_LEAN_AND_MEAN
-#endif //WIN32_LEAN_AND_MEAN
+#endif
 #include <Windows.h>
 #include <string>
 #elif TARGET == TARGET_LINUX
@@ -17,6 +17,23 @@
 #include <string>
 #include <pthread.h>
 #endif
+
+SchedulerPeriod::SchedulerPeriod(nanoseconds period):
+	period(period)
+{
+#if TARGET == TARGET_WINDOWS
+	if (timeBeginPeriod(duration_cast<milliseconds>(period).count()) != TIMERR_NOERROR)
+		throw std::runtime_error("Failed to initialize Windows scheduler period");
+#endif
+}
+
+SchedulerPeriod::~SchedulerPeriod()
+{
+#if TARGET == TARGET_WINDOWS
+	if (period == -1ns) return;
+	timeEndPeriod(duration_cast<milliseconds>(period).count());
+#endif
+}
 
 void set_thread_name(std::string_view name)
 {
