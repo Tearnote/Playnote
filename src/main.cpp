@@ -1,3 +1,4 @@
+#include <expected>
 #include "util/logger.hpp"
 #include "sys/os.hpp"
 #include "config.hpp"
@@ -12,9 +13,9 @@ public:
 		auto scheduler_period = SchedulerPeriod(1ms);
 	}
 
-	auto run() -> int
+	auto run() -> std::expected<void, int>
 	{
-		return 0;
+		return {};
 	}
 };
 
@@ -23,5 +24,5 @@ auto main(int argc, char* argv[]) -> int
 	set_thread_name("input");
 	auto logger = Logger::Provider();
 	auto playnote = Playnote();
-	return playnote.run();
+	return playnote.run().error_or(EXIT_SUCCESS);
 }
