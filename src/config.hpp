@@ -17,6 +17,17 @@ inline constexpr auto AppVersion = std::to_array({0u, 0u, 1u});
 #error Build type incorrectly defined
 #endif
 
+// Detect target
+#define TARGET_WINDOWS 0
+#define TARGET_LINUX 1
+#ifdef _WIN32
+#define TARGET TARGET_WINDOWS
+#elifdef __linux__
+#define TARGET TARGET_LINUX
+#else
+#error Unknown target platform
+#endif
+
 // Whether to disable assertions
 #ifdef NDEBUG
 #undef NDEBUG
