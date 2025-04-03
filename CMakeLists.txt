@@ -32,6 +32,7 @@ add_executable(Playnote
 	src/util/except.hpp
 	src/util/logger.hpp
 	src/util/logger.cpp
+	src/util/ranges.hpp
 	src/util/types.hpp
 	src/util/math.hpp
 	src/util/time.hpp
@@ -39,17 +40,17 @@ add_executable(Playnote
 	src/sys/window.hpp
 	src/sys/os.hpp
 	src/sys/os.cpp
+	src/event_loop.hpp
 	src/playnote.hpp
 	src/playnote.cpp
-	src/main.cpp
 	src/config.hpp
-	src/util/ranges.hpp
-	src/event_loop.hpp
+	src/main.cpp
 )
 
 target_include_directories(Playnote PRIVATE src) # All includes start from src as root
 
 target_link_libraries(Playnote PRIVATE vk-bootstrap)
+target_link_libraries(Playnote PRIVATE libassert::assert)
 target_link_libraries(Playnote PRIVATE quill)
 target_link_libraries(Playnote PRIVATE glfw)
 target_link_libraries(Playnote PRIVATE volk)

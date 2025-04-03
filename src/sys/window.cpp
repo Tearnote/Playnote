@@ -1,6 +1,6 @@
 #include "sys/window.hpp"
 
-#include <cassert>
+#include "libassert/assert.hpp"
 #include "GLFW/glfw3.h"
 #include "util/except.hpp"
 #include "util/math.hpp"
@@ -39,7 +39,7 @@ auto Window_impl::getTime() -> nanoseconds
 
 Window_impl::Window_impl(std::string const& title, uvec2 size)
 {
-	assert(size.x() > 0 && size.y() > 0);
+	ASSUME(size.x() > 0 && size.y() > 0);
 
 	// Create the window
 	glfwSetErrorCallback(
@@ -54,7 +54,7 @@ Window_impl::Window_impl(std::string const& title, uvec2 size)
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 	windowPtr = GlfwWindowPtr(glfwCreateWindow(size.x(), size.y(), title.c_str(), nullptr, nullptr));
-	assert(windowPtr);
+	ASSERT(windowPtr);
 
 	// Set up event callbacks
 	glfwSetWindowUserPointer(windowPtr.get(), this);
