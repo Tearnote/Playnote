@@ -12,7 +12,7 @@ public:
 	Logger();
 };
 
-inline auto s_logger = Service<Logger>();
+inline auto s_logger = Service<Logger>{};
 
 // Convenience macros
 

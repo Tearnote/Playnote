@@ -16,8 +16,8 @@ template<typename T>
 auto ptr_span(T* ptr, usize size = 1)
 {
 	if (!ptr || !size)
-		return std::span<T>();
-	return std::span(ptr, size);
+		return std::span<T>{};
+	return std::span{ptr, size};
 }
 
 #endif

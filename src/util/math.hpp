@@ -14,13 +14,13 @@
 // Constants
 
 template<std::floating_point T>
-constexpr auto Tau_v = std::numbers::pi_v<T> * T(2.0);
+constexpr auto Tau_v = std::numbers::pi_v<T> * 2;
 constexpr auto Tau = Tau_v<float>;
 
 // Scalar operations
 
 template<arithmetic T, std::floating_point Prec = float>
-constexpr auto radians(T deg) -> Prec { return Prec(deg) * Tau_v<Prec> / Prec(360); }
+constexpr auto radians(T deg) -> Prec { return static_cast<Prec>(deg) * Tau_v<Prec> / 360; }
 
 // True modulo operation (as opposed to remainder, which is operator% in C++.)
 // The result is always positive and does not flip direction at zero.
@@ -50,7 +50,7 @@ template<usize Dim, arithmetic T>
 class vec {
 public:
 	static_assert(Dim >= 2 && Dim <= 4, "Vectors need to have 2, 3 or 4 components");
-	using self_t = vec<Dim, T>;
+	using self_t = vec;
 
 	// Creation
 
@@ -81,7 +81,7 @@ public:
 	explicit constexpr vec(vec<Dim, U> const& other)
 	{
 		for (auto i: iota(0uz, Dim))
-			arr[i] = T(other[i]);
+			arr[i] = static_cast<T>(other[i]);
 	}
 
 	// Dimension downcast
@@ -392,7 +392,7 @@ constexpr auto operator>>(vec<Dim, T> const& left, T right) -> vec<Dim, T>
 template<usize Dim, std::floating_point T>
 constexpr auto abs(vec<Dim, T> const& v) -> vec<Dim, T>
 {
-	auto result = vec<Dim, T>();
+	auto result = vec<Dim, T>{};
 	for (auto i: iota(0uz, Dim))
 		result[i] = abs(v[i]);
 	return result;

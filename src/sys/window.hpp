@@ -14,11 +14,8 @@
 class Window {
 public:
 	auto isClosing() -> bool;
-
 	void poll();
-
 	auto size() -> uvec2;
-
 	auto getCursorPosition() -> vec2;
 
 	void registerKeyCallback(std::function<void(int, bool)> func)
@@ -37,11 +34,9 @@ public:
 	}
 
 	auto getTime() -> nanoseconds;
-
 	auto handle() -> GLFWwindow* { return windowPtr.get(); }
 
 	Window(std::string const& title, uvec2 size);
-
 	~Window();
 
 private:

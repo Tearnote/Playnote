@@ -8,7 +8,7 @@
 template<typename Err, typename... Args>
 auto typed_error_fmt(std::format_string<Args...> fmt, Args&&... args) -> Err
 {
-	return Err(std::format(fmt, std::forward<Args>(args)...));
+	return Err{std::format(fmt, std::forward<Args>(args)...)};
 }
 
 template<typename... Args>

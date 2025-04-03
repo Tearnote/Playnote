@@ -15,7 +15,7 @@ public:
 	template<typename... Args>
 	auto provide(Args&&... args) -> Stub
 	{
-		return Stub(*this, std::forward<Args>(args)...);
+		return Stub{*this, std::forward<Args>(args)...};
 	}
 
 	// Gain access to the currently provisioned instance
@@ -30,9 +30,9 @@ private:
 
 		template<typename... Args>
 		explicit Stub(Service<T>& service, Args&&... args):
-			service(service),
-			instance(std::forward<Args>(args)...),
-			prevInstance(service.handle)
+			service{service},
+			instance{std::forward<Args>(args)...},
+			prevInstance{service.handle}
 		{
 			service.handle = &instance;
 		}

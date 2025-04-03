@@ -20,7 +20,7 @@ auto Window::size() -> uvec2
 	auto w = 0;
 	auto h = 0;
 	glfwGetFramebufferSize(windowPtr.get(), &w, &h);
-	return uvec2(w, h);
+	return uvec2{static_cast<uint>(w), static_cast<uint>(h)};
 }
 
 auto Window::getCursorPosition() -> vec2
@@ -28,12 +28,12 @@ auto Window::getCursorPosition() -> vec2
 	auto x = 0.0;
 	auto y = 0.0;
 	glfwGetCursorPos(windowPtr.get(), &x, &y);
-	return vec2(x, y);
+	return vec2{static_cast<float>(x), static_cast<float>(y)};
 }
 
 auto Window::getTime() -> nanoseconds
 {
-	auto time = std::chrono::duration<double>(glfwGetTime());
+	auto time = std::chrono::duration<double>{glfwGetTime()};
 	return duration_cast<nanoseconds>(time);
 }
 
@@ -53,7 +53,7 @@ Window::Window(std::string const& title, uvec2 size)
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 	windowPtr =
-		GlfwWindowPtr(glfwCreateWindow(size.x(), size.y(), title.c_str(), nullptr, nullptr));
+		GlfwWindowPtr{glfwCreateWindow(size.x(), size.y(), title.c_str(), nullptr, nullptr)};
 	ASSERT(windowPtr);
 
 	// Set up event callbacks

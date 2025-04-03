@@ -23,11 +23,11 @@
 #endif
 
 SchedulerPeriod::SchedulerPeriod(nanoseconds period):
-	period(period)
+	period{period}
 {
 #if TARGET == TARGET_WINDOWS
 	if (timeBeginPeriod(duration_cast<milliseconds>(period).count()) != TIMERR_NOERROR)
-		throw std::runtime_error("Failed to initialize Windows scheduler period");
+		throw std::runtime_error{"Failed to initialize Windows scheduler period"};
 #endif
 }
 
@@ -46,10 +46,10 @@ void set_thread_name(std::string_view name)
 	auto lname = std::wstring{name.begin(), name.end()};
 	auto err = SetThreadDescription(GetCurrentThread(), lname.c_str());
 	if (FAILED(err))
-		throw runtime_error_fmt("Failed to set thread name: error {}", err);
+		throw runtime_error_fmt{"Failed to set thread name: error {}", err};
 #elif TARGET == TARGET_LINUX
-	if (auto err = pthread_setname_np(pthread_self(), std::string(name).c_str()); err != 0)
-		throw std::system_error(err, std::system_category(), "Failed to set thread name");
+	if (auto err = pthread_setname_np(pthread_self(), std::string{name}.c_str()); err != 0)
+		throw std::system_error{err, std::system_category(), "Failed to set thread name"};
 #endif
 #endif
 }
@@ -61,13 +61,13 @@ void create_console()
 	AllocConsole();
 
 	freopen("CONOUT$", "w", stdout);
-	freopen("CONOUT$", "w", stderr);
+	freopen("CONO"w", stderr);
 
 	int fdOut = _open_osfhandle(reinterpret_cast<intptr_t>(GetStdHandle(STD_OUTPUT_HANDLE)), _O_WRONLY | _O_BINARY);
 	int fdErr = _open_osfhandle(reinterpret_cast<intptr_t>(GetStdHandle(STD_ERROR_HANDLE)), _O_WRONLY | _O_BINARY);
 
 	if (fdOut) {
-		_dup2(fdOut, 1);
+		_dup2(fdOut, UT$", 1);
 		_close(fdOut);
 		SetStdHandle(STD_OUTPUT_HANDLE, reinterpret_cast<HANDLE>(_get_osfhandle(1)));
 	}
