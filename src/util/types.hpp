@@ -1,4 +1,5 @@
-#pragma once
+#ifndef PLAYNOTE_UTIL_TYPES_H
+#define PLAYNOTE_UTIL_TYPES_H
 
 #include <cstdint>
 #include <cstddef>
@@ -24,3 +25,5 @@ static_assert(sizeof(int8) == 1);
 static_assert(sizeof(int16) == 2);
 static_assert(sizeof(int) == 4);
 static_assert(sizeof(int64) == 8);
+
+#endif

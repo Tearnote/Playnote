@@ -1,4 +1,5 @@
-#pragma once
+#ifndef PLAYNOTE_CONFIG_H
+#define PLAYNOTE_CONFIG_H
 
 #include <array>
 #include "quill/core/LogLevel.h"
@@ -60,4 +61,6 @@ inline constexpr auto const* LogfilePath = "playnote-debug.log";
 inline constexpr auto const* LogfilePath = "playnote-reldeb.log";
 #else
 inline constexpr auto const* LogfilePath = "playnote.log";
+#endif
+
 #endif

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef PLAYNOTE_SYS_WINDOW_H
+#define PLAYNOTE_SYS_WINDOW_H
 
 #include <functional>
 #include <utility>
@@ -58,3 +59,5 @@ private:
 };
 
 inline auto s_window = Service<Window>();
+
+#endif

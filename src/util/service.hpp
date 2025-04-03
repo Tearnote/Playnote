@@ -1,4 +1,5 @@
-#pragma once
+#ifndef PLAYNOTE_UTIL_SERVICE_H
+#define PLAYNOTE_UTIL_SERVICE_H
 
 #include <utility>
 #include "libassert/assert.hpp"
@@ -47,3 +48,5 @@ private:
 
 	T* handle = nullptr;
 };
+
+#endif

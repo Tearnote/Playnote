@@ -1,4 +1,5 @@
-#pragma once
+#ifndef PLAYNOTE_EVENT_LOOP_H
+#define PLAYNOTE_EVENT_LOOP_H
 
 #include "sys/window.hpp"
 
@@ -10,3 +11,5 @@ public:
 			s_window->poll();
 	}
 };
+
+#endif

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef PLAYNOTE_UTIL_EXCEPT_H
+#define PLAYNOTE_UTIL_EXCEPT_H
 
 #include <stdexcept>
 #include <utility>
@@ -21,3 +22,5 @@ auto logic_error_fmt(std::format_string<Args...> fmt, Args&&... args)
 {
 	return typed_error_fmt<std::logic_error>(fmt, std::forward<Args>(args)...);
 };
+
+#endif

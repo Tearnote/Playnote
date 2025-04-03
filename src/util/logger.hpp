@@ -1,4 +1,5 @@
-#pragma once
+#ifndef PLAYNOTE_UTIL_LOGGER_H
+#define PLAYNOTE_UTIL_LOGGER_H
 
 #include "quill/LogMacros.h"
 #include "quill/Logger.h"
@@ -21,3 +22,5 @@ inline auto s_logger = Service<Logger>();
 #define L_WARN(...) LOG_WARNING(s_logger->logger, __VA_ARGS__)
 #define L_ERROR(...) LOG_ERROR(s_logger->logger, __VA_ARGS__)
 #define L_CRIT(...) LOG_CRITICAL(s_logger->logger, __VA_ARGS__)
+
+#endif

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef PLAYNOTE_SYS_OS_H
+#define PLAYNOTE_SYS_OS_H
 
 #include <string_view>
 #include "util/time.hpp"
@@ -26,3 +27,5 @@ private:
 };
 
 void set_thread_name(std::string_view name);
+
+#endif

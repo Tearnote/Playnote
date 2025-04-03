@@ -1,4 +1,5 @@
-#pragma once
+#ifndef PLAYNOTE_UTIL_MATH_H
+#define PLAYNOTE_UTIL_MATH_H
 
 #include <initializer_list>
 #include <type_traits>
@@ -418,3 +419,5 @@ static_assert(std::is_trivially_constructible_v<ivec4>);
 static_assert(std::is_trivially_constructible_v<uvec2>);
 static_assert(std::is_trivially_constructible_v<uvec3>);
 static_assert(std::is_trivially_constructible_v<uvec4>);
+
+#endif

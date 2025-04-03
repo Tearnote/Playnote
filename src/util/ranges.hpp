@@ -1,4 +1,5 @@
-#pragma once
+#ifndef PLAYNOTE_UTIL_RANGES_H
+#define PLAYNOTE_UTIL_RANGES_H
 
 #include <algorithm>
 #include <ranges>
@@ -18,3 +19,5 @@ auto ptr_span(T* ptr, usize size = 1)
 		return std::span<T>();
 	return std::span(ptr, size);
 }
+
+#endif
