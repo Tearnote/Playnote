@@ -37,9 +37,11 @@ private:
 			service.handle = &instance;
 		}
 
-		// Not copyable or movable
+		// Moving would break the scope-based overriding
 		Stub(Stub const&) = delete;
 		auto operator=(Stub const&) -> Stub& = delete;
+		Stub(Stub&&) = delete;
+		auto operator=(Stub&&) -> Stub& = delete;
 
 	private:
 		Service<T>& service;

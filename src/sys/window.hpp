@@ -39,6 +39,11 @@ public:
 	Window(std::string const& title, uvec2 size);
 	~Window();
 
+	Window(Window const&) = delete;
+	auto operator=(Window const&) -> Window& = delete;
+	Window(Window&&) = delete;
+	auto operator=(Window&&) -> Window& = delete;
+
 private:
 	using GlfwWindowPtr = std::unique_ptr<GLFWwindow, decltype(
 		[](auto* w) {

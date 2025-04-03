@@ -22,6 +22,9 @@ public:
 		return *this;
 	}
 
+	SchedulerPeriod(SchedulerPeriod const&) = delete;
+	auto operator=(SchedulerPeriod const&) -> SchedulerPeriod& = delete;
+
 private:
 	nanoseconds period;
 };
