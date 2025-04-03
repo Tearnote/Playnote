@@ -9,7 +9,6 @@ class Service {
 	class Stub;
 
 public:
-
 	// Create an instance of the underlying service. The service will be destroyed
 	// once the returned stub goes out of scope.
 	template<typename... Args>
@@ -38,7 +37,7 @@ private:
 
 		// Not copyable or movable
 		Stub(Stub const&) = delete;
-		auto operator=(Stub const&)->Stub & = delete;
+		auto operator=(Stub const&) -> Stub& = delete;
 
 	private:
 		Service<T>& service;

@@ -44,10 +44,8 @@ public:
 	~Window();
 
 private:
-
 	using GlfwWindowPtr = std::unique_ptr<GLFWwindow, decltype(
-		[](auto* w)
-		{
+		[](auto* w) {
 			glfwDestroyWindow(w);
 		}
 	)>;

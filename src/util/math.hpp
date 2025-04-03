@@ -13,7 +13,7 @@
 // Constants
 
 template<std::floating_point T>
-constexpr auto Tau_v = std::numbers::pi_v<T> *T(2.0);
+constexpr auto Tau_v = std::numbers::pi_v<T> * T(2.0);
 constexpr auto Tau = Tau_v<float>;
 
 // Scalar operations
@@ -46,8 +46,7 @@ constexpr auto clamp(T val, T vmin, T vmax) -> T { return std::max(vmin, std::mi
 
 // Generic math vector, of any dimension between 2 to 4 and any underlying type
 template<usize Dim, arithmetic T>
-class vec
-{
+class vec {
 public:
 	static_assert(Dim >= 2 && Dim <= 4, "Vectors need to have 2, 3 or 4 components");
 	using self_t = vec<Dim, T>;
@@ -116,21 +115,53 @@ public:
 	constexpr auto operator[](usize n) const -> T { return at(n); }
 
 	[[nodiscard]]
-	constexpr auto x() -> T& { static_assert(Dim >= 1); return arr[0]; }
+	constexpr auto x() -> T&
+	{
+		static_assert(Dim >= 1);
+		return arr[0];
+	}
 	[[nodiscard]]
-	constexpr auto x() const -> T { static_assert(Dim >= 1); return arr[0]; }
+	constexpr auto x() const -> T
+	{
+		static_assert(Dim >= 1);
+		return arr[0];
+	}
 	[[nodiscard]]
-	constexpr auto y() -> T& { static_assert(Dim >= 2); return arr[1]; }
+	constexpr auto y() -> T&
+	{
+		static_assert(Dim >= 2);
+		return arr[1];
+	}
 	[[nodiscard]]
-	constexpr auto y() const -> T { static_assert(Dim >= 2); return arr[1]; }
+	constexpr auto y() const -> T
+	{
+		static_assert(Dim >= 2);
+		return arr[1];
+	}
 	[[nodiscard]]
-	constexpr auto z() -> T& { static_assert(Dim >= 3); return arr[2]; }
+	constexpr auto z() -> T&
+	{
+		static_assert(Dim >= 3);
+		return arr[2];
+	}
 	[[nodiscard]]
-	constexpr auto z() const -> T { static_assert(Dim >= 3); return arr[2]; }
+	constexpr auto z() const -> T
+	{
+		static_assert(Dim >= 3);
+		return arr[2];
+	}
 	[[nodiscard]]
-	constexpr auto w() -> T& { static_assert(Dim >= 4); return arr[3]; }
+	constexpr auto w() -> T&
+	{
+		static_assert(Dim >= 4);
+		return arr[3];
+	}
 	[[nodiscard]]
-	constexpr auto w() const -> T { static_assert(Dim >= 4); return arr[3]; }
+	constexpr auto w() const -> T
+	{
+		static_assert(Dim >= 4);
+		return arr[3];
+	}
 
 	[[nodiscard]]
 	constexpr auto r() -> T& { return x(); }

@@ -43,8 +43,7 @@ Window::Window(std::string const& title, uvec2 size)
 
 	// Create the window
 	glfwSetErrorCallback(
-		[](int code, char const* str)
-		{
+		[](int code, char const* str) {
 			throw runtime_error_fmt("[GLFW] Error {}: {}", code, str);
 		}
 	);
@@ -53,15 +52,15 @@ Window::Window(std::string const& title, uvec2 size)
 
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-	windowPtr = GlfwWindowPtr(glfwCreateWindow(size.x(), size.y(), title.c_str(), nullptr, nullptr));
+	windowPtr =
+		GlfwWindowPtr(glfwCreateWindow(size.x(), size.y(), title.c_str(), nullptr, nullptr));
 	ASSERT(windowPtr);
 
 	// Set up event callbacks
 	glfwSetWindowUserPointer(windowPtr.get(), this);
 
 	glfwSetKeyCallback(windowPtr.get(),
-		[](GLFWwindow* windowPtr, int key, int, int action, int)
-		{
+		[](GLFWwindow* windowPtr, int key, int, int action, int) {
 			if (action == GLFW_REPEAT) return;
 			auto& window = *static_cast<Window*>(glfwGetWindowUserPointer(windowPtr));
 			for (auto& func: window.keyCallbacks)
@@ -87,8 +86,7 @@ Window::Window(std::string const& title, uvec2 size)
 
 	// Quit on ESC
 	registerKeyCallback(
-		[this](int key, bool)
-		{
+		[this](int key, bool) {
 			if (key == GLFW_KEY_ESCAPE)
 				glfwSetWindowShouldClose(windowPtr.get(), GLFW_TRUE);
 		}

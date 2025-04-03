@@ -3,8 +3,7 @@
 #include <string_view>
 #include "util/time.hpp"
 
-class SchedulerPeriod
-{
+class SchedulerPeriod {
 public:
 	explicit SchedulerPeriod(nanoseconds period);
 

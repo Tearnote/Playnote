@@ -4,12 +4,10 @@
 #include "quill/Logger.h"
 #include "util/service.hpp"
 
-class Logger
-{
+class Logger {
 public:
 	// Only access via macros below
 	quill::Logger* logger;
-
 	Logger();
 };
 

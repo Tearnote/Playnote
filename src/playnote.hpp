@@ -1,13 +1,9 @@
 #pragma once
 
 #include <expected>
-#include "util/logger.hpp"
 
-class Playnote:
-	Logger
-{
+class Playnote {
 public:
 	Playnote();
-
 	auto run() -> std::expected<void, int>;
 };

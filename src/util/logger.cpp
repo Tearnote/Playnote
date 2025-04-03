@@ -22,9 +22,9 @@ Logger::Logger()
 	auto file_cfg = quill::FileSinkConfig();
 	file_cfg.set_open_mode('w');
 	auto file_sink = quill::Frontend::create_or_get_sink<quill::FileSink>(LogfilePath, file_cfg);
-	self.logger = quill::Frontend::create_or_get_logger(
-		"root", {std::move(console_sink), std::move(file_sink)},
-		quill::PatternFormatterOptions("%(time) [%(log_level_short_code)] %(message)", "%H:%M:%S.%Qms")
-	);
+	self.logger = quill::Frontend::create_or_get_logger("root",
+		{std::move(console_sink), std::move(file_sink)},
+		quill::PatternFormatterOptions("%(time) [%(log_level_short_code)] %(message)",
+			"%H:%M:%S.%Qms"));
 	self.logger->set_log_level(LoggingLevel);
 }
