@@ -19,8 +19,9 @@ try {
 	return EXIT_SUCCESS;
 }
 catch (std::exception const& e) {
-	// In case anything throws before the logger is ready
-	std::print(stderr, "Uncaught exception: {}", e.what());
-//	L_CRIT("Uncaught exception: {}", e.what());
+	if (s_logger)
+		L_CRIT("Uncaught exception: {}", e.what());
+	else
+		std::print(stderr, "Uncaught exception: {}", e.what());
 	return EXIT_FAILURE;
 }

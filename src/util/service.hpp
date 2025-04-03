@@ -21,6 +21,7 @@ public:
 	// Gain access to the currently provisioned instance
 	auto operator*() -> T& { return *ASSUME_VAL(handle); }
 	auto operator->() -> T* { return ASSUME_VAL(handle); }
+	operator bool() const { return handle != nullptr; }
 
 private:
 	class Stub {
