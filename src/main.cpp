@@ -1,15 +1,26 @@
 #include <exception>
 #include <print>
 #include "util/logger.hpp"
-#include "playnote.hpp"
+#include "sys/window.hpp"
+#include "sys/os.hpp"
+#include "config.hpp"
 
-auto main(int argc, char* argv[]) -> int
+auto main(int, char*[]) -> int
 try {
 	auto logger = s_logger.provide();
-	auto playnote = Playnote();
-	return playnote.run().error_or(EXIT_SUCCESS);
+	set_thread_name("input");
+	L_INFO("{} {}.{}.{} starting up", AppTitle, AppVersion[0], AppVersion[1], AppVersion[2]);
+	auto scheduler_period = SchedulerPeriod(1ms);
+	auto window = s_window.provide(AppTitle, uvec2(640, 480));
+
+	while (!s_window->isClosing())
+		s_window->poll();
+
+	return EXIT_SUCCESS;
 }
-catch (std::exception& e) {
+catch (std::exception const& e) {
 	// In case anything throws before the logger is ready
 	std::print(stderr, "Uncaught exception: {}", e.what());
+//	L_CRIT("Uncaught exception: {}", e.what());
+	return EXIT_FAILURE;
 }
