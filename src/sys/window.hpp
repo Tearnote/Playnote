@@ -5,13 +5,12 @@
 #include <vector>
 #include <memory>
 #include "GLFW/glfw3.h"
+#include "util/service.hpp"
 #include "util/logger.hpp"
 #include "util/math.hpp"
 #include "util/time.hpp"
 
-class Window_impl:
-	Logger
-{
+class Window {
 public:
 	auto isClosing() -> bool;
 
@@ -40,17 +39,11 @@ public:
 
 	auto handle() -> GLFWwindow* { return windowPtr.get(); }
 
+	Window(std::string const& title, uvec2 size);
+
+	~Window();
+
 private:
-	// Only usable from the service
-	friend class Service<Window_impl>;
-
-	Window_impl(std::string const& title, uvec2 size);
-
-	~Window_impl();
-
-	// Moveable
-	Window_impl(Window_impl&&) = default;
-	auto operator=(Window_impl&&) -> Window_impl& = default;
 
 	using GlfwWindowPtr = std::unique_ptr<GLFWwindow, decltype(
 		[](auto* w)
@@ -66,4 +59,4 @@ private:
 	std::vector<std::function<void(int, bool)>> mouseButtonCallbacks;
 };
 
-using Window = Service<Window_impl>;
+inline auto s_window = Service<Window>();

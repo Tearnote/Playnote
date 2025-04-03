@@ -16,7 +16,7 @@ Playnote::Playnote()
 auto Playnote::run() -> std::expected<void, int> try
 {
 	auto scheduler_period = SchedulerPeriod(1ms);
-	auto window = Window::Provider(AppTitle, uvec2(640, 480));
+	auto window = s_window.provide(AppTitle, uvec2(640, 480));
 	auto event_loop = EventLoop();
 	event_loop.process();
 	return {};

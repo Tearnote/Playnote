@@ -2,13 +2,11 @@
 
 #include "sys/window.hpp"
 
-class EventLoop:
-	Window
-{
+class EventLoop {
 public:
 	void process()
 	{
-		while (!Window::serv->isClosing())
-			Window::serv->poll();
+		while (!s_window->isClosing())
+			s_window->poll();
 	}
 };

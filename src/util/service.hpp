@@ -1,73 +1,50 @@
 #pragma once
 
-#include <stdexcept>
 #include <utility>
+#include "libassert/assert.hpp"
 
-// Service - a scoped singleton
-// A service is a class that's globally available, but first an instance of it
-// needs to be provided. It's effectively a form of implicit argument passing;
-// providing a service allows everything in the same scope to use it.
-// If an instance requiring a service is created while the service doesn't
-// exist, it will throw.
-// An already provided service can be provided again, safely "shadowing"
-// the previous one.
-//
-// Providing a service is done by creating an instance of Service<T>::Provider.
-// Access to a provider service is available under Service<T>::serv after
-// inheriting Service<T>.
+// Wrapper for providing globally available scoped access to a class instance; singleton on steroids
 template<typename T>
-class Service
-{
-	using Self = Service<T>;
-	using Wrapped = T;
-
-	inline static Wrapped* current_serv = nullptr;
-
-protected:
-	Wrapped*& serv = current_serv;
-
-	Service()
-	{
-		if (!serv) throw std::runtime_error("Service requested but not available");
-	}
+class Service {
+	class Stub;
 
 public:
-	class Provider
+
+	// Create an instance of the underlying service. The service will be destroyed
+	// once the returned stub goes out of scope.
+	template<typename... Args>
+	auto provide(Args&&... args) -> Stub
 	{
+		return Stub(*this, std::forward<Args>(args)...);
+	}
+
+	// Gain access to the currently provisioned instance
+	auto operator*() -> T& { return *ASSUME_VAL(handle); }
+	auto operator->() -> T* { return ASSUME_VAL(handle); }
+
+private:
+	class Stub {
 	public:
+		~Stub() { service.handle = prevInstance; }
+
 		template<typename... Args>
-		explicit Provider(Args&&... args):
-			inst(std::forward<Args>(args)...),
-			prev(current_serv)
+		explicit Stub(Service<T>& service, Args&&... args):
+			service(service),
+			instance(std::forward<Args>(args)...),
+			prevInstance(service.handle)
 		{
-			current_serv = &inst;
+			service.handle = &instance;
 		}
 
-		~Provider()
-		{
-			if (prev) current_serv = prev;
-		}
-
-		// Moveable
-		Provider(Provider&& other):
-			inst(std::move(other.inst)),
-			prev(other.prev)
-		{
-			other.prev = nullptr;
-			current_serv = &inst;
-		}
-
-		auto operator=(Provider&& other) -> Provider&
-		{
-			inst = std::move(other.inst);
-			prev = other.prev;
-			other.prev = nullptr;
-			current_serv = &inst;
-			return *this;
-		}
+		// Not copyable or movable
+		Stub(Stub const&) = delete;
+		auto operator=(Stub const&)->Stub & = delete;
 
 	private:
-		Wrapped inst;
-		Wrapped* prev;
+		Service<T>& service;
+		T instance;
+		T* prevInstance;
 	};
+
+	T* handle = nullptr;
 };

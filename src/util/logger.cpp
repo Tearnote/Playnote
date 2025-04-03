@@ -7,7 +7,7 @@
 #include "quill/sinks/FileSink.h"
 #include "config.hpp"
 
-Logger_impl::Logger_impl()
+Logger::Logger()
 {
 	auto& self = *this;
 

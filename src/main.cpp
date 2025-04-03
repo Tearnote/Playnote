@@ -5,7 +5,7 @@
 
 auto main(int argc, char* argv[]) -> int try
 {
-	auto logger = Logger::Provider();
+	auto logger = s_logger.provide();
 	auto playnote = Playnote();
 	return playnote.run().error_or(EXIT_SUCCESS);
 }

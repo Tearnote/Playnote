@@ -5,17 +5,17 @@
 #include "util/except.hpp"
 #include "util/math.hpp"
 
-auto Window_impl::isClosing() -> bool
+auto Window::isClosing() -> bool
 {
 	return glfwWindowShouldClose(windowPtr.get());
 }
 
-void Window_impl::poll()
+void Window::poll()
 {
 	glfwPollEvents();
 }
 
-auto Window_impl::size() -> uvec2
+auto Window::size() -> uvec2
 {
 	auto w = 0;
 	auto h = 0;
@@ -23,7 +23,7 @@ auto Window_impl::size() -> uvec2
 	return uvec2(w, h);
 }
 
-auto Window_impl::getCursorPosition() -> vec2
+auto Window::getCursorPosition() -> vec2
 {
 	auto x = 0.0;
 	auto y = 0.0;
@@ -31,13 +31,13 @@ auto Window_impl::getCursorPosition() -> vec2
 	return vec2(x, y);
 }
 
-auto Window_impl::getTime() -> nanoseconds
+auto Window::getTime() -> nanoseconds
 {
 	auto time = std::chrono::duration<double>(glfwGetTime());
 	return duration_cast<nanoseconds>(time);
 }
 
-Window_impl::Window_impl(std::string const& title, uvec2 size)
+Window::Window(std::string const& title, uvec2 size)
 {
 	ASSUME(size.x() > 0 && size.y() > 0);
 
@@ -63,7 +63,7 @@ Window_impl::Window_impl(std::string const& title, uvec2 size)
 		[](GLFWwindow* windowPtr, int key, int, int action, int)
 		{
 			if (action == GLFW_REPEAT) return;
-			auto& window = *static_cast<Window_impl*>(glfwGetWindowUserPointer(windowPtr));
+			auto& window = *static_cast<Window*>(glfwGetWindowUserPointer(windowPtr));
 			for (auto& func: window.keyCallbacks)
 				func(key, action == GLFW_PRESS);
 		}
@@ -71,7 +71,7 @@ Window_impl::Window_impl(std::string const& title, uvec2 size)
 
 	glfwSetCursorPosCallback(windowPtr.get(),
 		[](GLFWwindow* windowPtr, double x, double y) {
-			auto& window = *static_cast<Window_impl*>(glfwGetWindowUserPointer(windowPtr));
+			auto& window = *static_cast<Window*>(glfwGetWindowUserPointer(windowPtr));
 			for (auto& func: window.cursorMotionCallbacks)
 				func(vec2(x, y));
 		}
@@ -79,7 +79,7 @@ Window_impl::Window_impl(std::string const& title, uvec2 size)
 
 	glfwSetMouseButtonCallback(windowPtr.get(),
 		[](GLFWwindow* windowPtr, int button, int action, int) {
-			auto& window = *static_cast<Window_impl*>(glfwGetWindowUserPointer(windowPtr));
+			auto& window = *static_cast<Window*>(glfwGetWindowUserPointer(windowPtr));
 			for (auto& func: window.mouseButtonCallbacks)
 				func(button, action == GLFW_PRESS);
 		}
@@ -97,7 +97,7 @@ Window_impl::Window_impl(std::string const& title, uvec2 size)
 	L_INFO("Created window \"{}\" at {}x{}", title, size.x(), size.y());
 }
 
-Window_impl::~Window_impl()
+Window::~Window()
 {
 	if (!windowPtr) return;
 
