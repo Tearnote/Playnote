@@ -1,7 +1,9 @@
 module;
+#include <string_view>
 #include <functional>
 #include <utility>
 #include <vector>
+#include <string>
 #include "libassert/assert.hpp"
 #include "GLFW/glfw3.h"
 #include "util/log_macros.hpp"
@@ -38,7 +40,7 @@ public:
 // Includes GLFW initialization, so only one can exist at a time
 class Window {
 public:
-	Window(std::string const& title, uvec2 size);
+	Window(std::string_view title, uvec2 size);
 
 	[[nodiscard]] auto is_closing() const -> bool { return glfwWindowShouldClose(*window_handle); }
 	[[nodiscard]] auto size() const -> uvec2;
@@ -68,11 +70,12 @@ public:
 
 private:
 	using WindowHandle = util::RAIIResource<GLFWwindow*, decltype([](auto* w) {
+		auto title = std::string{glfwGetWindowTitle(w)};
 		glfwDestroyWindow(w);
-		L_INFO("Window closed");
+		L_INFO("Window \"{}\" closed", title);
 	})>;
 
-	WindowHandle window_handle;
+	WindowHandle window_handle{};
 
 	std::vector<std::function<void(int, bool)>> key_callbacks;
 	std::vector<std::function<void(vec2)>> cursor_motion_callbacks;
@@ -101,7 +104,7 @@ auto GLFW::get_time() const -> chrono::nanoseconds
 	return duration_cast<chrono::nanoseconds>(time);
 }
 
-Window::Window(std::string const& title, uvec2 size)
+Window::Window(std::string_view title, uvec2 size)
 {
 	ASSUME(size.x() > 0 && size.y() > 0);
 
@@ -109,7 +112,7 @@ Window::Window(std::string const& title, uvec2 size)
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 	window_handle = WindowHandle{
-		glfwCreateWindow(size.x(), size.y(), title.c_str(), nullptr, nullptr)
+		glfwCreateWindow(size.x(), size.y(), std::string{title}.c_str(), nullptr, nullptr)
 	};
 	ASSERT(*window_handle);
 
