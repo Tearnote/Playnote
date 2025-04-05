@@ -27,7 +27,6 @@ include(cmake/Dependencies.cmake)
 ### Main target
 
 add_executable(Playnote
-	src/stx/concepts.hpp
 	src/stx/except.hpp
 	src/stx/types.hpp
 	src/util/log_macros.hpp

@@ -6,7 +6,6 @@ module;
 #include <numbers>
 #include <ranges>
 #include <array>
-#include "stx/concepts.hpp"
 #include "types.hpp"
 
 export module playnote.stx.math;
@@ -14,6 +13,10 @@ export module playnote.stx.math;
 namespace playnote::stx {
 
 namespace ranges = std::ranges;
+
+// A built-in type with defined arithmetic operations (+, -, *, /)
+template<typename T>
+concept arithmetic = std::is_arithmetic_v<T>;
 
 export template<std::floating_point T>
 constexpr auto Tau_v = std::numbers::pi_v<T> * 2;
