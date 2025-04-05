@@ -14,11 +14,25 @@ import playnote.stx.math;
 import playnote.util.service;
 
 namespace playnote::sys {
-
 namespace chrono = std::chrono;
 using chrono::duration_cast;
 using stx::uvec2;
 using stx::vec2;
+
+// RAII abstraction for GLFW library initialization
+class GLFW {
+public:
+	GLFW();
+	~GLFW();
+
+	[[nodiscard]] auto get_time() const -> chrono::nanoseconds;
+	void poll() { glfwPollEvents(); }
+
+	GLFW(GLFW const&) = delete;
+	auto operator=(GLFW const&) -> GLFW& = delete;
+	GLFW(GLFW&&) = delete;
+	auto operator=(GLFW&&) -> GLFW& = delete;
+};
 
 // RAII abstraction of a single application window, providing a drawing surface and input handling
 // Includes GLFW initialization, so only one can exist at a time
@@ -33,22 +47,20 @@ public:
 	auto operator=(Window&&) -> Window& = delete;
 
 	[[nodiscard]] auto is_closing() const -> bool { return glfwWindowShouldClose(windowPtr.get()); }
-	void poll() { glfwPollEvents(); }
 	[[nodiscard]] auto size() const -> uvec2;
 	[[nodiscard]] auto get_cursor_position() const -> vec2;
-	[[nodiscard]] auto get_time() const -> chrono::nanoseconds;
 
-	void registerKeyCallback(std::function<void(int, bool)> func)
+	void register_key_callback(std::function<void(int, bool)> func)
 	{
 		keyCallbacks.emplace_back(std::move(func));
 	}
 
-	void registerCursorMotionCallback(std::function<void(vec2)> func)
+	void register_cursor_motion_callback(std::function<void(vec2)> func)
 	{
 		cursorMotionCallbacks.emplace_back(std::move(func));
 	}
 
-	void registerMouseButtonCallback(std::function<void(int, bool)> func)
+	void register_mouse_button_callback(std::function<void(int, bool)> func)
 	{
 		mouseButtonCallbacks.emplace_back(std::move(func));
 	}
@@ -56,11 +68,9 @@ public:
 	auto handle() -> GLFWwindow* { return windowPtr.get(); }
 
 private:
-	using GlfwWindowPtr = std::unique_ptr<GLFWwindow, decltype(
-		[](auto* w) {
-			glfwDestroyWindow(w);
-		}
-	)>;
+	using GlfwWindowPtr = std::unique_ptr<GLFWwindow, decltype([](auto* w) {
+		glfwDestroyWindow(w);
+	})>;
 
 	GlfwWindowPtr windowPtr;
 
@@ -69,19 +79,33 @@ private:
 	std::vector<std::function<void(int, bool)>> mouseButtonCallbacks;
 };
 
+GLFW::GLFW()
+{
+	// No need to check GLFW functions' return codes with the error callback set
+	glfwSetErrorCallback([](int code, char const* str) {
+		throw stx::runtime_error_fmt("[GLFW] Error {}: {}", code, str);
+	});
+	glfwInit();
+	L_INFO("GLFW initialized");
+}
+
+GLFW::~GLFW()
+{
+	glfwTerminate();
+	L_INFO("GLFW cleaned up");
+}
+
+auto GLFW::get_time() const -> chrono::nanoseconds
+{
+	auto time = std::chrono::duration<double>{glfwGetTime()};
+	return duration_cast<chrono::nanoseconds>(time);
+}
+
 Window::Window(std::string const& title, uvec2 size)
 {
 	ASSUME(size.x() > 0 && size.y() > 0);
 
 	// Create the window
-	glfwSetErrorCallback(
-		[](int code, char const* str) {
-			throw stx::runtime_error_fmt("[GLFW] Error {}: {}", code, str);
-		}
-	);
-	glfwInit();
-	L_INFO("GLFW initialized");
-
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 	windowPtr =
@@ -117,12 +141,10 @@ Window::Window(std::string const& title, uvec2 size)
 	);
 
 	// Quit on ESC
-	registerKeyCallback(
-		[this](int key, bool) {
-			if (key == GLFW_KEY_ESCAPE)
-				glfwSetWindowShouldClose(windowPtr.get(), GLFW_TRUE);
-		}
-	);
+	register_key_callback([this](int key, bool) {
+		if (key == GLFW_KEY_ESCAPE)
+			glfwSetWindowShouldClose(windowPtr.get(), GLFW_TRUE);
+	});
 
 	L_INFO("Created window \"{}\" at {}x{}", title, size.x(), size.y());
 }
@@ -130,9 +152,7 @@ Window::Window(std::string const& title, uvec2 size)
 Window::~Window()
 {
 	if (!windowPtr) return;
-
 	windowPtr.reset();
-	glfwTerminate();
 	L_INFO("Window closed");
 }
 
@@ -152,12 +172,6 @@ auto Window::get_cursor_position() const -> vec2
 	return vec2{static_cast<float>(x), static_cast<float>(y)};
 }
 
-auto Window::get_time() const -> chrono::nanoseconds
-{
-	auto time = std::chrono::duration<double>{glfwGetTime()};
-	return duration_cast<chrono::nanoseconds>(time);
-}
-
-export auto s_window = util::Service<Window>();
-
+export auto s_glfw = util::Service<GLFW>{};
+export auto s_window = util::Service<Window>{};
 }
