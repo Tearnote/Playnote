@@ -16,10 +16,19 @@ public:
 	RAIIResource(T const& resource): resource(resource) {}
 	~RAIIResource() { if (resource) std::invoke(Func{}, *resource); }
 
+	auto get() -> T& { return resource.value(); }
+	auto get() const -> T const& { return resource.value(); }
+	auto operator*() -> T& { return get(); }
+	auto operator*() const -> T const& { return get(); }
+	auto operator->() -> T& { return get(); }
+	auto operator->() const -> T const& { return get(); }
+
 	RAIIResource(RAIIResource const&) = delete;
 	auto operator=(RAIIResource const&) -> RAIIResource& = delete;
 	RAIIResource(RAIIResource&& other) noexcept { *this = std::move(other); }
 	auto operator=(RAIIResource&&) noexcept -> RAIIResource&;
+
+	operator bool() const { return resource; }
 
 private:
 	std::optional<T> resource{std::nullopt};
