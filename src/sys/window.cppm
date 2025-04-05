@@ -5,9 +5,9 @@ module;
 #include <memory>
 #include "libassert/assert.hpp"
 #include "GLFW/glfw3.h"
+#include "util/log_macros.hpp"
 #include "util/service.hpp"
 #include "util/except.hpp"
-#include "util/logger.hpp"
 
 export module playnote.sys.window;
 
