@@ -4,7 +4,10 @@ module;
 #include <utility>
 #include <vector>
 #include <string>
+#include <vulkan/vulkan_core.h>
+
 #include "libassert/assert.hpp"
+#include "volk.h"
 #include "GLFW/glfw3.h"
 #include "util/log_macros.hpp"
 
@@ -64,6 +67,7 @@ public:
 	}
 
 	auto handle() -> GLFWwindow* { return *window_handle; }
+	auto create_surface(VkInstance) -> VkSurfaceKHR;
 
 	Window(Window const&) = delete;
 	auto operator=(Window const&) -> Window& = delete;
@@ -165,6 +169,13 @@ auto Window::get_cursor_position() const -> vec2
 	auto y = 0.0;
 	glfwGetCursorPos(*window_handle, &x, &y);
 	return vec2{static_cast<float>(x), static_cast<float>(y)};
+}
+
+auto Window::create_surface(VkInstance instance) -> VkSurfaceKHR
+{
+	auto result = VkSurfaceKHR{nullptr};
+	glfwCreateWindowSurface(instance, *window_handle, nullptr, &result);
+	return result;
 }
 
 export auto s_glfw = util::Service<GLFW>{};

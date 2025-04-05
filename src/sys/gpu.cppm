@@ -11,8 +11,12 @@ export module playnote.sys.gpu;
 import playnote.stx.except;
 import playnote.util.service;
 import playnote.util.raii;
+import playnote.sys.window;
 
 namespace playnote::sys {
+
+using sys::s_window;
+
 class GPU {
 public:
 	GPU();
@@ -42,6 +46,7 @@ private:
 		void*) -> VkBool32;
 #endif
 	auto create_instance() -> Instance;
+	auto create_surface(vkb::Instance&) -> Surface;
 
 	Instance instance{};
 	Surface surface{};
@@ -50,8 +55,8 @@ private:
 };
 
 GPU::GPU():
-	instance{create_instance()}
-//	surface{create_surface(*instance)},
+	instance{create_instance()},
+	surface{create_surface(*instance)}
 //	physical_device{select_physical_device(*instance, surface)},
 //	device{create_device(physical_device)}
 {
@@ -127,5 +132,14 @@ auto GPU::create_instance() -> Instance
 	return instance;
 }
 
+auto GPU::create_surface(vkb::Instance& instance) -> Surface
+{
+	return Surface_impl{
+		.surface = s_window->create_surface(instance),
+		.instance = instance,
+	};
+}
+
 export auto s_gpu = util::Service<GPU>{};
+
 }
