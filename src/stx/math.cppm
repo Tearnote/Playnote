@@ -12,7 +12,6 @@ export module playnote.stx.math;
 import playnote.stx.types;
 
 namespace playnote::stx {
-
 namespace ranges = std::ranges;
 using stx::uint;
 
@@ -46,7 +45,10 @@ export template<std::integral T>
 
 // GLSL-style scalar clamp
 export template<arithmetic T>
-[[nodiscard]] constexpr auto clamp(T val, T vmin, T vmax) -> T { return std::max(vmin, std::min(val, vmax)); }
+[[nodiscard]] constexpr auto clamp(T val, T vmin, T vmax) -> T
+{
+	return std::max(vmin, std::min(val, vmax));
+}
 
 // Generic math vector, of any dimension between 2 to 4 and any underlying type
 export template<usize Dim, arithmetic T>
@@ -68,30 +70,17 @@ public:
 	// Type cast
 	template<arithmetic U>
 		requires (!std::same_as<T, U>)
-	explicit constexpr vec(vec<Dim, U> const& other)
-	{
-		for (auto i: ranges::iota_view(0uz, Dim))
-			arr[i] = static_cast<T>(other[i]);
-	}
+	explicit constexpr vec(vec<Dim, U> const& other);
 
 	// Dimension downcast
 	template<usize N>
 		requires (N > Dim)
-	explicit constexpr vec(vec<N, T> const& other)
-	{
-		for (auto i: ranges::iota_view(0uz, Dim))
-			arr[i] = other[i];
-	}
+	explicit constexpr vec(vec<N, T> const& other);
 
 	// Dimension upcast
 	template<usize N>
 		requires (N < Dim)
-	constexpr vec(vec<N, T> const& other, T fill)
-	{
-		arr.fill(fill);
-		for (auto i: ranges::iota_view(0uz, N))
-			arr[i] = other[i];
-	}
+	constexpr vec(vec<N, T> const& other, T fill);
 
 	[[nodiscard]] constexpr auto at(usize n) -> T& { return arr[n]; }
 	[[nodiscard]] constexpr auto at(usize n) const -> T { return arr[n]; }
@@ -99,46 +88,14 @@ public:
 	[[nodiscard]] constexpr auto operator[](usize n) -> T& { return at(n); }
 	[[nodiscard]] constexpr auto operator[](usize n) const -> T { return at(n); }
 
-	[[nodiscard]] constexpr auto x() -> T&
-	{
-		static_assert(Dim >= 1);
-		return arr[0];
-	}
-	[[nodiscard]] constexpr auto x() const -> T
-	{
-		static_assert(Dim >= 1);
-		return arr[0];
-	}
-	[[nodiscard]] constexpr auto y() -> T&
-	{
-		static_assert(Dim >= 2);
-		return arr[1];
-	}
-	[[nodiscard]] constexpr auto y() const -> T
-	{
-		static_assert(Dim >= 2);
-		return arr[1];
-	}
-	[[nodiscard]] constexpr auto z() -> T&
-	{
-		static_assert(Dim >= 3);
-		return arr[2];
-	}
-	[[nodiscard]] constexpr auto z() const -> T
-	{
-		static_assert(Dim >= 3);
-		return arr[2];
-	}
-	[[nodiscard]] constexpr auto w() -> T&
-	{
-		static_assert(Dim >= 4);
-		return arr[3];
-	}
-	[[nodiscard]] constexpr auto w() const -> T
-	{
-		static_assert(Dim >= 4);
-		return arr[3];
-	}
+	[[nodiscard]] constexpr auto x() -> T&;
+	[[nodiscard]] constexpr auto x() const -> T;
+	[[nodiscard]] constexpr auto y() -> T&;
+	[[nodiscard]] constexpr auto y() const -> T;
+	[[nodiscard]] constexpr auto z() -> T&;
+	[[nodiscard]] constexpr auto z() const -> T;
+	[[nodiscard]] constexpr auto w() -> T&;
+	[[nodiscard]] constexpr auto w() const -> T;
 
 	[[nodiscard]] constexpr auto r() -> T& { return x(); }
 	[[nodiscard]] constexpr auto r() const -> T { return x(); }
@@ -151,89 +108,193 @@ public:
 
 	constexpr void fill(T val) { arr.fill(val); }
 
-	constexpr auto operator+=(self_t const& other) -> self_t&
-	{
-		for (auto i: ranges::iota_view(0uz, Dim))
-			arr[i] += other[i];
-		return *this;
-	}
+	constexpr auto operator+=(self_t const& other) -> self_t&;
+	constexpr auto operator-=(self_t const& other) -> self_t&;
+	constexpr auto operator*=(self_t const& other) -> self_t&;
+	constexpr auto operator/=(self_t const& other) -> self_t&;
+	constexpr auto operator%=(self_t const& other) -> self_t&;
 
-	constexpr auto operator-=(self_t const& other) -> self_t&
-	{
-		for (auto i: ranges::iota_view(0uz, Dim))
-			arr[i] -= other[i];
-		return *this;
-	}
-
-	constexpr auto operator*=(self_t const& other) -> self_t&
-	{
-		for (auto i: ranges::iota_view(0uz, Dim))
-			arr[i] *= other[i];
-		return *this;
-	}
-
-	constexpr auto operator/=(self_t const& other) -> self_t&
-	{
-		for (auto i: ranges::iota_view(0uz, Dim))
-			arr[i] /= other[i];
-		return *this;
-	}
-
-	constexpr auto operator%=(self_t const& other) -> self_t&
-	{
-		static_assert(std::is_integral_v<T>);
-
-		for (auto i: ranges::iota_view(0uz, Dim))
-			arr[i] %= other[i];
-		return *this;
-	}
-
-	// Scalar arithmetic
-
-	constexpr auto operator*=(T other) -> self_t&
-	{
-		for (auto i: ranges::iota_view(0uz, Dim))
-			arr[i] *= other;
-		return *this;
-	}
-
-	constexpr auto operator/=(T other) -> self_t&
-	{
-		for (auto i: ranges::iota_view(0uz, Dim))
-			arr[i] /= other;
-		return *this;
-	}
-
-	constexpr auto operator%=(T other) -> self_t&
-	{
-		static_assert(std::is_integral_v<T>);
-
-		for (auto i: ranges::iota_view(0uz, Dim))
-			arr[i] %= other;
-		return *this;
-	}
-
-	constexpr auto operator<<=(T other) -> self_t&
-	{
-		static_assert(std::is_integral_v<T>);
-
-		for (auto i: ranges::iota_view(0uz, Dim))
-			arr[i] <<= other;
-		return *this;
-	}
-
-	constexpr auto operator>>=(T other) -> self_t&
-	{
-		static_assert(std::is_integral_v<T>);
-
-		for (auto i: ranges::iota_view(0uz, Dim))
-			arr[i] >>= other;
-		return *this;
-	}
+	constexpr auto operator*=(T other) -> self_t&;
+	constexpr auto operator/=(T other) -> self_t&;
+	constexpr auto operator%=(T other) -> self_t&;
+	constexpr auto operator<<=(T other) -> self_t&;
+	constexpr auto operator>>=(T other) -> self_t&;
 
 private:
 	std::array<T, Dim> arr;
 };
+
+template<usize Dim, arithmetic T>
+template<arithmetic U>
+	requires (!std::same_as<T, U>)
+constexpr vec<Dim, T>::vec(vec<Dim, U> const& other)
+{
+	for (auto i: ranges::iota_view(0uz, Dim))
+		arr[i] = static_cast<T>(other[i]);
+}
+
+template<usize Dim, arithmetic T>
+template<usize N>
+	requires (N > Dim)
+constexpr vec<Dim, T>::vec(vec<N, T> const& other)
+{
+	for (auto i: ranges::iota_view(0uz, Dim))
+		arr[i] = other[i];
+}
+
+template<usize Dim, arithmetic T>
+template<usize N>
+	requires (N < Dim)
+constexpr vec<Dim, T>::vec(vec<N, T> const& other, T fill)
+{
+	arr.fill(fill);
+	for (auto i: ranges::iota_view(0uz, N))
+		arr[i] = other[i];
+}
+
+template<usize Dim, arithmetic T>
+constexpr auto vec<Dim, T>::x() -> T&
+{
+	static_assert(Dim >= 1);
+	return arr[0];
+}
+
+template<usize Dim, arithmetic T>
+constexpr auto vec<Dim, T>::x() const -> T
+{
+	static_assert(Dim >= 1);
+	return arr[0];
+}
+
+template<usize Dim, arithmetic T>
+constexpr auto vec<Dim, T>::y() -> T&
+{
+	static_assert(Dim >= 2);
+	return arr[1];
+}
+
+template<usize Dim, arithmetic T>
+constexpr auto vec<Dim, T>::y() const -> T
+{
+	static_assert(Dim >= 2);
+	return arr[1];
+}
+
+template<usize Dim, arithmetic T>
+constexpr auto vec<Dim, T>::z() -> T&
+{
+	static_assert(Dim >= 3);
+	return arr[2];
+}
+
+template<usize Dim, arithmetic T>
+constexpr auto vec<Dim, T>::z() const -> T
+{
+	static_assert(Dim >= 3);
+	return arr[2];
+}
+
+template<usize Dim, arithmetic T>
+constexpr auto vec<Dim, T>::w() -> T&
+{
+	static_assert(Dim >= 4);
+	return arr[3];
+}
+
+template<usize Dim, arithmetic T>
+constexpr auto vec<Dim, T>::w() const -> T
+{
+	static_assert(Dim >= 4);
+	return arr[3];
+}
+
+template<usize Dim, arithmetic T>
+constexpr auto vec<Dim, T>::operator+=(self_t const& other) -> self_t&
+{
+	for (auto i: ranges::iota_view(0uz, Dim))
+		arr[i] += other[i];
+	return *this;
+}
+
+template<usize Dim, arithmetic T>
+constexpr auto vec<Dim, T>::operator-=(self_t const& other) -> self_t&
+{
+	for (auto i: ranges::iota_view(0uz, Dim))
+		arr[i] -= other[i];
+	return *this;
+}
+
+template<usize Dim, arithmetic T>
+constexpr auto vec<Dim, T>::operator*=(self_t const& other) -> self_t&
+{
+	for (auto i: ranges::iota_view(0uz, Dim))
+		arr[i] *= other[i];
+	return *this;
+}
+
+template<usize Dim, arithmetic T>
+constexpr auto vec<Dim, T>::operator/=(self_t const& other) -> self_t&
+{
+	for (auto i: ranges::iota_view(0uz, Dim))
+		arr[i] /= other[i];
+	return *this;
+}
+
+template<usize Dim, arithmetic T>
+constexpr auto vec<Dim, T>::operator%=(self_t const& other) -> self_t&
+{
+	static_assert(std::is_integral_v<T>);
+
+	for (auto i: ranges::iota_view(0uz, Dim))
+		arr[i] %= other[i];
+	return *this;
+}
+
+template<usize Dim, arithmetic T>
+constexpr auto vec<Dim, T>::operator*=(T other) -> self_t&
+{
+	for (auto i: ranges::iota_view(0uz, Dim))
+		arr[i] *= other;
+	return *this;
+}
+
+template<usize Dim, arithmetic T>
+constexpr auto vec<Dim, T>::operator/=(T other) -> self_t&
+{
+	for (auto i: ranges::iota_view(0uz, Dim))
+		arr[i] /= other;
+	return *this;
+}
+
+template<usize Dim, arithmetic T>
+constexpr auto vec<Dim, T>::operator%=(T other) -> self_t&
+{
+	static_assert(std::is_integral_v<T>);
+
+	for (auto i: ranges::iota_view(0uz, Dim))
+		arr[i] %= other;
+	return *this;
+}
+
+template<usize Dim, arithmetic T>
+constexpr auto vec<Dim, T>::operator<<=(T other) -> self_t&
+{
+	static_assert(std::is_integral_v<T>);
+
+	for (auto i: ranges::iota_view(0uz, Dim))
+		arr[i] <<= other;
+	return *this;
+}
+
+template<usize Dim, arithmetic T>
+constexpr auto vec<Dim, T>::operator>>=(T other) -> self_t&
+{
+	static_assert(std::is_integral_v<T>);
+
+	for (auto i: ranges::iota_view(0uz, Dim))
+		arr[i] >>= other;
+	return *this;
+}
 
 export template<usize Dim, arithmetic T>
 constexpr auto operator+(vec<Dim, T> const& left, vec<Dim, T> const& right) -> vec<Dim, T>
@@ -375,5 +436,4 @@ static_assert(std::is_trivially_constructible_v<ivec4>);
 static_assert(std::is_trivially_constructible_v<uvec2>);
 static_assert(std::is_trivially_constructible_v<uvec3>);
 static_assert(std::is_trivially_constructible_v<uvec4>);
-
 }
