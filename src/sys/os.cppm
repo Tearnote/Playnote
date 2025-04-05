@@ -15,7 +15,6 @@ module;
 #include <Windows.h>
 #include <fcntl.h>
 #include <io.h>
-#include "util/except.hpp"
 #elif TARGET == TARGET_LINUX
 #include <system_error>
 #include <string>
@@ -24,10 +23,15 @@ module;
 
 export module playnote.sys.os;
 
+#if TARGET == TARGET_WINDOWS
+import playnote.stx.except;
+#endif
+
 namespace playnote::sys {
 
 namespace chrono = std::chrono;
 using namespace std::chrono_literals;
+using chrono::duration_cast;
 
 // Sets the system thread scheduler period for the lifetime of the instance
 // This decreases the minimum possible duration of thread sleep
@@ -49,7 +53,7 @@ SchedulerPeriod::SchedulerPeriod(chrono::nanoseconds period):
 	period{period}
 {
 #if TARGET == TARGET_WINDOWS
-	if (timeBeginPeriod(duration_cast<milliseconds>(period).count()) != TIMERR_NOERROR)
+	if (timeBeginPeriod(duration_cast<chrono::milliseconds>(period).count()) != TIMERR_NOERROR)
 		throw std::runtime_error{"Failed to initialize Windows scheduler period"};
 #endif
 }
@@ -58,7 +62,7 @@ SchedulerPeriod::~SchedulerPeriod()
 {
 	if (period == -1ns) return;
 #if TARGET == TARGET_WINDOWS
-	timeEndPeriod(duration_cast<milliseconds>(period).count());
+	timeEndPeriod(duration_cast<chrono::milliseconds>(period).count());
 #endif
 }
 
@@ -77,7 +81,7 @@ export void set_thread_name(std::string_view name)
 	auto lname = std::wstring{name.begin(), name.end()};
 	auto err = SetThreadDescription(GetCurrentThread(), lname.c_str());
 	if (FAILED(err))
-		throw runtime_error_fmt{"Failed to set thread name: error {}", err};
+		throw stx::runtime_error_fmt{"Failed to set thread name: error {}", err};
 #elif TARGET == TARGET_LINUX
 	if (auto err = pthread_setname_np(pthread_self(), std::string{name}.c_str()); err != 0)
 		throw std::system_error{err, std::system_category(), "Failed to set thread name"};

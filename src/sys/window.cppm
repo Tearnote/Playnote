@@ -6,10 +6,10 @@ module;
 #include "libassert/assert.hpp"
 #include "GLFW/glfw3.h"
 #include "util/log_macros.hpp"
-#include "../stx/except.hpp"
 
 export module playnote.sys.window;
 
+import playnote.stx.except;
 import playnote.stx.math;
 import playnote.util.service;
 
@@ -76,7 +76,7 @@ Window::Window(std::string const& title, uvec2 size)
 	// Create the window
 	glfwSetErrorCallback(
 		[](int code, char const* str) {
-			throw runtime_error_fmt("[GLFW] Error {}: {}", code, str);
+			throw stx::runtime_error_fmt("[GLFW] Error {}: {}", code, str);
 		}
 	);
 	glfwInit();
