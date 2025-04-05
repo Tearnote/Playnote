@@ -6,10 +6,12 @@
 #include <algorithm>
 #include <concepts>
 #include <numbers>
+#include <ranges>
 #include <array>
 #include "util/concepts.hpp"
-#include "util/ranges.hpp"
 #include "util/types.hpp"
+
+namespace ranges = std::ranges;
 
 // Constants
 
@@ -80,7 +82,7 @@ public:
 		requires (!std::same_as<T, U>)
 	explicit constexpr vec(vec<Dim, U> const& other)
 	{
-		for (auto i: iota(0uz, Dim))
+		for (auto i: ranges::iota_view(0uz, Dim))
 			arr[i] = static_cast<T>(other[i]);
 	}
 
@@ -89,7 +91,7 @@ public:
 		requires (N > Dim)
 	explicit constexpr vec(vec<N, T> const& other)
 	{
-		for (auto i: iota(0uz, Dim))
+		for (auto i: ranges::iota_view(0uz, Dim))
 			arr[i] = other[i];
 	}
 
@@ -99,7 +101,7 @@ public:
 	constexpr vec(vec<N, T> const& other, T fill)
 	{
 		arr.fill(fill);
-		for (auto i: iota(0uz, N))
+		for (auto i: ranges::iota_view(0uz, N))
 			arr[i] = other[i];
 	}
 
@@ -189,28 +191,28 @@ public:
 
 	constexpr auto operator+=(self_t const& other) -> self_t&
 	{
-		for (auto i: iota(0uz, Dim))
+		for (auto i: ranges::iota_view(0uz, Dim))
 			arr[i] += other[i];
 		return *this;
 	}
 
 	constexpr auto operator-=(self_t const& other) -> self_t&
 	{
-		for (auto i: iota(0uz, Dim))
+		for (auto i: ranges::iota_view(0uz, Dim))
 			arr[i] -= other[i];
 		return *this;
 	}
 
 	constexpr auto operator*=(self_t const& other) -> self_t&
 	{
-		for (auto i: iota(0uz, Dim))
+		for (auto i: ranges::iota_view(0uz, Dim))
 			arr[i] *= other[i];
 		return *this;
 	}
 
 	constexpr auto operator/=(self_t const& other) -> self_t&
 	{
-		for (auto i: iota(0uz, Dim))
+		for (auto i: ranges::iota_view(0uz, Dim))
 			arr[i] /= other[i];
 		return *this;
 	}
@@ -219,7 +221,7 @@ public:
 	{
 		static_assert(std::is_integral_v<T>);
 
-		for (auto i: iota(0uz, Dim))
+		for (auto i: ranges::iota_view(0uz, Dim))
 			arr[i] %= other[i];
 		return *this;
 	}
@@ -228,14 +230,14 @@ public:
 
 	constexpr auto operator*=(T other) -> self_t&
 	{
-		for (auto i: iota(0uz, Dim))
+		for (auto i: ranges::iota_view(0uz, Dim))
 			arr[i] *= other;
 		return *this;
 	}
 
 	constexpr auto operator/=(T other) -> self_t&
 	{
-		for (auto i: iota(0uz, Dim))
+		for (auto i: ranges::iota_view(0uz, Dim))
 			arr[i] /= other;
 		return *this;
 	}
@@ -244,7 +246,7 @@ public:
 	{
 		static_assert(std::is_integral_v<T>);
 
-		for (auto i: iota(0uz, Dim))
+		for (auto i: ranges::iota_view(0uz, Dim))
 			arr[i] %= other;
 		return *this;
 	}
@@ -253,7 +255,7 @@ public:
 	{
 		static_assert(std::is_integral_v<T>);
 
-		for (auto i: iota(0uz, Dim))
+		for (auto i: ranges::iota_view(0uz, Dim))
 			arr[i] <<= other;
 		return *this;
 	}
@@ -262,7 +264,7 @@ public:
 	{
 		static_assert(std::is_integral_v<T>);
 
-		for (auto i: iota(0uz, Dim))
+		for (auto i: ranges::iota_view(0uz, Dim))
 			arr[i] >>= other;
 		return *this;
 	}
@@ -316,7 +318,7 @@ constexpr auto operator%(vec<Dim, T> const& left, vec<Dim, T> const& right) -> v
 template<usize Dim, arithmetic T>
 constexpr auto operator==(vec<Dim, T> const& left, vec<Dim, T> const& right) -> bool
 {
-	for (auto i: iota(0uz, Dim)) {
+	for (auto i: ranges::iota_view(0uz, Dim)) {
 		if (left[i] != right[i])
 			return false;
 	}
@@ -327,7 +329,7 @@ template<usize Dim, arithmetic T>
 constexpr auto min(vec<Dim, T> const& left, vec<Dim, T> const& right) -> vec<Dim, T>
 {
 	auto result = vec<Dim, T>();
-	for (auto i: iota(0uz, Dim))
+	for (auto i: ranges::iota_view(0uz, Dim))
 		result[i] = std::min(left[i], right[i]);
 	return result;
 }
@@ -336,7 +338,7 @@ template<usize Dim, arithmetic T>
 constexpr auto max(vec<Dim, T> const& left, vec<Dim, T> const& right) -> vec<Dim, T>
 {
 	auto result = vec<Dim, T>();
-	for (auto i: iota(0uz, Dim))
+	for (auto i: ranges::iota_view(0uz, Dim))
 		result[i] = std::max(left[i], right[i]);
 	return result;
 }
@@ -393,7 +395,7 @@ template<usize Dim, std::floating_point T>
 constexpr auto abs(vec<Dim, T> const& v) -> vec<Dim, T>
 {
 	auto result = vec<Dim, T>{};
-	for (auto i: iota(0uz, Dim))
+	for (auto i: ranges::iota_view(0uz, Dim))
 		result[i] = abs(v[i]);
 	return result;
 }

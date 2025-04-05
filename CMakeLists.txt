@@ -32,7 +32,6 @@ add_executable(Playnote
 	src/util/except.hpp
 	src/util/logger.hpp
 	src/util/logger.cpp
-	src/util/ranges.hpp
 	src/util/types.hpp
 	src/util/math.hpp
 	src/util/time.hpp
