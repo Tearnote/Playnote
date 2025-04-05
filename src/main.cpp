@@ -1,15 +1,16 @@
+import playnote.util.math;
 import playnote.sys.window;
 import playnote.sys.os;
 
 #include <exception>
 #include <print>
 #include "util/logger.hpp"
-#include "util/math.hpp"
 #include "config.hpp"
 
 // Can't namespace main()
 using namespace playnote;
 using namespace std::chrono_literals; // Temporarily needed
+using util::uvec2;
 
 auto main(int, char*[]) -> int
 try {

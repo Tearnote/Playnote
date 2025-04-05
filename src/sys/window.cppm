@@ -8,11 +8,16 @@ module;
 #include "util/service.hpp"
 #include "util/except.hpp"
 #include "util/logger.hpp"
-#include "util/math.hpp"
 #include "util/time.hpp"
 
 export module playnote.sys.window;
+
+import playnote.util.math;
+
 namespace playnote::sys {
+
+using util::uvec2;
+using util::vec2;
 
 // RAII abstraction of a single application window, providing a drawing surface and input handling
 // Includes GLFW initialization, so only one can exist at a time

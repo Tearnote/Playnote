@@ -33,13 +33,13 @@ add_executable(Playnote
 	src/util/logger.hpp
 	src/util/logger.cpp
 	src/util/types.hpp
-	src/util/math.hpp
 	src/util/time.hpp
 	src/config.hpp
 	src/main.cpp
 )
 target_sources(Playnote PUBLIC
 	FILE_SET CXX_MODULES FILES
+	src/util/math.cppm
 	src/sys/window.cppm
 	src/sys/os.cppm
 )
