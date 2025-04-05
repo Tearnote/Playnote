@@ -41,6 +41,7 @@ target_sources(Playnote PUBLIC
 	src/util/service.cppm
 	src/util/logger.cppm
 	src/sys/window.cppm
+	src/sys/gpu.cppm
 	src/sys/os.cppm
 )
 

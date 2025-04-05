@@ -1,6 +1,7 @@
 import playnote.stx.math;
 import playnote.util.logger;
 import playnote.sys.window;
+import playnote.sys.gpu;
 import playnote.sys.os;
 
 #include <exception>
@@ -16,6 +17,7 @@ using stx::uvec2;
 using util::s_logger;
 using sys::s_window;
 using sys::s_glfw;
+using sys::s_gpu;
 
 auto main(int, char*[]) -> int
 try {
@@ -28,6 +30,7 @@ try {
 	auto scheduler_period = sys::SchedulerPeriod{1ms};
 	auto glfw = s_glfw.provide();
 	auto window = s_window.provide(AppTitle, uvec2(640, 480));
+	auto gpu = s_gpu.provide();
 
 	while (!s_window->is_closing())
 		s_glfw->poll();
