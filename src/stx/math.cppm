@@ -6,13 +6,15 @@ module;
 #include <numbers>
 #include <ranges>
 #include <array>
-#include "types.hpp"
 
 export module playnote.stx.math;
+
+import playnote.stx.types;
 
 namespace playnote::stx {
 
 namespace ranges = std::ranges;
+using stx::uint;
 
 // A built-in type with defined arithmetic operations (+, -, *, /)
 template<typename T>
