@@ -6,12 +6,12 @@ module;
 #include <numbers>
 #include <ranges>
 #include <array>
-#include "util/concepts.hpp"
-#include "util/types.hpp"
+#include "stx/concepts.hpp"
+#include "types.hpp"
 
-export module playnote.util.math;
+export module playnote.stx.math;
 
-namespace playnote::util {
+namespace playnote::stx {
 
 namespace ranges = std::ranges;
 

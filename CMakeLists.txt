@@ -27,18 +27,18 @@ include(cmake/Dependencies.cmake)
 ### Main target
 
 add_executable(Playnote
+	src/stx/concepts.hpp
+	src/stx/except.hpp
+	src/stx/types.hpp
 	src/util/log_macros.hpp
-	src/util/concepts.hpp
-	src/util/except.hpp
-	src/util/types.hpp
 	src/config.hpp
 	src/main.cpp
 )
 target_sources(Playnote PUBLIC
 	FILE_SET CXX_MODULES FILES
+	src/stx/math.cppm
 	src/util/service.cppm
 	src/util/logger.cppm
-	src/util/math.cppm
 	src/sys/window.cppm
 	src/sys/os.cppm
 )

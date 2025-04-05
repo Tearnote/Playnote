@@ -1,5 +1,5 @@
+import playnote.stx.math;
 import playnote.util.logger;
-import playnote.util.math;
 import playnote.sys.window;
 import playnote.sys.os;
 
@@ -12,7 +12,7 @@ import playnote.sys.os;
 // Can't namespace main()
 using namespace playnote;
 using namespace std::chrono_literals; // Temporarily needed
-using util::uvec2;
+using stx::uvec2;
 using util::s_logger;
 using sys::s_window;
 

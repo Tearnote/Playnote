@@ -6,19 +6,19 @@ module;
 #include "libassert/assert.hpp"
 #include "GLFW/glfw3.h"
 #include "util/log_macros.hpp"
-#include "util/except.hpp"
+#include "../stx/except.hpp"
 
 export module playnote.sys.window;
 
+import playnote.stx.math;
 import playnote.util.service;
-import playnote.util.math;
 
 namespace playnote::sys {
 
 namespace chrono = std::chrono;
 using chrono::duration_cast;
-using util::uvec2;
-using util::vec2;
+using stx::uvec2;
+using stx::vec2;
 
 // RAII abstraction of a single application window, providing a drawing surface and input handling
 // Includes GLFW initialization, so only one can exist at a time
