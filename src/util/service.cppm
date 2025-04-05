@@ -1,11 +1,13 @@
-#ifndef PLAYNOTE_UTIL_SERVICE_H
-#define PLAYNOTE_UTIL_SERVICE_H
-
+module;
 #include <utility>
 #include "libassert/assert.hpp"
 
+export module playnote.util.service;
+
+namespace playnote::util {
+
 // Wrapper for providing globally available scoped access to a class instance; singleton on steroids
-template<typename T>
+export template<typename T>
 class Service {
 	class Stub;
 
@@ -49,7 +51,7 @@ private:
 		T* prevInstance;
 	};
 
-	T* handle = nullptr;
+	T* handle{nullptr};
 };
 
-#endif
+}

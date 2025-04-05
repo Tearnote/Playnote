@@ -5,10 +5,11 @@ module;
 #include "quill/Frontend.h"
 #include "quill/Backend.h"
 #include "quill/Logger.h"
-#include "util/service.hpp"
 #include "config.hpp"
 
 export module playnote.util.logger;
+
+import playnote.util.service;
 
 namespace playnote::util {
 
@@ -43,6 +44,6 @@ Logger::Logger()
 	logger->set_log_level(LoggingLevel);
 }
 
-export auto s_logger = Service<Logger>{};
+export auto s_logger = util::Service<Logger>{};
 
 }

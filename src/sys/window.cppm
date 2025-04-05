@@ -6,11 +6,11 @@ module;
 #include "libassert/assert.hpp"
 #include "GLFW/glfw3.h"
 #include "util/log_macros.hpp"
-#include "util/service.hpp"
 #include "util/except.hpp"
 
 export module playnote.sys.window;
 
+import playnote.util.service;
 import playnote.util.math;
 
 namespace playnote::sys {
@@ -158,6 +158,6 @@ auto Window::get_time() const -> chrono::nanoseconds
 	return duration_cast<chrono::nanoseconds>(time);
 }
 
-export auto s_window = Service<Window>();
+export auto s_window = util::Service<Window>();
 
 }
