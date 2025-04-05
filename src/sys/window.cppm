@@ -8,7 +8,6 @@ module;
 #include "util/service.hpp"
 #include "util/except.hpp"
 #include "util/logger.hpp"
-#include "util/time.hpp"
 
 export module playnote.sys.window;
 
@@ -16,6 +15,8 @@ import playnote.util.math;
 
 namespace playnote::sys {
 
+namespace chrono = std::chrono;
+using chrono::duration_cast;
 using util::uvec2;
 using util::vec2;
 
@@ -35,7 +36,7 @@ public:
 	void poll() { glfwPollEvents(); }
 	[[nodiscard]] auto size() const -> uvec2;
 	[[nodiscard]] auto get_cursor_position() const -> vec2;
-	[[nodiscard]] auto get_time() const -> nanoseconds;
+	[[nodiscard]] auto get_time() const -> chrono::nanoseconds;
 
 	void registerKeyCallback(std::function<void(int, bool)> func)
 	{
@@ -151,10 +152,10 @@ auto Window::get_cursor_position() const -> vec2
 	return vec2{static_cast<float>(x), static_cast<float>(y)};
 }
 
-auto Window::get_time() const -> nanoseconds
+auto Window::get_time() const -> chrono::nanoseconds
 {
 	auto time = std::chrono::duration<double>{glfwGetTime()};
-	return duration_cast<nanoseconds>(time);
+	return duration_cast<chrono::nanoseconds>(time);
 }
 
 export auto s_window = Service<Window>();

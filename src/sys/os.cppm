@@ -1,6 +1,6 @@
 module;
 #include <string_view>
-#include "util/time.hpp"
+#include <chrono>
 #include "config.hpp"
 
 #if TARGET == TARGET_WINDOWS
@@ -26,11 +26,14 @@ export module playnote.sys.os;
 
 namespace playnote::sys {
 
+namespace chrono = std::chrono;
+using namespace std::chrono_literals;
+
 // Sets the system thread scheduler period for the lifetime of the instance
 // This decreases the minimum possible duration of thread sleep
 export class SchedulerPeriod {
 public:
-	explicit SchedulerPeriod(nanoseconds period);
+	explicit SchedulerPeriod(chrono::nanoseconds period);
 	~SchedulerPeriod();
 
 	SchedulerPeriod(SchedulerPeriod&& other) noexcept { *this = std::move(other); }
@@ -39,10 +42,10 @@ public:
 	auto operator=(SchedulerPeriod const&) -> SchedulerPeriod& = delete;
 
 private:
-	nanoseconds period{};
+	chrono::nanoseconds period{};
 };
 
-SchedulerPeriod::SchedulerPeriod(nanoseconds period):
+SchedulerPeriod::SchedulerPeriod(chrono::nanoseconds period):
 	period{period}
 {
 #if TARGET == TARGET_WINDOWS

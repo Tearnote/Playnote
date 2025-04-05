@@ -33,7 +33,6 @@ add_executable(Playnote
 	src/util/logger.hpp
 	src/util/logger.cpp
 	src/util/types.hpp
-	src/util/time.hpp
 	src/config.hpp
 	src/main.cpp
 )
