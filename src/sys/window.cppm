@@ -22,6 +22,7 @@ using stx::uvec2;
 using stx::vec2;
 
 // RAII abstraction for GLFW library initialization
+// Requires services: logger
 class GLFW {
 public:
 	GLFW();
@@ -38,6 +39,7 @@ public:
 
 // RAII abstraction of a single application window, providing a drawing surface and input handling
 // Includes GLFW initialization, so only one can exist at a time
+// Requires services: logger, glfw
 class Window {
 public:
 	Window(std::string_view title, uvec2 size);
