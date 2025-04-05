@@ -38,10 +38,12 @@ add_executable(Playnote
 	src/util/time.hpp
 	src/sys/window.cpp
 	src/sys/window.hpp
-	src/sys/os.hpp
-	src/sys/os.cpp
 	src/config.hpp
 	src/main.cpp
+)
+target_sources(Playnote PUBLIC
+	FILE_SET CXX_MODULES FILES
+	src/sys/os.cppm
 )
 
 target_include_directories(Playnote PRIVATE src) # All includes start from src as root

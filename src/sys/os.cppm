@@ -1,6 +1,7 @@
-#include "sys/os.hpp"
+module;
 
 #include <string_view>
+#include "util/time.hpp"
 #include "config.hpp"
 
 #if TARGET == TARGET_WINDOWS
@@ -22,6 +23,26 @@
 #include <pthread.h>
 #endif
 
+export module playnote.sys.os;
+
+namespace playnote::sys {
+
+// Sets the system thread scheduler period for the lifetime of the instance
+// This decreases the minimum possible duration of thread sleep
+export class SchedulerPeriod {
+public:
+	explicit SchedulerPeriod(nanoseconds period);
+	~SchedulerPeriod();
+
+	SchedulerPeriod(SchedulerPeriod&& other) noexcept { *this = std::move(other); }
+	auto operator=(SchedulerPeriod&& other) noexcept -> SchedulerPeriod&;
+	SchedulerPeriod(SchedulerPeriod const&) = delete;
+	auto operator=(SchedulerPeriod const&) -> SchedulerPeriod& = delete;
+
+private:
+	nanoseconds period{};
+};
+
 SchedulerPeriod::SchedulerPeriod(nanoseconds period):
 	period{period}
 {
@@ -33,13 +54,21 @@ SchedulerPeriod::SchedulerPeriod(nanoseconds period):
 
 SchedulerPeriod::~SchedulerPeriod()
 {
-#if TARGET == TARGET_WINDOWS
 	if (period == -1ns) return;
+#if TARGET == TARGET_WINDOWS
 	timeEndPeriod(duration_cast<milliseconds>(period).count());
 #endif
 }
 
-void set_thread_name(std::string_view name)
+auto SchedulerPeriod::operator=(SchedulerPeriod&& other) noexcept -> SchedulerPeriod&
+{
+	period = other.period;
+	other.period = -1ns;
+	return *this;
+}
+
+// Name the current thread
+export void set_thread_name(std::string_view name)
 {
 #ifdef THREAD_DEBUG
 #if TARGET == TARGET_WINDOWS
@@ -54,8 +83,9 @@ void set_thread_name(std::string_view name)
 #endif
 }
 
+// Open the console window and attach standard outputs to it
 // https://github.com/ocaml/ocaml/issues/9252#issuecomment-576383814
-void create_console()
+export void create_console()
 {
 #if TARGET == TARGET_WINDOWS
 	AllocConsole();
@@ -93,4 +123,6 @@ void create_console()
 	mode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
 	SetConsoleMode(out, mode);
 #endif
+}
+
 }
