@@ -1,5 +1,4 @@
 module;
-
 #include <string_view>
 #include "util/time.hpp"
 #include "config.hpp"
@@ -24,7 +23,6 @@ module;
 #endif
 
 export module playnote.sys.os;
-
 namespace playnote::sys {
 
 // Sets the system thread scheduler period for the lifetime of the instance
