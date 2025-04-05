@@ -22,7 +22,7 @@ using stx::vec2;
 
 // RAII abstraction of a single application window, providing a drawing surface and input handling
 // Includes GLFW initialization, so only one can exist at a time
-export class Window {
+class Window {
 public:
 	Window(std::string const& title, uvec2 size);
 	~Window();

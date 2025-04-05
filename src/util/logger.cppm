@@ -15,7 +15,7 @@ namespace playnote::util {
 
 // Wrapper for the Quill threaded async logging library
 // After the service is available, use via log_macros.hpp
-export class Logger {
+class Logger {
 public:
 	Logger();
 	[[nodiscard]] auto get() -> quill::Logger* { return logger; }
