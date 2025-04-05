@@ -12,6 +12,8 @@ namespace playnote::util {
 export template<typename T, stx::callable<void(T&)> Func>
 class RAIIResource {
 public:
+	using Inner = T;
+
 	RAIIResource() = default;
 	RAIIResource(T const& resource): resource(resource) {}
 	~RAIIResource() { if (resource) std::invoke(Func{}, *resource); }
@@ -20,8 +22,8 @@ public:
 	auto get() const -> T const& { return resource.value(); }
 	auto operator*() -> T& { return get(); }
 	auto operator*() const -> T const& { return get(); }
-	auto operator->() -> T& { return get(); }
-	auto operator->() const -> T const& { return get(); }
+	auto operator->() -> T* { return &get(); }
+	auto operator->() const -> T const* { return &get(); }
 
 	RAIIResource(RAIIResource const&) = delete;
 	auto operator=(RAIIResource const&) -> RAIIResource& = delete;
