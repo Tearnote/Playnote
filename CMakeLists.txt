@@ -33,9 +33,11 @@ add_executable(Playnote
 )
 target_sources(Playnote PUBLIC
 	FILE_SET CXX_MODULES FILES
+	src/stx/callable.cppm
 	src/stx/except.cppm
 	src/stx/types.cppm
 	src/stx/math.cppm
+	src/util/raii.cppm
 	src/util/service.cppm
 	src/util/logger.cppm
 	src/sys/window.cppm
