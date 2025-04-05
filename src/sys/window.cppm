@@ -2,7 +2,6 @@ module;
 #include <functional>
 #include <utility>
 #include <vector>
-#include <memory>
 #include "libassert/assert.hpp"
 #include "GLFW/glfw3.h"
 #include "util/log_macros.hpp"
@@ -12,6 +11,7 @@ export module playnote.sys.window;
 import playnote.stx.except;
 import playnote.stx.math;
 import playnote.util.service;
+import playnote.util.raii;
 
 namespace playnote::sys {
 namespace chrono = std::chrono;
@@ -39,44 +39,44 @@ public:
 class Window {
 public:
 	Window(std::string const& title, uvec2 size);
-	~Window();
+
+	[[nodiscard]] auto is_closing() const -> bool { return glfwWindowShouldClose(*window_handle); }
+	[[nodiscard]] auto size() const -> uvec2;
+	[[nodiscard]] auto get_cursor_position() const -> vec2;
+
+	void register_key_callback(std::function<void(int, bool)> func)
+	{
+		key_callbacks.emplace_back(std::move(func));
+	}
+
+	void register_cursor_motion_callback(std::function<void(vec2)> func)
+	{
+		cursor_motion_callbacks.emplace_back(std::move(func));
+	}
+
+	void register_mouse_button_callback(std::function<void(int, bool)> func)
+	{
+		mouse_button_callbacks.emplace_back(std::move(func));
+	}
+
+	auto handle() -> GLFWwindow* { return *window_handle; }
 
 	Window(Window const&) = delete;
 	auto operator=(Window const&) -> Window& = delete;
 	Window(Window&&) = delete;
 	auto operator=(Window&&) -> Window& = delete;
 
-	[[nodiscard]] auto is_closing() const -> bool { return glfwWindowShouldClose(windowPtr.get()); }
-	[[nodiscard]] auto size() const -> uvec2;
-	[[nodiscard]] auto get_cursor_position() const -> vec2;
-
-	void register_key_callback(std::function<void(int, bool)> func)
-	{
-		keyCallbacks.emplace_back(std::move(func));
-	}
-
-	void register_cursor_motion_callback(std::function<void(vec2)> func)
-	{
-		cursorMotionCallbacks.emplace_back(std::move(func));
-	}
-
-	void register_mouse_button_callback(std::function<void(int, bool)> func)
-	{
-		mouseButtonCallbacks.emplace_back(std::move(func));
-	}
-
-	auto handle() -> GLFWwindow* { return windowPtr.get(); }
-
 private:
-	using GlfwWindowPtr = std::unique_ptr<GLFWwindow, decltype([](auto* w) {
+	using WindowHandle = util::RAIIResource<GLFWwindow*, decltype([](auto* w) {
 		glfwDestroyWindow(w);
+		L_INFO("Window closed");
 	})>;
 
-	GlfwWindowPtr windowPtr;
+	WindowHandle window_handle;
 
-	std::vector<std::function<void(int, bool)>> keyCallbacks;
-	std::vector<std::function<void(vec2)>> cursorMotionCallbacks;
-	std::vector<std::function<void(int, bool)>> mouseButtonCallbacks;
+	std::vector<std::function<void(int, bool)>> key_callbacks;
+	std::vector<std::function<void(vec2)>> cursor_motion_callbacks;
+	std::vector<std::function<void(int, bool)>> mouse_button_callbacks;
 };
 
 GLFW::GLFW()
@@ -108,34 +108,31 @@ Window::Window(std::string const& title, uvec2 size)
 	// Create the window
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-	windowPtr =
-		GlfwWindowPtr{glfwCreateWindow(size.x(), size.y(), title.c_str(), nullptr, nullptr)};
-	ASSERT(windowPtr);
+	window_handle = WindowHandle{
+		glfwCreateWindow(size.x(), size.y(), title.c_str(), nullptr, nullptr)
+	};
+	ASSERT(*window_handle);
 
 	// Set up event callbacks
-	glfwSetWindowUserPointer(windowPtr.get(), this);
+	glfwSetWindowUserPointer(*window_handle, this);
 
-	glfwSetKeyCallback(windowPtr.get(),
-		[](GLFWwindow* windowPtr, int key, int, int action, int) {
-			if (action == GLFW_REPEAT) return;
-			auto& window = *static_cast<Window*>(glfwGetWindowUserPointer(windowPtr));
-			for (auto& func: window.keyCallbacks)
-				func(key, action == GLFW_PRESS);
-		}
-	);
+	glfwSetKeyCallback(*window_handle, [](GLFWwindow* window_ptr, int key, int, int action, int) {
+		if (action == GLFW_REPEAT) return;
+		auto& window = *static_cast<Window*>(glfwGetWindowUserPointer(window_ptr));
+		for (auto& func: window.key_callbacks)
+			func(key, action == GLFW_PRESS);
+	});
 
-	glfwSetCursorPosCallback(windowPtr.get(),
-		[](GLFWwindow* windowPtr, double x, double y) {
-			auto& window = *static_cast<Window*>(glfwGetWindowUserPointer(windowPtr));
-			for (auto& func: window.cursorMotionCallbacks)
-				func(vec2(x, y));
-		}
-	);
+	glfwSetCursorPosCallback(*window_handle, [](GLFWwindow* window_ptr, double x, double y) {
+		auto& window = *static_cast<Window*>(glfwGetWindowUserPointer(window_ptr));
+		for (auto& func: window.cursor_motion_callbacks)
+			func(vec2{static_cast<float>(x), static_cast<float>(y)});
+	});
 
-	glfwSetMouseButtonCallback(windowPtr.get(),
-		[](GLFWwindow* windowPtr, int button, int action, int) {
-			auto& window = *static_cast<Window*>(glfwGetWindowUserPointer(windowPtr));
-			for (auto& func: window.mouseButtonCallbacks)
+	glfwSetMouseButtonCallback(*window_handle,
+		[](GLFWwindow* window_ptr, int button, int action, int) {
+			auto& window = *static_cast<Window*>(glfwGetWindowUserPointer(window_ptr));
+			for (auto& func: window.mouse_button_callbacks)
 				func(button, action == GLFW_PRESS);
 		}
 	);
@@ -143,24 +140,17 @@ Window::Window(std::string const& title, uvec2 size)
 	// Quit on ESC
 	register_key_callback([this](int key, bool) {
 		if (key == GLFW_KEY_ESCAPE)
-			glfwSetWindowShouldClose(windowPtr.get(), GLFW_TRUE);
+			glfwSetWindowShouldClose(*window_handle, GLFW_TRUE);
 	});
 
 	L_INFO("Created window \"{}\" at {}x{}", title, size.x(), size.y());
-}
-
-Window::~Window()
-{
-	if (!windowPtr) return;
-	windowPtr.reset();
-	L_INFO("Window closed");
 }
 
 auto Window::size() const -> uvec2
 {
 	auto w = 0;
 	auto h = 0;
-	glfwGetFramebufferSize(windowPtr.get(), &w, &h);
+	glfwGetFramebufferSize(*window_handle, &w, &h);
 	return uvec2{static_cast<uint>(w), static_cast<uint>(h)};
 }
 
@@ -168,7 +158,7 @@ auto Window::get_cursor_position() const -> vec2
 {
 	auto x = 0.0;
 	auto y = 0.0;
-	glfwGetCursorPos(windowPtr.get(), &x, &y);
+	glfwGetCursorPos(*window_handle, &x, &y);
 	return vec2{static_cast<float>(x), static_cast<float>(y)};
 }
 
