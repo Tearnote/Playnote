@@ -1,12 +1,18 @@
 module;
+#include <optional>
 #include <utility>
 #include <memory>
 #include <vector>
+#include <ranges>
+#include <span>
 #include "libassert/assert.hpp"
 #include "volk.h"
 #include "VkBootstrap.h"
+#include "vuk/runtime/vk/DeviceFrameResource.hpp"
 #include "vuk/runtime/vk/VkRuntime.hpp"
+#include "vuk/runtime/vk/Image.hpp"
 #include "vuk/runtime/ThisThreadExecutor.hpp"
+#include "vuk/ImageAttachment.hpp"
 #include "vuk/Executor.hpp"
 #include "vuk/Types.hpp"
 #include "util/log_macros.hpp"
@@ -16,17 +22,22 @@ export module playnote.sys.gpu;
 
 import playnote.stx.except;
 import playnote.stx.types;
+import playnote.stx.math;
 import playnote.util.service;
 import playnote.util.raii;
 import playnote.sys.window;
 
 namespace playnote::sys {
 
+namespace ranges = std::ranges;
 using stx::uint;
+using stx::uvec2;
 using sys::s_window;
 
 class GPU {
 public:
+	static constexpr auto FramesInFlight = 2u;
+
 	GPU();
 
 private:
@@ -49,6 +60,7 @@ private:
 		vkb::destroy_device(d);
 		L_DEBUG("Vulkan device cleaned up");
 	})>;
+
 	struct Queues {
 		VkQueue graphics;
 		uint graphics_family_index;
@@ -69,12 +81,16 @@ private:
 	static auto create_device(vkb::PhysicalDevice&) -> Device;
 	static auto retrieve_queues(vkb::Device&) -> Queues;
 	static auto create_runtime(VkInstance, VkPhysicalDevice, VkDevice, Queues const&) -> vuk::Runtime;
+	static auto create_swapchain(uvec2 size, vuk::Allocator&, vkb::Device&, Surface&, std::optional<vuk::Swapchain> old = std::nullopt) -> vuk::Swapchain;
 
 	Instance instance{};
 	Surface surface{};
 	vkb::PhysicalDevice physical_device{};
 	Device device{};
 	vuk::Runtime runtime;
+	vuk::DeviceSuperFrameResource global_resource;
+	vuk::Allocator global_allocator;
+	vuk::Swapchain swapchain;
 };
 
 GPU::GPU():
@@ -82,7 +98,10 @@ GPU::GPU():
 	surface{create_surface(*instance)},
 	physical_device{select_physical_device(*instance, *surface)},
 	device{create_device(physical_device)},
-	runtime{create_runtime(*instance, physical_device, *device, retrieve_queues(*device))}
+	runtime{create_runtime(*instance, physical_device, *device, retrieve_queues(*device))},
+	global_resource{vuk::DeviceSuperFrameResource{runtime, FramesInFlight}},
+	global_allocator{vuk::Allocator{global_resource}},
+	swapchain{create_swapchain(s_window->size(), global_allocator, *device, surface)}
 {
 	L_INFO("Vulkan initialized");
 }
@@ -243,26 +262,27 @@ auto GPU::retrieve_queues(vkb::Device& device) -> Queues
 	result.graphics = device.get_queue(vkb::QueueType::graphics).value();
 	result.graphics_family_index = device.get_queue_index(vkb::QueueType::graphics).value();
 
-	auto transferQueuePresent = device.get_dedicated_queue(vkb::QueueType::transfer).has_value();
-	result.transfer = transferQueuePresent?
+	auto transfer_queue_present = device.get_dedicated_queue(vkb::QueueType::transfer).has_value();
+	result.transfer = transfer_queue_present?
 		device.get_dedicated_queue(vkb::QueueType::transfer).value() :
 		VK_NULL_HANDLE;
-	result.transfer_family_index = transferQueuePresent?
+	result.transfer_family_index = transfer_queue_present?
 		device.get_dedicated_queue_index(vkb::QueueType::transfer).value() :
 		VK_QUEUE_FAMILY_IGNORED;
 
-	auto computeQueuePresent = device.get_dedicated_queue(vkb::QueueType::compute).has_value();
-	result.compute = computeQueuePresent?
+	auto compute_queue_present = device.get_dedicated_queue(vkb::QueueType::compute).has_value();
+	result.compute = compute_queue_present?
 		device.get_dedicated_queue(vkb::QueueType::compute).value() :
 		VK_NULL_HANDLE;
-	result.compute_family_index = computeQueuePresent?
+	result.compute_family_index = compute_queue_present?
 		device.get_dedicated_queue_index(vkb::QueueType::compute).value() :
 		VK_QUEUE_FAMILY_IGNORED;
 
 	return result;
 }
 
-auto GPU::create_runtime(VkInstance instance, VkPhysicalDevice physical_device, VkDevice device, Queues const& queues) -> vuk::Runtime
+auto GPU::create_runtime(VkInstance instance, VkPhysicalDevice physical_device, VkDevice device,
+	Queues const& queues) -> vuk::Runtime
 {
 	auto pointers = vuk::FunctionPointers{
 		vkGetInstanceProcAddr,
@@ -276,11 +296,16 @@ auto GPU::create_runtime(VkInstance instance, VkPhysicalDevice physical_device, 
 	auto executors = std::vector<std::unique_ptr<vuk::Executor>>{};
 	executors.reserve(4);
 	executors.emplace_back(std::make_unique<vuk::ThisThreadExecutor>());
-	executors.emplace_back(vuk::create_vkqueue_executor(pointers, device, queues.graphics, queues.graphics_family_index, vuk::DomainFlagBits::eGraphicsQueue));
-	if (queues.compute)
-		executors.emplace_back(vuk::create_vkqueue_executor(pointers, device, queues.compute, queues.compute_family_index, vuk::DomainFlagBits::eComputeQueue));
-	if (queues.transfer)
-		executors.emplace_back(vuk::create_vkqueue_executor(pointers, device, queues.transfer, queues.transfer_family_index, vuk::DomainFlagBits::eTransferQueue));
+	executors.emplace_back(vuk::create_vkqueue_executor(pointers, device, queues.graphics,
+		queues.graphics_family_index, vuk::DomainFlagBits::eGraphicsQueue));
+	if (queues.compute) {
+		executors.emplace_back(vuk::create_vkqueue_executor(pointers, device, queues.compute,
+			queues.compute_family_index, vuk::DomainFlagBits::eComputeQueue));
+	}
+	if (queues.transfer) {
+		executors.emplace_back(vuk::create_vkqueue_executor(pointers, device, queues.transfer,
+			queues.transfer_family_index, vuk::DomainFlagBits::eTransferQueue));
+	}
 
 	return vuk::Runtime{vuk::RuntimeCreateParameters{
 		.instance = instance,
@@ -289,6 +314,58 @@ auto GPU::create_runtime(VkInstance instance, VkPhysicalDevice physical_device, 
 		.executors = std::move(executors),
 		.pointers = pointers,
 	}};
+}
+
+auto GPU::create_swapchain(uvec2 size, vuk::Allocator& allocator, vkb::Device& device, Surface& surface, std::optional<vuk::Swapchain> old) -> vuk::Swapchain
+{
+	auto vkbswapchain_result = vkb::SwapchainBuilder{device}
+		.set_old_swapchain(old? old->swapchain : VK_NULL_HANDLE)
+		.set_desired_extent(size.x(), size.y())
+		.set_desired_format({
+			.format = VK_FORMAT_R8G8B8A8_UNORM,
+			.colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR,
+		})
+		.add_fallback_format({
+			.format = VK_FORMAT_B8G8R8A8_UNORM,
+			.colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR,
+		})
+		.set_image_usage_flags(
+			VK_IMAGE_USAGE_TRANSFER_DST_BIT |
+			VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
+		)
+		.build();
+	if (!vkbswapchain_result)
+		throw stx::runtime_error_fmt("Failed to create the swapchain: {}", vkbswapchain_result.error().message());
+	auto vkbswapchain = vkbswapchain_result.value();
+
+	if (old) {
+		allocator.deallocate(std::span{&old->swapchain, 1});
+		for (auto& image: old->images)
+			allocator.deallocate(std::span{&image.image_view, 1});
+	}
+
+	auto swapchain = vuk::Swapchain{allocator, vkbswapchain.image_count};
+
+	for(auto [image, view]: ranges::zip_view{*vkbswapchain.get_images(), *vkbswapchain.get_image_views()}) {
+		swapchain.images.emplace_back(vuk::ImageAttachment{
+			.image = vuk::Image{image, nullptr},
+			.image_view = vuk::ImageView{{0}, view},
+			.extent = {vkbswapchain.extent.width, vkbswapchain.extent.height, 1},
+			.format = static_cast<vuk::Format>(vkbswapchain.image_format),
+			.sample_count = vuk::Samples::e1,
+			.view_type = vuk::ImageViewType::e2D,
+			.base_level = 0,
+			.level_count = 1,
+			.base_layer = 0,
+			.layer_count = 1,
+		});
+	}
+
+	swapchain.swapchain = vkbswapchain.swapchain;
+	swapchain.surface = *surface;
+	L_DEBUG("Swapchain (re)created at {}x{}", size.x(), size.y());
+
+	return std::move(swapchain);
 }
 
 export auto s_gpu = util::Service<GPU>{};
