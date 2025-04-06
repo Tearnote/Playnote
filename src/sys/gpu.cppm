@@ -47,6 +47,7 @@ private:
 #endif
 	auto create_instance() -> Instance;
 	auto create_surface(vkb::Instance&) -> Surface;
+	auto select_physical_device(vkb::Instance&, VkSurfaceKHR) -> vkb::PhysicalDevice;
 
 	Instance instance{};
 	Surface surface{};
@@ -56,8 +57,8 @@ private:
 
 GPU::GPU():
 	instance{create_instance()},
-	surface{create_surface(*instance)}
-//	physical_device{select_physical_device(*instance, surface)},
+	surface{create_surface(*instance)},
+	physical_device{select_physical_device(*instance, *surface)}
 //	device{create_device(physical_device)}
 {
 	L_INFO("Vulkan initialized");
@@ -138,6 +139,65 @@ auto GPU::create_surface(vkb::Instance& instance) -> Surface
 		.surface = s_window->create_surface(instance),
 		.instance = instance,
 	};
+}
+
+auto GPU::select_physical_device(vkb::Instance& instance,
+	VkSurfaceKHR surface) -> vkb::PhysicalDevice
+{
+	auto physical_device_features = VkPhysicalDeviceFeatures{
+#ifdef VK_VALIDATION
+		.robustBufferAccess = VK_TRUE,
+		.shaderInt64 = VK_TRUE,
+#endif //VK_VALIDATION
+	};
+	auto physical_device_vulkan11_features = VkPhysicalDeviceVulkan11Features{
+		.shaderDrawParameters = VK_TRUE,
+	};
+	auto physical_device_vulkan12_features = VkPhysicalDeviceVulkan12Features{
+		.descriptorIndexing = VK_TRUE,
+		.shaderSampledImageArrayNonUniformIndexing = VK_TRUE,
+		.descriptorBindingUpdateUnusedWhilePending = VK_TRUE,
+		.descriptorBindingPartiallyBound = VK_TRUE,
+		.descriptorBindingVariableDescriptorCount = VK_TRUE,
+		.runtimeDescriptorArray = VK_TRUE,
+		.hostQueryReset = VK_TRUE,
+		.timelineSemaphore = VK_TRUE,
+		.bufferDeviceAddress = VK_TRUE,
+		.vulkanMemoryModel = VK_TRUE,
+		.vulkanMemoryModelDeviceScope = VK_TRUE,
+		.shaderOutputLayer = VK_TRUE,
+	};
+
+	auto physical_device_selector_result = vkb::PhysicalDeviceSelector(instance)
+		.set_surface(surface)
+		.set_minimum_version(1, 2)
+		.set_required_features(physical_device_features)
+		.set_required_features_11(physical_device_vulkan11_features)
+		.set_required_features_12(physical_device_vulkan12_features)
+		.add_required_extension(VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME)
+#ifdef VK_VALIDATION
+		.add_required_extension(VK_EXT_ROBUSTNESS_2_EXTENSION_NAME)
+		.add_required_extension_features(VkPhysicalDeviceRobustness2FeaturesEXT{
+			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ROBUSTNESS_2_FEATURES_EXT,
+			.robustBufferAccess2 = VK_TRUE,
+			.robustImageAccess2 = VK_TRUE,
+		})
+#endif //VK_VALIDATION
+		.select();
+	if (!physical_device_selector_result) {
+		throw stx::runtime_error_fmt("Failed to find a suitable GPU for Vulkan: {}",
+			physical_device_selector_result.error().message());
+	}
+	auto physical_device = physical_device_selector_result.value();
+	physical_device.enable_extension_if_present(VK_EXT_CALIBRATED_TIMESTAMPS_EXTENSION_NAME);
+	physical_device.enable_extension_if_present(VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME);
+
+	L_INFO("GPU selected: {}", physical_device.properties.deviceName);
+	L_DEBUG("Vulkan driver version {}.{}.{}",
+		VK_API_VERSION_MAJOR(physical_device.properties.driverVersion),
+		VK_API_VERSION_MINOR(physical_device.properties.driverVersion),
+		VK_API_VERSION_PATCH(physical_device.properties.driverVersion));
+	return physical_device;
 }
 
 export auto s_gpu = util::Service<GPU>{};
