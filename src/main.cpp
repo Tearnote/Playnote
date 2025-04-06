@@ -25,8 +25,10 @@ try {
 	auto window = s_window.provide(AppTitle, uvec2{640, 480});
 	auto gpu = s_gpu.provide();
 
-	while (!s_window->is_closing())
+	while (!s_window->is_closing()) {
 		s_glfw->poll();
+		s_gpu->next_frame();
+	}
 
 	return EXIT_SUCCESS;
 }

@@ -39,6 +39,14 @@ public:
 	static constexpr auto FramesInFlight = 2u;
 
 	GPU();
+	~GPU() { runtime.wait_idle(); }
+
+	void next_frame() { runtime.next_frame(); }
+
+	GPU(GPU const&) = delete;
+	auto operator=(GPU const&) -> GPU& = delete;
+	GPU(GPU&&) = delete;
+	auto operator=(GPU&&) -> GPU& = delete;
 
 private:
 	using Instance = util::RAIIResource<vkb::Instance, decltype([](auto& i) {
