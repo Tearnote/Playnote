@@ -247,6 +247,10 @@ auto GPU::select_physical_device(vkb::Instance& instance,
 		.set_required_features_11(physical_device_vulkan11_features)
 		.set_required_features_12(physical_device_vulkan12_features)
 		.add_required_extension(VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME)
+		.add_required_extension_features(VkPhysicalDeviceSynchronization2FeaturesKHR{
+			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES_KHR,
+			.synchronization2 = VK_TRUE,
+		})
 #ifdef VK_VALIDATION
 		.add_required_extension(VK_EXT_ROBUSTNESS_2_EXTENSION_NAME)
 		.add_required_extension_features(VkPhysicalDeviceRobustness2FeaturesEXT{
