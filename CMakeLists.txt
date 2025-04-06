@@ -43,6 +43,7 @@ target_sources(Playnote PUBLIC
 	src/sys/window.cppm
 	src/sys/gpu.cppm
 	src/sys/os.cppm
+	src/gfx/renderer.cppm
 )
 
 target_include_directories(Playnote PRIVATE src) # All includes start from src as root

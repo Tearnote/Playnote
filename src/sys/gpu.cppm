@@ -41,7 +41,7 @@ public:
 	GPU();
 	~GPU() { runtime.wait_idle(); }
 
-	void next_frame() { runtime.next_frame(); }
+	auto begin_frame() -> vuk::Allocator;
 
 	GPU(GPU const&) = delete;
 	auto operator=(GPU const&) -> GPU& = delete;
@@ -112,6 +112,13 @@ GPU::GPU():
 	swapchain{create_swapchain(s_window->size(), global_allocator, *device, surface)}
 {
 	L_INFO("Vulkan initialized");
+}
+
+auto GPU::begin_frame() -> vuk::Allocator
+{
+	auto& frame_resource = global_resource.get_next_frame();
+	runtime.next_frame();
+	return vuk::Allocator{frame_resource};
 }
 
 #ifdef VK_VALIDATION

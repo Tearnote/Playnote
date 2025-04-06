@@ -3,6 +3,7 @@ import playnote.util.logger;
 import playnote.sys.window;
 import playnote.sys.gpu;
 import playnote.sys.os;
+import playnote.gfx.renderer;
 
 #include <exception>
 #include <chrono>
@@ -14,6 +15,7 @@ using namespace playnote; // Can't namespace main()
 using namespace std::chrono_literals;
 using stx::uvec2;
 using util::s_logger;
+using gfx::s_renderer;
 using sys::s_window;
 using sys::s_glfw;
 using sys::s_gpu;
@@ -24,10 +26,11 @@ try {
 	auto glfw = s_glfw.provide();
 	auto window = s_window.provide(AppTitle, uvec2{640, 480});
 	auto gpu = s_gpu.provide();
+	auto renderer = s_renderer.provide();
 
 	while (!s_window->is_closing()) {
 		s_glfw->poll();
-		s_gpu->next_frame();
+		s_renderer->draw();
 	}
 
 	return EXIT_SUCCESS;
