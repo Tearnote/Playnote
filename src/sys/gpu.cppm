@@ -35,9 +35,11 @@ private:
 
 	using Surface = util::RAIIResource<Surface_impl, decltype([](auto& s) {
 		vkDestroySurfaceKHR(s.instance, s.surface, nullptr);
+		L_DEBUG("Vulkan surface cleaned up");
 	})>;
 	using Device = util::RAIIResource<vkb::Device, decltype([](auto& d) {
 		vkb::destroy_device(d);
+		L_DEBUG("Vulkan device cleaned up");
 	})>;
 
 #ifdef VK_VALIDATION
@@ -45,9 +47,10 @@ private:
 		VkDebugUtilsMessageTypeFlagsEXT, VkDebugUtilsMessengerCallbackDataEXT const*,
 		void*) -> VkBool32;
 #endif
-	auto create_instance() -> Instance;
-	auto create_surface(vkb::Instance&) -> Surface;
-	auto select_physical_device(vkb::Instance&, VkSurfaceKHR) -> vkb::PhysicalDevice;
+	static auto create_instance() -> Instance;
+	static auto create_surface(vkb::Instance&) -> Surface;
+	static auto select_physical_device(vkb::Instance&, VkSurfaceKHR) -> vkb::PhysicalDevice;
+	static auto create_device(vkb::PhysicalDevice&) -> Device;
 
 	Instance instance{};
 	Surface surface{};
@@ -58,8 +61,8 @@ private:
 GPU::GPU():
 	instance{create_instance()},
 	surface{create_surface(*instance)},
-	physical_device{select_physical_device(*instance, *surface)}
-//	device{create_device(physical_device)}
+	physical_device{select_physical_device(*instance, *surface)},
+	device{create_device(physical_device)}
 {
 	L_INFO("Vulkan initialized");
 }
@@ -198,6 +201,19 @@ auto GPU::select_physical_device(vkb::Instance& instance,
 		VK_API_VERSION_MINOR(physical_device.properties.driverVersion),
 		VK_API_VERSION_PATCH(physical_device.properties.driverVersion));
 	return physical_device;
+}
+
+auto GPU::create_device(vkb::PhysicalDevice& physical_device) -> Device
+{
+	auto device_result = vkb::DeviceBuilder(physical_device).build();
+	if (!device_result)
+		throw stx::runtime_error_fmt("Failed to create Vulkan device: {}",
+			device_result.error().message());
+	auto device = Device{vkb::Device(device_result.value())};
+	volkLoadDevice(*device);
+
+	L_DEBUG("Vulkan device created");
+	return device;
 }
 
 export auto s_gpu = util::Service<GPU>{};
