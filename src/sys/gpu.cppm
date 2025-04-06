@@ -13,13 +13,16 @@ module;
 #include "vuk/runtime/vk/Image.hpp"
 #include "vuk/runtime/ThisThreadExecutor.hpp"
 #include "vuk/ImageAttachment.hpp"
+#include "vuk/RenderGraph.hpp"
 #include "vuk/Executor.hpp"
 #include "vuk/Types.hpp"
+#include "vuk/Value.hpp"
 #include "util/log_macros.hpp"
 #include "config.hpp"
 
 export module playnote.sys.gpu;
 
+import playnote.stx.callable;
 import playnote.stx.except;
 import playnote.stx.types;
 import playnote.stx.math;
@@ -34,6 +37,8 @@ using stx::uint;
 using stx::uvec2;
 using sys::s_window;
 
+export using ManagedImage = vuk::Value<vuk::ImageAttachment>;
+
 class GPU {
 public:
 	static constexpr auto FramesInFlight = 2u;
@@ -41,7 +46,8 @@ public:
 	GPU();
 	~GPU() { runtime.wait_idle(); }
 
-	auto begin_frame() -> vuk::Allocator;
+	template<stx::callable<ManagedImage(vuk::Allocator&, ManagedImage&&)> Func>
+	void frame(Func&&);
 
 	GPU(GPU const&) = delete;
 	auto operator=(GPU const&) -> GPU& = delete;
@@ -114,11 +120,20 @@ GPU::GPU():
 	L_INFO("Vulkan initialized");
 }
 
-auto GPU::begin_frame() -> vuk::Allocator
+template<stx::callable<ManagedImage(vuk::Allocator&, ManagedImage&&)> Func>
+void GPU::frame(Func&& func)
 {
 	auto& frame_resource = global_resource.get_next_frame();
+	auto frame_allocator = vuk::Allocator{frame_resource};
 	runtime.next_frame();
-	return vuk::Allocator{frame_resource};
+	auto imported_swapchain = vuk::acquire_swapchain(swapchain);
+	auto swapchain_image = vuk::acquire_next_image("swp_img", std::move(imported_swapchain));
+
+	auto result = func(frame_allocator, std::move(swapchain_image));
+
+	auto entire_thing = vuk::enqueue_presentation(std::move(result));
+	auto compiler = vuk::Compiler{};
+	entire_thing.submit(frame_allocator, compiler, {});
 }
 
 #ifdef VK_VALIDATION
