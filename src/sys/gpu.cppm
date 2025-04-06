@@ -1,20 +1,28 @@
 module;
 #include <utility>
+#include <memory>
+#include <vector>
 #include "libassert/assert.hpp"
 #include "volk.h"
 #include "VkBootstrap.h"
+#include "vuk/runtime/vk/VkRuntime.hpp"
+#include "vuk/runtime/ThisThreadExecutor.hpp"
+#include "vuk/Executor.hpp"
+#include "vuk/Types.hpp"
 #include "util/log_macros.hpp"
 #include "config.hpp"
 
 export module playnote.sys.gpu;
 
 import playnote.stx.except;
+import playnote.stx.types;
 import playnote.util.service;
 import playnote.util.raii;
 import playnote.sys.window;
 
 namespace playnote::sys {
 
+using stx::uint;
 using sys::s_window;
 
 class GPU {
@@ -41,6 +49,14 @@ private:
 		vkb::destroy_device(d);
 		L_DEBUG("Vulkan device cleaned up");
 	})>;
+	struct Queues {
+		VkQueue graphics;
+		uint graphics_family_index;
+		VkQueue transfer;
+		uint transfer_family_index;
+		VkQueue compute;
+		uint compute_family_index;
+	};
 
 #ifdef VK_VALIDATION
 	static auto debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT,
@@ -51,18 +67,22 @@ private:
 	static auto create_surface(vkb::Instance&) -> Surface;
 	static auto select_physical_device(vkb::Instance&, VkSurfaceKHR) -> vkb::PhysicalDevice;
 	static auto create_device(vkb::PhysicalDevice&) -> Device;
+	static auto retrieve_queues(vkb::Device&) -> Queues;
+	static auto create_runtime(VkInstance, VkPhysicalDevice, VkDevice, Queues const&) -> vuk::Runtime;
 
 	Instance instance{};
 	Surface surface{};
 	vkb::PhysicalDevice physical_device{};
 	Device device{};
+	vuk::Runtime runtime;
 };
 
 GPU::GPU():
 	instance{create_instance()},
 	surface{create_surface(*instance)},
 	physical_device{select_physical_device(*instance, *surface)},
-	device{create_device(physical_device)}
+	device{create_device(physical_device)},
+	runtime{create_runtime(*instance, physical_device, *device, retrieve_queues(*device))}
 {
 	L_INFO("Vulkan initialized");
 }
@@ -171,7 +191,7 @@ auto GPU::select_physical_device(vkb::Instance& instance,
 		.shaderOutputLayer = VK_TRUE,
 	};
 
-	auto physical_device_selector_result = vkb::PhysicalDeviceSelector(instance)
+	auto physical_device_selector_result = vkb::PhysicalDeviceSelector{instance}
 		.set_surface(surface)
 		.set_minimum_version(1, 2)
 		.set_required_features(physical_device_features)
@@ -214,6 +234,61 @@ auto GPU::create_device(vkb::PhysicalDevice& physical_device) -> Device
 
 	L_DEBUG("Vulkan device created");
 	return device;
+}
+
+auto GPU::retrieve_queues(vkb::Device& device) -> Queues
+{
+	auto result = Queues{};
+
+	result.graphics = device.get_queue(vkb::QueueType::graphics).value();
+	result.graphics_family_index = device.get_queue_index(vkb::QueueType::graphics).value();
+
+	auto transferQueuePresent = device.get_dedicated_queue(vkb::QueueType::transfer).has_value();
+	result.transfer = transferQueuePresent?
+		device.get_dedicated_queue(vkb::QueueType::transfer).value() :
+		VK_NULL_HANDLE;
+	result.transfer_family_index = transferQueuePresent?
+		device.get_dedicated_queue_index(vkb::QueueType::transfer).value() :
+		VK_QUEUE_FAMILY_IGNORED;
+
+	auto computeQueuePresent = device.get_dedicated_queue(vkb::QueueType::compute).has_value();
+	result.compute = computeQueuePresent?
+		device.get_dedicated_queue(vkb::QueueType::compute).value() :
+		VK_NULL_HANDLE;
+	result.compute_family_index = computeQueuePresent?
+		device.get_dedicated_queue_index(vkb::QueueType::compute).value() :
+		VK_QUEUE_FAMILY_IGNORED;
+
+	return result;
+}
+
+auto GPU::create_runtime(VkInstance instance, VkPhysicalDevice physical_device, VkDevice device, Queues const& queues) -> vuk::Runtime
+{
+	auto pointers = vuk::FunctionPointers{
+		vkGetInstanceProcAddr,
+		vkGetDeviceProcAddr,
+#define VUK_X(name) name,
+#define VUK_Y(name) name,
+#include "vuk/runtime/vk/VkPFNOptional.hpp"
+#include "vuk/runtime/vk/VkPFNRequired.hpp"
+	};
+
+	auto executors = std::vector<std::unique_ptr<vuk::Executor>>{};
+	executors.reserve(4);
+	executors.emplace_back(std::make_unique<vuk::ThisThreadExecutor>());
+	executors.emplace_back(vuk::create_vkqueue_executor(pointers, device, queues.graphics, queues.graphics_family_index, vuk::DomainFlagBits::eGraphicsQueue));
+	if (queues.compute)
+		executors.emplace_back(vuk::create_vkqueue_executor(pointers, device, queues.compute, queues.compute_family_index, vuk::DomainFlagBits::eComputeQueue));
+	if (queues.transfer)
+		executors.emplace_back(vuk::create_vkqueue_executor(pointers, device, queues.transfer, queues.transfer_family_index, vuk::DomainFlagBits::eTransferQueue));
+
+	return vuk::Runtime{vuk::RuntimeCreateParameters{
+		.instance = instance,
+		.device = device,
+		.physical_device = physical_device,
+		.executors = std::move(executors),
+		.pointers = pointers,
+	}};
 }
 
 export auto s_gpu = util::Service<GPU>{};
