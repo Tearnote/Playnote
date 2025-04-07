@@ -47,7 +47,7 @@ set(VUK_EXTRA_IMGUI_PLATFORM_BACKEND "glfw" CACHE STRING "" FORCE)
 set(VUK_EXTRA_INIT OFF CACHE BOOL "" FORCE)
 FetchContent_Declare(vuk
 	GIT_REPOSITORY https://github.com/martty/vuk
-	GIT_TAG 4ad9d7714b1b2489f11be9f264e84e2073f30492
+	GIT_TAG 4b88bb86ed3a6c40f21b3ee355f258c10f71e998
 )
 FetchContent_MakeAvailable(vuk)
 target_compile_definitions(vuk PUBLIC VUK_CUSTOM_VULKAN_HEADER=<volk.h>)
