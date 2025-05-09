@@ -5,26 +5,26 @@ module;
 
 export module playnote.gfx.renderer;
 
-import playnote.util.service;
 import playnote.sys.gpu;
 
 namespace playnote::gfx {
 
 using sys::ManagedImage;
-using sys::s_gpu;
 
-class Renderer {
+export class Renderer {
 public:
+	explicit Renderer(sys::GPU& gpu): gpu{gpu} {}
 	void draw();
+
+private:
+	sys::GPU& gpu;
 };
 
 void Renderer::draw()
 {
-	s_gpu->frame([](auto&, auto&& target) -> ManagedImage {
+	gpu.frame([](auto&, auto&& target) -> ManagedImage {
 		return vuk::clear_image(std::move(target), vuk::ClearColor{0.655f, 0.639f, 0.741f, 1.0f});
 	});
 }
-
-export auto s_renderer = util::Service<Renderer>{};
 
 }

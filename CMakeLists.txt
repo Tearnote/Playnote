@@ -38,16 +38,18 @@ target_sources(Playnote PUBLIC
 	src/stx/types.cppm
 	src/stx/math.cppm
 	src/util/raii.cppm
-	src/util/service.cppm
+	src/util/locator.cppm
 	src/util/logger.cppm
 	src/sys/window.cppm
 	src/sys/gpu.cppm
 	src/sys/os.cppm
 	src/gfx/renderer.cppm
+	src/globals.cppm
 )
 
 target_include_directories(Playnote PRIVATE src) # All includes start from src as root
 
+target_link_libraries(Playnote PRIVATE unordered_dense::unordered_dense)
 target_link_libraries(Playnote PRIVATE vk-bootstrap)
 target_link_libraries(Playnote PRIVATE libassert::assert)
 target_link_libraries(Playnote PRIVATE quill)

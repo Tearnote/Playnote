@@ -15,8 +15,8 @@ export module playnote.sys.window;
 
 import playnote.stx.except;
 import playnote.stx.math;
-import playnote.util.service;
 import playnote.util.raii;
+import playnote.globals;
 
 namespace playnote::sys {
 namespace chrono = std::chrono;
@@ -26,7 +26,7 @@ using stx::vec2;
 
 // RAII abstraction for GLFW library initialization
 // Requires services: logger
-class GLFW {
+export class GLFW {
 public:
 	GLFW();
 	~GLFW();
@@ -43,7 +43,7 @@ public:
 // RAII abstraction of a single application window, providing a drawing surface and input handling
 // Includes GLFW initialization, so only one can exist at a time
 // Requires services: logger, glfw
-class Window {
+export class Window {
 public:
 	Window(std::string_view title, uvec2 size);
 
@@ -178,6 +178,4 @@ auto Window::create_surface(VkInstance instance) -> VkSurfaceKHR
 	return result;
 }
 
-export auto s_glfw = util::Service<GLFW>{};
-export auto s_window = util::Service<Window>{};
 }

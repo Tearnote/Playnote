@@ -26,7 +26,6 @@ import playnote.stx.callable;
 import playnote.stx.except;
 import playnote.stx.types;
 import playnote.stx.math;
-import playnote.util.service;
 import playnote.util.raii;
 import playnote.sys.window;
 
@@ -35,15 +34,14 @@ namespace playnote::sys {
 namespace ranges = std::ranges;
 using stx::uint;
 using stx::uvec2;
-using sys::s_window;
 
 export using ManagedImage = vuk::Value<vuk::ImageAttachment>;
 
-class GPU {
+export class GPU {
 public:
 	static constexpr auto FramesInFlight = 2u;
 
-	GPU();
+	explicit GPU(sys::Window&);
 	~GPU() { runtime.wait_idle(); }
 
 	template<stx::callable<ManagedImage(vuk::Allocator&, ManagedImage&&)> Func>
@@ -89,13 +87,15 @@ private:
 		VkDebugUtilsMessageTypeFlagsEXT, VkDebugUtilsMessengerCallbackDataEXT const*,
 		void*) -> VkBool32;
 #endif
-	static auto create_instance() -> Instance;
-	static auto create_surface(vkb::Instance&) -> Surface;
-	static auto select_physical_device(vkb::Instance&, VkSurfaceKHR) -> vkb::PhysicalDevice;
-	static auto create_device(vkb::PhysicalDevice&) -> Device;
-	static auto retrieve_queues(vkb::Device&) -> Queues;
-	static auto create_runtime(VkInstance, VkPhysicalDevice, VkDevice, Queues const&) -> vuk::Runtime;
-	static auto create_swapchain(uvec2 size, vuk::Allocator&, vkb::Device&, Surface&, std::optional<vuk::Swapchain> old = std::nullopt) -> vuk::Swapchain;
+	auto create_instance() -> Instance;
+	auto create_surface(vkb::Instance&) -> Surface;
+	auto select_physical_device(vkb::Instance&, VkSurfaceKHR) -> vkb::PhysicalDevice;
+	auto create_device(vkb::PhysicalDevice&) -> Device;
+	auto retrieve_queues(vkb::Device&) -> Queues;
+	auto create_runtime(VkInstance, VkPhysicalDevice, VkDevice, Queues const&) -> vuk::Runtime;
+	auto create_swapchain(uvec2 size, vuk::Allocator&, vkb::Device&, Surface&, std::optional<vuk::Swapchain> old = std::nullopt) -> vuk::Swapchain;
+
+	sys::Window& window;
 
 	Instance instance{};
 	Surface surface{};
@@ -107,7 +107,8 @@ private:
 	vuk::Swapchain swapchain;
 };
 
-GPU::GPU():
+GPU::GPU(sys::Window& window):
+	window{window},
 	instance{create_instance()},
 	surface{create_surface(*instance)},
 	physical_device{select_physical_device(*instance, *surface)},
@@ -115,7 +116,7 @@ GPU::GPU():
 	runtime{create_runtime(*instance, physical_device, *device, retrieve_queues(*device))},
 	global_resource{vuk::DeviceSuperFrameResource{runtime, FramesInFlight}},
 	global_allocator{vuk::Allocator{global_resource}},
-	swapchain{create_swapchain(s_window->size(), global_allocator, *device, surface)}
+	swapchain{create_swapchain(window.size(), global_allocator, *device, surface)}
 {
 	L_INFO("Vulkan initialized");
 }
@@ -208,7 +209,7 @@ auto GPU::create_instance() -> Instance
 auto GPU::create_surface(vkb::Instance& instance) -> Surface
 {
 	return Surface_impl{
-		.surface = s_window->create_surface(instance),
+		.surface = window.create_surface(instance),
 		.instance = instance,
 	};
 }
@@ -402,7 +403,5 @@ auto GPU::create_swapchain(uvec2 size, vuk::Allocator& allocator, vkb::Device& d
 
 	return std::move(swapchain);
 }
-
-export auto s_gpu = util::Service<GPU>{};
 
 }

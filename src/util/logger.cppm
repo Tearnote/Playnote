@@ -1,5 +1,6 @@
 module;
 #include <utility>
+#include "libassert/assert.hpp"
 #include "quill/sinks/ConsoleSink.h"
 #include "quill/sinks/FileSink.h"
 #include "quill/Frontend.h"
@@ -9,23 +10,21 @@ module;
 
 export module playnote.util.logger;
 
-import playnote.util.service;
-
 namespace playnote::util {
 
 // Wrapper for the Quill threaded async logging library
-// After the service is available, use via log_macros.hpp
-class Logger {
+export class Logger {
 public:
 	Logger();
 	[[nodiscard]] auto get() -> quill::Logger* { return logger; }
 
 private:
-	quill::Logger* logger;
+	inline static quill::Logger* logger{nullptr};
 };
 
 Logger::Logger()
 {
+	ASSUME(!logger); // Only one can exist
 	quill::Backend::start({
 		.thread_name = "Logging",
 		.log_level_short_codes = {
@@ -43,7 +42,5 @@ Logger::Logger()
 			"%H:%M:%S.%Qms"});
 	logger->set_log_level(LoggingLevel);
 }
-
-export auto s_logger = util::Service<Logger>{};
 
 }

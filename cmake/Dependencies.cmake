@@ -12,10 +12,16 @@ find_package(glfw3 3.4 REQUIRED)
 ### Remote dependencies
 
 FetchContent_Declare(libassert
-	GIT_REPOSITORY https://github.com/jeremy-rifkin/libassert.git
+	GIT_REPOSITORY https://github.com/jeremy-rifkin/libassert
 	GIT_TAG v2.1.5
 )
 FetchContent_MakeAvailable(libassert)
+
+FetchContent_Declare(unordered_dense
+	GIT_REPOSITORY https://github.com/martinus/unordered_dense
+	GIT_TAG v4.5.0
+)
+FetchContent_MakeAvailable(unordered_dense)
 
 FetchContent_Declare(quill
 	GIT_REPOSITORY https://github.com/odygrd/quill
