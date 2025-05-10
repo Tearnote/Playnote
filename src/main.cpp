@@ -16,6 +16,21 @@ using namespace playnote; // Can't namespace main()
 using namespace std::chrono_literals;
 using stx::uvec2;
 
+void enqueue_test_scene(gfx::Renderer& renderer)
+{
+	renderer.enqueue_rect({{ 33, 315}, {256,   6}, {0.996f, 0.000f, 0.000f, 1.000f}});
+	renderer.enqueue_rect({{ 31,   0}, {  2, 322}, {1.000f, 1.000f, 1.000f, 1.000f}});
+	renderer.enqueue_rect({{ 31, 321}, {260,   1}, {1.000f, 1.000f, 1.000f, 1.000f}});
+	renderer.enqueue_rect({{289,   0}, {  2, 322}, {1.000f, 1.000f, 1.000f, 1.000f}});
+	renderer.enqueue_rect({{ 84,   0}, {  2, 315}, {0.376f, 0.376f, 0.376f, 0.376f}});
+	renderer.enqueue_rect({{116,   0}, {  2, 315}, {0.376f, 0.376f, 0.376f, 0.376f}});
+	renderer.enqueue_rect({{141,   0}, {  2, 315}, {0.376f, 0.376f, 0.376f, 0.376f}});
+	renderer.enqueue_rect({{173,   0}, {  2, 315}, {0.376f, 0.376f, 0.376f, 0.376f}});
+	renderer.enqueue_rect({{198,   0}, {  2, 315}, {0.376f, 0.376f, 0.376f, 0.376f}});
+	renderer.enqueue_rect({{230,   0}, {  2, 315}, {0.376f, 0.376f, 0.376f, 0.376f}});
+	renderer.enqueue_rect({{255,   0}, {  2, 315}, {0.376f, 0.376f, 0.376f, 0.376f}});
+}
+
 auto run() -> int
 try {
 	auto scheduler_period = sys::SchedulerPeriod{1ms};
@@ -26,11 +41,8 @@ try {
 
 	while (!window.is_closing()) {
 		glfw.poll();
-		renderer.enqueue_rect({
-			.pos = {50, 50},
-			.size = {540, 380},
-			.color = {1.0f, 0.2f, 0.2f, 1.0f}
-		});
+		enqueue_test_scene(renderer);
+
 		renderer.draw();
 	}
 
