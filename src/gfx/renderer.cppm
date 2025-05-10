@@ -63,7 +63,8 @@ void Renderer::draw()
 		auto cleared = vuk::clear_image(std::move(target), vuk::ClearColor{0.0f, 0.0f, 0.0f, 1.0f});
 
 		auto pass = vuk::make_pass("rects",
-			[rects_len = rects.size(), rects_buf = *rects_buf](vuk::CommandBuffer& cmd, VUK_IA(vuk::eColorWrite) target) {
+			[window_size = gpu.get_window().size(), rects_len = rects.size(), rects_buf = *rects_buf]
+			(vuk::CommandBuffer& cmd, VUK_IA(vuk::eColorWrite) target) {
 			cmd.set_dynamic_state(vuk::DynamicStateFlagBits::eScissor | vuk::DynamicStateFlagBits::eViewport)
 			   .set_viewport(0, vuk::Rect2D::framebuffer())
 			   .set_scissor(0, vuk::Rect2D::framebuffer())
@@ -71,6 +72,7 @@ void Renderer::draw()
 			   .broadcast_color_blend({})
 			   .bind_graphics_pipeline("rects")
 			   .bind_buffer(0, 0, rects_buf)
+			   .specialize_constants(0, window_size.x()).specialize_constants(1, window_size.y())
 			   .draw(6 * rects_len, 1, 0, 0);
 
 			return target;

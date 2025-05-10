@@ -11,9 +11,12 @@ layout(binding = 0, std430) restrict readonly buffer Rects {
 	Rect b_rects[];
 };
 
+layout (constant_id = 0) const uint ViewportWidth = 0;
+layout (constant_id = 1) const uint ViewportHeight = 0;
+const uvec2 ViewportSize = uvec2(ViewportWidth, ViewportHeight);
+
 layout(location = 0) out vec4 f_color;
 
-const vec2 ViewportSize = vec2(640, 480);
 
 void main() {
 	int instance = gl_VertexIndex / 6;
@@ -32,6 +35,6 @@ void main() {
 	}
 	vec2 pos = rect.pos + rect.size * offset;
 
-	gl_Position = vec4(pos / ViewportSize * 2.0 - 1.0, 0.0, 1.0);
+	gl_Position = vec4(pos / vec2(ViewportSize) * 2.0 - 1.0, 0.0, 1.0);
 	f_color = rect.color;
 }
