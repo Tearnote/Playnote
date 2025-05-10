@@ -33,8 +33,11 @@ void main() {
 		case 4: offset = vec2(1, 0); break;
 		case 5: offset = vec2(1, 1); break;
 	}
-	vec2 pos = rect.pos + rect.size * offset;
+	vec2 pos = vec2(rect.pos + rect.size * offset);
+	pos += vec2(0.5); // Half pixel offset to center the vertex on the pixel
+	pos /= vec2(ViewportSize); // from 0.0 to 1.0
+	pos = pos * 2.0 - 1.0; // from -1.0 to 1.0 (clip space)
 
-	gl_Position = vec4(pos / vec2(ViewportSize) * 2.0 - 1.0, 0.0, 1.0);
+	gl_Position = vec4(pos, 0.0, 1.0);
 	f_color = rect.color;
 }
