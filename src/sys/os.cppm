@@ -37,41 +37,38 @@ using chrono::duration_cast;
 // This decreases the minimum possible duration of thread sleep
 export class SchedulerPeriod {
 public:
-	explicit SchedulerPeriod(chrono::nanoseconds period);
-	~SchedulerPeriod();
+	explicit SchedulerPeriod(chrono::nanoseconds period):
+		period{period}
+	{
+#if TARGET == TARGET_WINDOWS
+		if (timeBeginPeriod(duration_cast<chrono::milliseconds>(period).count()) != TIMERR_NOERROR)
+			throw std::runtime_error{"Failed to initialize Windows scheduler period"};
+#endif
+	}
+
+	~SchedulerPeriod()
+	{
+		if (period == -1ns) return;
+#if TARGET == TARGET_WINDOWS
+		timeEndPeriod(duration_cast<chrono::milliseconds>(period).count());
+#endif
+	}
 
 	SchedulerPeriod(SchedulerPeriod&& other) noexcept { *this = std::move(other); }
-	auto operator=(SchedulerPeriod&& other) noexcept -> SchedulerPeriod&;
+
+	auto operator=(SchedulerPeriod&& other) noexcept -> SchedulerPeriod&
+	{
+		period = other.period;
+		other.period = -1ns;
+		return *this;
+	}
+
 	SchedulerPeriod(SchedulerPeriod const&) = delete;
 	auto operator=(SchedulerPeriod const&) -> SchedulerPeriod& = delete;
 
 private:
 	chrono::nanoseconds period{};
 };
-
-SchedulerPeriod::SchedulerPeriod(chrono::nanoseconds period):
-	period{period}
-{
-#if TARGET == TARGET_WINDOWS
-	if (timeBeginPeriod(duration_cast<chrono::milliseconds>(period).count()) != TIMERR_NOERROR)
-		throw std::runtime_error{"Failed to initialize Windows scheduler period"};
-#endif
-}
-
-SchedulerPeriod::~SchedulerPeriod()
-{
-	if (period == -1ns) return;
-#if TARGET == TARGET_WINDOWS
-	timeEndPeriod(duration_cast<chrono::milliseconds>(period).count());
-#endif
-}
-
-auto SchedulerPeriod::operator=(SchedulerPeriod&& other) noexcept -> SchedulerPeriod&
-{
-	period = other.period;
-	other.period = -1ns;
-	return *this;
-}
 
 // Name the current thread
 export void set_thread_name(std::string_view name)
