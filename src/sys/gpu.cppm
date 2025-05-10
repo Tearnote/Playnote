@@ -44,6 +44,8 @@ public:
 	explicit GPU(sys::Window&);
 	~GPU() { runtime.wait_idle(); }
 
+	auto get_global_allocator() -> vuk::Allocator& { return global_allocator; }
+
 	template<stx::callable<ManagedImage(vuk::Allocator&, ManagedImage&&)> Func>
 	void frame(Func&&);
 

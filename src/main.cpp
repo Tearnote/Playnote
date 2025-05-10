@@ -26,6 +26,11 @@ try {
 
 	while (!window.is_closing()) {
 		glfw.poll();
+		renderer.enqueue_rect({
+			.pos = {50, 50},
+			.size = {540, 380},
+			.color = {1.0f, 0.2f, 0.2f, 1.0f}
+		});
 		renderer.draw();
 	}
 

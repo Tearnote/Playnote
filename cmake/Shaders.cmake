@@ -2,9 +2,10 @@ include_guard()
 
 include(cmake/Dependencies.cmake)
 
-set(SHADER_DIR_PREFIX src/shaders/)
+set(SHADER_DIR_PREFIX src/gpu/)
 set(SHADER_SOURCES
-	# Nothing
+	rects.vert
+	rects.frag
 )
 
 foreach(SHADER_PATH ${SHADER_SOURCES})
@@ -13,7 +14,7 @@ foreach(SHADER_PATH ${SHADER_SOURCES})
 	add_custom_command(
 		OUTPUT ${SHADER_OUTPUT}
 		COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/$<CONFIG>/generated/spv/${SHADER_DIR}
-		COMMAND Vulkan::glslc --target-env=vulkan1.3 -mfmt=num $<$<CONFIG:Debug,RelWithDebInfo>:-g> -MD -MF ${SHADER_OUTPUT}.d -o ${SHADER_OUTPUT} ${PROJECT_SOURCE_DIR}/${SHADER_DIR_PREFIX}${SHADER_PATH}
+		COMMAND Vulkan::glslc --target-env=vulkan1.2 -mfmt=num $<$<CONFIG:Debug,RelWithDebInfo>:-g> -MD -MF ${SHADER_OUTPUT}.d -o ${SHADER_OUTPUT} ${PROJECT_SOURCE_DIR}/${SHADER_DIR_PREFIX}${SHADER_PATH}
 		DEPENDS ${SHADER_DIR_PREFIX}${SHADER_PATH}
 		DEPFILE ${SHADER_OUTPUT}.d
 		VERBATIM COMMAND_EXPAND_LISTS
