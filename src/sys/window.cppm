@@ -25,7 +25,6 @@ using stx::uvec2;
 using stx::vec2;
 
 // RAII abstraction for GLFW library initialization
-// Requires services: logger
 export class GLFW {
 public:
 	GLFW();
@@ -42,10 +41,9 @@ public:
 
 // RAII abstraction of a single application window, providing a drawing surface and input handling
 // Includes GLFW initialization, so only one can exist at a time
-// Requires services: logger, glfw
 export class Window {
 public:
-	Window(std::string_view title, uvec2 size);
+	Window(GLFW&, std::string_view title, uvec2 size);
 
 	[[nodiscard]] auto is_closing() const -> bool { return glfwWindowShouldClose(*window_handle); }
 	[[nodiscard]] auto size() const -> uvec2;
@@ -110,7 +108,7 @@ auto GLFW::get_time() const -> chrono::nanoseconds
 	return duration_cast<chrono::nanoseconds>(time);
 }
 
-Window::Window(std::string_view title, uvec2 size)
+Window::Window(GLFW&, std::string_view title, uvec2 size) // GLFW parameter is a semantic dependency
 {
 	ASSUME(size.x() > 0 && size.y() > 0);
 

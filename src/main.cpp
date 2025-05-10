@@ -20,7 +20,7 @@ auto run() -> int
 try {
 	auto scheduler_period = sys::SchedulerPeriod{1ms};
 	auto [glfw, glfw_stub] = locator.provide<sys::GLFW>();
-	auto [window, window_stub] = locator.provide<sys::Window>(AppTitle, uvec2{640, 480});
+	auto [window, window_stub] = locator.provide<sys::Window>(glfw, AppTitle, uvec2{640, 480});
 	auto [gpu, gpu_stub] = locator.provide<sys::GPU>(window);
 	auto [renderer, renderer_stub] = locator.provide<gfx::Renderer>(gpu);
 
