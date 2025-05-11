@@ -15,7 +15,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(BUILD_SHARED_LIBS OFF) # Only build static libs
 #TODO Compiler and linker flags:
 #TODO - nonstandard speedups (fastmath etc)
-#TODO - enable exceptions, disable RTTI
+#TODO - enable exceptions and RTTI
 #TODO - safety checks for DEBUG
 #TODO - optimizations for RELEASE
 #TODO - enable LTO and dead code removal
@@ -28,6 +28,7 @@ include(cmake/Dependencies.cmake)
 
 add_executable(Playnote
 	src/util/log_macros.hpp
+	src/gfx/renderer.cpp
 	src/config.hpp
 	src/main.cpp
 )
@@ -44,6 +45,7 @@ target_sources(Playnote PUBLIC
 	src/sys/gpu.cppm
 	src/sys/os.cppm
 	src/gfx/renderer.cppm
+	src/gfx/imgui.cppm
 	src/input_thread.cppm
 	src/render_thread.cppm
 	src/globals.cppm
@@ -57,6 +59,7 @@ target_link_libraries(Playnote PRIVATE libassert::assert)
 target_link_libraries(Playnote PRIVATE quill)
 target_link_libraries(Playnote PRIVATE glfw)
 target_link_libraries(Playnote PRIVATE volk)
+target_link_libraries(Playnote PRIVATE vuk-extra-imgui-platform)
 target_link_libraries(Playnote PRIVATE vuk)
 
 ### Assets and other artifacts
