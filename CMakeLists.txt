@@ -28,6 +28,7 @@ include(cmake/Dependencies.cmake)
 
 add_executable(Playnote
 	src/util/log_macros.hpp
+	src/sys/gpu.cpp
 	src/gfx/renderer.cpp
 	src/config.hpp
 	src/main.cpp
