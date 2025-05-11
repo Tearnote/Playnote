@@ -4,6 +4,7 @@ module;
 export module playnote.input_thread;
 
 import playnote.sys.window;
+import playnote.sys.os;
 import playnote.globals;
 
 namespace playnote {
@@ -13,6 +14,7 @@ namespace playnote {
 // This function needs to be run on the process's initial thread.
 export void input_thread()
 {
+	sys::set_thread_name("input");
 	auto& glfw = locator.get<sys::GLFW>();
 	auto& window = locator.get<sys::Window>();
 

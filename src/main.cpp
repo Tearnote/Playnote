@@ -46,7 +46,6 @@ try {
 	sys::create_console();
 #endif
 	auto [logger, logger_stub] = locator.provide<util::Logger>();
-	sys::set_thread_name("input");
 	L_INFO("{} {}.{}.{} starting up", AppTitle, AppVersion[0], AppVersion[1], AppVersion[2]);
 	return run();
 }
