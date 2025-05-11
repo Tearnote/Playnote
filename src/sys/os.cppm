@@ -1,6 +1,8 @@
 module;
 #include <string_view>
+#include <string>
 #include <chrono>
+#include "tracy/Tracy.hpp"
 #include "config.hpp"
 
 #if TARGET == TARGET_WINDOWS
@@ -84,6 +86,7 @@ export void set_thread_name(std::string_view name)
 		throw std::system_error{err, std::system_category(), "Failed to set thread name"};
 #endif
 #endif
+	tracy::SetThreadName(std::string{name}.c_str());
 }
 
 // Open the console window and attach standard outputs to it
