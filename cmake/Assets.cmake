@@ -3,7 +3,7 @@ include_guard()
 
 set(ASSET_DIR_PREFIX assets/)
 set(ASSET_PATHS
-	# Nothing
+	test.ogg
 )
 
 foreach(ASSET_PATH ${ASSET_PATHS})
