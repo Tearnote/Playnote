@@ -6,6 +6,7 @@ export module playnote.stx.types;
 
 namespace playnote::stx {
 
+// Explicitly sized shorthands for standard types
 export using uint8 = std::uint8_t;
 export using uint16 = std::uint16_t;
 export using uint = std::uint32_t;
@@ -17,8 +18,7 @@ export using int64 = std::int64_t;
 export using usize = std::size_t;
 export using isize = std::ptrdiff_t;
 
-// Sanity check
-
+// Sanity checks
 static_assert(sizeof(uint8) == 1);
 static_assert(sizeof(uint16) == 2);
 static_assert(sizeof(uint) == 4);

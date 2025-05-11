@@ -7,6 +7,7 @@ export module playnote.stx.except;
 
 namespace playnote::stx {
 
+// An arbitrary exception type with a formatted message
 template<typename Err, typename... Args>
 auto typed_error_fmt(std::format_string<Args...> fmt, Args&&... args) -> Err
 {

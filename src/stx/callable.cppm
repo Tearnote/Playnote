@@ -9,7 +9,6 @@ namespace playnote::stx {
 
 // "applicable" concept
 // Analogous to std::invocable but accepts a tuple rather than argument pack
-
 template<typename, typename>
 struct is_applicable: std::false_type {};
 
@@ -21,7 +20,6 @@ concept applicable = is_applicable<F, Tuple>::value;
 
 // "apply_results_in" concept
 // Analogous to std::invoke_result type compatibility check but accepts a tuple rather than argument pack
-
 template<typename, typename>
 struct apply_result: std::false_type {};
 
@@ -33,7 +31,6 @@ concept apply_results_in = std::convertible_to<typename apply_result<F, Tuple>::
 
 // "callable_unpack" helper struct
 // Provides return type and tuple of arguments from a function type expression
-
 template<typename>
 struct callable_unpack;
 
@@ -43,7 +40,7 @@ struct callable_unpack<R(Args...)> {
 	using rtype = R;
 };
 
-// A functor type callable with specified argument types and returning the specified type
+// A callable functor type with specific argument types and return type
 // Syntax analogous to std::function template argument
 export template<class F, typename Sig,
 	typename Unpack = callable_unpack<Sig>,

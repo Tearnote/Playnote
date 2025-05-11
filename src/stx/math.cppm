@@ -19,10 +19,12 @@ using stx::uint;
 template<typename T>
 concept arithmetic = std::is_arithmetic_v<T>;
 
+// https://www.tauday.com/
 export template<std::floating_point T>
 constexpr auto Tau_v = std::numbers::pi_v<T> * 2;
 export constexpr auto Tau = Tau_v<float>;
 
+// degrees -> radians
 export template<arithmetic T, std::floating_point Prec = float>
 constexpr auto radians(T deg) -> Prec { return static_cast<Prec>(deg) * Tau_v<Prec> / 360; }
 
@@ -417,6 +419,7 @@ constexpr auto abs(vec<Dim, T> const& v) -> vec<Dim, T>
 	return result;
 }
 
+// GLSL-like shorthands
 export using vec2 = vec<2, float>;
 export using vec3 = vec<3, float>;
 export using vec4 = vec<4, float>;
