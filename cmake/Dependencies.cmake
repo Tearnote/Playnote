@@ -1,8 +1,8 @@
 # Declaration of all external dependencies
 include_guard()
 
+find_package(PkgConfig REQUIRED)
 include(FetchContent)
-list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
 # Local dependencies
 
@@ -12,7 +12,7 @@ find_package(Vulkan REQUIRED # GPU API
 find_package(glfw3 3.4 REQUIRED) # Windowing support
 
 if(UNIX)
-	find_package(PipeWire REQUIRED)
+	pkg_search_module(PipeWire REQUIRED IMPORTED_TARGET libpipewire-0.3) # Low latency Linux audio
 endif()
 
 # Remote dependencies

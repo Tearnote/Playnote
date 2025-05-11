@@ -58,7 +58,7 @@ target_include_directories(Playnote PRIVATE src) # All includes start from src a
 
 target_link_libraries(Playnote PRIVATE unordered_dense::unordered_dense)
 target_link_libraries(Playnote PRIVATE vk-bootstrap)
-target_link_libraries(Playnote PRIVATE PipeWire::PipeWire)
+target_link_libraries(Playnote PRIVATE PkgConfig::PipeWire)
 target_link_libraries(Playnote PRIVATE libassert::assert)
 target_link_libraries(Playnote PRIVATE TracyClient)
 target_link_libraries(Playnote PRIVATE quill)
