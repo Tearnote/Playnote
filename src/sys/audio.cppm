@@ -23,7 +23,6 @@ namespace playnote::sys {
 namespace ranges = std::ranges;
 using stx::uint;
 using stx::uint8;
-using stx::int16;
 
 export class Audio {
 public:
@@ -82,7 +81,7 @@ Audio::Audio(int argc, char* argv[]) {
 	auto buffer = std::array<uint8, 1024>{};
 	auto builder = SPA_POD_BUILDER_INIT(buffer.data(), buffer.size());
 	auto audio_info = spa_audio_info_raw{
-		.format = SPA_AUDIO_FORMAT_S16,
+		.format = SPA_AUDIO_FORMAT_F32,
 		.rate = SamplingRate,
 		.channels = ChannelCount,
 	};
@@ -112,18 +111,18 @@ void Audio::on_process(void* userdata)
 		return;
 	}
 	auto* buffer = buffer_outer->buffer;
-	auto* output = static_cast<int16*>(buffer->datas[0].data);
+	auto* output = static_cast<float*>(buffer->datas[0].data);
 	if (!output) return;
 
-	constexpr auto Stride = sizeof(int16) * ChannelCount;
+	constexpr auto Stride = sizeof(float) * ChannelCount;
 	const auto max_frames = buffer->datas[0].maxsize / Stride;
 	auto frames = std::min(max_frames, buffer_outer->requested);
 	for (auto i: ranges::iota_view(0u, frames)) {
 		self.sin_accumulator += stx::Tau_v<double> * 440.0 / static_cast<double>(SamplingRate);
 		self.sin_accumulator = std::fmod(self.sin_accumulator, stx::Tau_v<double>);
-		auto val = std::sin(self.sin_accumulator) * 0.5 * 32767.0;
+		auto val = std::sin(self.sin_accumulator) * 0.5;
 		for (auto c: ranges::iota_view(0u, ChannelCount))
-			output[i * ChannelCount + c] = static_cast<int16>(val);
+			output[i * ChannelCount + c] = static_cast<float>(val);
 	}
 
 	buffer->datas[0].chunk->offset = 0;
