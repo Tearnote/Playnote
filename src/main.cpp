@@ -13,6 +13,7 @@ import playnote.sys.gpu;
 import playnote.sys.os;
 import playnote.gfx.renderer;
 import playnote.render_thread;
+import playnote.audio_thread;
 import playnote.input_thread;
 import playnote.globals;
 
@@ -26,13 +27,14 @@ try {
 	auto [glfw, glfw_stub] = locator.provide<sys::GLFW>();
 	auto [window, window_stub] = locator.provide<sys::Window>(glfw, AppTitle, uvec2{640, 480});
 	auto [gpu, gpu_stub] = locator.provide<sys::GPU>(window);
-	auto [audio, audio_stub] = locator.provide<sys::Audio>(argc, argv);
 
 	// Spawn all threads. Every thread is assumed to eventually finish
 	// once window.is_closing() is true
+	auto audio_thread_stub = std::thread{audio_thread, argc, argv};
 	auto render_thread_stub = std::thread{render_thread};
 	input_thread();
 	render_thread_stub.join();
+	audio_thread_stub.join();
 
 	return EXIT_SUCCESS;
 }

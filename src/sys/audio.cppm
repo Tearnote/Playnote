@@ -1,19 +1,130 @@
 module;
+#include <string_view>
+#include <algorithm>
+#include <memory>
+#include <thread>
+#include <ranges>
+#include <array>
+#include <cmath>
+#include <spa/param/audio/format-utils.h>
 #include <pipewire/pipewire.h>
 #include "util/log_macros.hpp"
 #include "config.hpp"
+#include "quill/bundled/fmt/base.h"
 
 export module playnote.sys.audio;
 
+import playnote.stx.except;
+import playnote.stx.types;
+import playnote.stx.math;
+
 namespace playnote::sys {
+
+namespace ranges = std::ranges;
+using stx::uint;
+using stx::uint8;
+using stx::int16;
 
 export class Audio {
 public:
-	Audio(int argc, char* argv[])
+	Audio(int argc, char* argv[]);
+
+	void run() { pw_main_loop_run(loop.get()); }
+
+	Audio(Audio const&) = delete;
+	auto operator=(Audio const&) -> Audio& = delete;
+	Audio(Audio&&) = delete;
+	auto operator=(Audio&&) -> Audio& = delete;
+
+private:
+	static constexpr auto ChannelCount = 2u;
+	static constexpr auto SamplingRate = 48000u;
+
+	using Loop = std::unique_ptr<pw_main_loop, decltype([](auto* l) {
+		pw_main_loop_destroy(l);
+	})>;
+	using Stream = std::unique_ptr<pw_stream, decltype([](auto* s) {
+		pw_stream_destroy(s);
+	})>;
+
+	Loop loop{};
+	Stream stream{};
+	double sin_accumulator{};
+
+	static void on_process(void*);
+	inline static const auto StreamEvents = pw_stream_events{
+		.version = PW_VERSION_STREAM_EVENTS,
+		.process = on_process,
+	};
+
+	template<typename T>
+	static auto ptr_check(T* ptr, std::string_view message = "libpipewire error") -> T*
 	{
-		pw_init(&argc, &argv);
-		L_DEBUG("Using libpipewire {}\n", pw_get_library_version());
+		if (!ptr) throw stx::system_error_fmt("{}", message);
+		return ptr;
+	}
+
+	static void ret_check(int ret, std::string_view message = "libpipewire error")
+	{
+		if (ret < 0) throw stx::system_error_fmt("{}", message);
 	}
 };
+
+Audio::Audio(int argc, char* argv[]) {
+	pw_init(&argc, &argv);
+	L_DEBUG("Using libpipewire {}\n", pw_get_library_version());
+
+	loop = Loop{ptr_check(pw_main_loop_new(nullptr))};
+	stream = Stream{pw_stream_new_simple(
+		pw_main_loop_get_loop(loop.get()), "audio",
+		pw_properties_new(
+			PW_KEY_MEDIA_TYPE, "Audio",
+			PW_KEY_MEDIA_CATEGORY, "Playback",
+			PW_KEY_MEDIA_ROLE, "Game", nullptr),
+		&StreamEvents, this)};
+
+	auto params = std::array<spa_pod const*, 1>{};
+	auto buffer = std::array<uint8, 1024>{};
+	auto builder = SPA_POD_BUILDER_INIT(buffer.data(), buffer.size());
+	auto audio_info = spa_audio_info_raw{
+		.format = SPA_AUDIO_FORMAT_S16,
+		.rate = SamplingRate,
+		.channels = ChannelCount,
+	};
+	params[0] = spa_format_audio_raw_build(&builder, SPA_PARAM_EnumFormat, &audio_info);
+	ret_check(pw_stream_connect(stream.get(), PW_DIRECTION_OUTPUT, PW_ID_ANY,
+		static_cast<pw_stream_flags>(PW_STREAM_FLAG_AUTOCONNECT | PW_STREAM_FLAG_MAP_BUFFERS | PW_STREAM_FLAG_RT_PROCESS),
+		params.data(), 1));
+}
+
+void Audio::on_process(void* userdata)
+{
+	auto& self = *static_cast<Audio*>(userdata);
+
+	auto* buffer_outer = pw_stream_dequeue_buffer(self.stream.get());
+	if (!buffer_outer) {
+		L_WARN("Ran out of audio buffers");
+		return;
+	}
+	auto* buffer = buffer_outer->buffer;
+	auto* output = static_cast<int16*>(buffer->datas[0].data);
+	if (!output) return;
+
+	constexpr auto Stride = sizeof(int16) * ChannelCount;
+	const auto max_frames = buffer->datas[0].maxsize / Stride;
+	auto frames = std::min(max_frames, buffer_outer->requested);
+	for (auto i: ranges::iota_view(0u, frames)) {
+		self.sin_accumulator += stx::Tau_v<double> * 440.0 / static_cast<double>(SamplingRate);
+		self.sin_accumulator = std::fmod(self.sin_accumulator, stx::Tau_v<double>);
+		auto val = std::sin(self.sin_accumulator) * 0.5 * 32767.0;
+		for (auto c: ranges::iota_view(0u, ChannelCount))
+			output[i * ChannelCount + c] = static_cast<int16>(val);
+	}
+
+	buffer->datas[0].chunk->offset = 0;
+	buffer->datas[0].chunk->stride = Stride;
+	buffer->datas[0].chunk->size = frames * Stride;
+	pw_stream_queue_buffer(self.stream.get(), buffer_outer);
+}
 
 }

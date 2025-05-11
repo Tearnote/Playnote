@@ -18,12 +18,12 @@ public:
 	RAIIResource(T const& resource): resource(resource) {}
 	~RAIIResource() { if (resource) std::invoke(Func{}, *resource); }
 
-	auto get() -> T& { return resource.value(); }
-	auto get() const -> T const& { return resource.value(); }
-	auto operator*() -> T& { return get(); }
-	auto operator*() const -> T const& { return get(); }
-	auto operator->() -> T* { return &get(); }
-	auto operator->() const -> T const* { return &get(); }
+	auto get() -> T* { return &resource.value(); }
+	auto get() const -> T const* { return &resource.value(); }
+	auto operator*() -> T& { return *get(); }
+	auto operator*() const -> T const& { return *get(); }
+	auto operator->() -> T* { return get(); }
+	auto operator->() const -> T const* { return get(); }
 
 	// Safely moveable
 	RAIIResource(RAIIResource const&) = delete;

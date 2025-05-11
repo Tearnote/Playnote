@@ -1,6 +1,8 @@
 module;
+#include <system_error>
 #include <stdexcept>
 #include <utility>
+#include <cerrno>
 #include <format>
 
 export module playnote.stx.except;
@@ -26,6 +28,13 @@ export template<typename... Args>
 auto logic_error_fmt(std::format_string<Args...> fmt, Args&&... args)
 {
 	return typed_error_fmt<std::logic_error>(fmt, std::forward<Args>(args)...);
+};
+
+// A std::system_error with a formatted message, using errno automatically
+export template<typename... Args>
+auto system_error_fmt(std::format_string<Args...> fmt, Args&&... args)
+{
+	return std::system_error{errno, std::generic_category(), std::format(fmt, std::forward<Args>(args)...)};
 };
 
 }

@@ -48,8 +48,9 @@ target_sources(Playnote PUBLIC
 	src/sys/os.cppm
 	src/gfx/renderer.cppm
 	src/gfx/imgui.cppm
-	src/input_thread.cppm
 	src/render_thread.cppm
+	src/audio_thread.cppm
+	src/input_thread.cppm
 	src/globals.cppm
 )
 
