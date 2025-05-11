@@ -162,12 +162,6 @@ Window::Window(GLFW&, std::string_view title, uvec2 size)
 		}
 	);
 
-	// Quit on ESC
-	register_key_callback([this](int key, bool) {
-		if (key == GLFW_KEY_ESCAPE)
-			glfwSetWindowShouldClose(*window_handle, GLFW_TRUE);
-	});
-
 	L_INFO("Created window \"{}\" at {}x{}", title, size.x(), size.y());
 }
 
