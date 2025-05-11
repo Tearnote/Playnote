@@ -10,13 +10,18 @@ import playnote.sys.gpu;
 
 namespace playnote::gfx {
 
+// Encapsulation of Dear ImGui initialization and drawing
 export class Imgui {
 public:
-	Imgui(sys::GPU&);
+	explicit Imgui(sys::GPU&);
 
+	// Prepare Imgui to accept commands
+	// All ImGui:: functions must be run within the provided function
 	template<stx::callable<void()> Func>
 	void enqueue(Func);
 
+	// Draw enqueued Imgui state into the image
+	// Must be run once and after enqueue()
 	auto draw(vuk::Allocator&, sys::ManagedImage) -> sys::ManagedImage;
 
 private:

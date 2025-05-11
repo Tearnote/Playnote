@@ -16,14 +16,18 @@ using stx::vec4;
 using stx::uint;
 using sys::ManagedImage;
 
+// System that takes primitive definitions and draws them to the screen
+// Handles Imgui drawing as well
 export class Renderer {
 public:
+	// Solid color rectangle primitive
 	struct Rect {
 		ivec2 pos;
 		ivec2 size;
 		vec4 color;
 	};
 
+	// An accumulator of primitives to draw
 	class Queue {
 	public:
 		// Add a solid color rectangle to the draw queue
@@ -36,6 +40,9 @@ public:
 
 	explicit Renderer(sys::GPU& gpu);
 
+	// Provide a queue to the function argument, and then draw contents of the queue to the screen
+	// Each call will wait block until the next frame begins
+	// Imgui:: calls are only allowed within the function argument
 	template<stx::callable<void(Queue&)> Func>
 	void frame(Func&&);
 
@@ -43,6 +50,7 @@ private:
 	sys::GPU& gpu;
 	gfx::Imgui imgui;
 
+	// Drawing logic separated from frame() so that it's not templated
 	void draw(Queue const&);
 };
 
