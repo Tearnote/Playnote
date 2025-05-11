@@ -10,6 +10,7 @@ import playnote.gfx.renderer;
 
 namespace playnote {
 
+// Welcome back, LR2
 void enqueue_test_scene(gfx::Renderer::Queue& queue)
 {
 	queue.enqueue_rect({{ 33, 315}, {256,   6}, {0.996f, 0.000f, 0.000f, 1.000f}});
@@ -25,6 +26,8 @@ void enqueue_test_scene(gfx::Renderer::Queue& queue)
 	queue.enqueue_rect({{255,   0}, {  2, 315}, {0.376f, 0.376f, 0.376f, 0.376f}});
 }
 
+// Handle the tasks of the render thread, which is to present current game state onto the window
+// at the screen's refresh rate.
 export void render_thread()
 {
 	auto& window = locator.get<sys::Window>();

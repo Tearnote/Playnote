@@ -26,6 +26,8 @@ try {
 	auto [window, window_stub] = locator.provide<sys::Window>(glfw, AppTitle, uvec2{640, 480});
 	auto [gpu, gpu_stub] = locator.provide<sys::GPU>(window);
 
+	// Spawn all threads. Every thread is assumed to eventually finish
+	// once window.is_closing() is true
 	auto render_thread_stub = std::thread{render_thread};
 	input_thread();
 	render_thread_stub.join();

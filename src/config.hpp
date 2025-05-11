@@ -4,6 +4,9 @@
 #include <array>
 #include "quill/core/LogLevel.h"
 
+// Global game configuration - controls which features are on/off depending on build configuration,
+// and their hardcoded values
+
 inline constexpr auto AppTitle = "Playnote";
 inline constexpr auto AppVersion = std::to_array({0u, 0u, 1u});
 
