@@ -147,6 +147,7 @@ void GPU::frame(Func&& func)
 	auto compiler = vuk::Compiler{};
 	auto profiling_cbs = vuk::extra::make_Tracy_callbacks(*tracy_context);
 	entire_thing.submit(frame_allocator, compiler, { .callbacks = profiling_cbs });
+	FrameMark;
 }
 
 }
