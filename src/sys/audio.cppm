@@ -7,6 +7,7 @@ module;
 #include <array>
 #include <cmath>
 #include <spa/param/audio/format-utils.h>
+#include <spa/param/latency-utils.h>
 #include <pipewire/pipewire.h>
 #include "util/log_macros.hpp"
 #include "config.hpp"
@@ -39,6 +40,7 @@ public:
 private:
 	static constexpr auto ChannelCount = 2u;
 	static constexpr auto SamplingRate = 48000u;
+	static constexpr auto Latency = "64/48000";
 
 	using Loop = std::unique_ptr<pw_main_loop, decltype([](auto* l) {
 		pw_main_loop_destroy(l);
@@ -76,11 +78,13 @@ Audio::Audio(int argc, char* argv[]) {
 
 	loop = Loop{ptr_check(pw_main_loop_new(nullptr))};
 	stream = Stream{pw_stream_new_simple(
-		pw_main_loop_get_loop(loop.get()), "audio",
+		pw_main_loop_get_loop(loop.get()), std::string{AppTitle}.c_str(),
 		pw_properties_new(
 			PW_KEY_MEDIA_TYPE, "Audio",
 			PW_KEY_MEDIA_CATEGORY, "Playback",
-			PW_KEY_MEDIA_ROLE, "Game", nullptr),
+			PW_KEY_MEDIA_ROLE, "Game",
+			PW_KEY_NODE_LATENCY, Latency,
+		nullptr),
 		&StreamEvents, this)};
 
 	auto params = std::array<spa_pod const*, 1>{};
