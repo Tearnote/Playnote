@@ -1,3 +1,4 @@
+# Target that copies a list of files into the build
 include_guard()
 
 set(ASSET_DIR_PREFIX assets/)

@@ -1,3 +1,4 @@
+# Target that compiles a list of shaders into SPIRV as a list of 32-bit integer literals
 include_guard()
 
 include(cmake/Dependencies.cmake)

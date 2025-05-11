@@ -1,4 +1,4 @@
-### Project configuration
+# Project configuration
 
 cmake_minimum_required(VERSION 3.30)
 project(Playnote
@@ -10,7 +10,7 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-### Global build settings
+# Global build settings
 
 set(BUILD_SHARED_LIBS OFF) # Only build static libs
 #TODO Compiler and linker flags:
@@ -24,7 +24,7 @@ add_compile_definitions("BUILD_TYPE=$<$<CONFIG:Debug>:BUILD_DEBUG>$<$<CONFIG:Rel
 
 include(cmake/Dependencies.cmake)
 
-### Main target
+# Main target
 
 add_executable(Playnote
 	src/util/log_macros.hpp
@@ -62,7 +62,7 @@ target_link_libraries(Playnote PRIVATE volk)
 target_link_libraries(Playnote PRIVATE vuk-extra-imgui-platform)
 target_link_libraries(Playnote PRIVATE vuk)
 
-### Assets and other artifacts
+# Assets and other artifacts
 
 include(cmake/Shaders.cmake)
 add_dependencies(Playnote Playnote_Shaders)
