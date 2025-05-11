@@ -10,6 +10,7 @@ find_package(Vulkan REQUIRED # GPU API
 	COMPONENTS glslc glslangValidator # Shader compiler
 )
 find_package(glfw3 3.4 REQUIRED) # Windowing support
+pkg_search_module(libsndfile REQUIRED IMPORTED_TARGET sndfile) # Sound file decoding
 
 if(UNIX)
 	pkg_search_module(PipeWire REQUIRED IMPORTED_TARGET libpipewire-0.3) # Low latency Linux audio
