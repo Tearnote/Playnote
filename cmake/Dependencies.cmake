@@ -59,3 +59,12 @@ FetchContent_Declare(vuk # Vulkan rendergraph
 FetchContent_MakeAvailable(vuk)
 target_compile_definitions(vuk PUBLIC VUK_CUSTOM_VULKAN_HEADER=<volk.h>)
 target_link_libraries(vuk PRIVATE volk)
+
+set(TRACY_ONLY_LOCALHOST ON CACHE BOOL "" FORCE)
+FetchContent_Declare(tracy # CPU/GPU profiler
+	GIT_REPOSITORY https://github.com/wolfpld/tracy
+	GIT_TAG 53510c316bd48b7899f15c98a510ad632124fc58
+	GIT_SHALLOW TRUE
+)
+FetchContent_MakeAvailable(tracy)
+target_compile_definitions(TracyClient PUBLIC TRACY_VK_USE_SYMBOL_TABLE)

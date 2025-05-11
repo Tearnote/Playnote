@@ -9,9 +9,12 @@ module;
 #include "vuk/runtime/vk/VkSwapchain.hpp"
 #include "vuk/runtime/vk/Allocator.hpp"
 #include "vuk/runtime/vk/VkRuntime.hpp"
+#include "vuk/runtime/CommandBuffer.hpp" // Required to work around bug in TracyIntegration.hpp
+#include "vuk/extra/TracyIntegration.hpp"
 #include "vuk/ImageAttachment.hpp"
 #include "vuk/RenderGraph.hpp"
 #include "vuk/Value.hpp"
+#include "vuk/Types.hpp"
 #include "util/log_macros.hpp"
 #include "config.hpp"
 
@@ -110,6 +113,7 @@ private:
 	vuk::DeviceSuperFrameResource global_resource;
 	vuk::Allocator global_allocator;
 	vuk::Swapchain swapchain;
+	std::unique_ptr<vuk::extra::TracyContext> tracy_context;
 };
 
 GPU::GPU(sys::Window& window):
@@ -122,7 +126,8 @@ GPU::GPU(sys::Window& window):
 	runtime{create_runtime(*instance, physical_device, *device, retrieve_queues(*device))},
 	global_resource{runtime, FramesInFlight},
 	global_allocator{global_resource},
-	swapchain{create_swapchain(window.size(), global_allocator, *device, *surface)}
+	swapchain{create_swapchain(window.size(), global_allocator, *device, *surface)},
+	tracy_context{vuk::extra::init_Tracy(global_allocator)}
 {
 	L_INFO("Vulkan initialized");
 }
@@ -140,7 +145,8 @@ void GPU::frame(Func&& func)
 
 	auto entire_thing = vuk::enqueue_presentation(std::move(result));
 	auto compiler = vuk::Compiler{};
-	entire_thing.submit(frame_allocator, compiler, {});
+	auto profiling_cbs = vuk::extra::make_Tracy_callbacks(*tracy_context);
+	entire_thing.submit(frame_allocator, compiler, { .callbacks = profiling_cbs });
 }
 
 }
