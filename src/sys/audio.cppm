@@ -1,7 +1,6 @@
 module;
 #include <string_view>
 #include <algorithm>
-#include <memory>
 #include <thread>
 #include <ranges>
 #include <array>
@@ -29,8 +28,7 @@ using stx::int16;
 export class Audio {
 public:
 	Audio(int argc, char* argv[]);
-
-	void run() { pw_main_loop_run(loop.get()); }
+	~Audio();
 
 	Audio(Audio const&) = delete;
 	auto operator=(Audio const&) -> Audio& = delete;
@@ -40,17 +38,10 @@ public:
 private:
 	static constexpr auto ChannelCount = 2u;
 	static constexpr auto SamplingRate = 48000u;
-	static constexpr auto Latency = "64/48000";
+	static constexpr auto Latency = "128/48000";
 
-	using Loop = std::unique_ptr<pw_main_loop, decltype([](auto* l) {
-		pw_main_loop_destroy(l);
-	})>;
-	using Stream = std::unique_ptr<pw_stream, decltype([](auto* s) {
-		pw_stream_destroy(s);
-	})>;
-
-	Loop loop{};
-	Stream stream{};
+	pw_thread_loop* loop{nullptr};
+	pw_stream* stream{nullptr};
 	double sin_accumulator{};
 
 	static void on_process(void*);
@@ -76,16 +67,16 @@ Audio::Audio(int argc, char* argv[]) {
 	pw_init(&argc, &argv);
 	L_DEBUG("Using libpipewire {}\n", pw_get_library_version());
 
-	loop = Loop{ptr_check(pw_main_loop_new(nullptr))};
-	stream = Stream{pw_stream_new_simple(
-		pw_main_loop_get_loop(loop.get()), std::string{AppTitle}.c_str(),
+	loop = ptr_check(pw_thread_loop_new(nullptr, nullptr));
+	stream = pw_stream_new_simple(
+		pw_thread_loop_get_loop(loop), std::string{AppTitle}.c_str(),
 		pw_properties_new(
 			PW_KEY_MEDIA_TYPE, "Audio",
 			PW_KEY_MEDIA_CATEGORY, "Playback",
 			PW_KEY_MEDIA_ROLE, "Game",
 			PW_KEY_NODE_LATENCY, Latency,
 		nullptr),
-		&StreamEvents, this)};
+		&StreamEvents, this);
 
 	auto params = std::array<spa_pod const*, 1>{};
 	auto buffer = std::array<uint8, 1024>{};
@@ -96,16 +87,26 @@ Audio::Audio(int argc, char* argv[]) {
 		.channels = ChannelCount,
 	};
 	params[0] = spa_format_audio_raw_build(&builder, SPA_PARAM_EnumFormat, &audio_info);
-	ret_check(pw_stream_connect(stream.get(), PW_DIRECTION_OUTPUT, PW_ID_ANY,
+	ret_check(pw_stream_connect(stream, PW_DIRECTION_OUTPUT, PW_ID_ANY,
 		static_cast<pw_stream_flags>(PW_STREAM_FLAG_AUTOCONNECT | PW_STREAM_FLAG_MAP_BUFFERS | PW_STREAM_FLAG_RT_PROCESS),
 		params.data(), 1));
+
+	pw_thread_loop_start(loop);
+}
+
+Audio::~Audio()
+{
+	pw_thread_loop_lock(loop);
+	pw_stream_destroy(stream);
+	pw_thread_loop_unlock(loop);
+	pw_thread_loop_destroy(loop);
 }
 
 void Audio::on_process(void* userdata)
 {
 	auto& self = *static_cast<Audio*>(userdata);
 
-	auto* buffer_outer = pw_stream_dequeue_buffer(self.stream.get());
+	auto* buffer_outer = pw_stream_dequeue_buffer(self.stream);
 	if (!buffer_outer) {
 		L_WARN("Ran out of audio buffers");
 		return;
@@ -128,7 +129,7 @@ void Audio::on_process(void* userdata)
 	buffer->datas[0].chunk->offset = 0;
 	buffer->datas[0].chunk->stride = Stride;
 	buffer->datas[0].chunk->size = frames * Stride;
-	pw_stream_queue_buffer(self.stream.get(), buffer_outer);
+	pw_stream_queue_buffer(self.stream, buffer_outer);
 }
 
 }

@@ -30,11 +30,11 @@ try {
 
 	// Spawn all threads. Every thread is assumed to eventually finish
 	// once window.is_closing() is true
-	auto audio_thread_stub = std::thread{audio_thread, argc, argv};
-	auto render_thread_stub = std::thread{render_thread};
-	input_thread();
-	render_thread_stub.join();
-	audio_thread_stub.join();
+	{
+		auto audio_thread_stub = std::jthread{audio_thread, argc, argv};
+		auto render_thread_stub = std::jthread{render_thread};
+		input_thread();
+	}
 
 	return EXIT_SUCCESS;
 }
