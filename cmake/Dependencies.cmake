@@ -11,6 +11,7 @@ find_package(Vulkan REQUIRED # GPU API
 )
 find_package(glfw3 3.4 REQUIRED) # Windowing support
 pkg_search_module(libsndfile REQUIRED IMPORTED_TARGET sndfile) # Audio file decoding
+pkg_search_module(libsamplerate REQUIRED IMPORTED_TARGET samplerate) # Audio file decoding
 
 if(UNIX)
 	pkg_search_module(PipeWire REQUIRED IMPORTED_TARGET libpipewire-0.3) # Low latency Linux audio
