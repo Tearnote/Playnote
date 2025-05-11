@@ -34,6 +34,7 @@ export void render_thread()
 	while (!window.is_closing()) {
 		renderer.frame([](gfx::Renderer::Queue& queue) {
 			enqueue_test_scene(queue);
+			ImGui::ShowDemoWindow();
 		});
 	}
 }

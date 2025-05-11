@@ -5,6 +5,8 @@
 import playnote.util.logger;
 import playnote.globals;
 
+// Logging macros
+// Requires that the global locator contains util::Logger
 #define L_TRACE(...) LOG_TRACE_L1(playnote::locator.get<playnote::util::Logger>().get(), __VA_ARGS__)
 #define L_DEBUG(...) LOG_DEBUG(playnote::locator.get<playnote::util::Logger>().get(), __VA_ARGS__)
 #define L_INFO(...) LOG_INFO(playnote::locator.get<playnote::util::Logger>().get(), __VA_ARGS__)

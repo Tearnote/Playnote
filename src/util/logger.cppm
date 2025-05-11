@@ -19,12 +19,12 @@ public:
 	[[nodiscard]] auto get() -> quill::Logger* { return logger; }
 
 private:
-	inline static quill::Logger* logger{nullptr};
+	inline static quill::Logger* logger{nullptr}; // Static to ensure only one can exist
 };
 
 Logger::Logger()
 {
-	ASSUME(!logger); // Only one can exist
+	ASSUME(!logger);
 	quill::Backend::start({
 		.thread_name = "Logging",
 		.log_level_short_codes = {
@@ -38,8 +38,11 @@ Logger::Logger()
 	auto file_sink = quill::Frontend::create_or_get_sink<quill::FileSink>(LogfilePath, file_cfg);
 	logger = quill::Frontend::create_or_get_logger("root",
 		{std::move(console_sink), std::move(file_sink)},
-		quill::PatternFormatterOptions{"%(time) [%(log_level_short_code)] %(message)",
-			"%H:%M:%S.%Qms"});
+		quill::PatternFormatterOptions{
+			"%(time) [%(log_level_short_code)] %(message)",
+			"%H:%M:%S.%Qms"
+		}
+	);
 	logger->set_log_level(LoggingLevel);
 }
 

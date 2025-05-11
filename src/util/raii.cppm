@@ -25,6 +25,7 @@ public:
 	auto operator->() -> T* { return &get(); }
 	auto operator->() const -> T const* { return &get(); }
 
+	// Safely moveable
 	RAIIResource(RAIIResource const&) = delete;
 	auto operator=(RAIIResource const&) -> RAIIResource& = delete;
 	RAIIResource(RAIIResource&& other) noexcept { *this = std::move(other); }
@@ -33,7 +34,7 @@ public:
 	operator bool() const { return resource; }
 
 private:
-	std::optional<T> resource{std::nullopt};
+	std::optional<T> resource{std::nullopt}; // nullopt represents uninitialized and moved-out-from states
 };
 
 template<typename T, stx::callable<void(T&)> Func>
