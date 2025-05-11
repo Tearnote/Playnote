@@ -1,5 +1,6 @@
 module;
 #include <thread>
+#include "tracy/Tracy.hpp"
 
 export module playnote.input_thread;
 
@@ -20,6 +21,7 @@ export void input_thread()
 
 	while (!window.is_closing()) {
 		glfw.poll();
+		FrameMarkNamed("input");
 		std::this_thread::yield();
 	}
 }

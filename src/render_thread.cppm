@@ -1,4 +1,5 @@
 module;
+#include "tracy/Tracy.hpp"
 #include "imgui.h"
 
 export module playnote.render_thread;
@@ -41,6 +42,7 @@ export void render_thread()
 			enqueue_test_scene(queue);
 			ImGui::ShowDemoWindow();
 		});
+		FrameMark;
 	}
 }
 
