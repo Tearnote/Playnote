@@ -120,8 +120,8 @@ GPU::GPU(sys::Window& window):
 	physical_device{select_physical_device(*instance, *surface)},
 	device{create_device(physical_device)},
 	runtime{create_runtime(*instance, physical_device, *device, retrieve_queues(*device))},
-	global_resource{vuk::DeviceSuperFrameResource{runtime, FramesInFlight}},
-	global_allocator{vuk::Allocator{global_resource}},
+	global_resource{runtime, FramesInFlight},
+	global_allocator{global_resource},
 	swapchain{create_swapchain(window.size(), global_allocator, *device, *surface)}
 {
 	L_INFO("Vulkan initialized");
