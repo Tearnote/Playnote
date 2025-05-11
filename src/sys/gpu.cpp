@@ -69,7 +69,7 @@ auto GPU::create_instance() -> vkb::Instance
 		.set_debug_messenger_severity(
 			VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT |
 			VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
-			VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT
+			VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT // Verbose, but debug printf messages are INFO
 		)
 		.set_debug_messenger_type(
 			VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
@@ -111,6 +111,7 @@ auto GPU::select_physical_device(vkb::Instance& instance,
 		.shaderInt64 = VK_TRUE,
 #endif //VK_VALIDATION
 	};
+	// All of the below features are vuk requirements
 	auto physical_device_vulkan11_features = VkPhysicalDeviceVulkan11Features{
 		.shaderDrawParameters = VK_TRUE,
 	};
@@ -131,7 +132,7 @@ auto GPU::select_physical_device(vkb::Instance& instance,
 
 	auto physical_device_selector_result = vkb::PhysicalDeviceSelector{instance}
 		.set_surface(surface)
-		.set_minimum_version(1, 2)
+		.set_minimum_version(1, 2) // vuk requirement
 		.set_required_features(physical_device_features)
 		.set_required_features_11(physical_device_vulkan11_features)
 		.set_required_features_12(physical_device_vulkan12_features)
@@ -154,7 +155,7 @@ auto GPU::select_physical_device(vkb::Instance& instance,
 			physical_device_selector_result.error().message());
 	}
 	auto physical_device = physical_device_selector_result.value();
-	physical_device.enable_extension_if_present(VK_EXT_CALIBRATED_TIMESTAMPS_EXTENSION_NAME);
+	physical_device.enable_extension_if_present(VK_EXT_CALIBRATED_TIMESTAMPS_EXTENSION_NAME); // for vuk's Tracy integration
 	physical_device.enable_extension_if_present(VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME);
 
 	L_INFO("GPU selected: {}", physical_device.properties.deviceName);
@@ -210,6 +211,8 @@ auto GPU::create_runtime(VkInstance instance, VkPhysicalDevice physical_device, 
 	auto pointers = vuk::FunctionPointers{
 		vkGetInstanceProcAddr,
 		vkGetDeviceProcAddr,
+// Please don't hate me martty, it saves me so much typing
+// (and of course we won't spend the extra 1ms it would take to load the functions a second time)
 #define VUK_X(name) name,
 #define VUK_Y(name) name,
 #include "vuk/runtime/vk/VkPFNOptional.hpp"
@@ -239,7 +242,8 @@ auto GPU::create_runtime(VkInstance instance, VkPhysicalDevice physical_device, 
 	}};
 }
 
-auto GPU::create_swapchain(uvec2 size, vuk::Allocator& allocator, vkb::Device& device, Surface_impl& surface, std::optional<vuk::Swapchain> old) -> vuk::Swapchain
+auto GPU::create_swapchain(uvec2 size, vuk::Allocator& allocator, vkb::Device& device,
+	Surface_impl& surface, std::optional<vuk::Swapchain> old) -> vuk::Swapchain
 {
 	auto vkbswapchain_result = vkb::SwapchainBuilder{device}
 		.set_old_swapchain(old? old->swapchain : VK_NULL_HANDLE)
@@ -259,7 +263,8 @@ auto GPU::create_swapchain(uvec2 size, vuk::Allocator& allocator, vkb::Device& d
 		)
 		.build();
 	if (!vkbswapchain_result)
-		throw stx::runtime_error_fmt("Failed to create the swapchain: {}", vkbswapchain_result.error().message());
+		throw stx::runtime_error_fmt("Failed to create the swapchain: {}",
+			vkbswapchain_result.error().message());
 	auto vkbswapchain = vkbswapchain_result.value();
 
 	if (old) {
@@ -270,7 +275,8 @@ auto GPU::create_swapchain(uvec2 size, vuk::Allocator& allocator, vkb::Device& d
 
 	auto swapchain = vuk::Swapchain{allocator, vkbswapchain.image_count};
 
-	for(auto [image, view]: ranges::zip_view{*vkbswapchain.get_images(), *vkbswapchain.get_image_views()}) {
+	for (auto [image, view]: ranges::zip_view{*vkbswapchain.get_images(),
+		     *vkbswapchain.get_image_views()}) {
 		swapchain.images.emplace_back(vuk::ImageAttachment{
 			.image = vuk::Image{image, nullptr},
 			.image_view = vuk::ImageView{{0}, view},

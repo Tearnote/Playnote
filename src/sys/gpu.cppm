@@ -29,11 +29,13 @@ namespace playnote::sys {
 using stx::uint;
 using stx::uvec2;
 
+// Saves some typing
 export using ManagedImage = vuk::Value<vuk::ImageAttachment>;
 
+// RAII encapsulation of GPU state, handling initialization and frame preparation/presentation
 export class GPU {
 public:
-	static constexpr auto FramesInFlight = 2u;
+	static constexpr auto FramesInFlight = 2u; // 2 or 3, low latency vs smoothness
 
 	explicit GPU(sys::Window&);
 	~GPU() { runtime.wait_idle(); }
@@ -41,6 +43,9 @@ public:
 	auto get_window() -> sys::Window& { return window; }
 	auto get_global_allocator() -> vuk::Allocator& { return global_allocator; }
 
+	// Prepare and present a single frame
+	// All vuk draw commands must be submitted within the callback
+	// The callback is provided with the frame allocator and swapchain image
 	template<stx::callable<ManagedImage(vuk::Allocator&, ManagedImage&&)> Func>
 	void frame(Func&&);
 
@@ -80,10 +85,13 @@ private:
 	};
 
 #ifdef VK_VALIDATION
+	// Forward Vulkan validation errors to the logger
 	static auto debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT,
 		VkDebugUtilsMessageTypeFlagsEXT, VkDebugUtilsMessengerCallbackDataEXT const*,
 		void*) -> VkBool32;
 #endif
+	// Helpers below use dumb types instead of RAII wrappers to avoid a linker bug
+	// (the lambda types are distinct in different TUs when modules are in use)
 	auto create_instance() -> vkb::Instance;
 	auto create_surface(vkb::Instance&) -> Surface_impl;
 	auto select_physical_device(vkb::Instance&, VkSurfaceKHR) -> vkb::PhysicalDevice;
@@ -105,6 +113,7 @@ private:
 };
 
 GPU::GPU(sys::Window& window):
+	// Beautiful, isn't it
 	window{window},
 	instance{create_instance()},
 	surface{create_surface(*instance)},

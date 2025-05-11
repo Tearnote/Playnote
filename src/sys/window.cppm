@@ -30,7 +30,11 @@ public:
 	GLFW();
 	~GLFW();
 
+	// Retrieve time since application start
 	[[nodiscard]] auto get_time() const -> chrono::nanoseconds;
+
+	// Pump the message queue
+	// Run this as often as possible to receive accurate event timestamps
 	void poll() { glfwPollEvents(); }
 
 	GLFW(GLFW const&) = delete;
@@ -40,31 +44,45 @@ public:
 };
 
 // RAII abstraction of a single application window, providing a drawing surface and input handling
-// Includes GLFW initialization, so only one can exist at a time
 export class Window {
 public:
-	Window(GLFW&, std::string_view title, uvec2 size);
+	Window(GLFW&, std::string_view title, uvec2 size);  // GLFW parameter is a semantic dependency
 
+	// true if application close was requested (the X was pressed, or triggered manually from code
+	// to mark a user-requested quit event)
 	[[nodiscard]] auto is_closing() const -> bool { return glfwWindowShouldClose(*window_handle); }
+
+	// Size of the window's framebuffer
 	[[nodiscard]] auto size() const -> uvec2;
+
+	// Position of the cursor relative to the window's framebuffer
 	[[nodiscard]] auto get_cursor_position() const -> vec2;
 
+	// Run the provided function on any keyboard key press/release
+	// Function is provided with the keycode and key state (true for press, false for release)
 	void register_key_callback(std::function<void(int, bool)> func)
 	{
 		key_callbacks.emplace_back(std::move(func));
 	}
 
+	// Run the provided function on any cursor move
+	// Function is provided with the new cursor position
 	void register_cursor_motion_callback(std::function<void(vec2)> func)
 	{
 		cursor_motion_callbacks.emplace_back(std::move(func));
 	}
 
+	// Run the provided function on any mouse button press/release
+	// Function is provided with the button index and state (true for press, false for release)
 	void register_mouse_button_callback(std::function<void(int, bool)> func)
 	{
 		mouse_button_callbacks.emplace_back(std::move(func));
 	}
 
 	auto handle() -> GLFWwindow* { return *window_handle; }
+
+	// Create a Vulkan surface for the window's framebuffer
+	// Destruction needs to be handled manually by the caller
 	auto create_surface(VkInstance) -> VkSurfaceKHR;
 
 	Window(Window const&) = delete;
@@ -88,7 +106,7 @@ private:
 
 GLFW::GLFW()
 {
-	// No need to check GLFW functions' return codes with the error callback set
+	// Convert GLFW errors to exceptions, freeing us from having to check error codes
 	glfwSetErrorCallback([](int code, char const* str) {
 		throw stx::runtime_error_fmt("[GLFW] Error {}: {}", code, str);
 	});
@@ -108,7 +126,7 @@ auto GLFW::get_time() const -> chrono::nanoseconds
 	return duration_cast<chrono::nanoseconds>(time);
 }
 
-Window::Window(GLFW&, std::string_view title, uvec2 size) // GLFW parameter is a semantic dependency
+Window::Window(GLFW&, std::string_view title, uvec2 size)
 {
 	ASSUME(size.x() > 0 && size.y() > 0);
 
@@ -120,11 +138,11 @@ Window::Window(GLFW&, std::string_view title, uvec2 size) // GLFW parameter is a
 	};
 	ASSERT(*window_handle);
 
-	// Set up event callbacks
+	// Provide event callbacks full access to the associated Window instance
 	glfwSetWindowUserPointer(*window_handle, this);
 
 	glfwSetKeyCallback(*window_handle, [](GLFWwindow* window_ptr, int key, int, int action, int) {
-		if (action == GLFW_REPEAT) return;
+		if (action == GLFW_REPEAT) return; // Only care about press and release
 		auto& window = *static_cast<Window*>(glfwGetWindowUserPointer(window_ptr));
 		for (auto& func: window.key_callbacks)
 			func(key, action == GLFW_PRESS);
