@@ -43,6 +43,7 @@ target_sources(Playnote PUBLIC
 	src/util/locator.cppm
 	src/util/logger.cppm
 	src/sys/window.cppm
+	src/sys/audio.cppm
 	src/sys/gpu.cppm
 	src/sys/os.cppm
 	src/gfx/renderer.cppm
@@ -56,6 +57,7 @@ target_include_directories(Playnote PRIVATE src) # All includes start from src a
 
 target_link_libraries(Playnote PRIVATE unordered_dense::unordered_dense)
 target_link_libraries(Playnote PRIVATE vk-bootstrap)
+target_link_libraries(Playnote PRIVATE PipeWire::PipeWire)
 target_link_libraries(Playnote PRIVATE libassert::assert)
 target_link_libraries(Playnote PRIVATE TracyClient)
 target_link_libraries(Playnote PRIVATE quill)

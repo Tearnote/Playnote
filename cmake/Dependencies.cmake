@@ -2,6 +2,7 @@
 include_guard()
 
 include(FetchContent)
+list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
 # Local dependencies
 
@@ -9,6 +10,10 @@ find_package(Vulkan REQUIRED # GPU API
 	COMPONENTS glslc glslangValidator # Shader compiler
 )
 find_package(glfw3 3.4 REQUIRED) # Windowing support
+
+if(UNIX)
+	find_package(PipeWire REQUIRED)
+endif()
 
 # Remote dependencies
 
