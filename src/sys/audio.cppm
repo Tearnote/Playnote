@@ -1,6 +1,7 @@
 module;
 #include <string_view>
 #include <algorithm>
+#include <vector>
 #include <thread>
 #include <ranges>
 #include <array>
@@ -29,6 +30,12 @@ public:
 	Audio(int argc, char* argv[]);
 	~Audio();
 
+	void play(std::vector<float>&& new_audio)
+	{
+		audio = std::move(new_audio);
+		audio_progress = audio.data();
+	}
+
 	Audio(Audio const&) = delete;
 	auto operator=(Audio const&) -> Audio& = delete;
 	Audio(Audio&&) = delete;
@@ -37,11 +44,13 @@ public:
 private:
 	static constexpr auto ChannelCount = 2u;
 	static constexpr auto SamplingRate = 48000u;
-	static constexpr auto Latency = "128/48000";
+	static constexpr auto Latency = "256/48000";
 
 	pw_thread_loop* loop{nullptr};
 	pw_stream* stream{nullptr};
-	double sin_accumulator{};
+
+	std::vector<float> audio{};
+	float* audio_progress{nullptr};
 
 	static void on_process(void*);
 	inline static const auto StreamEvents = pw_stream_events{
@@ -117,12 +126,14 @@ void Audio::on_process(void* userdata)
 	constexpr auto Stride = sizeof(float) * ChannelCount;
 	const auto max_frames = buffer->datas[0].maxsize / Stride;
 	auto frames = std::min(max_frames, buffer_outer->requested);
-	for (auto i: ranges::iota_view(0u, frames)) {
-		self.sin_accumulator += stx::Tau_v<double> * 440.0 / static_cast<double>(SamplingRate);
-		self.sin_accumulator = std::fmod(self.sin_accumulator, stx::Tau_v<double>);
-		auto val = std::sin(self.sin_accumulator) * 0.5;
-		for (auto c: ranges::iota_view(0u, ChannelCount))
-			output[i * ChannelCount + c] = static_cast<float>(val);
+
+	if (self.audio_progress) {
+		auto remaining_audio_frames = static_cast<unsigned long>((self.audio.data() + self.audio.size()) - self.audio_progress) / ChannelCount;
+		auto frames_to_play = std::min(frames, remaining_audio_frames);
+		std::copy_n(self.audio_progress, frames_to_play * ChannelCount, output);
+		self.audio_progress += frames_to_play * ChannelCount;
+		if (self.audio_progress >= self.audio.data() + self.audio.size())
+			self.audio_progress = nullptr;
 	}
 
 	buffer->datas[0].chunk->offset = 0;
