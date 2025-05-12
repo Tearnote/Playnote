@@ -1,5 +1,7 @@
 module;
+#include <string_view>
 #include <utility>
+#include <string>
 #include <vector>
 #include <thread>
 #include <cmath>
@@ -20,10 +22,10 @@ namespace playnote {
 
 using stx::usize;
 
-auto load_test_file() -> std::vector<float>
+auto load_audio_file(std::string_view path) -> std::vector<float>
 {
 	auto file_info = SF_INFO{};
-	auto* file = sf_open("assets/test.ogg", SFM_READ, &file_info);
+	auto* file = sf_open(std::string{path}.c_str(), SFM_READ, &file_info);
 	if (!file) {
 		L_ERROR("Failed to open assets/test.ogg: {}", sf_strerror(nullptr));
 		return {};
@@ -64,8 +66,10 @@ export void audio_thread(int argc, char* argv[]) {
 
 	auto& window = locator.get<sys::Window>();
 	auto [audio, audio_stub] = locator.provide<sys::Audio>(argc, argv);
-	auto file = load_test_file();
+	auto file = load_audio_file("assets/test.ogg");
+	auto file2 = load_audio_file("assets/test2.ogg");
 	audio.play(std::move(file));
+	audio.play(std::move(file2));
 	while (!window.is_closing())
 		std::this_thread::yield();
 }

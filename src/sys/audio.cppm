@@ -24,6 +24,7 @@ namespace playnote::sys {
 namespace ranges = std::ranges;
 using stx::uint;
 using stx::uint8;
+using stx::usize;
 
 export class Audio {
 public:
@@ -32,8 +33,7 @@ public:
 
 	void play(std::vector<float>&& new_audio)
 	{
-		audio = std::move(new_audio);
-		audio_progress = audio.data();
+		audios.emplace_back(std::move(new_audio));
 	}
 
 	Audio(Audio const&) = delete;
@@ -49,8 +49,8 @@ private:
 	pw_thread_loop* loop{nullptr};
 	pw_stream* stream{nullptr};
 
-	std::vector<float> audio{};
-	float* audio_progress{nullptr};
+	std::vector<std::vector<float>> audios{};
+	usize audio_progress{0};
 
 	static void on_process(void*);
 	inline static const auto StreamEvents = pw_stream_events{
@@ -127,13 +127,19 @@ void Audio::on_process(void* userdata)
 	const auto max_frames = buffer->datas[0].maxsize / Stride;
 	auto frames = std::min(max_frames, buffer_outer->requested);
 
-	if (self.audio_progress) {
-		auto remaining_audio_frames = static_cast<unsigned long>((self.audio.data() + self.audio.size()) - self.audio_progress) / ChannelCount;
-		auto frames_to_play = std::min(frames, remaining_audio_frames);
-		std::copy_n(self.audio_progress, frames_to_play * ChannelCount, output);
-		self.audio_progress += frames_to_play * ChannelCount;
-		if (self.audio_progress >= self.audio.data() + self.audio.size())
-			self.audio_progress = nullptr;
+	if (!self.audios.empty()) {
+		for (auto i: ranges::iota_view(0u, frames)) {
+			auto frame = std::array<float, ChannelCount>{};
+			for (auto& audio: self.audios) {
+				if (self.audio_progress * 2 >= audio.size()) continue;
+				frame[0] += audio[self.audio_progress * 2    ] / self.audios.size();
+				frame[1] += audio[self.audio_progress * 2 + 1] / self.audios.size();
+			}
+
+			output[i * ChannelCount    ] = frame[0];
+			output[i * ChannelCount + 1] = frame[1];
+			self.audio_progress += 1;
+		}
 	}
 
 	buffer->datas[0].chunk->offset = 0;

@@ -4,6 +4,7 @@ include_guard()
 set(ASSET_DIR_PREFIX assets/)
 set(ASSET_PATHS
 	test.ogg
+	test2.ogg
 )
 
 foreach(ASSET_PATH ${ASSET_PATHS})
