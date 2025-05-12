@@ -3,6 +3,7 @@ module;
 #include <utility>
 #include <memory>
 #include <tuple>
+#include <mutex>
 #include "libassert/assert.hpp"
 #include "ankerl/unordered_dense.h"
 
@@ -17,7 +18,11 @@ export class Locator {
 	class Stub {
 	public:
 		Stub(Locator& parent, std::type_index slot): parent{parent}, slot{slot} {}
-		~Stub() { parent.services.erase(slot); }
+		~Stub()
+		{
+			auto lock = std::scoped_lock{parent.services_lock};
+			parent.services.erase(slot);
+		}
 
 		// Moving would break destructor order
 		Stub(Stub const& other) = delete;
@@ -50,14 +55,16 @@ public:
 
 	// Check if a service exists
 	template<typename T>
-	[[nodiscard]] auto exists() const -> bool;
+	[[nodiscard]] auto exists() -> bool;
 
 private:
 	ankerl::unordered_dense::map<std::type_index, std::shared_ptr<void>> services{};
+	std::mutex services_lock{};
 };
 
 template<typename T, typename ... Args>
 auto Locator::provide(Args&&... args) -> std::pair<T&, Stub> {
+	auto lock = std::scoped_lock{services_lock};
 	auto slot = std::type_index{typeid(T)};
 	ASSUME(!services.contains(slot));
 	services.emplace(slot, std::make_shared<T>(std::forward<Args>(args)...));
@@ -77,13 +84,15 @@ auto Locator::get() -> T& {
 
 template<typename T, typename ... Args>
 void Locator::replace(Args&&... args) {
+	auto lock = std::scoped_lock{services_lock};
 	auto slot = std::type_index{typeid(T)};
 	ASSUME(services.contains(slot));
 	services.at(slot) = std::make_shared<T>(std::forward<Args>(args)...);
 }
 
 template<typename T>
-auto Locator::exists() const -> bool {
+auto Locator::exists() -> bool {
+	auto lock = std::scoped_lock{services_lock};
 	auto slot = std::type_index{typeid(T)};
 	return services.contains(slot);
 }
