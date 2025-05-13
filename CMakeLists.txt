@@ -42,6 +42,7 @@ target_sources(Playnote PUBLIC
 	src/util/raii.cppm
 	src/util/locator.cppm
 	src/util/logger.cppm
+	src/util/file.cppm
 	src/sys/window.cppm
 	src/sys/audio.cppm
 	src/sys/gpu.cppm
@@ -52,6 +53,7 @@ target_sources(Playnote PUBLIC
 	src/audio_thread.cppm
 	src/input_thread.cppm
 	src/globals.cppm
+	src/bms.cppm
 )
 
 target_include_directories(Playnote PRIVATE src) # All includes start from src as root
@@ -66,6 +68,7 @@ target_link_libraries(Playnote PRIVATE TracyClient)
 target_link_libraries(Playnote PRIVATE quill)
 target_link_libraries(Playnote PRIVATE glfw)
 target_link_libraries(Playnote PRIVATE volk)
+target_link_libraries(Playnote PRIVATE mio::mio)
 target_link_libraries(Playnote PRIVATE vuk-extra-imgui-platform)
 target_link_libraries(Playnote PRIVATE vuk)
 

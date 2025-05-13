@@ -17,6 +17,7 @@ import playnote.sys.window;
 import playnote.sys.audio;
 import playnote.sys.os;
 import playnote.globals;
+import playnote.bms;
 
 namespace playnote {
 
@@ -66,6 +67,7 @@ export void audio_thread(int argc, char* argv[]) {
 
 	auto& window = locator.get<sys::Window>();
 	auto [audio, audio_stub] = locator.provide<sys::Audio>(argc, argv);
+	auto bms = BMS("songs/Ling Child/02_hyper.bme");
 	while (!window.is_closing())
 		std::this_thread::yield();
 }

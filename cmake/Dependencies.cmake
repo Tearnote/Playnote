@@ -25,6 +25,12 @@ FetchContent_Declare(libassert # Smarter assert macros
 )
 FetchContent_MakeAvailable(libassert)
 
+FetchContent_Declare(mio # Memory-mapped disk IO
+	GIT_REPOSITORY https://github.com/vimpunk/mio
+	GIT_TAG 8b6b7d878c89e81614d05edca7936de41ccdd2da
+)
+FetchContent_MakeAvailable(mio)
+
 FetchContent_Declare(unordered_dense # std::unordered_map replacement
 	GIT_REPOSITORY https://github.com/martinus/unordered_dense
 	GIT_TAG v4.5.0
