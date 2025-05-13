@@ -8,10 +8,8 @@
 import playnote.stx.math;
 import playnote.util.logger;
 import playnote.sys.window;
-import playnote.sys.audio;
 import playnote.sys.gpu;
 import playnote.sys.os;
-import playnote.gfx.renderer;
 import playnote.render_thread;
 import playnote.audio_thread;
 import playnote.input_thread;
