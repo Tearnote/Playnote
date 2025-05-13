@@ -4,7 +4,6 @@ module;
 
 export module playnote.render_thread;
 
-import playnote.globals;
 import playnote.sys.window;
 import playnote.sys.gpu;
 import playnote.sys.os;
@@ -30,12 +29,11 @@ void enqueue_test_scene(gfx::Renderer::Queue& queue)
 
 // Handle the tasks of the render thread, which is to present current game state onto the window
 // at the screen's refresh rate.
-export void render_thread()
+export void render_thread(sys::Window& window)
 {
 	sys::set_thread_name("render");
-	auto& window = locator.get<sys::Window>();
-	auto& gpu = locator.get<sys::GPU>();
-	auto [renderer, renderer_stub] = locator.provide<gfx::Renderer>(gpu);
+	auto gpu = sys::GPU{window};
+	auto renderer = gfx::Renderer{gpu};
 
 	while (!window.is_closing()) {
 		renderer.frame([](gfx::Renderer::Queue& queue) {

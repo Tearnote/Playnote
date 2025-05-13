@@ -18,6 +18,7 @@ export module playnote.sys.audio;
 import playnote.stx.except;
 import playnote.stx.types;
 import playnote.stx.math;
+import playnote.globals;
 
 namespace playnote::sys {
 

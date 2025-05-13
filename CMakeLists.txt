@@ -40,7 +40,6 @@ target_sources(Playnote PUBLIC
 	src/stx/types.cppm
 	src/stx/math.cppm
 	src/util/raii.cppm
-	src/util/locator.cppm
 	src/util/logger.cppm
 	src/util/file.cppm
 	src/sys/window.cppm

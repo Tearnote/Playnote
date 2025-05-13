@@ -1,14 +1,6 @@
 module;
 #include <string_view>
-#include <utility>
-#include <string>
-#include <vector>
 #include <thread>
-#include <cmath>
-#include <samplerate.h>
-#include <sndfile.h>
-#include "libassert/assert.hpp"
-#include "util/log_macros.hpp"
 
 export module playnote.audio_thread;
 
@@ -16,12 +8,10 @@ import playnote.stx.types;
 import playnote.sys.window;
 import playnote.sys.audio;
 import playnote.sys.os;
-import playnote.globals;
 import playnote.bms;
 
 namespace playnote {
 
-using stx::usize;
 /*
 auto load_audio_file(std::string_view path) -> std::vector<float>
 {
@@ -62,11 +52,10 @@ auto load_audio_file(std::string_view path) -> std::vector<float>
 	}
 }
 */
-export void audio_thread(int argc, char* argv[]) {
+export void audio_thread(sys::Window& window, int argc, char* argv[]) {
 	sys::set_thread_name("audio");
 
-	auto& window = locator.get<sys::Window>();
-	auto [audio, audio_stub] = locator.provide<sys::Audio>(argc, argv);
+	auto audio = sys::Audio{argc, argv};
 	auto bms = BMS("songs/Ling Child/02_hyper.bme");
 	while (!window.is_closing())
 		std::this_thread::yield();

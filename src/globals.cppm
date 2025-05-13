@@ -1,4 +1,5 @@
 module;
+#include <optional>
 
 export module playnote.globals;
 
@@ -10,11 +11,11 @@ export module playnote.globals;
 // and not use the locator themselves, instead depending on dependency injection.
 // Game systems, on the other hand, will communicate via a central event queue. (TODO)
 
-import playnote.util.locator;
+import playnote.util.logger;
 
 namespace playnote {
 
-// The global resource locator
-export auto locator = util::Locator{};
+// The global logger
+export auto g_logger = std::optional<util::Logger>{};
 
 }

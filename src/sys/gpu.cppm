@@ -26,6 +26,7 @@ import playnote.stx.types;
 import playnote.stx.math;
 import playnote.util.raii;
 import playnote.sys.window;
+import playnote.globals;
 
 namespace playnote::sys {
 
