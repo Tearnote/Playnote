@@ -1,6 +1,7 @@
 module;
 #include <string_view>
 #include <thread>
+#include "util/log_macros.hpp"
 
 export module playnote.audio_thread;
 
@@ -8,6 +9,7 @@ import playnote.stx.types;
 import playnote.sys.window;
 import playnote.sys.audio;
 import playnote.sys.os;
+import playnote.globals;
 import playnote.bms;
 
 namespace playnote {
@@ -52,13 +54,18 @@ auto load_audio_file(std::string_view path) -> std::vector<float>
 	}
 }
 */
-export void audio_thread(sys::Window& window, int argc, char* argv[]) {
+export void audio_thread(sys::Window& window, int argc, char* argv[])
+try {
 	sys::set_thread_name("audio");
 
 	auto audio = sys::Audio{argc, argv};
 	auto bms = BMS("songs/Ling Child/02_hyper.bme");
 	while (!window.is_closing())
 		std::this_thread::yield();
+}
+catch (std::exception const& e) {
+	L_CRIT("Uncaught exception: {}", e.what());
+	window.request_close();
 }
 
 }

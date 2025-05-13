@@ -1,6 +1,7 @@
 module;
 #include "tracy/Tracy.hpp"
 #include "imgui.h"
+#include "util/log_macros.hpp"
 
 export module playnote.render_thread;
 
@@ -8,6 +9,7 @@ import playnote.sys.window;
 import playnote.sys.gpu;
 import playnote.sys.os;
 import playnote.gfx.renderer;
+import playnote.globals;
 
 namespace playnote {
 
@@ -30,7 +32,7 @@ void enqueue_test_scene(gfx::Renderer::Queue& queue)
 // Handle the tasks of the render thread, which is to present current game state onto the window
 // at the screen's refresh rate.
 export void render_thread(sys::Window& window)
-{
+try {
 	sys::set_thread_name("render");
 	auto gpu = sys::GPU{window};
 	auto renderer = gfx::Renderer{gpu};
@@ -42,6 +44,10 @@ export void render_thread(sys::Window& window)
 		});
 		FrameMark;
 	}
+}
+catch (std::exception const& e) {
+	L_CRIT("Uncaught exception: {}", e.what());
+	window.request_close();
 }
 
 }

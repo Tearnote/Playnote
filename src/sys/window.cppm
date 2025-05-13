@@ -52,6 +52,9 @@ public:
 	// to mark a user-requested quit event)
 	[[nodiscard]] auto is_closing() const -> bool { return glfwWindowShouldClose(*window_handle); }
 
+	// Signal the application to cleanly close as soon as possible
+	void request_close() { glfwSetWindowShouldClose(*window_handle, true); }
+
 	// Size of the window's framebuffer
 	[[nodiscard]] auto size() const -> uvec2;
 

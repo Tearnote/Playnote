@@ -19,7 +19,7 @@ using namespace std::chrono_literals;
 using stx::uvec2;
 
 auto run(int argc, char* argv[]) -> int
-try {
+{
 	auto scheduler_period = sys::SchedulerPeriod{1ms};
 	auto glfw = sys::GLFW{};
 	auto window = sys::Window{glfw, AppTitle, uvec2{640, 480}};
@@ -34,11 +34,6 @@ try {
 
 	return EXIT_SUCCESS;
 }
-catch (std::exception const& e) {
-	// Logger guaranteed to exist here
-	L_CRIT("Uncaught exception: {}", e.what());
-	return EXIT_FAILURE;
-}
 
 auto main(int argc, char* argv[]) -> int
 try {
@@ -50,7 +45,7 @@ try {
 	return run(argc, argv);
 }
 catch (std::exception const& e) {
-	// Handle any exception that happened outside of run() just in case
+	// Handle any exception that happened outside of input_thread()
 	if (g_logger)
 		L_CRIT("Uncaught exception: {}", e.what());
 	else
