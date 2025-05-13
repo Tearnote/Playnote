@@ -21,7 +21,7 @@ import playnote.globals;
 namespace playnote {
 
 using stx::usize;
-
+/*
 auto load_audio_file(std::string_view path) -> std::vector<float>
 {
 	auto file_info = SF_INFO{};
@@ -60,16 +60,12 @@ auto load_audio_file(std::string_view path) -> std::vector<float>
 		return std::move(samples);
 	}
 }
-
+*/
 export void audio_thread(int argc, char* argv[]) {
 	sys::set_thread_name("audio");
 
 	auto& window = locator.get<sys::Window>();
 	auto [audio, audio_stub] = locator.provide<sys::Audio>(argc, argv);
-	auto file = load_audio_file("assets/test.ogg");
-	auto file2 = load_audio_file("assets/test2.ogg");
-	audio.play(std::move(file));
-	audio.play(std::move(file2));
 	while (!window.is_closing())
 		std::this_thread::yield();
 }

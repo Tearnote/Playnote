@@ -31,11 +31,6 @@ public:
 	Audio(int argc, char* argv[]);
 	~Audio();
 
-	void play(std::vector<float>&& new_audio)
-	{
-		audios.emplace_back(std::move(new_audio));
-	}
-
 	Audio(Audio const&) = delete;
 	auto operator=(Audio const&) -> Audio& = delete;
 	Audio(Audio&&) = delete;
@@ -48,9 +43,6 @@ private:
 
 	pw_thread_loop* loop{nullptr};
 	pw_stream* stream{nullptr};
-
-	std::vector<std::vector<float>> audios{};
-	usize audio_progress{0};
 
 	static void on_process(void*);
 	inline static const auto StreamEvents = pw_stream_events{
@@ -126,7 +118,7 @@ void Audio::on_process(void* userdata)
 	constexpr auto Stride = sizeof(float) * ChannelCount;
 	const auto max_frames = buffer->datas[0].maxsize / Stride;
 	auto frames = std::min(max_frames, buffer_outer->requested);
-
+/*
 	if (!self.audios.empty()) {
 		for (auto i: ranges::iota_view(0u, frames)) {
 			auto frame = std::array<float, ChannelCount>{};
@@ -141,7 +133,7 @@ void Audio::on_process(void* userdata)
 			self.audio_progress += 1;
 		}
 	}
-
+*/
 	buffer->datas[0].chunk->offset = 0;
 	buffer->datas[0].chunk->stride = Stride;
 	buffer->datas[0].chunk->size = frames * Stride;
