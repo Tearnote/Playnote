@@ -8,10 +8,12 @@ BMS loading and parsing facilities.
 
 module;
 #include <string_view>
+#include "util/log_macros.hpp"
 
 export module playnote.bms;
 
 import playnote.util.file;
+import playnote.globals;
 
 namespace playnote {
 
@@ -22,6 +24,7 @@ public:
 
 BMS::BMS(std::string_view path)
 {
+	L_DEBUG("Loading BMS file: \"{}\"", path);
 	auto bms_file = util::read_file(path);
 }
 

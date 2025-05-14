@@ -30,12 +30,6 @@ FetchContent_Declare(libassert # Smarter assert macros
 )
 FetchContent_MakeAvailable(libassert)
 
-FetchContent_Declare(ztd.text # Text encoding verification and conversion
-	GIT_REPOSITORY https://github.com/soasis/text.git
-	GIT_TAG 4d1952539394b378a57a68ce61a1b8be1bb62bd8
-)
-FetchContent_MakeAvailable(ztd.text)
-
 FetchContent_Declare(mio # Memory-mapped disk IO
 	GIT_REPOSITORY https://github.com/vimpunk/mio
 	GIT_TAG 8b6b7d878c89e81614d05edca7936de41ccdd2da
