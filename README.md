@@ -1,10 +1,11 @@
 # Playnote
 
-A [BMS](https://en.wikipedia.org/wiki/Be-Music_Source) player hobby project, written in modern C++. Work in progress.
+A hobby project for a stable, modern and intuitive [BMS](https://en.wikipedia.org/wiki/Be-Music_Source) player, written in modern C++.
+Work in progress.
 
-## Initial goals
+## Milestones
 
-- Loading songs directly from `.zip` archives
-- Smallest possible audio latency by interfacing with [WASAPI](https://learn.microsoft.com/en-us/windows/win32/coreaudio/wasapi) and [PipeWire](https://pipewire.org/) directly with a custom audio playback engine
-- Threaded input handling for millisecond-accurate timestamps regardless of framerate
-- [LR2-compatible](https://github.com/seraxis/lr2oraja-endlessdream) gauges and timing windows
+- [ ] `0.0.1`: A usable non-interactive player of BMS songs.
+  - Loads a BMS chart via a command-line argument
+  - Plays it back directly via [PipeWire](https://pipewire.org/) with minimal latency
+  - Basic Imgui playback controls
