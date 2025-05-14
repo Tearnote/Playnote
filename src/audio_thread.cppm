@@ -67,7 +67,10 @@ try {
 	sys::set_thread_name("audio");
 
 	auto audio = sys::Audio{argc, argv};
-	auto bms = BMS{"songs/Ling Child/02_hyper.bme"};
+	auto bms_ascii = BMS{"songs/Ling Child/02_hyper.bme"};
+	auto bms_shift_jis = BMS{"songs/地球塔デヴォーション/DVTN_0708_SPH.bme"};
+	auto bms_euc_kr = BMS{"songs/Seoul Subway Song/sss_7h.bme"};
+	auto bms_euc_kr2 = BMS{"songs/kkotbat ui norae ~ song of flower bed/sofb_7h (2).bme"};
 	while (!window.is_closing())
 		std::this_thread::yield();
 }
