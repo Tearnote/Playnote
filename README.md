@@ -21,6 +21,7 @@ Required to be installed locally:
 - [libsndfile](https://libsndfile.github.io/libsndfile/) ([LGPL](https://libsndfile.github.io/libsndfile/#licensing))
 - [libsamplerate](https://libsndfile.github.io/libsamplerate/) ([BSD](https://libsndfile.github.io/libsamplerate/license.html))
 - [libpipewire](https://pipewire.org/) ([MIT](https://gitlab.freedesktop.org/pipewire/pipewire/-/blob/master/COPYING))
+- [ICU](https://icu.unicode.org/) ([Unicode](https://github.com/unicode-org/icu/blob/main/LICENSE))
 
 Retrieved via [FetchContent](https://cmake.org/cmake/help/latest/module/FetchContent.html):
 
