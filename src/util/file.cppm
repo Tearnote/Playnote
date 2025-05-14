@@ -9,7 +9,7 @@ File I/O utilities.
 module;
 #include <string_view>
 #include <filesystem>
-#include <utility>
+#include <string>
 #include <span>
 #include "mio/mmap.hpp"
 
@@ -23,10 +23,15 @@ namespace playnote::util {
 namespace fs = std::filesystem;
 using stx::usize;
 
-// Open file for reading
-// Returns the RAII-managed memory mapping and a span of the contents
-// The span is only valid as long as the mapping exists
-export auto read_file(std::string_view path) -> std::pair<mio::mmap_source, std::span<char const>>
+// A file open for reading
+struct File {
+	std::string path;
+	mio::mmap_source map;
+	std::span<char const> contents;
+};
+
+// Open a file for reading
+export auto read_file(std::string_view path) -> File
 {
 	auto status = fs::status(path);
 	if (!fs::exists(status))
@@ -34,12 +39,12 @@ export auto read_file(std::string_view path) -> std::pair<mio::mmap_source, std:
 	if (!fs::is_regular_file(status))
 		throw stx::runtime_error_fmt("\"{}\" is not a regular file", path);
 
-	auto map = mio::mmap_source{path};
-	return {
-		std::piecewise_construct,
-		std::make_tuple(std::move(map)),
-		std::make_tuple(map.data(), map.size())
+	auto file = File{
+		.path = std::string{path},
+		.map = mio::mmap_source{path},
 	};
+	file.contents = {file.map.data(), file.map.size()}; // Can't refer to .map in the same initializer, I think?
+	return file;
 }
 
 }

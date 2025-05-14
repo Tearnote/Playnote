@@ -22,7 +22,7 @@ public:
 
 BMS::BMS(std::string_view path)
 {
-	auto [bms_raw_mapping, bms_raw_contents] = util::read_file(path);
+	auto bms_file = util::read_file(path);
 }
 
 }

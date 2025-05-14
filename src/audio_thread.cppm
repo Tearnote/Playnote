@@ -67,7 +67,7 @@ try {
 	sys::set_thread_name("audio");
 
 	auto audio = sys::Audio{argc, argv};
-	auto bms = BMS("songs/Ling Child/02_hyper.bme");
+	auto bms = BMS{"songs/Ling Child/02_hyper.bme"};
 	while (!window.is_closing())
 		std::this_thread::yield();
 }
