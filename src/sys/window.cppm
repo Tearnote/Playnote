@@ -1,3 +1,12 @@
+/*
+This software is dual-licensed. For more details, please consult LICENSE.txt.
+Copyright (c) 2025 Tearnote (Hubert Maraszek)
+
+sys/window.cppm:
+Initializes GLFW and manages windows. Windows handle keyboard and mouse input, and the window's
+"should close" state manages application lifetime.
+*/
+
 module;
 #include <string_view>
 #include <functional>

@@ -1,3 +1,11 @@
+/*
+This software is dual-licensed. For more details, please consult LICENSE.txt.
+Copyright (c) 2025 Tearnote (Hubert Maraszek)
+
+gfx/imgui.cppm:
+Wrapper for vuk's Imgui integration.
+*/
+
 module;
 #include "vuk/extra/ImGuiIntegration.hpp"
 #include "backends/imgui_impl_glfw.h"

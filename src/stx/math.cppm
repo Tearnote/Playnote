@@ -1,3 +1,11 @@
+/*
+This software is dual-licensed. For more details, please consult LICENSE.txt.
+Copyright (c) 2025 Tearnote (Hubert Maraszek)
+
+stx/math.cppm:
+Additional math types and functions. Introduces 2-4 component vectors.
+*/
+
 module;
 #include <initializer_list>
 #include <type_traits>

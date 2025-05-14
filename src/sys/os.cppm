@@ -1,3 +1,11 @@
+/*
+This software is dual-licensed. For more details, please consult LICENSE.txt.
+Copyright (c) 2025 Tearnote (Hubert Maraszek)
+
+sys/os.cppm:
+Various OS-specific utilities.
+*/
+
 module;
 #include <string_view>
 #include <string>

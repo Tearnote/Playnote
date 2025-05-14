@@ -1,3 +1,11 @@
+/*
+This software is dual-licensed. For more details, please consult LICENSE.txt.
+Copyright (c) 2025 Tearnote (Hubert Maraszek)
+
+util/logger.cppm:
+Wrapper for the Quill threaded async logging library.
+*/
+
 module;
 #include <utility>
 #include "libassert/assert.hpp"
@@ -12,7 +20,6 @@ export module playnote.util.logger;
 
 namespace playnote::util {
 
-// Wrapper for the Quill threaded async logging library
 export class Logger {
 public:
 	Logger();

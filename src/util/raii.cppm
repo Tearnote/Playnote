@@ -1,3 +1,11 @@
+/*
+This software is dual-licensed. For more details, please consult LICENSE.txt.
+Copyright (c) 2025 Tearnote (Hubert Maraszek)
+
+util/raii.cppm:
+A wrapper for a C-style resource, guaranteeing that the cleanup function will be executed.
+*/
+
 module;
 #include <functional>
 #include <optional>
@@ -8,7 +16,6 @@ import playnote.stx.callable;
 
 namespace playnote::util {
 
-// A wrapper for a C-style resource that guarantees running the cleanup function
 export template<typename T, stx::callable<void(T&)> Func>
 class RAIIResource {
 public:

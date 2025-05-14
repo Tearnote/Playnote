@@ -1,3 +1,12 @@
+/*
+This software is dual-licensed. For more details, please consult LICENSE.txt.
+Copyright (c) 2025 Tearnote (Hubert Maraszek)
+
+stx/callable.cppm:
+A callable functor type concept with specific argument types and return type.
+Syntax analogous to the std::function template argument.
+*/
+
 module;
 #include <type_traits>
 #include <concepts>
@@ -40,8 +49,6 @@ struct callable_unpack<R(Args...)> {
 	using rtype = R;
 };
 
-// A callable functor type with specific argument types and return type
-// Syntax analogous to std::function template argument
 export template<class F, typename Sig,
 	typename Unpack = callable_unpack<Sig>,
 	typename ArgsT = typename Unpack::args,

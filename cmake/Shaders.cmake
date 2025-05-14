@@ -1,4 +1,9 @@
-# Target that compiles a list of shaders into SPIRV as a list of 32-bit integer literals
+# This software is dual-licensed. For more details, please consult LICENSE.txt.
+# Copyright (c) 2025 Tearnote (Hubert Maraszek)
+#
+# cmake/Shaders.cmake:
+# Target that compiles a list of shaders into SPIR-V as a list of 32-bit integer literals.
+
 include_guard()
 
 include(cmake/Dependencies.cmake)

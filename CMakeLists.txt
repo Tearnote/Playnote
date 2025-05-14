@@ -1,3 +1,9 @@
+# This software is dual-licensed. For more details, please consult LICENSE.txt.
+# Copyright (c) 2025 Tearnote (Hubert Maraszek)
+#
+# CMakeLists.txt:
+# Declares project files and build configuration.
+
 # Project configuration
 
 cmake_minimum_required(VERSION 3.30)

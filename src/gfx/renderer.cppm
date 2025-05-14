@@ -1,3 +1,11 @@
+/*
+This software is dual-licensed. For more details, please consult LICENSE.txt.
+Copyright (c) 2025 Tearnote (Hubert Maraszek)
+
+gfx/renderer.cppm:
+A renderer of primitives.
+*/
+
 module;
 #include <vector>
 
@@ -16,8 +24,6 @@ using stx::vec4;
 using stx::uint;
 using sys::ManagedImage;
 
-// System that takes primitive definitions and draws them to the screen
-// Handles Imgui drawing as well
 export class Renderer {
 public:
 	// Solid color rectangle primitive

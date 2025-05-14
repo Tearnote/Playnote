@@ -1,3 +1,11 @@
+/*
+This software is dual-licensed. For more details, please consult LICENSE.txt.
+Copyright (c) 2025 Tearnote (Hubert Maraszek)
+
+gfx/renderer.cpp:
+gfx/renderer implementation unit, to avoid the vuk include in the module interface.
+*/
+
 module;
 #include <array>
 #include "vuk/runtime/vk/Pipeline.hpp"

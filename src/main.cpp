@@ -1,3 +1,11 @@
+/*
+This software is dual-licensed. For more details, please consult LICENSE.txt.
+Copyright (c) 2025 Tearnote (Hubert Maraszek)
+
+main.cpp:
+Entry point. Initializes basic facilities like logging and shared subsystems, then spawns threads.
+*/
+
 #include <exception>
 #include <thread>
 #include <chrono>

@@ -1,3 +1,11 @@
+/*
+This software is dual-licensed. For more details, please consult LICENSE.txt.
+Copyright (c) 2025 Tearnote (Hubert Maraszek)
+
+util/file.cppm:
+File I/O utilities.
+*/
+
 module;
 #include <string_view>
 #include <filesystem>
@@ -17,6 +25,7 @@ using stx::usize;
 
 // Open file for reading
 // Returns the RAII-managed memory mapping and a span of the contents
+// The span is only valid as long as the mapping exists
 export auto read_file(std::string_view path) -> std::pair<mio::mmap_source, std::span<char const>>
 {
 	auto status = fs::status(path);

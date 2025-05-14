@@ -1,3 +1,11 @@
+/*
+This software is dual-licensed. For more details, please consult LICENSE.txt.
+Copyright (c) 2025 Tearnote (Hubert Maraszek)
+
+sys/gpu.cpp:
+sys/gpu implementation unit, to keep some of the larger imports out of the interface.
+*/
+
 module;
 #include <optional>
 #include <utility>

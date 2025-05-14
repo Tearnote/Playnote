@@ -1,3 +1,11 @@
+/*
+This software is dual-licensed. For more details, please consult LICENSE.txt.
+Copyright (c) 2025 Tearnote (Hubert Maraszek)
+
+stx/except.cppm:
+Additional exception types, adding formatting and convenience wrappers.
+*/
+
 module;
 #include <system_error>
 #include <stdexcept>

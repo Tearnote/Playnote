@@ -1,3 +1,11 @@
+/*
+This software is dual-licensed. For more details, please consult LICENSE.txt.
+Copyright (c) 2025 Tearnote (Hubert Maraszek)
+
+render_thread.cppm:
+Presents current game state onto the window at the screen's refresh rate.
+*/
+
 module;
 #include "tracy/Tracy.hpp"
 #include "imgui.h"
@@ -29,8 +37,6 @@ void enqueue_test_scene(gfx::Renderer::Queue& queue)
 	queue.enqueue_rect({{255,   0}, {  2, 315}, {0.376f, 0.376f, 0.376f, 0.376f}});
 }
 
-// Handle the tasks of the render thread, which is to present current game state onto the window
-// at the screen's refresh rate.
 export void render_thread(sys::Window& window)
 try {
 	sys::set_thread_name("render");

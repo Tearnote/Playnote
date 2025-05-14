@@ -1,11 +1,17 @@
+/*
+This software is dual-licensed. For more details, please consult LICENSE.txt.
+Copyright (c) 2025 Tearnote (Hubert Maraszek)
+
+config.hpp:
+Global game configuration - controls which features are on/off depending on build configuration,
+and their hardcoded values.
+*/
+
 #ifndef PLAYNOTE_CONFIG_H
 #define PLAYNOTE_CONFIG_H
 
 #include <array>
 #include "quill/core/LogLevel.h"
-
-// Global game configuration - controls which features are on/off depending on build configuration,
-// and their hardcoded values
 
 inline constexpr auto AppTitle = "Playnote";
 inline constexpr auto AppVersion = std::to_array({0u, 0u, 1u});

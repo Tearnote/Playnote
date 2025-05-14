@@ -1,3 +1,11 @@
+/*
+This software is dual-licensed. For more details, please consult LICENSE.txt.
+Copyright (c) 2025 Tearnote (Hubert Maraszek)
+
+stx/types.cppm:
+Explicitly sized shorthands for standard types.
+*/
+
 module;
 #include <cstdint>
 #include <cstddef>
@@ -6,7 +14,6 @@ export module playnote.stx.types;
 
 namespace playnote::stx {
 
-// Explicitly sized shorthands for standard types
 export using uint8 = std::uint8_t;
 export using uint16 = std::uint16_t;
 export using uint = std::uint32_t;

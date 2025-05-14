@@ -1,3 +1,11 @@
+/*
+This software is dual-licensed. For more details, please consult LICENSE.txt.
+Copyright (c) 2025 Tearnote (Hubert Maraszek)
+
+audio_thread.cppm:
+Initializes audio and handles queueing of playback events.
+*/
+
 module;
 #include <string_view>
 #include <thread>

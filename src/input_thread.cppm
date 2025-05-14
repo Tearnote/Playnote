@@ -1,3 +1,12 @@
+/*
+This software is dual-licensed. For more details, please consult LICENSE.txt.
+Copyright (c) 2025 Tearnote (Hubert Maraszek)
+
+input_thread.cppm:
+Spinning on the OS message queue as much possible without saturating the CPU.
+Only the process's main thread can be the input thread.
+*/
+
 module;
 #include <exception>
 #include <thread>
@@ -12,9 +21,6 @@ import playnote.globals;
 
 namespace playnote {
 
-// Handle the tasks of the input thread, which is spinning on the OS message queue as much possible
-// without saturating the CPU.
-// This function needs to be run on the process's initial thread.
 export void input_thread(sys::GLFW& glfw, sys::Window& window)
 try {
 	sys::set_thread_name("input");

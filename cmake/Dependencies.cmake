@@ -1,4 +1,9 @@
-# Declaration of all external dependencies
+# This software is dual-licensed. For more details, please consult LICENSE.txt.
+# Copyright (c) 2025 Tearnote (Hubert Maraszek)
+#
+# cmake/Dependencies.cmake:
+# Declares and retrieves all external dependencies.
+
 include_guard()
 
 find_package(PkgConfig REQUIRED)
