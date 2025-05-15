@@ -1,0 +1,104 @@
+/*
+This software is dual-licensed. For more details, please consult LICENSE.txt.
+Copyright (c) 2025 Tearnote (Hubert Maraszek)
+
+util/charset.cppm:
+Text encoding detection and conversion.
+*/
+
+module;
+#include <string_view>
+#include <string>
+#include <vector>
+#include <span>
+#include <unicode/errorcode.h>
+#include <unicode/ucsdet.h>
+#include <unicode/unistr.h>
+#include <unicode/ucnv.h>
+#include "libassert/assert.hpp"
+#include "util/log_macros.hpp"
+
+export module playnote.util.charset;
+
+import playnote.stx.except;
+import playnote.stx.types;
+import playnote.globals;
+
+namespace playnote::util {
+
+using Encoding = std::string;
+using stx::usize;
+
+// Throw on any ICU error other than invalid byte during decoding.
+// A BMS file with wrongly detected encoding will have some garbled text, but should still
+// be playable.
+class ICUError: public icu::ErrorCode {
+protected:
+	void handleFailure() const override
+	{
+		if (errorCode == U_ILLEGAL_CHAR_FOUND) {
+			L_WARN("Illegal character found in file");
+			return;
+		}
+		throw stx::runtime_error_fmt("ICU error: {}", errorName());
+	}
+};
+
+// Returns true if the encoding is one of the known BMS encodings
+auto is_supported_encoding(std::string_view encoding) -> bool
+{
+	if (encoding == "UTF-8")
+		return true;
+	if (encoding == "Shift_JIS")
+		return true;
+	if (encoding == "EUC-KR")
+		return true;
+	return false;
+}
+
+// Try to detect the encoding of a passage of text.
+// A few encodings known to be common to BMS files are supported. If none of them match,
+// an empty string is returned.
+export auto detect_text_encoding(std::span<char const> text) -> Encoding
+{
+	using Detector = std::unique_ptr<UCharsetDetector, decltype([](auto* p) {
+		ucsdet_close(p);
+	})>;
+	auto err = ICUError{};
+
+	auto detector = Detector{ASSUME_VAL(ucsdet_open(err))};
+	ucsdet_setText(detector.get(), text.data(), text.size(), err);
+
+	auto* matches_ptr = static_cast<UCharsetMatch const**>(nullptr);
+	auto matches_count = int{0};
+	matches_ptr = ucsdet_detectAll(detector.get(), &matches_count, err);
+	auto matches = std::span{matches_ptr, static_cast<usize>(matches_count)};
+
+	for (auto const& match: matches) {
+		auto* match_name = ucsdet_getName(match, err);
+		if (is_supported_encoding(match_name))
+			return match_name;
+	}
+	return "";
+}
+
+// Convert a passage of text from a given encoding to Unicode (UTF-16).
+// Any bytes that are invalid in the specified encoding are turned into replacement characters.
+export auto text_to_unicode(std::span<char const> text, Encoding const& encoding) -> icu::UnicodeString
+{
+	using Converter = std::unique_ptr<UConverter, decltype([](auto* p) {
+		ucnv_close(p);
+	})>;
+	auto err = ICUError{};
+
+	auto converter = Converter{ucnv_open(encoding.c_str(), err)};
+	auto contents = icu::UnicodeString{};
+	auto contents_capacity = text.size() + 1; // Add space for null terminator
+	auto contents_buf = contents.getBuffer(contents_capacity);
+	auto converted = ucnv_toUChars(converter.get(), contents_buf, contents_capacity, text.data(), text.size(), err);
+	ASSUME(converted < contents_capacity);
+	contents.releaseBuffer(converted); // Cuts off the null terminator
+	return contents;
+}
+
+}
