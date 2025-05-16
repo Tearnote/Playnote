@@ -58,6 +58,14 @@ protected:
 	}
 };
 
+// Convert a UString to a std::string.
+// Useful for debug output, but do not use carelessly as this allocates.
+export auto to_utf8(UString const& str) -> std::string
+{
+	auto result = std::string{};
+	return str.toUTF8String(result);
+}
+
 // Returns true if the encoding is one of the known BMS encodings
 auto is_supported_encoding(std::string_view encoding) -> bool
 {
