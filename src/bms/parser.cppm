@@ -9,6 +9,7 @@ A BMS format parser - turns a complete BMS file into a list of commands.
 module;
 #include <string_view>
 #include <variant>
+#include <unicode/numfmt.h>
 #include "util/log_macros.hpp"
 
 export module playnote.bms.parser;
@@ -20,6 +21,7 @@ import playnote.globals;
 namespace playnote::bms {
 
 using util::UString;
+using util::ICUError;
 
 export struct HeaderCommand {
 	UString header;
@@ -28,14 +30,31 @@ export struct HeaderCommand {
 };
 
 export struct ChannelCommand {
-	UString measure;
+	int measure;
 	UString channel;
 	UString value;
 };
 
 auto parse_channel(UString&& command) -> ChannelCommand
 {
-	return {}; // TODO
+	auto colon_pos = command.indexOf(':');
+	if (colon_pos != 6 || command.length() < 9) return {-1};
+
+	auto measure_str = UString{command, 1, 3};
+	auto err = ICUError{};
+	auto* formatter = icu::NumberFormat::createInstance(icu::Locale::getRoot(), err);
+	auto measure = icu::Formattable{-1};
+	formatter->setParseIntegerOnly(true);
+	formatter->parse(measure_str, measure, err);
+
+	auto channel = UString{command, 4, 2};
+	auto value = UString{command, 7};
+
+	return {
+		.measure = measure.getLong(),
+		.channel = std::move(channel),
+		.value = std::move(value),
+	};
 }
 
 auto parse_header(UString&& command) -> HeaderCommand
@@ -67,7 +86,7 @@ auto parse_header(UString&& command) -> HeaderCommand
 	else if (header.startsWith("SEEK"  )) extract_slot(4);
 	else if (header.startsWith("EXBPM" )) extract_slot(5);
 	else if (header.startsWith("EXWAV" )) extract_slot(5);
-	else if (header.startsWith("SWBGA")) extract_slot(5);
+	else if (header.startsWith("SWBGA" )) extract_slot(5);
 	else if (header.startsWith("EXRANK")) extract_slot(6);
 	else if (header.startsWith("CHANGEOPTION")) extract_slot(12);
 

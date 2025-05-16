@@ -46,7 +46,7 @@ public:
 // Throw on any ICU error other than invalid byte during decoding.
 // A BMS file with wrongly detected encoding will have some garbled text, but should still
 // be playable.
-class ICUError: public icu::ErrorCode {
+export class ICUError: public icu::ErrorCode {
 protected:
 	void handleFailure() const override
 	{

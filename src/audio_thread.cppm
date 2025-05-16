@@ -76,7 +76,7 @@ auto load_bms(std::string_view path) -> int
 			L_TRACE("Header: {} {} {}", to_utf8(cmd.header), to_utf8(cmd.slot), to_utf8(cmd.value));
 		},
 		[](bms::ChannelCommand&& cmd) {
-			L_TRACE("Channel: {} {} {}", to_utf8(cmd.measure), to_utf8(cmd.channel), to_utf8(cmd.value));
+			L_TRACE("Channel: {} {} {}", cmd.measure, to_utf8(cmd.channel), to_utf8(cmd.value));
 		}
 	);
 	L_INFO("Loaded BMS file \"{}\" successfully", path);
