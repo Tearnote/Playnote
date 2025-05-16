@@ -13,6 +13,7 @@ for inter-subsystem communication.
 
 module;
 #include <optional>
+#include <unicode/numfmt.h>
 
 export module playnote.globals;
 
@@ -20,7 +21,10 @@ import playnote.util.logger;
 
 namespace playnote {
 
-// The global logger
+// Global logger
 export auto g_logger = std::optional<util::Logger>{};
+
+// Global integer formatter
+export auto* g_int_formatter = static_cast<icu::NumberFormat*>(nullptr);
 
 }

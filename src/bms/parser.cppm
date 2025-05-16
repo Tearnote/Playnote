@@ -41,11 +41,8 @@ auto parse_channel(UString&& command) -> ChannelCommand
 	if (colon_pos != 6 || command.length() < 9) return {-1};
 
 	auto measure_str = UString{command, 1, 3};
-	auto err = ICUError{};
-	auto* formatter = icu::NumberFormat::createInstance(icu::Locale::getRoot(), err);
 	auto measure = icu::Formattable{-1};
-	formatter->setParseIntegerOnly(true);
-	formatter->parse(measure_str, measure, err);
+	g_int_formatter->parse(measure_str, measure, ICUError{});
 
 	auto channel = UString{command, 4, 2};
 	auto value = UString{command, 7};

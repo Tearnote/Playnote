@@ -14,6 +14,7 @@ module;
 #include <unicode/errorcode.h>
 #include <unicode/ucsdet.h>
 #include <unicode/unistr.h>
+#include <unicode/numfmt.h>
 #include <unicode/ucnv.h>
 #include "libassert/assert.hpp"
 #include "ankerl/unordered_dense.h"
@@ -86,18 +87,17 @@ export auto detect_text_encoding(std::span<char const> text) -> Encoding
 	using Detector = std::unique_ptr<UCharsetDetector, decltype([](auto* p) {
 		ucsdet_close(p);
 	})>;
-	auto err = ICUError{};
 
-	auto detector = Detector{ASSUME_VAL(ucsdet_open(err))};
-	ucsdet_setText(detector.get(), text.data(), text.size(), err);
+	auto detector = Detector{ASSUME_VAL(ucsdet_open(ICUError{}))};
+	ucsdet_setText(detector.get(), text.data(), text.size(), ICUError{});
 
 	auto* matches_ptr = static_cast<UCharsetMatch const**>(nullptr);
 	auto matches_count = int{0};
-	matches_ptr = ucsdet_detectAll(detector.get(), &matches_count, err);
+	matches_ptr = ucsdet_detectAll(detector.get(), &matches_count, ICUError{});
 	auto matches = std::span{matches_ptr, static_cast<usize>(matches_count)};
 
 	for (auto const& match: matches) {
-		auto* match_name = ucsdet_getName(match, err);
+		auto* match_name = ucsdet_getName(match, ICUError{});
 		if (is_supported_encoding(match_name))
 			return match_name;
 	}
@@ -111,16 +111,22 @@ export auto text_to_unicode(std::span<char const> text, Encoding const& encoding
 	using Converter = std::unique_ptr<UConverter, decltype([](auto* p) {
 		ucnv_close(p);
 	})>;
-	auto err = ICUError{};
 
-	auto converter = Converter{ucnv_open(encoding.c_str(), err)};
+	auto converter = Converter{ucnv_open(encoding.c_str(), ICUError{})};
 	auto contents = UString{};
 	auto contents_capacity = text.size() + 1; // Add space for null terminator
 	auto contents_buf = contents.getBuffer(contents_capacity);
-	auto converted = ucnv_toUChars(converter.get(), contents_buf, contents_capacity, text.data(), text.size(), err);
+	auto converted = ucnv_toUChars(converter.get(), contents_buf, contents_capacity, text.data(), text.size(), ICUError{});
 	ASSUME(converted < contents_capacity);
 	contents.releaseBuffer(converted); // Cuts off the null terminator
 	return contents;
+}
+
+// Make the global formatters usable anywhere. The resulting instances are thread-safe.
+export void init_global_formatters()
+{
+	g_int_formatter = icu::NumberFormat::createInstance(icu::Locale::getRoot(), ICUError{});
+	g_int_formatter->setParseIntegerOnly(true);
 }
 
 }

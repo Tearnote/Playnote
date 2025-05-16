@@ -14,6 +14,7 @@ Entry point. Initializes basic facilities like logging and shared subsystems, th
 #include "config.hpp"
 
 import playnote.stx.math;
+import playnote.util.charset;
 import playnote.util.logger;
 import playnote.sys.window;
 import playnote.sys.os;
@@ -50,6 +51,7 @@ try {
 #endif
 	g_logger = util::Logger{};
 	L_INFO("{} {}.{}.{} starting up", AppTitle, AppVersion[0], AppVersion[1], AppVersion[2]);
+	util::init_global_formatters();
 	return run(argc, argv);
 }
 catch (std::exception const& e) {
