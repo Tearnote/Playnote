@@ -7,6 +7,7 @@ Initializes audio and handles queueing of playback events.
 */
 
 module;
+#include <type_traits>
 #include <string_view>
 #include <thread>
 #include "util/log_macros.hpp"
@@ -14,13 +15,17 @@ module;
 export module playnote.audio_thread;
 
 import playnote.stx.types;
+import playnote.util.charset;
+import playnote.util.file;
 import playnote.sys.window;
 import playnote.sys.audio;
 import playnote.sys.os;
+import playnote.bms.parser;
 import playnote.globals;
-import playnote.bms;
 
 namespace playnote {
+
+using util::to_utf8;
 
 /*
 auto load_audio_file(std::string_view path) -> std::vector<float>
@@ -62,15 +67,32 @@ auto load_audio_file(std::string_view path) -> std::vector<float>
 	}
 }
 */
+auto load_bms(std::string_view path) -> int
+{
+	L_INFO("Loading BMS file \"{}\"", path);
+	auto file = util::read_file(path);
+	bms::parse(path, file.contents,
+		[](bms::HeaderCommand&& cmd) {
+			L_TRACE("Header: {} {} {}", to_utf8(cmd.header), to_utf8(cmd.slot), to_utf8(cmd.value));
+		},
+		[](bms::ChannelCommand&& cmd) {
+			L_TRACE("Channel: {} {} {}", to_utf8(cmd.measure), to_utf8(cmd.channel), to_utf8(cmd.value));
+		}
+	);
+	L_INFO("Loaded BMS file \"{}\" successfully", path);
+
+	return 0;
+}
+
 export void audio_thread(sys::Window& window, int argc, char* argv[])
 try {
 	sys::set_thread_name("audio");
 
 	auto audio = sys::Audio{argc, argv};
-	auto bms_ascii = BMS{"songs/Ling Child/02_hyper.bme"};
-	auto bms_shift_jis = BMS{"songs/地球塔デヴォーション/DVTN_0708_SPH.bme"};
-	auto bms_euc_kr = BMS{"songs/Seoul Subway Song/sss_7h.bme"};
-	auto bms_euc_kr2 = BMS{"songs/kkotbat ui norae ~ song of flower bed/sofb_7h (2).bme"};
+	auto bms_ascii = load_bms("songs/Ling Child/02_hyper.bme");
+	auto bms_shift_jis = load_bms("songs/地球塔デヴォーション/DVTN_0708_SPH.bme");
+	auto bms_euc_kr = load_bms("songs/Seoul Subway Song/sss_7h.bme");
+	auto bms_euc_kr2 = load_bms("songs/kkotbat ui norae ~ song of flower bed/sofb_7h (2).bme");
 	while (!window.is_closing())
 		std::this_thread::yield();
 }

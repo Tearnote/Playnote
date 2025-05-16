@@ -27,18 +27,8 @@ using util::to_utf8;
 template<typename Key, typename T, typename Hash>
 using unordered_map = ankerl::unordered_dense::map<Key, T, Hash>;
 
-//TODO Factor out file opening
-//TODO Convert to BMSParser factory which produces BMS instances, to reuse header_handlers
 export class BMS {
-public:
-	explicit BMS(std::string_view path);
-
 private:
-	struct HeaderParams {
-		UString header;
-		UString slot;
-		UString value;
-	};
 	using HeaderHandlerFunc = void(BMS::*)(HeaderParams&&);
 	unordered_map<UString, HeaderHandlerFunc, UStringHash> header_handlers{};
 
@@ -55,20 +45,6 @@ private:
 	void parse_header_url(HeaderParams&& params) { url = std::move(params.value); }
 	void parse_header_email(HeaderParams&& params) { email = std::move(params.value); }
 	void register_header_handlers();
-
-	void parse_file(UString&& file);
-	void parse_line(UString&& line);
-	void parse_channel(UString&& command);
-	void parse_header(UString&& command);
-
-	std::string path;
-	UString title{};
-	UString subtitle{};
-	UString genre{};
-	UString artist{};
-	UString subartist{};
-	UString url{};
-	UString email{};
 };
 
 void BMS::register_header_handlers()
@@ -152,105 +128,6 @@ void BMS::register_header_handlers()
 	header_handlers.emplace("MATERIALSBMP", &BMS::parse_header_ignored_log); // ^
 	header_handlers.emplace("OPTION", &BMS::parse_header_ignored_log); // Horrifying, who invented this
 	header_handlers.emplace("CHANGEOPTION", &BMS::parse_header_ignored_log); // ^
-}
-
-BMS::BMS(std::string_view path):
-	path{path}
-{
-	L_INFO("Loading BMS file \"{}\"", path);
-	auto file = util::read_file(path);
-	auto encoding = util::detect_text_encoding(file.contents);
-	if (encoding.empty()) {
-		L_WARN("Failed to detect encoding, assuming Shift_JIS");
-		encoding = "Shift_JIS";
-	} else {
-		L_TRACE("Detected encoding: {}", encoding);
-	}
-	auto contents = util::text_to_unicode(file.contents, encoding);
-	L_TRACE("Converted \"{}\" to UTF-16", path);
-
-	register_header_handlers();
-	parse_file(std::move(contents));
-
-	L_INFO("Loaded BMS file \"{}\" successfully", path);
-	L_TRACE("Title: {}", to_utf8(title));
-	L_TRACE("Genre: {}", to_utf8(genre));
-	L_TRACE("Artist: {}", to_utf8(artist));
-	L_TRACE("Subartist: {}", to_utf8(subartist));
-}
-
-void BMS::parse_file(UString&& file)
-{
-	// Normalize line endings
-	file.findAndReplace("\r\n", "\n");
-	file.findAndReplace("\r", "\n");
-
-	auto pos = int{0};
-	auto len = file.length();
-	while (pos < len) {
-		auto split_pos = file.indexOf('\n', pos);
-		if (split_pos == -1)
-			split_pos = len;
-		parse_line(std::move(UString{file, pos, split_pos - pos}));
-		pos = split_pos + 1; // Skip over the newline
-	}
-}
-
-void BMS::parse_line(UString&& line)
-{
-	line.trim(); // BMS occasionally uses leading whitespace
-	if (line.isEmpty()) return;
-	if (line[0] != '#') return; // Ignore comments
-	if (line[1] >= '0' && line[1] <= '9')
-		parse_channel(std::move(line));
-	else
-		parse_header(std::move(line));
-}
-
-void BMS::parse_channel(UString&& command)
-{
-	// TODO
-}
-
-void BMS::parse_header(UString&& command)
-{
-	auto first_space = command.indexOf(' ');
-	if (first_space == -1) first_space = command.length();
-	auto first_tab = command.indexOf('\t');
-	if (first_tab == -1) first_tab = command.length();
-	auto first_whitespace = std::min(first_space, first_tab);
-
-	auto header = UString{command, 1, first_whitespace - 1};
-	header.toUpper();
-	auto value = UString{command, first_whitespace + 1};
-
-	auto slot = UString{};
-	auto extract_slot = [&](int start) {
-		slot = UString{header, start};
-		header.truncate(start);
-	};
-	     if (header.startsWith("WAV"   )) extract_slot(3);
-	else if (header.startsWith("BMP"   )) extract_slot(3);
-	else if (header.startsWith("BGA"   )) extract_slot(3);
-	else if (header.startsWith("BPM"   )) extract_slot(3); // This will also match BPM rather than BPMxx, but slot will end up empty anyway
-	else if (header.startsWith("TEXT"  )) extract_slot(4);
-	else if (header.startsWith("SONG"  )) extract_slot(4);
-	else if (header.startsWith("@BGA"  )) extract_slot(4);
-	else if (header.startsWith("STOP"  )) extract_slot(4);
-	else if (header.startsWith("ARGB"  )) extract_slot(4);
-	else if (header.startsWith("SEEK"  )) extract_slot(4);
-	else if (header.startsWith("EXBPM" )) extract_slot(5);
-	else if (header.startsWith("EXWAV" )) extract_slot(5);
-	else if (header.startsWith("SWBGA")) extract_slot(5);
-	else if (header.startsWith("EXRANK")) extract_slot(6);
-	else if (header.startsWith("CHANGEOPTION")) extract_slot(12);
-
-	try {
-		(this->*header_handlers.at(header))({header, std::move(slot), std::move(value)});
-	} catch (std::out_of_range const&) {
-		auto header_u8 = std::string{};
-		L_WARN("Unrecognized header in BMS file \"{}\": {}", path, header.toUTF8String(header_u8));
-	}
 }
 
 }

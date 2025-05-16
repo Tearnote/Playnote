@@ -10,7 +10,6 @@ module;
 #include <string_view>
 #include <filesystem>
 #include <string>
-#include <span>
 #include "mio/mmap.hpp"
 
 export module playnote.util.file;
@@ -27,7 +26,7 @@ using stx::usize;
 struct File {
 	std::string path;
 	mio::mmap_source map;
-	std::span<char const> contents;
+	std::string_view contents;
 };
 
 // Open a file for reading
