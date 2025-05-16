@@ -124,17 +124,17 @@ export template<
 	stx::callable<void(HeaderCommand&&)> HFunc,
 	stx::callable<void(ChannelCommand&&)> CFunc
 >
-void parse(std::string_view raw_bms_file, HFunc&& header_func, CFunc&& channel_func)
+void parse(std::string_view bms_file_contents, HFunc&& header_func, CFunc&& channel_func)
 {
 	// Convert file to UTF-16
-	auto encoding = util::detect_text_encoding(raw_bms_file);
+	auto encoding = util::detect_text_encoding(bms_file_contents);
 	if (encoding.empty()) {
 		L_WARN("Failed to detect encoding, assuming Shift_JIS");
 		encoding = "Shift_JIS";
 	} else {
 		L_TRACE("Detected encoding: {}", encoding);
 	}
-	auto bms_file_u16 = util::text_to_unicode(raw_bms_file, encoding);
+	auto bms_file_u16 = util::text_to_unicode(bms_file_contents, encoding);
 
 	// Normalize line endings
 	bms_file_u16.findAndReplace("\r\n", "\n");
