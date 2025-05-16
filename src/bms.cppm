@@ -48,30 +48,39 @@ private:
 	void parse_header_unimplemented_critical(HeaderParams&& params) { throw stx::runtime_error_fmt("Critical unimplemented header: {}", to_utf8(params.header)); }
 
 	void parse_header_title(HeaderParams&& params) { title = std::move(params.value); }
+	void parse_header_subtitle(HeaderParams&& params) { subtitle = std::move(params.value); }
 	void parse_header_genre(HeaderParams&& params) { genre = std::move(params.value); }
 	void parse_header_artist(HeaderParams&& params) { artist = std::move(params.value); }
 	void parse_header_subartist(HeaderParams&& params) { subartist = std::move(params.value); }
+	void parse_header_url(HeaderParams&& params) { url = std::move(params.value); }
+	void parse_header_email(HeaderParams&& params) { email = std::move(params.value); }
 	void register_header_handlers();
 
 	void parse_file(UString&& file);
 	void parse_line(UString&& line);
-	void parse_channel(UString&& line);
-	void parse_header(UString&& line);
+	void parse_channel(UString&& command);
+	void parse_header(UString&& command);
 
 	std::string path;
 	UString title{};
+	UString subtitle{};
 	UString genre{};
 	UString artist{};
 	UString subartist{};
+	UString url{};
+	UString email{};
 };
 
 void BMS::register_header_handlers()
 {
 	// Implemented headers
 	header_handlers.emplace("TITLE", &BMS::parse_header_title);
+	header_handlers.emplace("SUBTITLE", &BMS::parse_header_subtitle);
 	header_handlers.emplace("ARTIST", &BMS::parse_header_artist);
 	header_handlers.emplace("SUBARTIST", &BMS::parse_header_subartist);
 	header_handlers.emplace("GENRE", &BMS::parse_header_genre);
+	header_handlers.emplace("%URL", &BMS::parse_header_url);
+	header_handlers.emplace("%EMAIL", &BMS::parse_header_email);
 
 	// Critical unimplemented headers
 	// (if a file uses one of these, there is no chance for the BMS to play even remotely correctly)
@@ -85,7 +94,6 @@ void BMS::register_header_handlers()
 	header_handlers.emplace("BANNER", &BMS::parse_header_unimplemented);
 	header_handlers.emplace("BACKBMP", &BMS::parse_header_unimplemented);
 	header_handlers.emplace("DIFFICULTY", &BMS::parse_header_unimplemented);
-	header_handlers.emplace("SUBTITLE", &BMS::parse_header_unimplemented);
 	header_handlers.emplace("MAKER", &BMS::parse_header_unimplemented);
 	header_handlers.emplace("COMMENT", &BMS::parse_header_unimplemented);
 	header_handlers.emplace("TEXT", &BMS::parse_header_unimplemented);
@@ -113,8 +121,6 @@ void BMS::register_header_handlers()
 	header_handlers.emplace("VIDEODLY", &BMS::parse_header_unimplemented);
 	header_handlers.emplace("MOVIE", &BMS::parse_header_unimplemented);
 	header_handlers.emplace("ExtChr", &BMS::parse_header_unimplemented);
-	header_handlers.emplace("%URL", &BMS::parse_header_unimplemented);
-	header_handlers.emplace("%EMAIL", &BMS::parse_header_unimplemented);
 
 	// Unsupported headers
 	header_handlers.emplace("RANK", &BMS::parse_header_ignored); // Playnote enforces uniform judgment
@@ -188,22 +194,22 @@ void BMS::parse_line(UString&& line)
 		parse_header(std::move(line));
 }
 
-void BMS::parse_channel(UString&& line)
+void BMS::parse_channel(UString&& command)
 {
 	// TODO
 }
 
-void BMS::parse_header(UString&& line)
+void BMS::parse_header(UString&& command)
 {
-	auto first_space = line.indexOf(' ');
-	if (first_space == -1) first_space = line.length();
-	auto first_tab = line.indexOf('\t');
-	if (first_tab == -1) first_tab = line.length();
+	auto first_space = command.indexOf(' ');
+	if (first_space == -1) first_space = command.length();
+	auto first_tab = command.indexOf('\t');
+	if (first_tab == -1) first_tab = command.length();
 	auto first_whitespace = std::min(first_space, first_tab);
 
-	auto header = UString{line, 1, first_whitespace - 1};
+	auto header = UString{command, 1, first_whitespace - 1};
 	header.toUpper();
-	auto value = UString{line, first_whitespace + 1};
+	auto value = UString{command, first_whitespace + 1};
 
 	auto slot = UString{};
 	auto extract_slot = [&](int start) {
