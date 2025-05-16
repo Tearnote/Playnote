@@ -9,7 +9,7 @@ A BMS format parser - turns a complete BMS file into a list of commands.
 module;
 #include <string_view>
 #include <variant>
-#include <unicode/numfmt.h>
+#include <unicode/fmtable.h>
 #include "util/log_macros.hpp"
 
 export module playnote.bms.parser;
@@ -20,9 +20,10 @@ import playnote.globals;
 
 namespace playnote::bms {
 
-using util::UString;
 using util::ICUError;
+using util::UString;
 
+// A "header" type BMS command
 export struct HeaderCommand {
 	int line;
 	UString header;
@@ -30,6 +31,7 @@ export struct HeaderCommand {
 	UString value;
 };
 
+// A "channel" type BMS command
 export struct ChannelCommand {
 	int line;
 	int measure;
@@ -37,6 +39,8 @@ export struct ChannelCommand {
 	UString value;
 };
 
+// Parse a known "header" type command into its individual components.
+// If the command is malformed, measure will be set to -1 which is otherwise an invalid value.
 auto parse_channel(int line_index, UString&& command) -> ChannelCommand
 {
 	auto colon_pos = command.indexOf(':');
@@ -57,6 +61,8 @@ auto parse_channel(int line_index, UString&& command) -> ChannelCommand
 	};
 }
 
+// Parse a known "header" type command into its individual components.
+// Some fields might be returned empty if the command is malformed.
 auto parse_header(int line_index, UString&& command) -> HeaderCommand
 {
 	auto first_space = command.indexOf(' ');
@@ -98,6 +104,8 @@ auto parse_header(int line_index, UString&& command) -> HeaderCommand
 	};
 }
 
+// Parse a line into the appropriate command.
+// If the line doesn't contain a valid command, std::monostate is returned.
 auto parse_line(int line_index, UString&& line) -> std::variant<std::monostate, HeaderCommand, ChannelCommand>
 {
 	line.trim(); // BMS occasionally uses leading whitespace
@@ -109,11 +117,14 @@ auto parse_line(int line_index, UString&& line) -> std::variant<std::monostate, 
 		return parse_header(line_index, std::move(line));
 }
 
+// Parse an entire BMS file, running the provided functions once for each command.
+// The functions are called in the same order the lines appear in the file.
+// The commands might be invalid, and some fields might be empty.
 export template<
 	stx::callable<void(HeaderCommand&&)> HFunc,
 	stx::callable<void(ChannelCommand&&)> CFunc
 >
-void parse(std::string_view path, std::string_view raw_bms_file, HFunc&& header_func, CFunc&& channel_func)
+void parse(std::string_view raw_bms_file, HFunc&& header_func, CFunc&& channel_func)
 {
 	// Convert file to UTF-16
 	auto encoding = util::detect_text_encoding(raw_bms_file);
@@ -130,13 +141,14 @@ void parse(std::string_view path, std::string_view raw_bms_file, HFunc&& header_
 	bms_file_u16.findAndReplace("\r", "\n");
 
 	// Split into lines
-	auto pos = int{0};
+	auto pos = 0;
 	auto len = bms_file_u16.length();
 	int line_index = 0;
 	while (pos < len) {
 		auto split_pos = bms_file_u16.indexOf('\n', pos);
 		if (split_pos == -1) split_pos = len;
 
+		// Parse line and dispatch
 		auto result = parse_line(line_index, {bms_file_u16, pos, split_pos - pos});
 		if (std::holds_alternative<HeaderCommand>(result))
 			header_func(std::move(std::get<HeaderCommand>(result)));
