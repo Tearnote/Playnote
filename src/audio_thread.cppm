@@ -73,7 +73,6 @@ auto load_bms(bms::IRCompiler& compiler, std::string_view path) -> bms::IR
 	auto file = util::read_file(path);
 	auto ir = compiler.compile(path, file.contents);
 	L_INFO("Loaded BMS file \"{}\" successfully", path);
-
 	return ir;
 }
 

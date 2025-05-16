@@ -10,12 +10,15 @@ commands.
 
 module;
 #include <string_view>
+#include <string>
+#include <openssl/evp.h>
 #include "ankerl/unordered_dense.h"
 #include "util/log_macros.hpp"
 
 export module playnote.bms.ir;
 
 import playnote.stx.except;
+import playnote.stx.types;
 import playnote.util.charset;
 import playnote.bms.parser;
 import playnote.globals;
@@ -24,6 +27,7 @@ namespace playnote::bms {
 
 template<typename Key, typename T, typename Hash>
 using unordered_map = ankerl::unordered_dense::map<Key, T, Hash>;
+using stx::uint8;
 using util::UStringHash;
 using util::UString;
 using util::to_utf8;
@@ -31,6 +35,8 @@ using bms::HeaderCommand;
 
 export class IR {
 public:
+	std::string path;
+	std::array<uint8, 16> md5;
 };
 
 export class IRCompiler {
@@ -45,7 +51,6 @@ private:
 
 	void register_header_handlers();
 
-	// Header handlers: generic
 	void parse_header_ignored(HeaderCommand&&) {}
 	void parse_header_ignored_log(HeaderCommand&& cmd) {L_INFO("Ignored header: {}", to_utf8(cmd.header)); }
 	void parse_header_unimplemented(HeaderCommand&& cmd) { L_WARN("Unimplemented header: {}", to_utf8(cmd.header)); }
@@ -60,6 +65,10 @@ IRCompiler::IRCompiler()
 auto IRCompiler::compile(std::string_view path, std::string_view bms_file_contents) -> IR
 {
 	L_INFO("Compiling BMS file \"{}\"", path);
+	auto ir = IR{};
+	ir.path = std::string{path};
+	EVP_Q_digest(nullptr, "MD5", nullptr, bms_file_contents.data(), bms_file_contents.size(), ir.md5.data(), nullptr);
+
 	bms::parse(bms_file_contents,
 		[](bms::HeaderCommand&& cmd) {
 			L_TRACE("{}: #{}{} {}", cmd.line, to_utf8(cmd.header), to_utf8(cmd.slot), to_utf8(cmd.value));
@@ -69,7 +78,7 @@ auto IRCompiler::compile(std::string_view path, std::string_view bms_file_conten
 		}
 	);
 
-	return IR{};
+	return ir;
 }
 
 void IRCompiler::register_header_handlers()

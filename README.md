@@ -22,6 +22,7 @@ Required to be installed locally:
 - [libsamplerate](https://libsndfile.github.io/libsamplerate/) ([BSD](https://libsndfile.github.io/libsamplerate/license.html))
 - [libpipewire](https://pipewire.org/) ([MIT](https://gitlab.freedesktop.org/pipewire/pipewire/-/blob/master/COPYING))
 - [ICU](https://icu.unicode.org/) ([Unicode](https://github.com/unicode-org/icu/blob/main/LICENSE))
+- [OpenSSL](https://openssl-library.org/) ([Apache](https://github.com/openssl/openssl?tab=Apache-2.0-1-ov-file#readme))
 
 Retrieved via [FetchContent](https://cmake.org/cmake/help/latest/module/FetchContent.html):
 
