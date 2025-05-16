@@ -24,18 +24,20 @@ using util::UString;
 using util::ICUError;
 
 export struct HeaderCommand {
+	int line;
 	UString header;
 	UString slot;
 	UString value;
 };
 
 export struct ChannelCommand {
+	int line;
 	int measure;
 	UString channel;
 	UString value;
 };
 
-auto parse_channel(UString&& command) -> ChannelCommand
+auto parse_channel(int line_index, UString&& command) -> ChannelCommand
 {
 	auto colon_pos = command.indexOf(':');
 	if (colon_pos != 6 || command.length() < 9) return {-1};
@@ -48,13 +50,14 @@ auto parse_channel(UString&& command) -> ChannelCommand
 	auto value = UString{command, 7};
 
 	return {
+		.line = line_index,
 		.measure = measure.getLong(),
 		.channel = std::move(channel),
 		.value = std::move(value),
 	};
 }
 
-auto parse_header(UString&& command) -> HeaderCommand
+auto parse_header(int line_index, UString&& command) -> HeaderCommand
 {
 	auto first_space = command.indexOf(' ');
 	if (first_space == -1) first_space = command.length();
@@ -88,21 +91,22 @@ auto parse_header(UString&& command) -> HeaderCommand
 	else if (header.startsWith("CHANGEOPTION")) extract_slot(12);
 
 	return {
+		.line = line_index,
 		.header = header,
 		.slot = std::move(slot),
 		.value = std::move(value)
 	};
 }
 
-auto parse_line(UString&& line) -> std::variant<std::monostate, HeaderCommand, ChannelCommand>
+auto parse_line(int line_index, UString&& line) -> std::variant<std::monostate, HeaderCommand, ChannelCommand>
 {
 	line.trim(); // BMS occasionally uses leading whitespace
 	if (line.isEmpty()) return {};
 	if (line[0] != '#') return {}; // Ignore comments
 	if (line[1] >= '0' && line[1] <= '9')
-		return parse_channel(std::move(line));
+		return parse_channel(line_index, std::move(line));
 	else
-		return parse_header(std::move(line));
+		return parse_header(line_index, std::move(line));
 }
 
 export template<
@@ -128,17 +132,19 @@ void parse(std::string_view path, std::string_view raw_bms_file, HFunc&& header_
 	// Split into lines
 	auto pos = int{0};
 	auto len = bms_file_u16.length();
+	int line_index = 0;
 	while (pos < len) {
 		auto split_pos = bms_file_u16.indexOf('\n', pos);
 		if (split_pos == -1) split_pos = len;
 
-		auto result = parse_line({bms_file_u16, pos, split_pos - pos});
+		auto result = parse_line(line_index, {bms_file_u16, pos, split_pos - pos});
 		if (std::holds_alternative<HeaderCommand>(result))
 			header_func(std::move(std::get<HeaderCommand>(result)));
 		else if (std::holds_alternative<ChannelCommand>(result))
 			channel_func(std::move(std::get<ChannelCommand>(result)));
 
 		pos = split_pos + 1; // Skip over the newline
+		line_index += 1;
 	}
 }
 
