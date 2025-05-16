@@ -16,6 +16,7 @@ module;
 #include <unicode/unistr.h>
 #include <unicode/ucnv.h>
 #include "libassert/assert.hpp"
+#include "ankerl/unordered_dense.h"
 #include "util/log_macros.hpp"
 
 export module playnote.util.charset;
@@ -26,8 +27,21 @@ import playnote.globals;
 
 namespace playnote::util {
 
-using Encoding = std::string;
+export using Encoding = std::string;
+export using UString = icu::UnicodeString;
+using stx::uint64;
 using stx::usize;
+
+// Wrapper enabling UString to be used as a hashmap key
+// We don't use UString.hashCode() because it's a low quality 32-bit hash
+export class UStringHash {
+public:
+	using is_avalanching = void;
+	auto operator()(UString const& str) const noexcept -> uint64 {
+		using sv_hash = ankerl::unordered_dense::hash<std::basic_string_view<UChar>>;
+		return sv_hash{}({str.getBuffer(), static_cast<usize>(str.length())});
+	}
+};
 
 // Throw on any ICU error other than invalid byte during decoding.
 // A BMS file with wrongly detected encoding will have some garbled text, but should still
@@ -84,7 +98,7 @@ export auto detect_text_encoding(std::span<char const> text) -> Encoding
 
 // Convert a passage of text from a given encoding to Unicode (UTF-16).
 // Any bytes that are invalid in the specified encoding are turned into replacement characters.
-export auto text_to_unicode(std::span<char const> text, Encoding const& encoding) -> icu::UnicodeString
+export auto text_to_unicode(std::span<char const> text, Encoding const& encoding) -> UString
 {
 	using Converter = std::unique_ptr<UConverter, decltype([](auto* p) {
 		ucnv_close(p);
@@ -92,7 +106,7 @@ export auto text_to_unicode(std::span<char const> text, Encoding const& encoding
 	auto err = ICUError{};
 
 	auto converter = Converter{ucnv_open(encoding.c_str(), err)};
-	auto contents = icu::UnicodeString{};
+	auto contents = UString{};
 	auto contents_capacity = text.size() + 1; // Add space for null terminator
 	auto contents_buf = contents.getBuffer(contents_capacity);
 	auto converted = ucnv_toUChars(converter.get(), contents_buf, contents_capacity, text.data(), text.size(), err);
