@@ -86,6 +86,19 @@ void BMS::register_header_handlers()
 	// (if a file uses one of these, there is no chance for the BMS to play even remotely correctly)
 	header_handlers.emplace("WAVCMD", &BMS::parse_header_unimplemented_critical);
 	header_handlers.emplace("EXWAV", &BMS::parse_header_unimplemented_critical); // Underspecified, and likely unimplementable
+	header_handlers.emplace("RANDOM", &BMS::parse_header_unimplemented_critical);
+	header_handlers.emplace("IF", &BMS::parse_header_unimplemented_critical);
+	header_handlers.emplace("ELSEIF", &BMS::parse_header_unimplemented_critical);
+	header_handlers.emplace("ELSE", &BMS::parse_header_unimplemented_critical);
+	header_handlers.emplace("ENDIF", &BMS::parse_header_unimplemented_critical);
+	header_handlers.emplace("SETRANDOM", &BMS::parse_header_unimplemented_critical);
+	header_handlers.emplace("ENDRANDOM", &BMS::parse_header_unimplemented_critical);
+	header_handlers.emplace("SWITCH", &BMS::parse_header_unimplemented_critical);
+	header_handlers.emplace("CASE", &BMS::parse_header_unimplemented_critical);
+	header_handlers.emplace("SKIP", &BMS::parse_header_unimplemented_critical);
+	header_handlers.emplace("DEF", &BMS::parse_header_unimplemented_critical);
+	header_handlers.emplace("SETSWITCH", &BMS::parse_header_unimplemented_critical);
+	header_handlers.emplace("ENDSW", &BMS::parse_header_unimplemented_critical);
 
 	// Unimplemented headers
 	header_handlers.emplace("PLAYER", &BMS::parse_header_unimplemented);
