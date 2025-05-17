@@ -9,7 +9,10 @@ commands.
 */
 
 module;
+#include <memory_resource>
 #include <string_view>
+#include <variant>
+#include <memory>
 #include <string>
 #include <openssl/evp.h>
 #include "ankerl/unordered_dense.h"
@@ -33,10 +36,32 @@ using util::UString;
 using util::to_utf8;
 using bms::HeaderCommand;
 
+export class IRCompiler;
+
 export class IR {
 public:
+	struct HeaderEvent {
+		struct Title {
+			UString title;
+		};
+
+		std::variant<
+			std::monostate, // 0
+			Title*          // 1
+		> params;
+	};
+
+private:
+	friend IRCompiler;
+
+	std::unique_ptr<std::pmr::monotonic_buffer_resource> buffer_resource; // unique_ptr makes it moveable
+	std::pmr::polymorphic_allocator<> allocator;
+
 	std::string path;
-	std::array<uint8, 16> md5;
+	std::array<uint8, 16> md5{};
+	std::pmr::vector<HeaderEvent> header_events;
+
+	IR();
 };
 
 export class IRCompiler {
@@ -46,16 +71,23 @@ public:
 	auto compile(std::string_view path, std::string_view bms_file_contents) -> IR;
 
 private:
-	using HeaderHandlerFunc = void(IRCompiler::*)(HeaderCommand&&);
+	using HeaderHandlerFunc = void(IRCompiler::*)(IR&, HeaderCommand&&);
 	unordered_map<UString, HeaderHandlerFunc, UStringHash> header_handlers{};
 
 	void register_header_handlers();
 
-	void parse_header_ignored(HeaderCommand&&) {}
-	void parse_header_ignored_log(HeaderCommand&& cmd) {L_INFO("Ignored header: {}", to_utf8(cmd.header)); }
-	void parse_header_unimplemented(HeaderCommand&& cmd) { L_WARN("Unimplemented header: {}", to_utf8(cmd.header)); }
-	void parse_header_unimplemented_critical(HeaderCommand&& cmd) { throw stx::runtime_error_fmt("Critical unimplemented header: {}", to_utf8(cmd.header)); }
+	void parse_header_ignored(IR&, HeaderCommand&&) {}
+	void parse_header_ignored_log(IR&, HeaderCommand&&);
+	void parse_header_unimplemented(IR&, HeaderCommand&&);
+	void parse_header_unimplemented_critical(IR&, HeaderCommand&&);
+
+	void parse_header_title(IR&, HeaderCommand&&);
 };
+
+IR::IR():
+	buffer_resource{std::make_unique<std::pmr::monotonic_buffer_resource>()},
+	allocator{buffer_resource.get()},
+	header_events{allocator} {}
 
 IRCompiler::IRCompiler()
 {
@@ -66,12 +98,14 @@ auto IRCompiler::compile(std::string_view path, std::string_view bms_file_conten
 {
 	L_INFO("Compiling BMS file \"{}\"", path);
 	auto ir = IR{};
+
 	ir.path = std::string{path};
 	EVP_Q_digest(nullptr, "MD5", nullptr, bms_file_contents.data(), bms_file_contents.size(), ir.md5.data(), nullptr);
 
 	bms::parse(bms_file_contents,
-		[](bms::HeaderCommand&& cmd) {
+		[&](bms::HeaderCommand&& cmd) {
 			L_TRACE("{}: #{}{} {}", cmd.line, to_utf8(cmd.header), to_utf8(cmd.slot), to_utf8(cmd.value));
+			(this->*header_handlers.at(cmd.header))(ir, std::move(cmd));
 		},
 		[](bms::ChannelCommand&& cmd) {
 			L_TRACE("{}: #{}{}:{}", cmd.line, cmd.measure, to_utf8(cmd.channel), to_utf8(cmd.value));
@@ -84,7 +118,7 @@ auto IRCompiler::compile(std::string_view path, std::string_view bms_file_conten
 void IRCompiler::register_header_handlers()
 {
 	// Implemented headers
-	//TODO
+	header_handlers.emplace("TITLE", &IRCompiler::parse_header_title);
 
 	// Critical unimplemented headers
 	// (if a file uses one of these, there is no chance for the BMS to play even remotely correctly)
@@ -105,7 +139,6 @@ void IRCompiler::register_header_handlers()
 	header_handlers.emplace("ENDSW", &IRCompiler::parse_header_unimplemented_critical);
 
 	// Unimplemented headers
-	header_handlers.emplace("TITLE", &IRCompiler::parse_header_unimplemented);
 	header_handlers.emplace("SUBTITLE", &IRCompiler::parse_header_unimplemented);
 	header_handlers.emplace("ARTIST", &IRCompiler::parse_header_unimplemented);
 	header_handlers.emplace("SUBARTIST", &IRCompiler::parse_header_unimplemented);
@@ -164,6 +197,35 @@ void IRCompiler::register_header_handlers()
 	header_handlers.emplace("MATERIALSBMP", &IRCompiler::parse_header_ignored_log); // ^
 	header_handlers.emplace("OPTION", &IRCompiler::parse_header_ignored_log); // Horrifying, who invented this
 	header_handlers.emplace("CHANGEOPTION", &IRCompiler::parse_header_ignored_log); // ^
+}
+
+void IRCompiler::parse_header_ignored_log(IR&, HeaderCommand&& cmd)
+{
+	L_INFO("Ignored header: {}", to_utf8(cmd.header));
+}
+
+void IRCompiler::parse_header_unimplemented(IR&, HeaderCommand&& cmd)
+{
+	L_WARN("Unimplemented header: {}", to_utf8(cmd.header));
+}
+
+void IRCompiler::parse_header_unimplemented_critical(IR&, HeaderCommand&& cmd)
+{
+	throw stx::runtime_error_fmt("Critical unimplemented header: {}", to_utf8(cmd.header));
+}
+
+void IRCompiler::parse_header_title(IR& ir, HeaderCommand&& cmd)
+{
+	if (cmd.value.isEmpty()) {
+		L_WARN("Title header is empty");
+		return;
+	}
+
+	ir.header_events.emplace_back(IR::HeaderEvent{
+		.params = ir.allocator.new_object<IR::HeaderEvent::Title>(IR::HeaderEvent::Title{
+			.title = std::move(cmd.value),
+		}),
+	});
 }
 
 }
