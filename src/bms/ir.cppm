@@ -104,11 +104,10 @@ auto IRCompiler::compile(std::string_view path, std::string_view bms_file_conten
 
 	bms::parse(bms_file_contents,
 		[&](HeaderCommand&& cmd) {
-			L_TRACE("{}: #{}{} {}", cmd.line, to_utf8(cmd.header), to_utf8(cmd.slot), to_utf8(cmd.value));
 			(this->*header_handlers.at(cmd.header))(ir, std::move(cmd));
 		},
 		[](ChannelCommand&& cmd) {
-			L_TRACE("{}: #{}{}:{}", cmd.line, cmd.measure, to_utf8(cmd.channel), to_utf8(cmd.value));
+			// L_TRACE("{}: #{}{}:{}", cmd.line, cmd.measure, to_utf8(cmd.channel), to_utf8(cmd.value));
 		}
 	);
 
@@ -221,6 +220,7 @@ void IRCompiler::parse_header_title(IR& ir, HeaderCommand&& cmd)
 		return;
 	}
 
+	L_TRACE("Title: {}", to_utf8(cmd.value));
 	ir.header_events.emplace_back(IR::HeaderEvent{
 		.params = ir.allocator.new_object<IR::HeaderEvent::Title>(IR::HeaderEvent::Title{
 			.title = std::move(cmd.value),

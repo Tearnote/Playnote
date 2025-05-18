@@ -83,9 +83,9 @@ try {
 	auto audio = sys::Audio{argc, argv};
 	auto bms_compiler = bms::IRCompiler{};
 	auto bms_ascii = load_bms(bms_compiler, "songs/Ling Child/02_hyper.bme");
-	auto bms_shift_jis = load_bms(bms_compiler, "songs/地球塔デヴォーション/DVTN_0708_SPH.bme");
-	auto bms_euc_kr = load_bms(bms_compiler, "songs/Seoul Subway Song/sss_7h.bme");
-	auto bms_euc_kr2 = load_bms(bms_compiler, "songs/kkotbat ui norae ~ song of flower bed/sofb_7h (2).bme");
+	// auto bms_shift_jis = load_bms(bms_compiler, "songs/地球塔デヴォーション/DVTN_0708_SPH.bme");
+	// auto bms_euc_kr = load_bms(bms_compiler, "songs/Seoul Subway Song/sss_7h.bme");
+	// auto bms_euc_kr2 = load_bms(bms_compiler, "songs/kkotbat ui norae ~ song of flower bed/sofb_7h (2).bme");
 	while (!window.is_closing())
 		std::this_thread::yield();
 }
