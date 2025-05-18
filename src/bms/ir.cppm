@@ -36,6 +36,7 @@ using unordered_map = ankerl::unordered_dense::map<Key, T, Hash>;
 using stx::uint8;
 using util::UStringHash;
 using util::UString;
+using util::to_float;
 using util::to_utf8;
 using util::to_int;
 using bms::HeaderCommand;
@@ -69,6 +70,9 @@ public:
 		struct Player {
 			int count;
 		};
+		struct BPM {
+			float bpm;
+		};
 		using ParamsType = std::variant<
 			std::monostate, // 0
 			Title*,         // 1
@@ -79,6 +83,16 @@ public:
 			URL*,           // 6
 			Email*,         // 7
 			Player*         // 8
+			std::monostate, //  0
+			Title*,         //  1
+			Subtitle*,      //  2
+			Artist*,        //  3
+			Subartist*,     //  4
+			Genre*,         //  5
+			URL*,           //  6
+			Email*,         //  7
+			Player*,        //  8
+			BPM*            //  9
 		>;
 
 		ParamsType params;
@@ -135,6 +149,7 @@ private:
 	void parse_header_url(IR&, HeaderCommand&&);
 	void parse_header_email(IR&, HeaderCommand&&);
 	void parse_header_player(IR&, HeaderCommand&&);
+	void parse_header_bpm(IR&, HeaderCommand&&);
 };
 
 IR::IR():
@@ -176,6 +191,7 @@ void IRCompiler::register_header_handlers()
 	header_handlers.emplace("%URL", &IRCompiler::parse_header_url);
 	header_handlers.emplace("%EMAIL", &IRCompiler::parse_header_email);
 	header_handlers.emplace("PLAYER", &IRCompiler::parse_header_player);
+	header_handlers.emplace("BPM", &IRCompiler::parse_header_bpm);
 
 	// Critical unimplemented headers
 	// (if a file uses one of these, there is no chance for the BMS to play even remotely correctly)
@@ -205,7 +221,6 @@ void IRCompiler::register_header_handlers()
 	header_handlers.emplace("COMMENT", &IRCompiler::parse_header_unimplemented);
 	header_handlers.emplace("TEXT", &IRCompiler::parse_header_unimplemented);
 	header_handlers.emplace("SONG", &IRCompiler::parse_header_unimplemented);
-	header_handlers.emplace("BPM", &IRCompiler::parse_header_unimplemented);
 	header_handlers.emplace("EXBPM", &IRCompiler::parse_header_unimplemented);
 	header_handlers.emplace("BASEBPM", &IRCompiler::parse_header_unimplemented);
 	header_handlers.emplace("STOP", &IRCompiler::parse_header_unimplemented);
@@ -373,6 +388,27 @@ void IRCompiler::parse_header_player(IR& ir, HeaderCommand&& cmd) try
 }
 catch (std::exception const&) {
 	L_WARN("Player header has an invalid value: {}", to_utf8(cmd.value));
+}
+
+void IRCompiler::parse_header_bpm(IR& ir, HeaderCommand&& cmd) try
+{
+	if (!cmd.slot.isEmpty()) {
+		L_WARN("Unimplemented header: BPMxx");
+		return;
+	}
+	if (cmd.value.isEmpty()) {
+		L_WARN("BPM header has no value");
+		return;
+	}
+	auto bpm = to_float(cmd.value);
+
+	L_TRACE("BPM: {}", bpm);
+	ir.add_header_event(IR::HeaderEvent::BPM{
+		.bpm = bpm,
+	});
+}
+catch (std::exception const&) {
+	L_WARN("BPM header has an invalid value: {}", to_utf8(cmd.value));
 }
 
 }
