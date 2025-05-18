@@ -11,6 +11,7 @@ commands.
 module;
 #include <memory_resource>
 #include <string_view>
+#include <utility>
 #include <variant>
 #include <memory>
 #include <string>
@@ -20,6 +21,7 @@ module;
 
 export module playnote.bms.ir;
 
+import playnote.stx.concepts;
 import playnote.stx.except;
 import playnote.stx.types;
 import playnote.util.charset;
@@ -47,12 +49,13 @@ public:
 		struct Subtitle {
 			UString subtitle;
 		};
-
-		std::variant<
+		using ParamsType = std::variant<
 			std::monostate, // 0
 			Title*,         // 1
 			Subtitle*       // 2
-		> params;
+		>;
+
+		ParamsType params;
 	};
 
 private:
@@ -66,7 +69,20 @@ private:
 	std::pmr::vector<HeaderEvent> header_events;
 
 	IR();
+
+	template<typename T>
+		requires stx::is_variant_alternative<T*, HeaderEvent::ParamsType>
+	void add_header_event(T&&);
 };
+
+template<typename T>
+	requires stx::is_variant_alternative<T*, IR::HeaderEvent::ParamsType>
+void IR::add_header_event(T&& event)
+{
+	header_events.emplace_back(HeaderEvent{
+		.params = allocator.new_object<T>(std::forward<T>(event)),
+	});
+}
 
 export class IRCompiler {
 public:
@@ -224,10 +240,8 @@ void IRCompiler::parse_header_title(IR& ir, HeaderCommand&& cmd)
 	}
 
 	L_TRACE("Title: {}", to_utf8(cmd.value));
-	ir.header_events.emplace_back(IR::HeaderEvent{
-		.params = ir.allocator.new_object<IR::HeaderEvent::Title>(IR::HeaderEvent::Title{
-			.title = std::move(cmd.value),
-		}),
+	ir.add_header_event(IR::HeaderEvent::Title{
+		.title = std::move(cmd.value),
 	});
 }
 
@@ -239,10 +253,8 @@ void IRCompiler::parse_header_subtitle(IR& ir, HeaderCommand&& cmd)
 	}
 
 	L_TRACE("Subtitle: {}", to_utf8(cmd.value));
-	ir.header_events.emplace_back(IR::HeaderEvent{
-		.params = ir.allocator.new_object<IR::HeaderEvent::Subtitle>(IR::HeaderEvent::Subtitle{
-			.subtitle = std::move(cmd.value),
-		}),
+	ir.add_header_event(IR::HeaderEvent::Subtitle{
+		.subtitle = std::move(cmd.value),
 	});
 }
 
