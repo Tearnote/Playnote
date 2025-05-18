@@ -11,12 +11,12 @@ commands.
 module;
 #include <memory_resource>
 #include <string_view>
+#include <exception>
 #include <utility>
 #include <variant>
 #include <memory>
 #include <string>
 #include <openssl/evp.h>
-#include <unicode/fmtable.h>
 #include "ankerl/unordered_dense.h"
 #include "util/log_macros.hpp"
 
@@ -35,9 +35,9 @@ template<typename Key, typename T, typename Hash>
 using unordered_map = ankerl::unordered_dense::map<Key, T, Hash>;
 using stx::uint8;
 using util::UStringHash;
-using util::ICUError;
 using util::UString;
 using util::to_utf8;
+using util::to_int;
 using bms::HeaderCommand;
 
 export class IRCompiler;
@@ -354,19 +354,13 @@ void IRCompiler::parse_header_email(IR& ir, HeaderCommand&& cmd)
 	});
 }
 
-void IRCompiler::parse_header_player(IR& ir, HeaderCommand&& cmd)
+void IRCompiler::parse_header_player(IR& ir, HeaderCommand&& cmd) try
 {
 	if (cmd.value.isEmpty()) {
 		L_WARN("Player header has no value");
 		return;
 	}
-	auto count_fmt = icu::Formattable{-1};
-	g_int_formatter->parse(cmd.value, count_fmt, ICUError{});
-	auto count = count_fmt.getLong();
-	if (count == -1) {
-		L_WARN("Player header has an invalid value: {}", to_utf8(cmd.value));
-		return;
-	}
+	auto count = to_int(cmd.value);
 	if (count != 1 && count != 3) {
 		L_WARN("Player header has an invalid value: {}", count);
 		return;
@@ -376,6 +370,9 @@ void IRCompiler::parse_header_player(IR& ir, HeaderCommand&& cmd)
 	ir.add_header_event(IR::HeaderEvent::Player{
 		.count = count,
 	});
+}
+catch (std::exception const&) {
+	L_WARN("Player header has an invalid value: {}", to_utf8(cmd.value));
 }
 
 }

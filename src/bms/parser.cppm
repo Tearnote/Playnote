@@ -9,7 +9,6 @@ A BMS format parser - turns a complete BMS file into a list of commands.
 module;
 #include <string_view>
 #include <variant>
-#include <unicode/fmtable.h>
 #include "util/log_macros.hpp"
 
 export module playnote.bms.parser;
@@ -20,8 +19,8 @@ import playnote.globals;
 
 namespace playnote::bms {
 
-using util::ICUError;
 using util::UString;
+using util::to_int;
 
 // A "header" type BMS command
 export struct HeaderCommand {
@@ -46,16 +45,13 @@ auto parse_channel(int line_index, UString&& command) -> ChannelCommand
 	auto colon_pos = command.indexOf(':');
 	if (colon_pos != 6 || command.length() < 9) return {-1};
 
-	auto measure_str = UString{command, 1, 3};
-	auto measure = icu::Formattable{-1};
-	g_int_formatter->parse(measure_str, measure, ICUError{});
-
+	auto measure = to_int({command, 1, 3}); // We checked that at least the first character is a digit, so this won't throw
 	auto channel = UString{command, 4, 2};
 	auto value = UString{command, 7};
 
 	return {
 		.line = line_index,
-		.measure = measure.getLong(),
+		.measure = measure,
 		.channel = std::move(channel),
 		.value = std::move(value),
 	};

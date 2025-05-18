@@ -47,17 +47,19 @@ public:
 // Throw on any ICU error other than invalid byte during decoding.
 // A BMS file with wrongly detected encoding will have some garbled text, but should still
 // be playable.
-export class ICUError: public icu::ErrorCode {
-protected:
-	void handleFailure() const override
-	{
-		if (errorCode == U_ILLEGAL_CHAR_FOUND) {
-			L_WARN("Illegal character found in file");
-			return;
-		}
-		throw stx::runtime_error_fmt("ICU error: {}", errorName());
+export auto handle_icu_error(UErrorCode err)
+{
+	if (err == U_ZERO_ERROR) return;
+	if (U_SUCCESS(err)) {
+		L_WARN("ICU warning: {}", u_errorName(err));
+		return;
 	}
-};
+	if (err == U_ILLEGAL_CHAR_FOUND) {
+		L_WARN("Illegal character found in file");
+		return;
+	}
+	throw stx::runtime_error_fmt("ICU error: {}", u_errorName(err));
+}
 
 // Convert a UString to a std::string.
 // Useful for debug output, but do not use carelessly as this allocates.
@@ -88,16 +90,21 @@ export auto detect_text_encoding(std::span<char const> text) -> Encoding
 		ucsdet_close(p);
 	})>;
 
-	auto detector = Detector{ASSUME_VAL(ucsdet_open(ICUError{}))};
-	ucsdet_setText(detector.get(), text.data(), text.size(), ICUError{});
+	auto err = U_ZERO_ERROR;
+	auto detector = Detector{ASSUME_VAL(ucsdet_open(&err))};
+	handle_icu_error(err);
+	ucsdet_setText(detector.get(), text.data(), text.size(), &err);
+	handle_icu_error(err);
 
 	auto* matches_ptr = static_cast<UCharsetMatch const**>(nullptr);
 	auto matches_count = int{0};
-	matches_ptr = ucsdet_detectAll(detector.get(), &matches_count, ICUError{});
+	matches_ptr = ucsdet_detectAll(detector.get(), &matches_count, &err);
+	handle_icu_error(err);
 	auto matches = std::span{matches_ptr, static_cast<usize>(matches_count)};
 
 	for (auto const& match: matches) {
-		auto* match_name = ucsdet_getName(match, ICUError{});
+		auto* match_name = ucsdet_getName(match, &err);
+		handle_icu_error(err);
 		if (is_supported_encoding(match_name))
 			return match_name;
 	}
@@ -112,11 +119,14 @@ export auto text_to_unicode(std::span<char const> text, Encoding const& encoding
 		ucnv_close(p);
 	})>;
 
-	auto converter = Converter{ucnv_open(encoding.c_str(), ICUError{})};
+	auto err = U_ZERO_ERROR;
+	auto converter = Converter{ucnv_open(encoding.c_str(), &err)};
+	handle_icu_error(err);
 	auto contents = UString{};
 	auto contents_capacity = text.size() + 1; // Add space for null terminator
 	auto contents_buf = contents.getBuffer(contents_capacity);
-	auto converted = ucnv_toUChars(converter.get(), contents_buf, contents_capacity, text.data(), text.size(), ICUError{});
+	auto converted = ucnv_toUChars(converter.get(), contents_buf, contents_capacity, text.data(), text.size(), &err);
+	handle_icu_error(err);
 	ASSUME(converted < contents_capacity);
 	contents.releaseBuffer(converted); // Cuts off the null terminator
 	return contents;
@@ -125,8 +135,20 @@ export auto text_to_unicode(std::span<char const> text, Encoding const& encoding
 // Make the global formatters usable anywhere. The resulting instances are thread-safe.
 export void init_global_formatters()
 {
-	g_int_formatter = icu::NumberFormat::createInstance(icu::Locale::getRoot(), ICUError{});
+	auto err = U_ZERO_ERROR;
+	g_int_formatter = icu::NumberFormat::createInstance(icu::Locale::getRoot(), err);
+	handle_icu_error(err);
 	g_int_formatter->setParseIntegerOnly(true);
+}
+
+export auto to_int(UString const& str) -> int
+{
+	ASSUME(g_int_formatter);
+	auto fmt = icu::Formattable{};
+	auto err = U_ZERO_ERROR;
+	g_int_formatter->parse(str, fmt, err);
+	handle_icu_error(err);
+	return fmt.getLong();
 }
 
 }
