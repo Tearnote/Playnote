@@ -73,16 +73,18 @@ public:
 		struct BPM {
 			float bpm;
 		};
+		struct Difficulty {
+			enum class Level {
+				Unknown = 0,
+				Beginner,
+				Normal,
+				Hyper,
+				Another,
+				Insane,
+			};
+			Level level;
+		};
 		using ParamsType = std::variant<
-			std::monostate, // 0
-			Title*,         // 1
-			Subtitle*,      // 2
-			Artist*,        // 3
-			Subartist*,     // 4
-			Genre*,         // 5
-			URL*,           // 6
-			Email*,         // 7
-			Player*         // 8
 			std::monostate, //  0
 			Title*,         //  1
 			Subtitle*,      //  2
@@ -92,7 +94,8 @@ public:
 			URL*,           //  6
 			Email*,         //  7
 			Player*,        //  8
-			BPM*            //  9
+			BPM*,           //  9
+			Difficulty*     // 10
 		>;
 
 		ParamsType params;
@@ -150,6 +153,7 @@ private:
 	void parse_header_email(IR&, HeaderCommand&&);
 	void parse_header_player(IR&, HeaderCommand&&);
 	void parse_header_bpm(IR&, HeaderCommand&&);
+	void parse_header_difficulty(IR&, HeaderCommand&&);
 };
 
 IR::IR():
@@ -192,6 +196,7 @@ void IRCompiler::register_header_handlers()
 	header_handlers.emplace("%EMAIL", &IRCompiler::parse_header_email);
 	header_handlers.emplace("PLAYER", &IRCompiler::parse_header_player);
 	header_handlers.emplace("BPM", &IRCompiler::parse_header_bpm);
+	header_handlers.emplace("DIFFICULTY", &IRCompiler::parse_header_difficulty);
 
 	// Critical unimplemented headers
 	// (if a file uses one of these, there is no chance for the BMS to play even remotely correctly)
@@ -216,7 +221,6 @@ void IRCompiler::register_header_handlers()
 	header_handlers.emplace("STAGEFILE", &IRCompiler::parse_header_unimplemented);
 	header_handlers.emplace("BANNER", &IRCompiler::parse_header_unimplemented);
 	header_handlers.emplace("BACKBMP", &IRCompiler::parse_header_unimplemented);
-	header_handlers.emplace("DIFFICULTY", &IRCompiler::parse_header_unimplemented);
 	header_handlers.emplace("MAKER", &IRCompiler::parse_header_unimplemented);
 	header_handlers.emplace("COMMENT", &IRCompiler::parse_header_unimplemented);
 	header_handlers.emplace("TEXT", &IRCompiler::parse_header_unimplemented);
@@ -409,6 +413,27 @@ void IRCompiler::parse_header_bpm(IR& ir, HeaderCommand&& cmd) try
 }
 catch (std::exception const&) {
 	L_WARN("BPM header has an invalid value: {}", to_utf8(cmd.value));
+}
+
+void IRCompiler::parse_header_difficulty(IR& ir, HeaderCommand&& cmd) try
+{
+	if (cmd.value.isEmpty()) {
+		L_WARN("Difficulty header has no value");
+		return;
+	}
+	auto level = to_int(cmd.value);
+	if (level < 1 || level > 5) {
+		L_WARN("Difficulty header has an invalid value: {}", level);
+		return;
+	}
+
+	L_TRACE("Difficulty: {}", level);
+	ir.add_header_event(IR::HeaderEvent::Difficulty{
+		.level = static_cast<IR::HeaderEvent::Difficulty::Level>(level),
+	});
+}
+catch (std::exception const&) {
+	L_WARN("Difficulty header has an invalid value: {}", to_utf8(cmd.value));
 }
 
 }
