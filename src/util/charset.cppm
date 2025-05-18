@@ -139,6 +139,8 @@ export void init_global_formatters()
 	g_int_formatter = icu::NumberFormat::createInstance(icu::Locale::getRoot(), err);
 	handle_icu_error(err);
 	g_int_formatter->setParseIntegerOnly(true);
+	g_float_formatter = icu::NumberFormat::createInstance(icu::Locale::getRoot(), err);
+	handle_icu_error(err);
 }
 
 export auto to_int(UString const& str) -> int
@@ -148,7 +150,22 @@ export auto to_int(UString const& str) -> int
 	auto err = U_ZERO_ERROR;
 	g_int_formatter->parse(str, fmt, err);
 	handle_icu_error(err);
+	ASSUME(fmt.getType() == icu::Formattable::Type::kLong);
 	return fmt.getLong();
+}
+
+export auto to_float(UString const& str) -> float
+{
+	ASSUME(g_float_formatter);
+	auto fmt = icu::Formattable{};
+	auto err = U_ZERO_ERROR;
+	g_float_formatter->parse(str, fmt, err);
+	handle_icu_error(err);
+	ASSUME(fmt.getType() == icu::Formattable::Type::kLong || fmt.getType() == icu::Formattable::Type::kDouble);
+	if (fmt.getType() == icu::Formattable::Type::kLong)
+		return static_cast<float>(fmt.getLong());
+	else
+		return static_cast<float>(fmt.getDouble());
 }
 
 }

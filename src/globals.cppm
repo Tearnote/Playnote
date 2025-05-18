@@ -27,4 +27,7 @@ export auto g_logger = std::optional<util::Logger>{};
 // Global integer formatter
 export auto* g_int_formatter = static_cast<icu::NumberFormat*>(nullptr);
 
+// Global float formatter
+export auto* g_float_formatter = static_cast<icu::NumberFormat*>(nullptr);
+
 }
