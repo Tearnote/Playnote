@@ -14,9 +14,21 @@ Work in progress.
 ## Milestones
 
 - [ ] `0.0.1`: A usable non-interactive player of BMS songs.
-  - Loads a BMS chart via a command-line argument
-  - Plays it back directly via [PipeWire](https://pipewire.org/) with minimal latency
-  - Basic Imgui playback controls
+  - [x] Quill low-latency logging
+  - [x] GLFW windowing and input
+  - [x] Direct Pipewire audio interface
+  - [x] WAV/OGG decoding and sample rate conversion
+  - [x] Vulkan device creation
+  - [x] Threaded rendering via vuk
+  - [x] Dear ImGui debug controls support
+  - [x] BMS text encoding detection and conversion
+  - [x] BMS command parsing
+  - [ ] Compilation of BMS commands into IR
+  - [ ] Generation of a playable song from IR
+  - [ ] Loading song assets
+  - [ ] Song audio mixing and playback
+  - [ ] Basic Imgui playback controls
+  - [ ] Basic timeline visualization
 
 ## [Dependencies](./cmake/Dependencies.cmake)
 
@@ -32,7 +44,7 @@ Required to be installed locally:
 - [ICU](https://icu.unicode.org/) ([Unicode](https://github.com/unicode-org/icu/blob/main/LICENSE))
 - [OpenSSL](https://openssl-library.org/) ([Apache](https://github.com/openssl/openssl?tab=Apache-2.0-1-ov-file#readme))
 
-Retrieved via [FetchContent](https://cmake.org/cmake/help/latest/module/FetchContent.html):
+Retrieved via CMake [FetchContent](https://cmake.org/cmake/help/latest/module/FetchContent.html):
 
 - [libassert](https://github.com/jeremy-rifkin/libassert) ([MIT](https://github.com/jeremy-rifkin/libassert?tab=MIT-1-ov-file#readme))
 - [mio](https://github.com/vimpunk/mio) ([MIT](https://github.com/vimpunk/mio?tab=MIT-1-ov-file#readme))
