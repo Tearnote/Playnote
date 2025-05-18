@@ -115,17 +115,13 @@ private:
 
 	template<typename T>
 		requires stx::is_variant_alternative<T*, HeaderEvent::ParamsType>
-	void add_header_event(T&&);
+	void add_header_event(T&& event)
+	{
+		header_events.emplace_back(HeaderEvent{
+			.params = allocator.new_object<T>(std::forward<T>(event)),
+		});
+	}
 };
-
-template<typename T>
-	requires stx::is_variant_alternative<T*, IR::HeaderEvent::ParamsType>
-void IR::add_header_event(T&& event)
-{
-	header_events.emplace_back(HeaderEvent{
-		.params = allocator.new_object<T>(std::forward<T>(event)),
-	});
-}
 
 export class IRCompiler {
 public:
