@@ -73,6 +73,10 @@ public:
 		struct BPM {
 			float bpm;
 		};
+		struct WAV {
+			int slot;
+			UString name;
+		};
 		struct Difficulty {
 			enum class Level {
 				Unknown = 0,
@@ -95,7 +99,8 @@ public:
 			Email*,         //  7
 			Player*,        //  8
 			BPM*,           //  9
-			Difficulty*     // 10
+			Difficulty*,    // 10
+			WAV*            // 11
 		>;
 
 		ParamsType params;
@@ -130,26 +135,35 @@ public:
 	auto compile(std::string_view path, std::string_view bms_file_contents) -> IR;
 
 private:
-	using HeaderHandlerFunc = void(IRCompiler::*)(IR&, HeaderCommand&&);
+	struct SlotMappings {
+		unordered_map<UString, int, UStringHash> wav;
+	};
+
+	using HeaderHandlerFunc = void(IRCompiler::*)(IR&, HeaderCommand&&, SlotMappings&);
 	unordered_map<UString, HeaderHandlerFunc, UStringHash> header_handlers{};
 
 	void register_header_handlers();
 
-	void parse_header_ignored(IR&, HeaderCommand&&) {}
-	void parse_header_ignored_log(IR&, HeaderCommand&&);
-	void parse_header_unimplemented(IR&, HeaderCommand&&);
-	void parse_header_unimplemented_critical(IR&, HeaderCommand&&);
+	// Generic handlers
+	void parse_header_ignored(IR&, HeaderCommand&&, SlotMappings&) {}
+	void parse_header_ignored_log(IR&, HeaderCommand&&, SlotMappings&);
+	void parse_header_unimplemented(IR&, HeaderCommand&&, SlotMappings&);
+	void parse_header_unimplemented_critical(IR&, HeaderCommand&&, SlotMappings&);
 
-	void parse_header_title(IR&, HeaderCommand&&);
-	void parse_header_subtitle(IR&, HeaderCommand&&);
-	void parse_header_artist(IR&, HeaderCommand&&);
-	void parse_header_subartist(IR&, HeaderCommand&&);
-	void parse_header_genre(IR&, HeaderCommand&&);
-	void parse_header_url(IR&, HeaderCommand&&);
-	void parse_header_email(IR&, HeaderCommand&&);
-	void parse_header_player(IR&, HeaderCommand&&);
-	void parse_header_bpm(IR&, HeaderCommand&&);
-	void parse_header_difficulty(IR&, HeaderCommand&&);
+	// Metadata handlers
+	void parse_header_title(IR&, HeaderCommand&&, SlotMappings&);
+	void parse_header_subtitle(IR&, HeaderCommand&&, SlotMappings&);
+	void parse_header_artist(IR&, HeaderCommand&&, SlotMappings&);
+	void parse_header_subartist(IR&, HeaderCommand&&, SlotMappings&);
+	void parse_header_genre(IR&, HeaderCommand&&, SlotMappings&);
+	void parse_header_url(IR&, HeaderCommand&&, SlotMappings&);
+	void parse_header_email(IR&, HeaderCommand&&, SlotMappings&);
+	void parse_header_player(IR&, HeaderCommand&&, SlotMappings&);
+	void parse_header_bpm(IR&, HeaderCommand&&, SlotMappings&);
+	void parse_header_difficulty(IR&, HeaderCommand&&, SlotMappings&);
+
+	// File reference handlers
+	void parse_header_wav(IR&, HeaderCommand&&, SlotMappings&);
 };
 
 IR::IR():
@@ -166,12 +180,13 @@ auto IRCompiler::compile(std::string_view path, std::string_view bms_file_conten
 {
 	L_INFO("Compiling BMS file \"{}\"", path);
 	auto ir = IR{};
+	auto maps = SlotMappings{};
 
 	ir.path = std::string{path};
 	EVP_Q_digest(nullptr, "MD5", nullptr, bms_file_contents.data(), bms_file_contents.size(), ir.md5.data(), nullptr);
 
 	bms::parse(bms_file_contents,
-		[&](HeaderCommand&& cmd) { (this->*header_handlers.at(cmd.header))(ir, std::move(cmd)); },
+		[&](HeaderCommand&& cmd) { (this->*header_handlers.at(cmd.header))(ir, std::move(cmd), maps); },
 		[](ChannelCommand&& cmd) {
 			// L_TRACE("{}: #{}{}:{}", cmd.line, cmd.measure, to_utf8(cmd.channel), to_utf8(cmd.value));
 		}
@@ -193,6 +208,7 @@ void IRCompiler::register_header_handlers()
 	header_handlers.emplace("PLAYER", &IRCompiler::parse_header_player);
 	header_handlers.emplace("BPM", &IRCompiler::parse_header_bpm);
 	header_handlers.emplace("DIFFICULTY", &IRCompiler::parse_header_difficulty);
+	header_handlers.emplace("WAV", &IRCompiler::parse_header_wav);
 
 	// Critical unimplemented headers
 	// (if a file uses one of these, there is no chance for the BMS to play even remotely correctly)
@@ -228,7 +244,6 @@ void IRCompiler::register_header_handlers()
 	header_handlers.emplace("LNTYPE", &IRCompiler::parse_header_unimplemented);
 	header_handlers.emplace("LNOBJ", &IRCompiler::parse_header_unimplemented);
 	header_handlers.emplace("OCT/FP", &IRCompiler::parse_header_unimplemented);
-	header_handlers.emplace("WAV", &IRCompiler::parse_header_unimplemented);
 	header_handlers.emplace("CDDA", &IRCompiler::parse_header_unimplemented);
 	header_handlers.emplace("MIDIFILE", &IRCompiler::parse_header_unimplemented);
 	header_handlers.emplace("BMP", &IRCompiler::parse_header_unimplemented);
@@ -263,22 +278,22 @@ void IRCompiler::register_header_handlers()
 	header_handlers.emplace("CHANGEOPTION", &IRCompiler::parse_header_ignored_log); // ^
 }
 
-void IRCompiler::parse_header_ignored_log(IR&, HeaderCommand&& cmd)
+void IRCompiler::parse_header_ignored_log(IR&, HeaderCommand&& cmd, SlotMappings&)
 {
 	L_INFO("Ignored header: {}", to_utf8(cmd.header));
 }
 
-void IRCompiler::parse_header_unimplemented(IR&, HeaderCommand&& cmd)
+void IRCompiler::parse_header_unimplemented(IR&, HeaderCommand&& cmd, SlotMappings&)
 {
 	L_WARN("Unimplemented header: {}", to_utf8(cmd.header));
 }
 
-void IRCompiler::parse_header_unimplemented_critical(IR&, HeaderCommand&& cmd)
+void IRCompiler::parse_header_unimplemented_critical(IR&, HeaderCommand&& cmd, SlotMappings&)
 {
 	throw stx::runtime_error_fmt("Critical unimplemented header: {}", to_utf8(cmd.header));
 }
 
-void IRCompiler::parse_header_title(IR& ir, HeaderCommand&& cmd)
+void IRCompiler::parse_header_title(IR& ir, HeaderCommand&& cmd, SlotMappings&)
 {
 	if (cmd.value.isEmpty()) {
 		L_WARN("Title header has no value");
@@ -291,7 +306,7 @@ void IRCompiler::parse_header_title(IR& ir, HeaderCommand&& cmd)
 	});
 }
 
-void IRCompiler::parse_header_subtitle(IR& ir, HeaderCommand&& cmd)
+void IRCompiler::parse_header_subtitle(IR& ir, HeaderCommand&& cmd, SlotMappings&)
 {
 	if (cmd.value.isEmpty()) {
 		L_WARN("Subtitle header has no value");
@@ -304,7 +319,7 @@ void IRCompiler::parse_header_subtitle(IR& ir, HeaderCommand&& cmd)
 	});
 }
 
-void IRCompiler::parse_header_artist(IR& ir, HeaderCommand&& cmd)
+void IRCompiler::parse_header_artist(IR& ir, HeaderCommand&& cmd, SlotMappings&)
 {
 	if (cmd.value.isEmpty()) {
 		L_WARN("Artist header has no value");
@@ -317,7 +332,7 @@ void IRCompiler::parse_header_artist(IR& ir, HeaderCommand&& cmd)
 	});
 }
 
-void IRCompiler::parse_header_subartist(IR& ir, HeaderCommand&& cmd)
+void IRCompiler::parse_header_subartist(IR& ir, HeaderCommand&& cmd, SlotMappings&)
 {
 	if (cmd.value.isEmpty()) {
 		L_WARN("Subartist header has no value");
@@ -330,7 +345,7 @@ void IRCompiler::parse_header_subartist(IR& ir, HeaderCommand&& cmd)
 	});
 }
 
-void IRCompiler::parse_header_genre(IR& ir, HeaderCommand&& cmd)
+void IRCompiler::parse_header_genre(IR& ir, HeaderCommand&& cmd, SlotMappings&)
 {
 	if (cmd.value.isEmpty()) {
 		L_WARN("Genre header has no value");
@@ -343,7 +358,7 @@ void IRCompiler::parse_header_genre(IR& ir, HeaderCommand&& cmd)
 	});
 }
 
-void IRCompiler::parse_header_url(IR& ir, HeaderCommand&& cmd)
+void IRCompiler::parse_header_url(IR& ir, HeaderCommand&& cmd, SlotMappings&)
 {
 	if (cmd.value.isEmpty()) {
 		L_WARN("URL header has no value");
@@ -356,7 +371,7 @@ void IRCompiler::parse_header_url(IR& ir, HeaderCommand&& cmd)
 	});
 }
 
-void IRCompiler::parse_header_email(IR& ir, HeaderCommand&& cmd)
+void IRCompiler::parse_header_email(IR& ir, HeaderCommand&& cmd, SlotMappings&)
 {
 	if (cmd.value.isEmpty()) {
 		L_WARN("Email header has no value");
@@ -369,7 +384,7 @@ void IRCompiler::parse_header_email(IR& ir, HeaderCommand&& cmd)
 	});
 }
 
-void IRCompiler::parse_header_player(IR& ir, HeaderCommand&& cmd) try
+void IRCompiler::parse_header_player(IR& ir, HeaderCommand&& cmd, SlotMappings&) try
 {
 	if (cmd.value.isEmpty()) {
 		L_WARN("Player header has no value");
@@ -390,7 +405,7 @@ catch (std::exception const&) {
 	L_WARN("Player header has an invalid value: {}", to_utf8(cmd.value));
 }
 
-void IRCompiler::parse_header_bpm(IR& ir, HeaderCommand&& cmd) try
+void IRCompiler::parse_header_bpm(IR& ir, HeaderCommand&& cmd, SlotMappings&) try
 {
 	if (!cmd.slot.isEmpty()) {
 		L_WARN("Unimplemented header: BPMxx");
@@ -411,7 +426,7 @@ catch (std::exception const&) {
 	L_WARN("BPM header has an invalid value: {}", to_utf8(cmd.value));
 }
 
-void IRCompiler::parse_header_difficulty(IR& ir, HeaderCommand&& cmd) try
+void IRCompiler::parse_header_difficulty(IR& ir, HeaderCommand&& cmd, SlotMappings&) try
 {
 	if (cmd.value.isEmpty()) {
 		L_WARN("Difficulty header has no value");
@@ -430,6 +445,37 @@ void IRCompiler::parse_header_difficulty(IR& ir, HeaderCommand&& cmd) try
 }
 catch (std::exception const&) {
 	L_WARN("Difficulty header has an invalid value: {}", to_utf8(cmd.value));
+}
+
+void IRCompiler::parse_header_wav(IR& ir, HeaderCommand&& cmd, SlotMappings& maps)
+{
+	if (cmd.slot.isEmpty()) {
+		L_WARN("WAV header has no slot");
+		return;
+	}
+	if (cmd.value.isEmpty()) {
+		L_WARN("WAV header has no value");
+		return;
+	}
+
+	// Remove extension and trailing dots
+	auto separator_pos = cmd.value.lastIndexOf('.');
+	if (separator_pos != -1) {
+		cmd.value.truncate(separator_pos);
+		while (cmd.value.endsWith('.'))
+			cmd.value.truncate(cmd.value.length() - 1);
+	}
+
+	cmd.value.toLower();
+
+	auto slot_id = maps.wav.contains(cmd.slot)?
+		maps.wav.at(cmd.slot) :
+		maps.wav.emplace(cmd.slot, maps.wav.size()).first->second;
+	L_TRACE("WAV: {} -> #{}, {}", to_utf8(cmd.slot), slot_id, to_utf8(cmd.value));
+	ir.add_header_event(IR::HeaderEvent::WAV{
+		.slot = slot_id,
+		.name = std::move(cmd.value),
+	});
 }
 
 }
