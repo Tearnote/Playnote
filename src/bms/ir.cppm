@@ -103,11 +103,11 @@ auto IRCompiler::compile(std::string_view path, std::string_view bms_file_conten
 	EVP_Q_digest(nullptr, "MD5", nullptr, bms_file_contents.data(), bms_file_contents.size(), ir.md5.data(), nullptr);
 
 	bms::parse(bms_file_contents,
-		[&](bms::HeaderCommand&& cmd) {
+		[&](HeaderCommand&& cmd) {
 			L_TRACE("{}: #{}{} {}", cmd.line, to_utf8(cmd.header), to_utf8(cmd.slot), to_utf8(cmd.value));
 			(this->*header_handlers.at(cmd.header))(ir, std::move(cmd));
 		},
-		[](bms::ChannelCommand&& cmd) {
+		[](ChannelCommand&& cmd) {
 			L_TRACE("{}: #{}{}:{}", cmd.line, cmd.measure, to_utf8(cmd.channel), to_utf8(cmd.value));
 		}
 	);

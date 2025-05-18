@@ -1,7 +1,15 @@
 # Playnote
 
-A hobby project for a stable, modern and intuitive [BMS](https://en.wikipedia.org/wiki/Be-Music_Source) player, written in modern C++.
+A stable, modern and intuitive [BMS](https://en.wikipedia.org/wiki/Be-Music_Source) player for Windows and Linux, written in C++23.
 Work in progress.
+
+## Goals
+
+- A well documented, maintainable codebase following best practices
+- Careful use of STL and external libraries whenever suitable
+- High performance of all tasks and rock solid stability
+- Threaded design to minimize latencies and eliminate framedrops and loadings
+- Aggressive song optimization and caching
 
 ## Milestones
 
@@ -14,7 +22,7 @@ Work in progress.
 
 Required to be installed locally:
 
-- Linux (temporarily)
+- Linux (for now)
 - [Clang](https://clang.llvm.org/) ([Apache](https://github.com/llvm/llvm-project/blob/main/LICENSE.TXT))
 - [Vulkan SDK](https://www.lunarg.com/vulkan-sdk/) (with [glslc](https://github.com/google/shaderc) and [glslangValidator](https://github.com/KhronosGroup/glslang)) ([various licenses](https://vulkan.lunarg.com/software/license/vulkan-1.4.313.0-linux-license-summary.txt))
 - [glfw](https://www.glfw.org/) ([zlib](https://www.glfw.org/license.html))
