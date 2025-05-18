@@ -58,13 +58,17 @@ public:
 		struct Genre {
 			UString genre;
 		};
+		struct URL {
+			UString url;
+		};
 		using ParamsType = std::variant<
 			std::monostate, // 0
 			Title*,         // 1
 			Subtitle*,      // 2
 			Artist*,        // 3
 			Subartist*,     // 4
-			Genre*          // 5
+			Genre*,         // 5
+			URL*            // 6
 		>;
 
 		ParamsType params;
@@ -118,6 +122,7 @@ private:
 	void parse_header_artist(IR&, HeaderCommand&&);
 	void parse_header_subartist(IR&, HeaderCommand&&);
 	void parse_header_genre(IR&, HeaderCommand&&);
+	void parse_header_url(IR&, HeaderCommand&&);
 };
 
 IR::IR():
@@ -156,6 +161,7 @@ void IRCompiler::register_header_handlers()
 	header_handlers.emplace("ARTIST", &IRCompiler::parse_header_artist);
 	header_handlers.emplace("SUBARTIST", &IRCompiler::parse_header_subartist);
 	header_handlers.emplace("GENRE", &IRCompiler::parse_header_genre);
+	header_handlers.emplace("%URL", &IRCompiler::parse_header_url);
 
 	// Critical unimplemented headers
 	// (if a file uses one of these, there is no chance for the BMS to play even remotely correctly)
@@ -176,7 +182,6 @@ void IRCompiler::register_header_handlers()
 	header_handlers.emplace("ENDSW", &IRCompiler::parse_header_unimplemented_critical);
 
 	// Unimplemented headers
-	header_handlers.emplace("%URL", &IRCompiler::parse_header_unimplemented);
 	header_handlers.emplace("%EMAIL", &IRCompiler::parse_header_unimplemented);
 
 	header_handlers.emplace("PLAYER", &IRCompiler::parse_header_unimplemented);
@@ -309,6 +314,19 @@ void IRCompiler::parse_header_genre(IR& ir, HeaderCommand&& cmd)
 	L_TRACE("Genre: {}", to_utf8(cmd.value));
 	ir.add_header_event(IR::HeaderEvent::Genre{
 		.genre = std::move(cmd.value),
+	});
+}
+
+void IRCompiler::parse_header_url(IR& ir, HeaderCommand&& cmd)
+{
+	if (cmd.value.isEmpty()) {
+		L_WARN("URL header has no value");
+		return;
+	}
+
+	L_TRACE("URL: {}", to_utf8(cmd.value));
+	ir.add_header_event(IR::HeaderEvent::URL{
+		.url = std::move(cmd.value),
 	});
 }
 
