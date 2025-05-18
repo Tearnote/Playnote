@@ -69,7 +69,7 @@ export auto to_utf8(UString const& str) -> std::string
 	return str.toUTF8String(result);
 }
 
-// Returns true if the encoding is one of the known BMS encodings
+// Returns true if the encoding is one of the known BMS encodings.
 auto is_supported_encoding(std::string_view encoding) -> bool
 {
 	if (encoding == "UTF-8")
@@ -143,6 +143,9 @@ export void init_global_formatters()
 	handle_icu_error(err);
 }
 
+// Parse a Unicode string as an integer. Parsing begins at the first character, and ends
+// with success once the string ends or text is encountered that ends the number. If the string
+// begins with a non-number, an std::runtime_error is thrown.
 export auto to_int(UString const& str) -> int
 {
 	ASSUME(g_int_formatter);
@@ -154,6 +157,10 @@ export auto to_int(UString const& str) -> int
 	return fmt.getLong();
 }
 
+// Parse a Unicode string as a floating-point number. Parsing begins at the first character,
+// and ends with success once the string ends or text is encountered that ends the number.
+// If the string begins with a non-number, an std::runtime_error is thrown.
+// Scientific notation is supported, with an integer exponent.
 export auto to_float(UString const& str) -> float
 {
 	ASSUME(g_float_formatter);
