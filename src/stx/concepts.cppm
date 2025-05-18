@@ -19,7 +19,7 @@ inline constexpr auto is_variant_alternative_v = false;
 
 template<class T, class... Ts>
 inline constexpr auto is_variant_alternative_v<T, std::variant<Ts...>> =
-	(... or std::is_same_v<T, Ts>);
+	(... || std::is_same_v<T, Ts>);
 
 // Constrain type T to one of a std::variant's available alternatives
 export template<class T, class Variant>
