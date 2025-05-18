@@ -16,6 +16,7 @@ module;
 #include <memory>
 #include <string>
 #include <openssl/evp.h>
+#include <unicode/fmtable.h>
 #include "ankerl/unordered_dense.h"
 #include "util/log_macros.hpp"
 
@@ -34,6 +35,7 @@ template<typename Key, typename T, typename Hash>
 using unordered_map = ankerl::unordered_dense::map<Key, T, Hash>;
 using stx::uint8;
 using util::UStringHash;
+using util::ICUError;
 using util::UString;
 using util::to_utf8;
 using bms::HeaderCommand;
@@ -64,6 +66,9 @@ public:
 		struct Email {
 			UString email;
 		};
+		struct Player {
+			int count;
+		};
 		using ParamsType = std::variant<
 			std::monostate, // 0
 			Title*,         // 1
@@ -72,7 +77,8 @@ public:
 			Subartist*,     // 4
 			Genre*,         // 5
 			URL*,           // 6
-			Email*          // 7
+			Email*,         // 7
+			Player*         // 8
 		>;
 
 		ParamsType params;
@@ -128,6 +134,7 @@ private:
 	void parse_header_genre(IR&, HeaderCommand&&);
 	void parse_header_url(IR&, HeaderCommand&&);
 	void parse_header_email(IR&, HeaderCommand&&);
+	void parse_header_player(IR&, HeaderCommand&&);
 };
 
 IR::IR():
@@ -168,6 +175,7 @@ void IRCompiler::register_header_handlers()
 	header_handlers.emplace("GENRE", &IRCompiler::parse_header_genre);
 	header_handlers.emplace("%URL", &IRCompiler::parse_header_url);
 	header_handlers.emplace("%EMAIL", &IRCompiler::parse_header_email);
+	header_handlers.emplace("PLAYER", &IRCompiler::parse_header_player);
 
 	// Critical unimplemented headers
 	// (if a file uses one of these, there is no chance for the BMS to play even remotely correctly)
@@ -188,7 +196,6 @@ void IRCompiler::register_header_handlers()
 	header_handlers.emplace("ENDSW", &IRCompiler::parse_header_unimplemented_critical);
 
 	// Unimplemented headers
-	header_handlers.emplace("PLAYER", &IRCompiler::parse_header_unimplemented);
 	header_handlers.emplace("VOLWAV", &IRCompiler::parse_header_unimplemented);
 	header_handlers.emplace("STAGEFILE", &IRCompiler::parse_header_unimplemented);
 	header_handlers.emplace("BANNER", &IRCompiler::parse_header_unimplemented);
@@ -344,6 +351,30 @@ void IRCompiler::parse_header_email(IR& ir, HeaderCommand&& cmd)
 	L_TRACE("URL: {}", to_utf8(cmd.value));
 	ir.add_header_event(IR::HeaderEvent::Email{
 		.email = std::move(cmd.value),
+	});
+}
+
+void IRCompiler::parse_header_player(IR& ir, HeaderCommand&& cmd)
+{
+	if (cmd.value.isEmpty()) {
+		L_WARN("Player header has no value");
+		return;
+	}
+	auto count_fmt = icu::Formattable{-1};
+	g_int_formatter->parse(cmd.value, count_fmt, ICUError{});
+	auto count = count_fmt.getLong();
+	if (count == -1) {
+		L_WARN("Player header has an invalid value: {}", to_utf8(cmd.value));
+		return;
+	}
+	if (count != 1 && count != 3) {
+		L_WARN("Player header has an invalid value: {}", count);
+		return;
+	}
+
+	L_TRACE("Player: {}", count);
+	ir.add_header_event(IR::HeaderEvent::Player{
+		.count = count,
 	});
 }
 
