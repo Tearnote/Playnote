@@ -44,10 +44,14 @@ public:
 		struct Title {
 			UString title;
 		};
+		struct Subtitle {
+			UString subtitle;
+		};
 
 		std::variant<
 			std::monostate, // 0
-			Title*          // 1
+			Title*,         // 1
+			Subtitle*       // 2
 		> params;
 	};
 
@@ -82,6 +86,7 @@ private:
 	void parse_header_unimplemented_critical(IR&, HeaderCommand&&);
 
 	void parse_header_title(IR&, HeaderCommand&&);
+	void parse_header_subtitle(IR&, HeaderCommand&&);
 };
 
 IR::IR():
@@ -103,9 +108,7 @@ auto IRCompiler::compile(std::string_view path, std::string_view bms_file_conten
 	EVP_Q_digest(nullptr, "MD5", nullptr, bms_file_contents.data(), bms_file_contents.size(), ir.md5.data(), nullptr);
 
 	bms::parse(bms_file_contents,
-		[&](HeaderCommand&& cmd) {
-			(this->*header_handlers.at(cmd.header))(ir, std::move(cmd));
-		},
+		[&](HeaderCommand&& cmd) { (this->*header_handlers.at(cmd.header))(ir, std::move(cmd)); },
 		[](ChannelCommand&& cmd) {
 			// L_TRACE("{}: #{}{}:{}", cmd.line, cmd.measure, to_utf8(cmd.channel), to_utf8(cmd.value));
 		}
@@ -118,6 +121,7 @@ void IRCompiler::register_header_handlers()
 {
 	// Implemented headers
 	header_handlers.emplace("TITLE", &IRCompiler::parse_header_title);
+	header_handlers.emplace("SUBTITLE", &IRCompiler::parse_header_subtitle);
 
 	// Critical unimplemented headers
 	// (if a file uses one of these, there is no chance for the BMS to play even remotely correctly)
@@ -138,7 +142,6 @@ void IRCompiler::register_header_handlers()
 	header_handlers.emplace("ENDSW", &IRCompiler::parse_header_unimplemented_critical);
 
 	// Unimplemented headers
-	header_handlers.emplace("SUBTITLE", &IRCompiler::parse_header_unimplemented);
 	header_handlers.emplace("ARTIST", &IRCompiler::parse_header_unimplemented);
 	header_handlers.emplace("SUBARTIST", &IRCompiler::parse_header_unimplemented);
 	header_handlers.emplace("GENRE", &IRCompiler::parse_header_unimplemented);
@@ -216,7 +219,7 @@ void IRCompiler::parse_header_unimplemented_critical(IR&, HeaderCommand&& cmd)
 void IRCompiler::parse_header_title(IR& ir, HeaderCommand&& cmd)
 {
 	if (cmd.value.isEmpty()) {
-		L_WARN("Title header is empty");
+		L_WARN("Title header has no value");
 		return;
 	}
 
@@ -224,6 +227,21 @@ void IRCompiler::parse_header_title(IR& ir, HeaderCommand&& cmd)
 	ir.header_events.emplace_back(IR::HeaderEvent{
 		.params = ir.allocator.new_object<IR::HeaderEvent::Title>(IR::HeaderEvent::Title{
 			.title = std::move(cmd.value),
+		}),
+	});
+}
+
+void IRCompiler::parse_header_subtitle(IR& ir, HeaderCommand&& cmd)
+{
+	if (cmd.value.isEmpty()) {
+		L_WARN("Subtitle header has no value");
+		return;
+	}
+
+	L_TRACE("Subtitle: {}", to_utf8(cmd.value));
+	ir.header_events.emplace_back(IR::HeaderEvent{
+		.params = ir.allocator.new_object<IR::HeaderEvent::Subtitle>(IR::HeaderEvent::Subtitle{
+			.subtitle = std::move(cmd.value),
 		}),
 	});
 }
