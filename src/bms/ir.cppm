@@ -15,8 +15,10 @@ module;
 #include <utility>
 #include <variant>
 #include <memory>
+#include <ranges>
 #include <string>
 #include <openssl/evp.h>
+#include <boost/rational.hpp>
 #include "ankerl/unordered_dense.h"
 #include "util/log_macros.hpp"
 
@@ -31,6 +33,7 @@ import playnote.globals;
 
 namespace playnote::bms {
 
+namespace views = std::ranges::views;
 template<typename Key, typename T, typename Hash>
 using unordered_map = ankerl::unordered_dense::map<Key, T, Hash>;
 using stx::uint8;
@@ -106,6 +109,17 @@ public:
 		ParamsType params;
 	};
 
+	struct ChannelEvent {
+		enum class Type {
+			Unknown = 0,
+			BGM,
+		};
+
+		boost::rational<int> position;
+		Type type;
+		int slot;
+	};
+
 private:
 	friend IRCompiler;
 
@@ -135,21 +149,35 @@ public:
 	auto compile(std::string_view path, std::string_view bms_file_contents) -> IR;
 
 private:
+	struct SingleChannelCommand {
+		int line;
+		boost::rational<int> position;
+		UString channel;
+		UString value;
+	};
 	struct SlotMappings {
 		unordered_map<UString, int, UStringHash> wav;
 	};
 
 	using HeaderHandlerFunc = void(IRCompiler::*)(IR&, HeaderCommand&&, SlotMappings&);
 	unordered_map<UString, HeaderHandlerFunc, UStringHash> header_handlers{};
+	using ChannelHandlerFunc = void(IRCompiler::*)(IR&, SingleChannelCommand&&, SlotMappings&);
+	unordered_map<UString, ChannelHandlerFunc, UStringHash> channel_handlers{};
 
 	void register_header_handlers();
+	void register_channel_handlers();
 	void handle_header(IR&, HeaderCommand&&, SlotMappings&);
+	void handle_channel(IR&, ChannelCommand&&, SlotMappings&);
 
 	// Generic handlers
 	void parse_header_ignored(IR&, HeaderCommand&&, SlotMappings&) {}
 	void parse_header_ignored_log(IR&, HeaderCommand&&, SlotMappings&);
 	void parse_header_unimplemented(IR&, HeaderCommand&&, SlotMappings&);
 	void parse_header_unimplemented_critical(IR&, HeaderCommand&&, SlotMappings&);
+	void parse_channel_ignored(IR&, SingleChannelCommand&&, SlotMappings&) {}
+	void parse_channel_ignored_log(IR&, SingleChannelCommand&&, SlotMappings&);
+	void parse_channel_unimplemented(IR&, SingleChannelCommand&&, SlotMappings&);
+	void parse_channel_unimplemented_critical(IR&, SingleChannelCommand&&, SlotMappings&);
 
 	// Metadata handlers
 	void parse_header_title(IR&, HeaderCommand&&, SlotMappings&);
@@ -175,6 +203,7 @@ IR::IR():
 IRCompiler::IRCompiler()
 {
 	register_header_handlers();
+	register_channel_handlers();
 }
 
 auto IRCompiler::compile(std::string_view path, std::string_view bms_file_contents) -> IR
@@ -188,9 +217,7 @@ auto IRCompiler::compile(std::string_view path, std::string_view bms_file_conten
 
 	bms::parse(bms_file_contents,
 		[&](HeaderCommand&& cmd) { handle_header(ir, std::move(cmd), maps); },
-		[](ChannelCommand&& cmd) {
-			// L_TRACE("{}: #{}{}:{}", cmd.line, cmd.measure, to_utf8(cmd.channel), to_utf8(cmd.value));
-		}
+		[&](ChannelCommand&& cmd) { handle_channel(ir, std::move(cmd), maps); }
 	);
 
 	return ir;
@@ -279,6 +306,63 @@ void IRCompiler::register_header_handlers()
 	header_handlers.emplace("CHANGEOPTION", &IRCompiler::parse_header_ignored_log); // ^
 }
 
+void IRCompiler::register_channel_handlers()
+{
+	channel_handlers.emplace("00" /* Unused               */, &IRCompiler::parse_channel_ignored_log);
+	channel_handlers.emplace("01" /* BGM                  */, &IRCompiler::parse_channel_unimplemented);
+	channel_handlers.emplace("02" /* Meter                */, &IRCompiler::parse_channel_unimplemented_critical);
+	channel_handlers.emplace("03" /* BPM                  */, &IRCompiler::parse_channel_unimplemented_critical);
+	channel_handlers.emplace("04" /* BGA base             */, &IRCompiler::parse_channel_unimplemented);
+	channel_handlers.emplace("05" /* ExtChr, seek         */, &IRCompiler::parse_channel_ignored_log);
+	channel_handlers.emplace("06" /* BGA poor             */, &IRCompiler::parse_channel_unimplemented);
+	channel_handlers.emplace("07" /* BGA layer            */, &IRCompiler::parse_channel_unimplemented);
+	channel_handlers.emplace("08" /* BPMxx                */, &IRCompiler::parse_channel_unimplemented_critical);
+	channel_handlers.emplace("09" /* Stop                 */, &IRCompiler::parse_channel_unimplemented_critical);
+	channel_handlers.emplace("0A" /* BGA layer 2          */, &IRCompiler::parse_channel_unimplemented);
+	channel_handlers.emplace("0B" /* BGA base alpha       */, &IRCompiler::parse_channel_unimplemented);
+	channel_handlers.emplace("0C" /* BGA layer alpha      */, &IRCompiler::parse_channel_unimplemented);
+	channel_handlers.emplace("0D" /* BGA layer 2 alpha    */, &IRCompiler::parse_channel_unimplemented);
+	channel_handlers.emplace("0E" /* BGA poor alpha       */, &IRCompiler::parse_channel_unimplemented);
+	channel_handlers.emplace("97" /* BGM volume           */, &IRCompiler::parse_channel_unimplemented_critical);
+	channel_handlers.emplace("98" /* Key volume           */, &IRCompiler::parse_channel_unimplemented_critical);
+	channel_handlers.emplace("99" /* Text                 */, &IRCompiler::parse_channel_unimplemented);
+	channel_handlers.emplace("A0" /* Judge                */, &IRCompiler::parse_channel_ignored);
+	channel_handlers.emplace("A1" /* BGA base overlay     */, &IRCompiler::parse_channel_unimplemented);
+	channel_handlers.emplace("A2" /* BGA layer overlay    */, &IRCompiler::parse_channel_unimplemented);
+	channel_handlers.emplace("A3" /* BGA layer 2 overlay  */, &IRCompiler::parse_channel_unimplemented);
+	channel_handlers.emplace("A4" /* BGA poor overlay     */, &IRCompiler::parse_channel_unimplemented);
+	channel_handlers.emplace("A5" /* BGA key-bound        */, &IRCompiler::parse_channel_unimplemented);
+	channel_handlers.emplace("A6" /* BGA key-bound        */, &IRCompiler::parse_channel_ignored_log);
+	for (auto i: views::iota(1, 10)) // P1 notes
+		channel_handlers.emplace(UString{"1"}.append('0' + i), &IRCompiler::parse_channel_unimplemented);
+	for (auto i: views::iota(0, 26)) // ^
+		channel_handlers.emplace(UString{"1"}.append('A' + i), &IRCompiler::parse_channel_unimplemented);
+	for (auto i: views::iota(1, 10)) // P2 notes
+		channel_handlers.emplace(UString{"2"}.append('0' + i), &IRCompiler::parse_channel_unimplemented);
+	for (auto i: views::iota(0, 26)) // ^
+		channel_handlers.emplace(UString{"2"}.append('A' + i), &IRCompiler::parse_channel_unimplemented);
+	for (auto i: views::iota(1, 10))// P1 notes (adlib)
+		channel_handlers.emplace(UString{"3"}.append('0' + i), &IRCompiler::parse_channel_unimplemented);
+	for (auto i: views::iota(0, 26)) // ^
+		channel_handlers.emplace(UString{"3"}.append('A' + i), &IRCompiler::parse_channel_unimplemented);
+	for (auto i: views::iota(1, 10)) // P2 notes (adlib)
+		channel_handlers.emplace(UString{"4"}.append('0' + i), &IRCompiler::parse_channel_unimplemented);
+	for (auto i: views::iota(0, 26)) // ^
+		channel_handlers.emplace(UString{"4"}.append('A' + i), &IRCompiler::parse_channel_unimplemented);
+	for (auto i: views::iota(1, 10)) // P1 long notes
+		channel_handlers.emplace(UString{"5"}.append('0' + i), &IRCompiler::parse_channel_unimplemented);
+	for (auto i: views::iota(0, 26)) // ^
+		channel_handlers.emplace(UString{"5"}.append('A' + i), &IRCompiler::parse_channel_unimplemented);
+	for (auto i: views::iota(1, 10)) // P2 long notes
+		channel_handlers.emplace(UString{"6"}.append('0' + i), &IRCompiler::parse_channel_unimplemented);
+	for (auto i: views::iota(0, 26)) // ^
+		channel_handlers.emplace(UString{"6"}.append('A' + i), &IRCompiler::parse_channel_unimplemented);
+	for (auto i: views::iota(1, 10)) // P1 mines
+		channel_handlers.emplace(UString{"D"}.append('0' + i), &IRCompiler::parse_channel_unimplemented);
+	for (auto i: views::iota(1, 10)) // P2 mines
+		channel_handlers.emplace(UString{"E"}.append('0' + i), &IRCompiler::parse_channel_unimplemented);
+}
+
 void IRCompiler::handle_header(IR& ir, HeaderCommand&& cmd, SlotMappings& maps)
 {
 	if (!header_handlers.contains(cmd.header)) {
@@ -287,6 +371,51 @@ void IRCompiler::handle_header(IR& ir, HeaderCommand&& cmd, SlotMappings& maps)
 	}
 	cmd.slot.padLeading(2, '0');
 	(this->*header_handlers.at(cmd.header))(ir, std::move(cmd), maps);
+}
+
+void IRCompiler::handle_channel(IR& ir, ChannelCommand&& cmd, SlotMappings& maps)
+{
+	if (cmd.measure <= 0) {
+		L_WARN("#{}: Invalid measure: {}", cmd.line, cmd.measure);
+		return;
+	}
+
+	if (cmd.channel.isEmpty()) {
+		L_WARN("#{}: Missing measure channel", cmd.line);
+		return;
+	}
+	cmd.channel.padLeading(2, '0');
+
+	cmd.value.truncate(cmd.value.indexOf(' '));
+	cmd.value.truncate(cmd.value.indexOf('\t'));
+	if (cmd.value.isEmpty()) {
+		L_WARN("#{}: No valid measure value", cmd.line);
+		return;
+	}
+
+	auto channel_takes_float = [](UString const& ch) { return ch == "02"; };
+	if (channel_takes_float(cmd.channel)) {
+		(this->*channel_handlers.at(cmd.channel))(ir, SingleChannelCommand{
+			.line = cmd.line,
+			.position = cmd.measure,
+			.channel = cmd.channel,
+			.value = std::move(cmd.value),
+		}, maps);
+	} else {
+		if (cmd.value.length() % 2 != 0) {
+			L_WARN("#{}: Stray character in measure: {}", cmd.line, to_utf8(UString{cmd.value, cmd.value.length() - 1}));
+			cmd.value.truncate(cmd.value.length() - 1);
+		}
+		auto denominator = cmd.value.length() / 2;
+		for (auto i: views::iota(0, denominator)) {
+			(this->*channel_handlers.at(cmd.channel))(ir, SingleChannelCommand{
+				.line = cmd.line,
+				.position = cmd.measure + boost::rational<int>{i, denominator},
+				.channel = cmd.channel,
+				.value = UString{cmd.value, i * 2, 2},
+			}, maps);
+		}
+	}
 }
 
 void IRCompiler::parse_header_ignored_log(IR&, HeaderCommand&& cmd, SlotMappings&)
@@ -302,6 +431,21 @@ void IRCompiler::parse_header_unimplemented(IR&, HeaderCommand&& cmd, SlotMappin
 void IRCompiler::parse_header_unimplemented_critical(IR&, HeaderCommand&& cmd, SlotMappings&)
 {
 	throw stx::runtime_error_fmt("#{}: Critical unimplemented header: {}", cmd.line, to_utf8(cmd.header));
+}
+
+void IRCompiler::parse_channel_ignored_log(IR&, SingleChannelCommand&& cmd, SlotMappings&)
+{
+	L_INFO("#{}: Ignored channel: {}", cmd.line, to_utf8(cmd.channel));
+}
+
+void IRCompiler::parse_channel_unimplemented(IR&, SingleChannelCommand&& cmd, SlotMappings&)
+{
+	L_WARN("#{}: Unimplemented channel: {}", cmd.line, to_utf8(cmd.channel));
+}
+
+void IRCompiler::parse_channel_unimplemented_critical(IR&, SingleChannelCommand&& cmd, SlotMappings&)
+{
+	throw stx::runtime_error_fmt("#{}: Critical unimplemented channel: {}", cmd.line, to_utf8(cmd.channel));
 }
 
 void IRCompiler::parse_header_title(IR& ir, HeaderCommand&& cmd, SlotMappings&)
