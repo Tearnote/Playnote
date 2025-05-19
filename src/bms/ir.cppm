@@ -308,31 +308,22 @@ void IRCompiler::register_header_handlers()
 
 void IRCompiler::register_channel_handlers()
 {
-	channel_handlers.emplace("00" /* Unused                */, &IRCompiler::parse_channel_ignored_log);
+	// Unimplemented channels
 	channel_handlers.emplace("01" /* BGM                   */, &IRCompiler::parse_channel_unimplemented);
-	channel_handlers.emplace("02" /* Meter                 */, &IRCompiler::parse_channel_unimplemented_critical);
-	channel_handlers.emplace("03" /* BPM                   */, &IRCompiler::parse_channel_unimplemented_critical);
 	channel_handlers.emplace("04" /* BGA base              */, &IRCompiler::parse_channel_unimplemented);
-	channel_handlers.emplace("05" /* ExtChr, seek          */, &IRCompiler::parse_channel_ignored_log);
 	channel_handlers.emplace("06" /* BGA poor              */, &IRCompiler::parse_channel_unimplemented);
 	channel_handlers.emplace("07" /* BGA layer             */, &IRCompiler::parse_channel_unimplemented);
-	channel_handlers.emplace("08" /* BPMxx                 */, &IRCompiler::parse_channel_unimplemented_critical);
-	channel_handlers.emplace("09" /* Stop                  */, &IRCompiler::parse_channel_unimplemented_critical);
 	channel_handlers.emplace("0A" /* BGA layer 2           */, &IRCompiler::parse_channel_unimplemented);
 	channel_handlers.emplace("0B" /* BGA base alpha        */, &IRCompiler::parse_channel_unimplemented);
 	channel_handlers.emplace("0C" /* BGA layer alpha       */, &IRCompiler::parse_channel_unimplemented);
 	channel_handlers.emplace("0D" /* BGA layer 2 alpha     */, &IRCompiler::parse_channel_unimplemented);
 	channel_handlers.emplace("0E" /* BGA poor alpha        */, &IRCompiler::parse_channel_unimplemented);
-	channel_handlers.emplace("97" /* BGM volume            */, &IRCompiler::parse_channel_unimplemented_critical);
-	channel_handlers.emplace("98" /* Key volume            */, &IRCompiler::parse_channel_unimplemented_critical);
 	channel_handlers.emplace("99" /* Text                  */, &IRCompiler::parse_channel_unimplemented);
-	channel_handlers.emplace("A0" /* Judge                 */, &IRCompiler::parse_channel_ignored);
 	channel_handlers.emplace("A1" /* BGA base overlay      */, &IRCompiler::parse_channel_unimplemented);
 	channel_handlers.emplace("A2" /* BGA layer overlay     */, &IRCompiler::parse_channel_unimplemented);
 	channel_handlers.emplace("A3" /* BGA layer 2 overlay   */, &IRCompiler::parse_channel_unimplemented);
 	channel_handlers.emplace("A4" /* BGA poor overlay      */, &IRCompiler::parse_channel_unimplemented);
 	channel_handlers.emplace("A5" /* BGA key-bound         */, &IRCompiler::parse_channel_unimplemented);
-	channel_handlers.emplace("A6" /* BGA key-bound         */, &IRCompiler::parse_channel_ignored_log);
 	for (auto i: views::iota(1, 10)) // P1 notes
 		channel_handlers.emplace(UString{"1"}.append('0' + i), &IRCompiler::parse_channel_unimplemented);
 	for (auto i: views::iota(0, 26)) // ^
@@ -361,6 +352,21 @@ void IRCompiler::register_channel_handlers()
 		channel_handlers.emplace(UString{"D"}.append('0' + i), &IRCompiler::parse_channel_unimplemented);
 	for (auto i: views::iota(1, 10)) // P2 mines
 		channel_handlers.emplace(UString{"E"}.append('0' + i), &IRCompiler::parse_channel_unimplemented);
+
+	// Critical unimplemented channels
+	// (if a file uses one of these, there is no chance for the BMS to play even remotely correctly)
+	channel_handlers.emplace("02" /* Meter                 */, &IRCompiler::parse_channel_unimplemented_critical);
+	channel_handlers.emplace("03" /* BPM                   */, &IRCompiler::parse_channel_unimplemented_critical);
+	channel_handlers.emplace("08" /* BPMxx                 */, &IRCompiler::parse_channel_unimplemented_critical);
+	channel_handlers.emplace("09" /* Stop                  */, &IRCompiler::parse_channel_unimplemented_critical);
+	channel_handlers.emplace("97" /* BGM volume            */, &IRCompiler::parse_channel_unimplemented_critical);
+	channel_handlers.emplace("98" /* Key volume            */, &IRCompiler::parse_channel_unimplemented_critical);
+
+	// Unsupported channels
+	channel_handlers.emplace("A0" /* Judge                 */, &IRCompiler::parse_channel_ignored);
+	channel_handlers.emplace("00" /* Unused                */, &IRCompiler::parse_channel_ignored_log);
+	channel_handlers.emplace("05" /* ExtChr, seek          */, &IRCompiler::parse_channel_ignored_log);
+	channel_handlers.emplace("A6" /* Play option           */, &IRCompiler::parse_channel_ignored_log);
 }
 
 void IRCompiler::handle_header(IR& ir, HeaderCommand&& cmd, SlotMappings& maps)
