@@ -141,7 +141,7 @@ void parse(std::string_view bms_file_contents, HFunc&& header_func, CFunc&& chan
 	// Split into lines
 	auto pos = 0;
 	auto len = bms_file_u16.length();
-	int line_index = 0;
+	int line_index = 1;
 	while (pos < len) {
 		auto split_pos = bms_file_u16.indexOf('\n', pos);
 		if (split_pos == -1) split_pos = len;
