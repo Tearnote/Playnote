@@ -124,7 +124,25 @@ public:
 		enum class Type {
 			Unknown = 0,
 			BGM,
+			Note_P1_Key1,
+			Note_P1_Key2,
+			Note_P1_Key3,
+			Note_P1_Key4,
+			Note_P1_Key5,
+			Note_P1_Key6,
+			Note_P1_Key7,
+			Note_P1_KeyS,
+			Note_P2_Key1,
+			Note_P2_Key2,
+			Note_P2_Key3,
+			Note_P2_Key4,
+			Note_P2_Key5,
+			Note_P2_Key6,
+			Note_P2_Key7,
+			Note_P2_KeyS,
 		};
+
+		static auto to_string(Type) -> char const*;
 
 		NotePosition position;
 		Type type;
@@ -215,7 +233,32 @@ private:
 
 	// Audio channels
 	void parse_channel_bgm(IR&, SingleChannelCommand&&, SlotMappings&);
+	void parse_channel_note(IR&, SingleChannelCommand&&, SlotMappings&);
 };
+
+auto IR::ChannelEvent::to_string(Type type) -> char const*
+{
+	switch (type) {
+	case Type::BGM:          return "BGM";
+	case Type::Note_P1_Key1: return "Note_P1_Key1";
+	case Type::Note_P1_Key2: return "Note_P1_Key2";
+	case Type::Note_P1_Key3: return "Note_P1_Key3";
+	case Type::Note_P1_Key4: return "Note_P1_Key4";
+	case Type::Note_P1_Key5: return "Note_P1_Key5";
+	case Type::Note_P1_Key6: return "Note_P1_Key6";
+	case Type::Note_P1_Key7: return "Note_P1_Key7";
+	case Type::Note_P1_KeyS: return "Note_P1_KeyS";
+	case Type::Note_P2_Key1: return "Note_P2_Key1";
+	case Type::Note_P2_Key2: return "Note_P2_Key2";
+	case Type::Note_P2_Key3: return "Note_P2_Key3";
+	case Type::Note_P2_Key4: return "Note_P2_Key4";
+	case Type::Note_P2_Key5: return "Note_P2_Key5";
+	case Type::Note_P2_Key6: return "Note_P2_Key6";
+	case Type::Note_P2_Key7: return "Note_P2_Key7";
+	case Type::Note_P2_KeyS: return "Note_P2_KeyS";
+	default: return "";
+	}
+}
 
 IR::IR():
 	buffer_resource{std::make_unique<std::pmr::monotonic_buffer_resource>()},
@@ -339,8 +382,18 @@ void IRCompiler::register_header_handlers()
 
 void IRCompiler::register_channel_handlers()
 {
-	// Unimplemented channels
+	// Implemented channels
 	channel_handlers.emplace("01" /* BGM                   */, &IRCompiler::parse_channel_bgm);
+	for (auto i: views::iota(1, 10)) // P1 notes
+		channel_handlers.emplace(UString{"1"}.append('0' + i), &IRCompiler::parse_channel_note);
+	for (auto i: views::iota(0, 26)) // ^
+		channel_handlers.emplace(UString{"1"}.append('A' + i), &IRCompiler::parse_channel_note);
+	for (auto i: views::iota(1, 10)) // P2 notes
+		channel_handlers.emplace(UString{"2"}.append('0' + i), &IRCompiler::parse_channel_note);
+	for (auto i: views::iota(0, 26)) // ^
+		channel_handlers.emplace(UString{"2"}.append('A' + i), &IRCompiler::parse_channel_note);
+
+	// Unimplemented channels
 	channel_handlers.emplace("04" /* BGA base              */, &IRCompiler::parse_channel_unimplemented);
 	channel_handlers.emplace("06" /* BGA poor              */, &IRCompiler::parse_channel_unimplemented);
 	channel_handlers.emplace("07" /* BGA layer             */, &IRCompiler::parse_channel_unimplemented);
@@ -355,14 +408,6 @@ void IRCompiler::register_channel_handlers()
 	channel_handlers.emplace("A3" /* BGA layer 2 overlay   */, &IRCompiler::parse_channel_unimplemented);
 	channel_handlers.emplace("A4" /* BGA poor overlay      */, &IRCompiler::parse_channel_unimplemented);
 	channel_handlers.emplace("A5" /* BGA key-bound         */, &IRCompiler::parse_channel_unimplemented);
-	for (auto i: views::iota(1, 10)) // P1 notes
-		channel_handlers.emplace(UString{"1"}.append('0' + i), &IRCompiler::parse_channel_unimplemented);
-	for (auto i: views::iota(0, 26)) // ^
-		channel_handlers.emplace(UString{"1"}.append('A' + i), &IRCompiler::parse_channel_unimplemented);
-	for (auto i: views::iota(1, 10)) // P2 notes
-		channel_handlers.emplace(UString{"2"}.append('0' + i), &IRCompiler::parse_channel_unimplemented);
-	for (auto i: views::iota(0, 26)) // ^
-		channel_handlers.emplace(UString{"2"}.append('A' + i), &IRCompiler::parse_channel_unimplemented);
 	for (auto i: views::iota(1, 10))// P1 notes (adlib)
 		channel_handlers.emplace(UString{"3"}.append('0' + i), &IRCompiler::parse_channel_unimplemented);
 	for (auto i: views::iota(0, 26)) // ^
@@ -680,6 +725,37 @@ void IRCompiler::parse_channel_bgm(IR& ir, SingleChannelCommand&& cmd, SlotMappi
 	ir.add_channel_event({
 		.position = cmd.position,
 		.type = IR::ChannelEvent::Type::BGM,
+		.slot = slot_id,
+	});
+}
+
+void IRCompiler::parse_channel_note(IR& ir, SingleChannelCommand&& cmd, SlotMappings& maps)
+{
+	if (cmd.value == "00") return;
+	auto type = [&]() {
+		if (cmd.channel == "11") return IR::ChannelEvent::Type::Note_P1_Key1;
+		if (cmd.channel == "12") return IR::ChannelEvent::Type::Note_P1_Key2;
+		if (cmd.channel == "13") return IR::ChannelEvent::Type::Note_P1_Key3;
+		if (cmd.channel == "14") return IR::ChannelEvent::Type::Note_P1_Key4;
+		if (cmd.channel == "15") return IR::ChannelEvent::Type::Note_P1_Key5;
+		if (cmd.channel == "18") return IR::ChannelEvent::Type::Note_P1_Key6;
+		if (cmd.channel == "19") return IR::ChannelEvent::Type::Note_P1_Key7;
+		if (cmd.channel == "16") return IR::ChannelEvent::Type::Note_P1_KeyS;
+		if (cmd.channel == "21") return IR::ChannelEvent::Type::Note_P2_Key1;
+		if (cmd.channel == "22") return IR::ChannelEvent::Type::Note_P2_Key2;
+		if (cmd.channel == "23") return IR::ChannelEvent::Type::Note_P2_Key3;
+		if (cmd.channel == "24") return IR::ChannelEvent::Type::Note_P2_Key4;
+		if (cmd.channel == "25") return IR::ChannelEvent::Type::Note_P2_Key5;
+		if (cmd.channel == "28") return IR::ChannelEvent::Type::Note_P2_Key6;
+		if (cmd.channel == "29") return IR::ChannelEvent::Type::Note_P2_Key7;
+		if (cmd.channel == "26") return IR::ChannelEvent::Type::Note_P2_KeyS;
+		throw stx::runtime_error_fmt("L{}: Unknown note channel: {}", cmd.line, to_utf8(cmd.value));
+	}();
+	auto slot_id = maps.get_slot_id(maps.wav, cmd.value);
+	L_TRACE("L{}: {} {}: {} -> #{}", cmd.line, to_string(cmd.position), IR::ChannelEvent::to_string(type), to_utf8(cmd.value), slot_id);
+	ir.add_channel_event({
+		.position = cmd.position,
+		.type = type,
 		.slot = slot_id,
 	});
 }
