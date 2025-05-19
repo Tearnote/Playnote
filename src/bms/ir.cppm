@@ -366,7 +366,7 @@ void IRCompiler::register_channel_handlers()
 void IRCompiler::handle_header(IR& ir, HeaderCommand&& cmd, SlotMappings& maps)
 {
 	if (!header_handlers.contains(cmd.header)) {
-		L_WARN("#{}: Unknown header: {}", cmd.line, to_utf8(cmd.header));
+		L_WARN("L{}: Unknown header: {}", cmd.line, to_utf8(cmd.header));
 		return;
 	}
 	cmd.slot.padLeading(2, '0');
@@ -376,12 +376,12 @@ void IRCompiler::handle_header(IR& ir, HeaderCommand&& cmd, SlotMappings& maps)
 void IRCompiler::handle_channel(IR& ir, ChannelCommand&& cmd, SlotMappings& maps)
 {
 	if (cmd.measure <= 0) {
-		L_WARN("#{}: Invalid measure: {}", cmd.line, cmd.measure);
+		L_WARN("L{}: Invalid measure: {}", cmd.line, cmd.measure);
 		return;
 	}
 
 	if (cmd.channel.isEmpty()) {
-		L_WARN("#{}: Missing measure channel", cmd.line);
+		L_WARN("L{}: Missing measure channel", cmd.line);
 		return;
 	}
 	cmd.channel.padLeading(2, '0');
@@ -389,7 +389,7 @@ void IRCompiler::handle_channel(IR& ir, ChannelCommand&& cmd, SlotMappings& maps
 	cmd.value.truncate(cmd.value.indexOf(' '));
 	cmd.value.truncate(cmd.value.indexOf('\t'));
 	if (cmd.value.isEmpty()) {
-		L_WARN("#{}: No valid measure value", cmd.line);
+		L_WARN("L{}: No valid measure value", cmd.line);
 		return;
 	}
 
@@ -403,7 +403,7 @@ void IRCompiler::handle_channel(IR& ir, ChannelCommand&& cmd, SlotMappings& maps
 		}, maps);
 	} else {
 		if (cmd.value.length() % 2 != 0) {
-			L_WARN("#{}: Stray character in measure: {}", cmd.line, to_utf8(UString{cmd.value, cmd.value.length() - 1}));
+			L_WARN("L{}: Stray character in measure: {}", cmd.line, to_utf8(UString{cmd.value, cmd.value.length() - 1}));
 			cmd.value.truncate(cmd.value.length() - 1);
 		}
 		auto denominator = cmd.value.length() / 2;
@@ -420,42 +420,42 @@ void IRCompiler::handle_channel(IR& ir, ChannelCommand&& cmd, SlotMappings& maps
 
 void IRCompiler::parse_header_ignored_log(IR&, HeaderCommand&& cmd, SlotMappings&)
 {
-	L_INFO("#{}: Ignored header: {}", cmd.line, to_utf8(cmd.header));
+	L_INFO("L{}: Ignored header: {}", cmd.line, to_utf8(cmd.header));
 }
 
 void IRCompiler::parse_header_unimplemented(IR&, HeaderCommand&& cmd, SlotMappings&)
 {
-	L_WARN("#{}: Unimplemented header: {}", cmd.line, to_utf8(cmd.header));
+	L_WARN("L{}: Unimplemented header: {}", cmd.line, to_utf8(cmd.header));
 }
 
 void IRCompiler::parse_header_unimplemented_critical(IR&, HeaderCommand&& cmd, SlotMappings&)
 {
-	throw stx::runtime_error_fmt("#{}: Critical unimplemented header: {}", cmd.line, to_utf8(cmd.header));
+	throw stx::runtime_error_fmt("L{}: Critical unimplemented header: {}", cmd.line, to_utf8(cmd.header));
 }
 
 void IRCompiler::parse_channel_ignored_log(IR&, SingleChannelCommand&& cmd, SlotMappings&)
 {
-	L_INFO("#{}: Ignored channel: {}", cmd.line, to_utf8(cmd.channel));
+	L_INFO("L{}: Ignored channel: {}", cmd.line, to_utf8(cmd.channel));
 }
 
 void IRCompiler::parse_channel_unimplemented(IR&, SingleChannelCommand&& cmd, SlotMappings&)
 {
-	L_WARN("#{}: Unimplemented channel: {}", cmd.line, to_utf8(cmd.channel));
+	L_WARN("L{}: Unimplemented channel: {}", cmd.line, to_utf8(cmd.channel));
 }
 
 void IRCompiler::parse_channel_unimplemented_critical(IR&, SingleChannelCommand&& cmd, SlotMappings&)
 {
-	throw stx::runtime_error_fmt("#{}: Critical unimplemented channel: {}", cmd.line, to_utf8(cmd.channel));
+	throw stx::runtime_error_fmt("L{}: Critical unimplemented channel: {}", cmd.line, to_utf8(cmd.channel));
 }
 
 void IRCompiler::parse_header_title(IR& ir, HeaderCommand&& cmd, SlotMappings&)
 {
 	if (cmd.value.isEmpty()) {
-		L_WARN("#{}: Title header has no value", cmd.line);
+		L_WARN("L{}: Title header has no value", cmd.line);
 		return;
 	}
 
-	L_TRACE("#{}: Title: {}", cmd.line, to_utf8(cmd.value));
+	L_TRACE("L{}: Title: {}", cmd.line, to_utf8(cmd.value));
 	ir.add_header_event(IR::HeaderEvent::Title{
 		.title = std::move(cmd.value),
 	});
@@ -464,11 +464,11 @@ void IRCompiler::parse_header_title(IR& ir, HeaderCommand&& cmd, SlotMappings&)
 void IRCompiler::parse_header_subtitle(IR& ir, HeaderCommand&& cmd, SlotMappings&)
 {
 	if (cmd.value.isEmpty()) {
-		L_WARN("#{}: Subtitle header has no value", cmd.line);
+		L_WARN("L{}: Subtitle header has no value", cmd.line);
 		return;
 	}
 
-	L_TRACE("#{}: Subtitle: {}", cmd.line, to_utf8(cmd.value));
+	L_TRACE("L{}: Subtitle: {}", cmd.line, to_utf8(cmd.value));
 	ir.add_header_event(IR::HeaderEvent::Subtitle{
 		.subtitle = std::move(cmd.value),
 	});
@@ -477,11 +477,11 @@ void IRCompiler::parse_header_subtitle(IR& ir, HeaderCommand&& cmd, SlotMappings
 void IRCompiler::parse_header_artist(IR& ir, HeaderCommand&& cmd, SlotMappings&)
 {
 	if (cmd.value.isEmpty()) {
-		L_WARN("#{}: Artist header has no value", cmd.line);
+		L_WARN("L{}: Artist header has no value", cmd.line);
 		return;
 	}
 
-	L_TRACE("#{}: Artist: {}", cmd.line, to_utf8(cmd.value));
+	L_TRACE("L{}: Artist: {}", cmd.line, to_utf8(cmd.value));
 	ir.add_header_event(IR::HeaderEvent::Artist{
 		.artist = std::move(cmd.value),
 	});
@@ -490,11 +490,11 @@ void IRCompiler::parse_header_artist(IR& ir, HeaderCommand&& cmd, SlotMappings&)
 void IRCompiler::parse_header_subartist(IR& ir, HeaderCommand&& cmd, SlotMappings&)
 {
 	if (cmd.value.isEmpty()) {
-		L_WARN("#{}: Subartist header has no value", cmd.line);
+		L_WARN("L{}: Subartist header has no value", cmd.line);
 		return;
 	}
 
-	L_TRACE("#{}: Subartist: {}", cmd.line, to_utf8(cmd.value));
+	L_TRACE("L{}: Subartist: {}", cmd.line, to_utf8(cmd.value));
 	ir.add_header_event(IR::HeaderEvent::Subartist{
 		.subartist = std::move(cmd.value),
 	});
@@ -503,11 +503,11 @@ void IRCompiler::parse_header_subartist(IR& ir, HeaderCommand&& cmd, SlotMapping
 void IRCompiler::parse_header_genre(IR& ir, HeaderCommand&& cmd, SlotMappings&)
 {
 	if (cmd.value.isEmpty()) {
-		L_WARN("#{}: Genre header has no value", cmd.line);
+		L_WARN("L{}: Genre header has no value", cmd.line);
 		return;
 	}
 
-	L_TRACE("#{}: Genre: {}", cmd.line, to_utf8(cmd.value));
+	L_TRACE("L{}: Genre: {}", cmd.line, to_utf8(cmd.value));
 	ir.add_header_event(IR::HeaderEvent::Genre{
 		.genre = std::move(cmd.value),
 	});
@@ -516,11 +516,11 @@ void IRCompiler::parse_header_genre(IR& ir, HeaderCommand&& cmd, SlotMappings&)
 void IRCompiler::parse_header_url(IR& ir, HeaderCommand&& cmd, SlotMappings&)
 {
 	if (cmd.value.isEmpty()) {
-		L_WARN("#{}: URL header has no value", cmd.line);
+		L_WARN("L{}: URL header has no value", cmd.line);
 		return;
 	}
 
-	L_TRACE("#{}: URL: {}", cmd.line, to_utf8(cmd.value));
+	L_TRACE("L{}: URL: {}", cmd.line, to_utf8(cmd.value));
 	ir.add_header_event(IR::HeaderEvent::URL{
 		.url = std::move(cmd.value),
 	});
@@ -529,11 +529,11 @@ void IRCompiler::parse_header_url(IR& ir, HeaderCommand&& cmd, SlotMappings&)
 void IRCompiler::parse_header_email(IR& ir, HeaderCommand&& cmd, SlotMappings&)
 {
 	if (cmd.value.isEmpty()) {
-		L_WARN("#{}: mail header has no value", cmd.line);
+		L_WARN("L{}: mail header has no value", cmd.line);
 		return;
 	}
 
-	L_TRACE("#{}: URL: {}", cmd.line, to_utf8(cmd.value));
+	L_TRACE("L{}: URL: {}", cmd.line, to_utf8(cmd.value));
 	ir.add_header_event(IR::HeaderEvent::Email{
 		.email = std::move(cmd.value),
 	});
@@ -542,74 +542,74 @@ void IRCompiler::parse_header_email(IR& ir, HeaderCommand&& cmd, SlotMappings&)
 void IRCompiler::parse_header_player(IR& ir, HeaderCommand&& cmd, SlotMappings&) try
 {
 	if (cmd.value.isEmpty()) {
-		L_WARN("#{}: Player header has no value", cmd.line);
+		L_WARN("L{}: Player header has no value", cmd.line);
 		return;
 	}
 	auto count = to_int(cmd.value);
 	if (count != 1 && count != 3) {
-		L_WARN("#{}: Player header has an invalid value: {}", cmd.line, count);
+		L_WARN("L{}: Player header has an invalid value: {}", cmd.line, count);
 		return;
 	}
 
-	L_TRACE("#{}: Player: {}", cmd.line, count);
+	L_TRACE("L{}: Player: {}", cmd.line, count);
 	ir.add_header_event(IR::HeaderEvent::Player{
 		.count = count,
 	});
 }
 catch (std::exception const&) {
-	L_WARN("#{}: Player header has an invalid value: {}", cmd.line, to_utf8(cmd.value));
+	L_WARN("L{}: Player header has an invalid value: {}", cmd.line, to_utf8(cmd.value));
 }
 
 void IRCompiler::parse_header_bpm(IR& ir, HeaderCommand&& cmd, SlotMappings&) try
 {
 	if (!cmd.slot.isEmpty()) {
-		L_WARN("#{}: Unimplemented header: BPMxx", cmd.line);
+		L_WARN("L{}: Unimplemented header: BPMxx", cmd.line);
 		return;
 	}
 	if (cmd.value.isEmpty()) {
-		L_WARN("#{}: BPM header has no value", cmd.line);
+		L_WARN("L{}: BPM header has no value", cmd.line);
 		return;
 	}
 	auto bpm = to_float(cmd.value);
 
-	L_TRACE("#{}: BPM: {}", cmd.line, bpm);
+	L_TRACE("L{}: BPM: {}", cmd.line, bpm);
 	ir.add_header_event(IR::HeaderEvent::BPM{
 		.bpm = bpm,
 	});
 }
 catch (std::exception const&) {
-	L_WARN("#{}: BPM header has an invalid value: {}", cmd.line, to_utf8(cmd.value));
+	L_WARN("L{}: BPM header has an invalid value: {}", cmd.line, to_utf8(cmd.value));
 }
 
 void IRCompiler::parse_header_difficulty(IR& ir, HeaderCommand&& cmd, SlotMappings&) try
 {
 	if (cmd.value.isEmpty()) {
-		L_WARN("#{}: Difficulty header has no value", cmd.line);
+		L_WARN("L{}: Difficulty header has no value", cmd.line);
 		return;
 	}
 	auto level = to_int(cmd.value);
 	if (level < 1 || level > 5) {
-		L_WARN("#{}: Difficulty header has an invalid value: {}", cmd.line, level);
+		L_WARN("L{}: Difficulty header has an invalid value: {}", cmd.line, level);
 		return;
 	}
 
-	L_TRACE("#{}: Difficulty: {}", cmd.line, level);
+	L_TRACE("L{}: Difficulty: {}", cmd.line, level);
 	ir.add_header_event(IR::HeaderEvent::Difficulty{
 		.level = static_cast<IR::HeaderEvent::Difficulty::Level>(level),
 	});
 }
 catch (std::exception const&) {
-	L_WARN("#{}: Difficulty header has an invalid value: {}", cmd.line, to_utf8(cmd.value));
+	L_WARN("L{}: Difficulty header has an invalid value: {}", cmd.line, to_utf8(cmd.value));
 }
 
 void IRCompiler::parse_header_wav(IR& ir, HeaderCommand&& cmd, SlotMappings& maps)
 {
 	if (cmd.slot.isEmpty()) {
-		L_WARN("#{}: WAV header has no slot", cmd.line);
+		L_WARN("L{}: WAV header has no slot", cmd.line);
 		return;
 	}
 	if (cmd.value.isEmpty()) {
-		L_WARN("#{}: WAV header has no value", cmd.line);
+		L_WARN("L{}: WAV header has no value", cmd.line);
 		return;
 	}
 
@@ -626,7 +626,7 @@ void IRCompiler::parse_header_wav(IR& ir, HeaderCommand&& cmd, SlotMappings& map
 	auto slot_id = maps.wav.contains(cmd.slot)?
 		maps.wav.at(cmd.slot) :
 		maps.wav.emplace(cmd.slot, maps.wav.size()).first->second;
-	L_TRACE("#{}: WAV: {} -> #{}, {}", cmd.line, to_utf8(cmd.slot), slot_id, to_utf8(cmd.value));
+	L_TRACE("L{}: WAV: {} -> #{}, {}", cmd.line, to_utf8(cmd.slot), slot_id, to_utf8(cmd.value));
 	ir.add_header_event(IR::HeaderEvent::WAV{
 		.slot = slot_id,
 		.name = std::move(cmd.value),
