@@ -47,7 +47,9 @@ auto parse_channel(int line_index, UString&& command) -> ChannelCommand
 
 	auto measure = to_int({command, 1, 3}); // We checked that at least the first character is a digit, so this won't throw
 	auto channel = UString{command, 4, 2};
+	channel.toUpper();
 	auto value = UString{command, 7};
+	value.toUpper();
 
 	return {
 		.line = line_index,
