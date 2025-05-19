@@ -4,8 +4,7 @@ Copyright (c) 2025 Tearnote (Hubert Maraszek)
 
 bms/ir.cppm:
 The Intermediate Representation of a BMS file. Equivalent in functionality to the original file,
-but condensed, cleaned and serializable to a binary file. Handles IR compilation from BMS file
-commands.
+but condensed, cleaned and serializable to a binary file.
 */
 
 module;
@@ -45,8 +44,10 @@ using util::to_utf8;
 using util::to_int;
 using bms::HeaderCommand;
 
+// Whole part - measure, fractional part - position within measure
 using NotePosition = boost::rational<int>;
 
+// Print a note position for debug output
 export auto to_string(NotePosition pos) -> std::string
 {
 	return std::format("{} {}/{}",
@@ -57,6 +58,9 @@ export auto to_string(NotePosition pos) -> std::string
 
 export class IRCompiler;
 
+// The BMS IR is a list of validated header events and channel events, stored contiguously
+// in the same order as the original BMS file. Slots are flattened into sequential indices,
+// and each event stores dependencies as an alternative representation of control flow.
 export class IR {
 public:
 	struct HeaderEvent {
@@ -141,7 +145,6 @@ public:
 			Note_P2_Key7,
 			Note_P2_KeyS,
 		};
-
 		static auto to_string(Type) -> char const*;
 
 		NotePosition position;
@@ -152,6 +155,8 @@ public:
 private:
 	friend IRCompiler;
 
+	// As IR events are typically iterated from start to end, a linear allocator is used when
+	// building the structures to maximize cache efficiency
 	std::unique_ptr<std::pmr::monotonic_buffer_resource> buffer_resource; // unique_ptr makes it moveable
 	std::pmr::polymorphic_allocator<> allocator;
 
@@ -160,8 +165,10 @@ private:
 	std::pmr::vector<HeaderEvent> header_events;
 	std::pmr::vector<ChannelEvent> channel_events;
 
+	// Only constructible by friends
 	IR();
 
+	// Add events, ensuring the IR allocator is used
 	template<typename T>
 		requires stx::is_variant_alternative<T*, HeaderEvent::ParamsType>
 	void add_header_event(T&& event)
@@ -177,25 +184,33 @@ private:
 	}
 };
 
+// Generator of IR from raw BMS file contents.
 export class IRCompiler {
 public:
+	// Initializes internal mappings; reuse instance whenever possible
 	IRCompiler();
 
+	// Generate IR from an unmodified BMS file. The path is only used as metadata.
 	auto compile(std::string_view path, std::string_view bms_file_contents) -> IR;
 
 private:
+	// A BMS channel command can contain multiple notes; we split them up into these
 	struct SingleChannelCommand {
 		int line;
 		NotePosition position;
 		UString channel;
 		UString value;
 	};
+
+	// Tracks the mappings from slot strings to monotonic indices
 	struct SlotMappings {
 		unordered_map<UString, int, UStringHash> wav;
 
+		// Retrieve the slot's index, or register a new one
 		auto get_slot_id(unordered_map<UString, int, UStringHash>& map, UString const& key) -> int;
 	};
 
+	// Functions to process each type of header and channel
 	using HeaderHandlerFunc = void(IRCompiler::*)(IR&, HeaderCommand&&, SlotMappings&);
 	unordered_map<UString, HeaderHandlerFunc, UStringHash> header_handlers{};
 	using ChannelHandlerFunc = void(IRCompiler::*)(IR&, SingleChannelCommand&&, SlotMappings&);
@@ -278,9 +293,11 @@ auto IRCompiler::compile(std::string_view path, std::string_view bms_file_conten
 	auto ir = IR{};
 	auto maps = SlotMappings{};
 
+	// Fill in original metadata to maintain a link from the IR back to the BMS file
 	ir.path = std::string{path};
 	EVP_Q_digest(nullptr, "MD5", nullptr, bms_file_contents.data(), bms_file_contents.size(), ir.md5.data(), nullptr);
 
+	// Process UTF-16 converted and cleanly split BMS file commands
 	bms::parse(bms_file_contents,
 		[&](HeaderCommand&& cmd) { handle_header(ir, std::move(cmd), maps); },
 		[&](ChannelCommand&& cmd) { handle_channel(ir, std::move(cmd), maps); }
@@ -451,7 +468,7 @@ void IRCompiler::handle_header(IR& ir, HeaderCommand&& cmd, SlotMappings& maps)
 		L_WARN("L{}: Unknown header: {}", cmd.line, to_utf8(cmd.header));
 		return;
 	}
-	cmd.slot.padLeading(2, '0');
+	cmd.slot.padLeading(2, '0'); // Just in case someone forgot the leading 0
 	(this->*header_handlers.at(cmd.header))(ir, std::move(cmd), maps);
 }
 
@@ -466,12 +483,13 @@ void IRCompiler::handle_channel(IR& ir, ChannelCommand&& cmd, SlotMappings& maps
 		L_WARN("L{}: Missing measure channel", cmd.line);
 		return;
 	}
-	cmd.channel.padLeading(2, '0');
+	cmd.channel.padLeading(2, '0'); // Just in case someone forgot the leading 0
 	if (!channel_handlers.contains(cmd.channel)) {
 		L_WARN("L{}: Unknown channel: {}", cmd.line, to_utf8(cmd.channel));
 		return;
 	}
 
+	// Treat any data not immediately following the ":" as a comment
 	cmd.value.truncate(cmd.value.indexOf(' '));
 	cmd.value.truncate(cmd.value.indexOf('\t'));
 	if (cmd.value.isEmpty()) {
@@ -480,14 +498,15 @@ void IRCompiler::handle_channel(IR& ir, ChannelCommand&& cmd, SlotMappings& maps
 	}
 
 	auto channel_takes_float = [](UString const& ch) { return ch == "02"; };
-	if (channel_takes_float(cmd.channel)) {
+	if (channel_takes_float(cmd.channel)) { // Expected channel value is a single float
 		(this->*channel_handlers.at(cmd.channel))(ir, SingleChannelCommand{
 			.line = cmd.line,
 			.position = cmd.measure,
 			.channel = cmd.channel,
 			.value = std::move(cmd.value),
 		}, maps);
-	} else {
+	} else { // Expected channel value is a series of 2-character slots
+		// Chop off unpaired characters
 		if (cmd.value.length() % 2 != 0) {
 			L_WARN("L{}: Stray character in measure: {}", cmd.line, to_utf8(UString{cmd.value, cmd.value.length() - 1}));
 			cmd.value.truncate(cmd.value.length() - 1);
@@ -632,7 +651,7 @@ void IRCompiler::parse_header_player(IR& ir, HeaderCommand&& cmd, SlotMappings&)
 		return;
 	}
 	auto count = to_int(cmd.value);
-	if (count != 1 && count != 3) {
+	if (count != 1 && count != 3) { // 1: SP, 3: DP
 		L_WARN("L{}: Player header has an invalid value: {}", cmd.line, count);
 		return;
 	}
@@ -707,6 +726,7 @@ void IRCompiler::parse_header_wav(IR& ir, HeaderCommand&& cmd, SlotMappings& map
 			cmd.value.truncate(cmd.value.length() - 1);
 	}
 
+	// Treat filenames as canonically lowercase for case-insensitivity
 	cmd.value.toLower();
 
 	auto slot_id = maps.get_slot_id(maps.wav, cmd.slot);
