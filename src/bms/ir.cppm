@@ -391,6 +391,10 @@ void IRCompiler::handle_channel(IR& ir, ChannelCommand&& cmd, SlotMappings& maps
 		return;
 	}
 	cmd.channel.padLeading(2, '0');
+	if (!channel_handlers.contains(cmd.channel)) {
+		L_WARN("L{}: Unknown channel: {}", cmd.line, to_utf8(cmd.channel));
+		return;
+	}
 
 	cmd.value.truncate(cmd.value.indexOf(' '));
 	cmd.value.truncate(cmd.value.indexOf('\t'));
