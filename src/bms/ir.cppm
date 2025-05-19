@@ -226,113 +226,113 @@ auto IRCompiler::compile(std::string_view path, std::string_view bms_file_conten
 void IRCompiler::register_header_handlers()
 {
 	// Implemented headers
-	header_handlers.emplace("TITLE", &IRCompiler::parse_header_title);
-	header_handlers.emplace("SUBTITLE", &IRCompiler::parse_header_subtitle);
-	header_handlers.emplace("ARTIST", &IRCompiler::parse_header_artist);
-	header_handlers.emplace("SUBARTIST", &IRCompiler::parse_header_subartist);
-	header_handlers.emplace("GENRE", &IRCompiler::parse_header_genre);
-	header_handlers.emplace("%URL", &IRCompiler::parse_header_url);
-	header_handlers.emplace("%EMAIL", &IRCompiler::parse_header_email);
-	header_handlers.emplace("PLAYER", &IRCompiler::parse_header_player);
-	header_handlers.emplace("BPM", &IRCompiler::parse_header_bpm);
-	header_handlers.emplace("DIFFICULTY", &IRCompiler::parse_header_difficulty);
-	header_handlers.emplace("WAV", &IRCompiler::parse_header_wav);
+	header_handlers.emplace("TITLE",        &IRCompiler::parse_header_title);
+	header_handlers.emplace("SUBTITLE",     &IRCompiler::parse_header_subtitle);
+	header_handlers.emplace("ARTIST",       &IRCompiler::parse_header_artist);
+	header_handlers.emplace("SUBARTIST",    &IRCompiler::parse_header_subartist);
+	header_handlers.emplace("GENRE",        &IRCompiler::parse_header_genre);
+	header_handlers.emplace("%URL",         &IRCompiler::parse_header_url);
+	header_handlers.emplace("%EMAIL",       &IRCompiler::parse_header_email);
+	header_handlers.emplace("PLAYER",       &IRCompiler::parse_header_player);
+	header_handlers.emplace("BPM",          &IRCompiler::parse_header_bpm);
+	header_handlers.emplace("DIFFICULTY",   &IRCompiler::parse_header_difficulty);
+	header_handlers.emplace("WAV",          &IRCompiler::parse_header_wav);
 
 	// Critical unimplemented headers
 	// (if a file uses one of these, there is no chance for the BMS to play even remotely correctly)
-	header_handlers.emplace("WAVCMD", &IRCompiler::parse_header_unimplemented_critical);
-	header_handlers.emplace("EXWAV", &IRCompiler::parse_header_unimplemented_critical); // Underspecified, and likely unimplementable
-	header_handlers.emplace("RANDOM", &IRCompiler::parse_header_unimplemented_critical);
-	header_handlers.emplace("IF", &IRCompiler::parse_header_unimplemented_critical);
-	header_handlers.emplace("ELSEIF", &IRCompiler::parse_header_unimplemented_critical);
-	header_handlers.emplace("ELSE", &IRCompiler::parse_header_unimplemented_critical);
-	header_handlers.emplace("ENDIF", &IRCompiler::parse_header_unimplemented_critical);
-	header_handlers.emplace("SETRANDOM", &IRCompiler::parse_header_unimplemented_critical);
-	header_handlers.emplace("ENDRANDOM", &IRCompiler::parse_header_unimplemented_critical);
-	header_handlers.emplace("SWITCH", &IRCompiler::parse_header_unimplemented_critical);
-	header_handlers.emplace("CASE", &IRCompiler::parse_header_unimplemented_critical);
-	header_handlers.emplace("SKIP", &IRCompiler::parse_header_unimplemented_critical);
-	header_handlers.emplace("DEF", &IRCompiler::parse_header_unimplemented_critical);
-	header_handlers.emplace("SETSWITCH", &IRCompiler::parse_header_unimplemented_critical);
-	header_handlers.emplace("ENDSW", &IRCompiler::parse_header_unimplemented_critical);
+	header_handlers.emplace("WAVCMD",       &IRCompiler::parse_header_unimplemented_critical);
+	header_handlers.emplace("EXWAV",        &IRCompiler::parse_header_unimplemented_critical); // Underspecified, and likely unimplementable
+	header_handlers.emplace("RANDOM",       &IRCompiler::parse_header_unimplemented_critical);
+	header_handlers.emplace("IF",           &IRCompiler::parse_header_unimplemented_critical);
+	header_handlers.emplace("ELSEIF",       &IRCompiler::parse_header_unimplemented_critical);
+	header_handlers.emplace("ELSE",         &IRCompiler::parse_header_unimplemented_critical);
+	header_handlers.emplace("ENDIF",        &IRCompiler::parse_header_unimplemented_critical);
+	header_handlers.emplace("SETRANDOM",    &IRCompiler::parse_header_unimplemented_critical);
+	header_handlers.emplace("ENDRANDOM",    &IRCompiler::parse_header_unimplemented_critical);
+	header_handlers.emplace("SWITCH",       &IRCompiler::parse_header_unimplemented_critical);
+	header_handlers.emplace("CASE",         &IRCompiler::parse_header_unimplemented_critical);
+	header_handlers.emplace("SKIP",         &IRCompiler::parse_header_unimplemented_critical);
+	header_handlers.emplace("DEF",          &IRCompiler::parse_header_unimplemented_critical);
+	header_handlers.emplace("SETSWITCH",    &IRCompiler::parse_header_unimplemented_critical);
+	header_handlers.emplace("ENDSW",        &IRCompiler::parse_header_unimplemented_critical);
 
 	// Unimplemented headers
-	header_handlers.emplace("VOLWAV", &IRCompiler::parse_header_unimplemented);
-	header_handlers.emplace("STAGEFILE", &IRCompiler::parse_header_unimplemented);
-	header_handlers.emplace("BANNER", &IRCompiler::parse_header_unimplemented);
-	header_handlers.emplace("BACKBMP", &IRCompiler::parse_header_unimplemented);
-	header_handlers.emplace("MAKER", &IRCompiler::parse_header_unimplemented);
-	header_handlers.emplace("COMMENT", &IRCompiler::parse_header_unimplemented);
-	header_handlers.emplace("TEXT", &IRCompiler::parse_header_unimplemented);
-	header_handlers.emplace("SONG", &IRCompiler::parse_header_unimplemented);
-	header_handlers.emplace("EXBPM", &IRCompiler::parse_header_unimplemented);
-	header_handlers.emplace("BASEBPM", &IRCompiler::parse_header_unimplemented);
-	header_handlers.emplace("STOP", &IRCompiler::parse_header_unimplemented);
-	header_handlers.emplace("STP", &IRCompiler::parse_header_unimplemented);
-	header_handlers.emplace("LNTYPE", &IRCompiler::parse_header_unimplemented);
-	header_handlers.emplace("LNOBJ", &IRCompiler::parse_header_unimplemented);
-	header_handlers.emplace("OCT/FP", &IRCompiler::parse_header_unimplemented);
-	header_handlers.emplace("CDDA", &IRCompiler::parse_header_unimplemented);
-	header_handlers.emplace("MIDIFILE", &IRCompiler::parse_header_unimplemented);
-	header_handlers.emplace("BMP", &IRCompiler::parse_header_unimplemented);
-	header_handlers.emplace("BGA", &IRCompiler::parse_header_unimplemented);
-	header_handlers.emplace("@BGA", &IRCompiler::parse_header_unimplemented);
-	header_handlers.emplace("POORBGA", &IRCompiler::parse_header_unimplemented);
-	header_handlers.emplace("SWBGA", &IRCompiler::parse_header_unimplemented);
-	header_handlers.emplace("ARGB", &IRCompiler::parse_header_unimplemented);
-	header_handlers.emplace("VIDEOFILE", &IRCompiler::parse_header_unimplemented);
-	header_handlers.emplace("VIDEOf/s", &IRCompiler::parse_header_unimplemented);
-	header_handlers.emplace("VIDEOCOLORS", &IRCompiler::parse_header_unimplemented);
-	header_handlers.emplace("VIDEODLY", &IRCompiler::parse_header_unimplemented);
-	header_handlers.emplace("MOVIE", &IRCompiler::parse_header_unimplemented);
-	header_handlers.emplace("ExtChr", &IRCompiler::parse_header_unimplemented);
+	header_handlers.emplace("VOLWAV",       &IRCompiler::parse_header_unimplemented);
+	header_handlers.emplace("STAGEFILE",    &IRCompiler::parse_header_unimplemented);
+	header_handlers.emplace("BANNER",       &IRCompiler::parse_header_unimplemented);
+	header_handlers.emplace("BACKBMP",      &IRCompiler::parse_header_unimplemented);
+	header_handlers.emplace("MAKER",        &IRCompiler::parse_header_unimplemented);
+	header_handlers.emplace("COMMENT",      &IRCompiler::parse_header_unimplemented);
+	header_handlers.emplace("TEXT",         &IRCompiler::parse_header_unimplemented);
+	header_handlers.emplace("SONG",         &IRCompiler::parse_header_unimplemented);
+	header_handlers.emplace("EXBPM",        &IRCompiler::parse_header_unimplemented);
+	header_handlers.emplace("BASEBPM",      &IRCompiler::parse_header_unimplemented);
+	header_handlers.emplace("STOP",         &IRCompiler::parse_header_unimplemented);
+	header_handlers.emplace("STP",          &IRCompiler::parse_header_unimplemented);
+	header_handlers.emplace("LNTYPE",       &IRCompiler::parse_header_unimplemented);
+	header_handlers.emplace("LNOBJ",        &IRCompiler::parse_header_unimplemented);
+	header_handlers.emplace("OCT/FP",       &IRCompiler::parse_header_unimplemented);
+	header_handlers.emplace("CDDA",         &IRCompiler::parse_header_unimplemented);
+	header_handlers.emplace("MIDIFILE",     &IRCompiler::parse_header_unimplemented);
+	header_handlers.emplace("BMP",          &IRCompiler::parse_header_unimplemented);
+	header_handlers.emplace("BGA",          &IRCompiler::parse_header_unimplemented);
+	header_handlers.emplace("@BGA",         &IRCompiler::parse_header_unimplemented);
+	header_handlers.emplace("POORBGA",      &IRCompiler::parse_header_unimplemented);
+	header_handlers.emplace("SWBGA",        &IRCompiler::parse_header_unimplemented);
+	header_handlers.emplace("ARGB",         &IRCompiler::parse_header_unimplemented);
+	header_handlers.emplace("VIDEOFILE",    &IRCompiler::parse_header_unimplemented);
+	header_handlers.emplace("VIDEOf/s",     &IRCompiler::parse_header_unimplemented);
+	header_handlers.emplace("VIDEOCOLORS",  &IRCompiler::parse_header_unimplemented);
+	header_handlers.emplace("VIDEODLY",     &IRCompiler::parse_header_unimplemented);
+	header_handlers.emplace("MOVIE",        &IRCompiler::parse_header_unimplemented);
+	header_handlers.emplace("ExtChr",       &IRCompiler::parse_header_unimplemented);
 
 	// Unsupported headers
-	header_handlers.emplace("RANK", &IRCompiler::parse_header_ignored); // Playnote enforces uniform judgment
-	header_handlers.emplace("DEFEXRANK", &IRCompiler::parse_header_ignored); // ^
-	header_handlers.emplace("EXRANK", &IRCompiler::parse_header_ignored); // ^
-	header_handlers.emplace("TOTAL", &IRCompiler::parse_header_ignored); // Playnote enforces uniform gauges
-	header_handlers.emplace("PLAYLEVEL", &IRCompiler::parse_header_ignored); // Unreliable and useless
-	header_handlers.emplace("DIVIDEPROP", &IRCompiler::parse_header_ignored); // Not required
-	header_handlers.emplace("CHARSET", &IRCompiler::parse_header_ignored_log); // ^
-	header_handlers.emplace("CHARFILE", &IRCompiler::parse_header_ignored_log); // Unspecified
-	header_handlers.emplace("SEEK", &IRCompiler::parse_header_ignored_log); // ^
-	header_handlers.emplace("EXBMP", &IRCompiler::parse_header_ignored_log); // Underspecified (what's the blending mode?)
-	header_handlers.emplace("PATH_WAV", &IRCompiler::parse_header_ignored_log); // Security concern
-	header_handlers.emplace("MATERIALS", &IRCompiler::parse_header_ignored_log); // ^
+	header_handlers.emplace("RANK",         &IRCompiler::parse_header_ignored); // Playnote enforces uniform judgment
+	header_handlers.emplace("DEFEXRANK",    &IRCompiler::parse_header_ignored); // ^
+	header_handlers.emplace("EXRANK",       &IRCompiler::parse_header_ignored); // ^
+	header_handlers.emplace("TOTAL",        &IRCompiler::parse_header_ignored); // Playnote enforces uniform gauges
+	header_handlers.emplace("PLAYLEVEL",    &IRCompiler::parse_header_ignored); // Unreliable and useless
+	header_handlers.emplace("DIVIDEPROP",   &IRCompiler::parse_header_ignored); // Not required
+	header_handlers.emplace("CHARSET",      &IRCompiler::parse_header_ignored_log); // ^
+	header_handlers.emplace("CHARFILE",     &IRCompiler::parse_header_ignored_log); // Unspecified
+	header_handlers.emplace("SEEK",         &IRCompiler::parse_header_ignored_log); // ^
+	header_handlers.emplace("EXBMP",        &IRCompiler::parse_header_ignored_log); // Underspecified (what's the blending mode?)
+	header_handlers.emplace("PATH_WAV",     &IRCompiler::parse_header_ignored_log); // Security concern
+	header_handlers.emplace("MATERIALS",    &IRCompiler::parse_header_ignored_log); // ^
 	header_handlers.emplace("MATERIALSWAV", &IRCompiler::parse_header_ignored_log); // ^
 	header_handlers.emplace("MATERIALSBMP", &IRCompiler::parse_header_ignored_log); // ^
-	header_handlers.emplace("OPTION", &IRCompiler::parse_header_ignored_log); // Horrifying, who invented this
+	header_handlers.emplace("OPTION",       &IRCompiler::parse_header_ignored_log); // Horrifying, who invented this
 	header_handlers.emplace("CHANGEOPTION", &IRCompiler::parse_header_ignored_log); // ^
 }
 
 void IRCompiler::register_channel_handlers()
 {
-	channel_handlers.emplace("00" /* Unused               */, &IRCompiler::parse_channel_ignored_log);
-	channel_handlers.emplace("01" /* BGM                  */, &IRCompiler::parse_channel_unimplemented);
-	channel_handlers.emplace("02" /* Meter                */, &IRCompiler::parse_channel_unimplemented_critical);
-	channel_handlers.emplace("03" /* BPM                  */, &IRCompiler::parse_channel_unimplemented_critical);
-	channel_handlers.emplace("04" /* BGA base             */, &IRCompiler::parse_channel_unimplemented);
-	channel_handlers.emplace("05" /* ExtChr, seek         */, &IRCompiler::parse_channel_ignored_log);
-	channel_handlers.emplace("06" /* BGA poor             */, &IRCompiler::parse_channel_unimplemented);
-	channel_handlers.emplace("07" /* BGA layer            */, &IRCompiler::parse_channel_unimplemented);
-	channel_handlers.emplace("08" /* BPMxx                */, &IRCompiler::parse_channel_unimplemented_critical);
-	channel_handlers.emplace("09" /* Stop                 */, &IRCompiler::parse_channel_unimplemented_critical);
-	channel_handlers.emplace("0A" /* BGA layer 2          */, &IRCompiler::parse_channel_unimplemented);
-	channel_handlers.emplace("0B" /* BGA base alpha       */, &IRCompiler::parse_channel_unimplemented);
-	channel_handlers.emplace("0C" /* BGA layer alpha      */, &IRCompiler::parse_channel_unimplemented);
-	channel_handlers.emplace("0D" /* BGA layer 2 alpha    */, &IRCompiler::parse_channel_unimplemented);
-	channel_handlers.emplace("0E" /* BGA poor alpha       */, &IRCompiler::parse_channel_unimplemented);
-	channel_handlers.emplace("97" /* BGM volume           */, &IRCompiler::parse_channel_unimplemented_critical);
-	channel_handlers.emplace("98" /* Key volume           */, &IRCompiler::parse_channel_unimplemented_critical);
-	channel_handlers.emplace("99" /* Text                 */, &IRCompiler::parse_channel_unimplemented);
-	channel_handlers.emplace("A0" /* Judge                */, &IRCompiler::parse_channel_ignored);
-	channel_handlers.emplace("A1" /* BGA base overlay     */, &IRCompiler::parse_channel_unimplemented);
-	channel_handlers.emplace("A2" /* BGA layer overlay    */, &IRCompiler::parse_channel_unimplemented);
-	channel_handlers.emplace("A3" /* BGA layer 2 overlay  */, &IRCompiler::parse_channel_unimplemented);
-	channel_handlers.emplace("A4" /* BGA poor overlay     */, &IRCompiler::parse_channel_unimplemented);
-	channel_handlers.emplace("A5" /* BGA key-bound        */, &IRCompiler::parse_channel_unimplemented);
-	channel_handlers.emplace("A6" /* BGA key-bound        */, &IRCompiler::parse_channel_ignored_log);
+	channel_handlers.emplace("00" /* Unused                */, &IRCompiler::parse_channel_ignored_log);
+	channel_handlers.emplace("01" /* BGM                   */, &IRCompiler::parse_channel_unimplemented);
+	channel_handlers.emplace("02" /* Meter                 */, &IRCompiler::parse_channel_unimplemented_critical);
+	channel_handlers.emplace("03" /* BPM                   */, &IRCompiler::parse_channel_unimplemented_critical);
+	channel_handlers.emplace("04" /* BGA base              */, &IRCompiler::parse_channel_unimplemented);
+	channel_handlers.emplace("05" /* ExtChr, seek          */, &IRCompiler::parse_channel_ignored_log);
+	channel_handlers.emplace("06" /* BGA poor              */, &IRCompiler::parse_channel_unimplemented);
+	channel_handlers.emplace("07" /* BGA layer             */, &IRCompiler::parse_channel_unimplemented);
+	channel_handlers.emplace("08" /* BPMxx                 */, &IRCompiler::parse_channel_unimplemented_critical);
+	channel_handlers.emplace("09" /* Stop                  */, &IRCompiler::parse_channel_unimplemented_critical);
+	channel_handlers.emplace("0A" /* BGA layer 2           */, &IRCompiler::parse_channel_unimplemented);
+	channel_handlers.emplace("0B" /* BGA base alpha        */, &IRCompiler::parse_channel_unimplemented);
+	channel_handlers.emplace("0C" /* BGA layer alpha       */, &IRCompiler::parse_channel_unimplemented);
+	channel_handlers.emplace("0D" /* BGA layer 2 alpha     */, &IRCompiler::parse_channel_unimplemented);
+	channel_handlers.emplace("0E" /* BGA poor alpha        */, &IRCompiler::parse_channel_unimplemented);
+	channel_handlers.emplace("97" /* BGM volume            */, &IRCompiler::parse_channel_unimplemented_critical);
+	channel_handlers.emplace("98" /* Key volume            */, &IRCompiler::parse_channel_unimplemented_critical);
+	channel_handlers.emplace("99" /* Text                  */, &IRCompiler::parse_channel_unimplemented);
+	channel_handlers.emplace("A0" /* Judge                 */, &IRCompiler::parse_channel_ignored);
+	channel_handlers.emplace("A1" /* BGA base overlay      */, &IRCompiler::parse_channel_unimplemented);
+	channel_handlers.emplace("A2" /* BGA layer overlay     */, &IRCompiler::parse_channel_unimplemented);
+	channel_handlers.emplace("A3" /* BGA layer 2 overlay   */, &IRCompiler::parse_channel_unimplemented);
+	channel_handlers.emplace("A4" /* BGA poor overlay      */, &IRCompiler::parse_channel_unimplemented);
+	channel_handlers.emplace("A5" /* BGA key-bound         */, &IRCompiler::parse_channel_unimplemented);
+	channel_handlers.emplace("A6" /* BGA key-bound         */, &IRCompiler::parse_channel_ignored_log);
 	for (auto i: views::iota(1, 10)) // P1 notes
 		channel_handlers.emplace(UString{"1"}.append('0' + i), &IRCompiler::parse_channel_unimplemented);
 	for (auto i: views::iota(0, 26)) // ^
