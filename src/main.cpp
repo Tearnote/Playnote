@@ -6,6 +6,7 @@ main.cpp:
 Entry point. Initializes basic facilities like logging and shared subsystems, then spawns threads.
 */
 
+#include <functional>
 #include <exception>
 #include <thread>
 #include <chrono>
