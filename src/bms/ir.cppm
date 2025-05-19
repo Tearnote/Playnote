@@ -129,6 +129,7 @@ private:
 	std::string path;
 	std::array<uint8, 16> md5{};
 	std::pmr::vector<HeaderEvent> header_events;
+	std::pmr::vector<ChannelEvent> channel_events;
 
 	IR();
 
@@ -139,6 +140,11 @@ private:
 		header_events.emplace_back(HeaderEvent{
 			.params = allocator.new_object<T>(std::forward<T>(event)),
 		});
+	}
+
+	void add_channel_event(ChannelEvent&& event)
+	{
+		channel_events.emplace_back(std::move(event));
 	}
 };
 
@@ -157,6 +163,8 @@ private:
 	};
 	struct SlotMappings {
 		unordered_map<UString, int, UStringHash> wav;
+
+		auto get_slot_id(unordered_map<UString, int, UStringHash>& map, UString const& key) -> int;
 	};
 
 	using HeaderHandlerFunc = void(IRCompiler::*)(IR&, HeaderCommand&&, SlotMappings&);
@@ -193,12 +201,16 @@ private:
 
 	// File reference handlers
 	void parse_header_wav(IR&, HeaderCommand&&, SlotMappings&);
+
+	// Audio channels
+	void parse_channel_bgm(IR&, SingleChannelCommand&&, SlotMappings&);
 };
 
 IR::IR():
 	buffer_resource{std::make_unique<std::pmr::monotonic_buffer_resource>()},
 	allocator{buffer_resource.get()},
-	header_events{allocator} {}
+	header_events{allocator},
+	channel_events{allocator} {}
 
 IRCompiler::IRCompiler()
 {
@@ -221,6 +233,14 @@ auto IRCompiler::compile(std::string_view path, std::string_view bms_file_conten
 	);
 
 	return ir;
+}
+
+auto IRCompiler::SlotMappings::get_slot_id(unordered_map<UString, int, UStringHash>& map,
+	UString const& key) -> int
+{
+	return map.contains(key)?
+		map.at(key) :
+		map.emplace(key, map.size()).first->second;
 }
 
 void IRCompiler::register_header_handlers()
@@ -309,7 +329,7 @@ void IRCompiler::register_header_handlers()
 void IRCompiler::register_channel_handlers()
 {
 	// Unimplemented channels
-	channel_handlers.emplace("01" /* BGM                   */, &IRCompiler::parse_channel_unimplemented);
+	channel_handlers.emplace("01" /* BGM                   */, &IRCompiler::parse_channel_bgm);
 	channel_handlers.emplace("04" /* BGA base              */, &IRCompiler::parse_channel_unimplemented);
 	channel_handlers.emplace("06" /* BGA poor              */, &IRCompiler::parse_channel_unimplemented);
 	channel_handlers.emplace("07" /* BGA layer             */, &IRCompiler::parse_channel_unimplemented);
@@ -633,13 +653,23 @@ void IRCompiler::parse_header_wav(IR& ir, HeaderCommand&& cmd, SlotMappings& map
 
 	cmd.value.toLower();
 
-	auto slot_id = maps.wav.contains(cmd.slot)?
-		maps.wav.at(cmd.slot) :
-		maps.wav.emplace(cmd.slot, maps.wav.size()).first->second;
+	auto slot_id = maps.get_slot_id(maps.wav, cmd.slot);
 	L_TRACE("L{}: WAV: {} -> #{}, {}", cmd.line, to_utf8(cmd.slot), slot_id, to_utf8(cmd.value));
 	ir.add_header_event(IR::HeaderEvent::WAV{
 		.slot = slot_id,
 		.name = std::move(cmd.value),
+	});
+}
+
+void IRCompiler::parse_channel_bgm(IR& ir, SingleChannelCommand&& cmd, SlotMappings& maps)
+{
+	if (cmd.value == "00") return;
+	auto slot_id = maps.get_slot_id(maps.wav, cmd.value);
+	L_TRACE("L{}: BGM: {} -> #{}", cmd.line, to_utf8(cmd.value), slot_id);
+	ir.add_channel_event({
+		.position = cmd.position,
+		.type = IR::ChannelEvent::Type::BGM,
+		.slot = slot_id,
 	});
 }
 
