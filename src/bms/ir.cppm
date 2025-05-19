@@ -14,6 +14,7 @@ module;
 #include <exception>
 #include <utility>
 #include <variant>
+#include <format>
 #include <memory>
 #include <ranges>
 #include <string>
@@ -43,6 +44,16 @@ using util::to_float;
 using util::to_utf8;
 using util::to_int;
 using bms::HeaderCommand;
+
+using NotePosition = boost::rational<int>;
+
+export auto to_string(NotePosition pos) -> std::string
+{
+	return std::format("{} {}/{}",
+		pos.numerator() / pos.denominator(),
+		pos.numerator() % pos.denominator(),
+		pos.denominator());
+}
 
 export class IRCompiler;
 
@@ -115,7 +126,7 @@ public:
 			BGM,
 		};
 
-		boost::rational<int> position;
+		NotePosition position;
 		Type type;
 		int slot;
 	};
@@ -157,7 +168,7 @@ public:
 private:
 	struct SingleChannelCommand {
 		int line;
-		boost::rational<int> position;
+		NotePosition position;
 		UString channel;
 		UString value;
 	};
@@ -440,7 +451,7 @@ void IRCompiler::handle_channel(IR& ir, ChannelCommand&& cmd, SlotMappings& maps
 		for (auto i: views::iota(0, denominator)) {
 			(this->*channel_handlers.at(cmd.channel))(ir, SingleChannelCommand{
 				.line = cmd.line,
-				.position = cmd.measure + boost::rational<int>{i, denominator},
+				.position = cmd.measure + NotePosition{i, denominator},
 				.channel = cmd.channel,
 				.value = UString{cmd.value, i * 2, 2},
 			}, maps);
@@ -665,7 +676,7 @@ void IRCompiler::parse_channel_bgm(IR& ir, SingleChannelCommand&& cmd, SlotMappi
 {
 	if (cmd.value == "00") return;
 	auto slot_id = maps.get_slot_id(maps.wav, cmd.value);
-	L_TRACE("L{}: BGM: {} -> #{}", cmd.line, to_utf8(cmd.value), slot_id);
+	L_TRACE("L{}: {} BGM: {} -> #{}", cmd.line, to_string(cmd.position), to_utf8(cmd.value), slot_id);
 	ir.add_channel_event({
 		.position = cmd.position,
 		.type = IR::ChannelEvent::Type::BGM,
