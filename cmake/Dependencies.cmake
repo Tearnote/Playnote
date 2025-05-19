@@ -11,15 +11,15 @@ include(FetchContent)
 
 # Local dependencies
 
+find_package(OpenSSL REQUIRED) # MD5 hash
 find_package(Vulkan REQUIRED # GPU API
 	COMPONENTS glslc glslangValidator # Shader compiler
 )
 find_package(glfw3 3.4 REQUIRED) # Windowing support
-pkg_search_module(icu-uc REQUIRED IMPORTED_TARGET icu-uc) # Unicode string handling
-pkg_search_module(icu-i18n REQUIRED IMPORTED_TARGET icu-i18n) # Shift-JIS and EUC-KR conversion
-pkg_search_module(libsndfile REQUIRED IMPORTED_TARGET sndfile) # Audio file decoding
 pkg_search_module(libsamplerate REQUIRED IMPORTED_TARGET samplerate) # Audio file decoding
-pkg_search_module(openssl REQUIRED IMPORTED_TARGET openssl) # MD5 hash
+pkg_search_module(libsndfile REQUIRED IMPORTED_TARGET sndfile) # Audio file decoding
+pkg_search_module(icu-i18n REQUIRED IMPORTED_TARGET icu-i18n) # Shift-JIS and EUC-KR conversion
+pkg_search_module(icu-uc REQUIRED IMPORTED_TARGET icu-uc) # Unicode string handling
 
 if(UNIX)
 	pkg_search_module(PipeWire REQUIRED IMPORTED_TARGET libpipewire-0.3) # Low latency Linux audio
