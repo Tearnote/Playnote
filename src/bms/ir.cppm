@@ -143,6 +143,7 @@ private:
 	unordered_map<UString, HeaderHandlerFunc, UStringHash> header_handlers{};
 
 	void register_header_handlers();
+	void handle_header(IR&, HeaderCommand&&, SlotMappings&);
 
 	// Generic handlers
 	void parse_header_ignored(IR&, HeaderCommand&&, SlotMappings&) {}
@@ -186,7 +187,7 @@ auto IRCompiler::compile(std::string_view path, std::string_view bms_file_conten
 	EVP_Q_digest(nullptr, "MD5", nullptr, bms_file_contents.data(), bms_file_contents.size(), ir.md5.data(), nullptr);
 
 	bms::parse(bms_file_contents,
-		[&](HeaderCommand&& cmd) { (this->*header_handlers.at(cmd.header))(ir, std::move(cmd), maps); },
+		[&](HeaderCommand&& cmd) { handle_header(ir, std::move(cmd), maps); },
 		[](ChannelCommand&& cmd) {
 			// L_TRACE("{}: #{}{}:{}", cmd.line, cmd.measure, to_utf8(cmd.channel), to_utf8(cmd.value));
 		}
@@ -276,6 +277,15 @@ void IRCompiler::register_header_handlers()
 	header_handlers.emplace("MATERIALSBMP", &IRCompiler::parse_header_ignored_log); // ^
 	header_handlers.emplace("OPTION", &IRCompiler::parse_header_ignored_log); // Horrifying, who invented this
 	header_handlers.emplace("CHANGEOPTION", &IRCompiler::parse_header_ignored_log); // ^
+}
+
+void IRCompiler::handle_header(IR& ir, HeaderCommand&& cmd, SlotMappings& maps)
+{
+	if (!header_handlers.contains(cmd.header)) {
+		L_WARN("Unknown header: {}", to_utf8(cmd.header));
+		return;
+	}
+	(this->*header_handlers.at(cmd.header))(ir, std::move(cmd), maps);
 }
 
 void IRCompiler::parse_header_ignored_log(IR&, HeaderCommand&& cmd, SlotMappings&)
