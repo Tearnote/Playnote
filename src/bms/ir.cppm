@@ -285,6 +285,7 @@ void IRCompiler::handle_header(IR& ir, HeaderCommand&& cmd, SlotMappings& maps)
 		L_WARN("Unknown header: {}", to_utf8(cmd.header));
 		return;
 	}
+	cmd.slot.padLeading(2, '0');
 	(this->*header_handlers.at(cmd.header))(ir, std::move(cmd), maps);
 }
 
