@@ -20,6 +20,7 @@ import playnote.util.file;
 import playnote.sys.window;
 import playnote.sys.audio;
 import playnote.sys.os;
+import playnote.bms.chart;
 import playnote.bms.ir;
 import playnote.globals;
 
@@ -83,6 +84,7 @@ try {
 	auto audio = sys::Audio{argc, argv};
 	auto bms_compiler = bms::IRCompiler{};
 	auto bms_ir = load_bms(bms_compiler, "songs/Ling Child/02_hyper.bme");
+	auto bms_chart = bms::Chart::from_ir(bms_ir);
 	while (!window.is_closing())
 		std::this_thread::yield();
 }

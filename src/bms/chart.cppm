@@ -11,16 +11,23 @@ module;
 #include <vector>
 #include <chrono>
 #include <array>
+#include <span>
+#include "util/log_macros.hpp"
 
 export module playnote.bms.chart;
 
+import playnote.stx.callable;
 import playnote.stx.types;
+import playnote.util.charset;
 import playnote.bms.ir;
+import playnote.globals;
 
 namespace playnote::bms {
 
 namespace chrono = std::chrono;
 using stx::usize;
+using util::UString;
+using util::to_utf8;
 
 export class Chart {
 public:
@@ -56,14 +63,35 @@ private:
 		Size,
 	};
 	struct Slot {
-		std::vector<float>& sample;
+		std::span<float> sample;
 		int playback_pos;
 	};
 
 	Chart() = default;
 
+	UString title;
+	UString artist;
+	float bpm{130}; // BMS spec default
+
 	std::array<Lane, static_cast<usize>(LaneType::Size)> lanes;
 	std::vector<std::optional<Slot>> slots;
 };
+
+auto Chart::from_ir(IR const& ir) -> Chart
+{
+	auto chart = Chart{};
+
+	ir.each_header_event([&](IR::HeaderEvent const& event) {
+		event.params.visit(stx::visitor {
+			[&](IR::HeaderEvent::Title* title_params) { chart.title = title_params->title; },
+			[&](IR::HeaderEvent::Artist* artist_params) { chart.artist = artist_params->artist; },
+			[&](IR::HeaderEvent::BPM* bpm_params) { chart.bpm = bpm_params->bpm; },
+			[](auto&&) {}
+		});
+	});
+	L_INFO("Built chart \"{}\"", to_utf8(chart.title));
+
+	return chart;
+}
 
 }

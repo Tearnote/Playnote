@@ -24,6 +24,7 @@ module;
 
 export module playnote.bms.ir;
 
+import playnote.stx.callable;
 import playnote.stx.concepts;
 import playnote.stx.except;
 import playnote.stx.types;
@@ -151,6 +152,14 @@ public:
 		Type type;
 		int slot;
 	};
+
+	// Run the provided function on each header event, in original file order
+	template<stx::callable<void(HeaderEvent const&)> Func>
+	void each_header_event(Func&& func) const { for (auto const& event: header_events) func(event); }
+
+	// Run the provided function on each channel event, in original file order
+	template<stx::callable<void(ChannelEvent const&)> Func>
+	void each_channel_event(Func&& func) const { for (auto const& event: channel_events) func(event); }
 
 private:
 	friend IRCompiler;
