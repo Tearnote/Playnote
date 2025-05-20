@@ -468,7 +468,8 @@ void IRCompiler::handle_header(IR& ir, HeaderCommand&& cmd, SlotMappings& maps)
 		L_WARN("L{}: Unknown header: {}", cmd.line, to_utf8(cmd.header));
 		return;
 	}
-	cmd.slot.padLeading(2, '0'); // Just in case someone forgot the leading 0
+	if (!cmd.slot.isEmpty())
+		cmd.slot.padLeading(2, '0'); // Just in case someone forgot the leading 0
 	(this->*header_handlers.at(cmd.header))(ir, std::move(cmd), maps);
 }
 
