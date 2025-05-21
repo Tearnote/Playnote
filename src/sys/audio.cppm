@@ -3,7 +3,7 @@ This software is dual-licensed. For more details, please consult LICENSE.txt.
 Copyright (c) 2025 Tearnote (Hubert Maraszek)
 
 sys/audio.cppm:
-Initializes audio, mixes active channels and submits them for playback.
+Initializes audio and submits buffers for playback.
 */
 
 module;
