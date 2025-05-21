@@ -2,8 +2,8 @@
 This software is dual-licensed. For more details, please consult LICENSE.txt.
 Copyright (c) 2025 Tearnote (Hubert Maraszek)
 
-util/file.cppm:
-File I/O utilities.
+io/file.cppm:
+Raw file I/O utilities.
 */
 
 module;
@@ -12,12 +12,12 @@ module;
 #include <string>
 #include "mio/mmap.hpp"
 
-export module playnote.util.file;
+export module playnote.io.file;
 
 import playnote.stx.except;
 import playnote.stx.types;
 
-namespace playnote::util {
+namespace playnote::io {
 
 namespace fs = std::filesystem;
 using stx::usize;
@@ -26,7 +26,7 @@ using stx::usize;
 struct File {
 	std::string path;
 	mio::mmap_source map;
-	std::string_view contents;
+	std::span<char const> contents;
 };
 
 // Open a file for reading

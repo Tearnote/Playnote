@@ -16,7 +16,7 @@ export module playnote.audio_thread;
 
 import playnote.stx.types;
 import playnote.util.charset;
-import playnote.util.file;
+import playnote.io.file;
 import playnote.sys.window;
 import playnote.sys.audio;
 import playnote.sys.os;
@@ -71,7 +71,7 @@ auto load_audio_file(std::string_view path) -> std::vector<float>
 auto load_bms(bms::IRCompiler& compiler, std::string_view path) -> bms::IR
 {
 	L_INFO("Loading BMS file \"{}\"", path);
-	auto file = util::read_file(path);
+	auto file = io::read_file(path);
 	auto ir = compiler.compile(path, file.contents);
 	L_INFO("Loaded BMS file \"{}\" successfully", path);
 	return ir;
