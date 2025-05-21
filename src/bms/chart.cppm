@@ -8,16 +8,18 @@ A definite, playable rhythm game chart, constructed from an IR. Tracks playback 
 
 module;
 #include <optional>
+#include <utility>
 #include <vector>
 #include <chrono>
 #include <array>
-#include <span>
 #include "util/log_macros.hpp"
 
 export module playnote.bms.chart;
 
 import playnote.stx.callable;
 import playnote.stx.types;
+import playnote.io.bulk_request;
+import playnote.io.audio_codec;
 import playnote.util.charset;
 import playnote.bms.ir;
 import playnote.globals;
@@ -26,12 +28,14 @@ namespace playnote::bms {
 
 namespace chrono = std::chrono;
 using stx::usize;
+using io::BulkRequest;
+using io::AudioCodec;
 using util::UString;
 using util::to_utf8;
 
 export class Chart {
 public:
-	static auto from_ir(IR const&) -> Chart;
+	static auto from_ir(IR const&) -> std::pair<Chart, BulkRequest>;
 
 private:
 	struct Note {
@@ -63,7 +67,7 @@ private:
 		Size,
 	};
 	struct Slot {
-		std::span<float> sample;
+		AudioCodec::Output sample;
 		int playback_pos;
 	};
 
@@ -77,22 +81,31 @@ private:
 	std::vector<std::optional<Slot>> slots;
 };
 
-auto Chart::from_ir(IR const& ir) -> Chart
+auto Chart::from_ir(IR const& ir) -> std::pair<Chart, BulkRequest>
 {
 	auto chart = Chart{};
+	auto requests = BulkRequest{""/* todo */};
 
 	chart.slots.resize(ir.get_wav_slot_count());
 	ir.each_header_event([&](IR::HeaderEvent const& event) {
 		event.params.visit(stx::visitor {
-			[&](IR::HeaderEvent::Title* title_params) { chart.title = title_params->title; },
-			[&](IR::HeaderEvent::Artist* artist_params) { chart.artist = artist_params->artist; },
-			[&](IR::HeaderEvent::BPM* bpm_params) { chart.bpm = bpm_params->bpm; },
+			[&](IR::HeaderEvent::Title const* title_params) { chart.title = title_params->title; },
+			[&](IR::HeaderEvent::Artist const* artist_params) { chart.artist = artist_params->artist; },
+			[&](IR::HeaderEvent::BPM const* bpm_params) { chart.bpm = bpm_params->bpm; },
+			[&](IR::HeaderEvent::WAV const* wav_params) {
+				chart.slots[wav_params->slot].emplace(Slot{});
+				requests.enqueue<AudioCodec>(
+					chart.slots[wav_params->slot]->sample,
+					to_utf8(wav_params->name),
+					{"wav", "ogg", "mp3", "flac", "opus"}
+				);
+			},
 			[](auto&&) {}
 		});
 	});
 	L_INFO("Built chart \"{}\"", to_utf8(chart.title));
 
-	return chart;
+	return std::make_pair(chart, requests);
 }
 
 }

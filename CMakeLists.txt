@@ -46,6 +46,8 @@ target_sources(Playnote PUBLIC
 	src/stx/except.cppm
 	src/stx/types.cppm
 	src/stx/math.cppm
+	src/io/audio_codec.cppm
+	src/io/bulk_request.cppm
 	src/io/file.cppm
 	src/util/charset.cppm
 	src/util/logger.cppm
