@@ -81,6 +81,7 @@ auto Chart::from_ir(IR const& ir) -> Chart
 {
 	auto chart = Chart{};
 
+	chart.slots.resize(ir.get_wav_slot_count());
 	ir.each_header_event([&](IR::HeaderEvent const& event) {
 		event.params.visit(stx::visitor {
 			[&](IR::HeaderEvent::Title* title_params) { chart.title = title_params->title; },

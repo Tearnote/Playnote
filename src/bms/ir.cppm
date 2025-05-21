@@ -161,6 +161,9 @@ public:
 	template<stx::callable<void(ChannelEvent const&)> Func>
 	void each_channel_event(Func&& func) const { for (auto const& event: channel_events) func(event); }
 
+	// Get the total number of WAV slots referenced by the headers and channels
+	[[nodiscard]] auto get_wav_slot_count() const -> int { return wav_slot_count; }
+
 private:
 	friend IRCompiler;
 
@@ -173,6 +176,8 @@ private:
 	std::array<uint8, 16> md5{};
 	std::pmr::vector<HeaderEvent> header_events;
 	std::pmr::vector<ChannelEvent> channel_events;
+
+	int wav_slot_count = 0;
 
 	// Only constructible by friends
 	IR();
@@ -311,6 +316,8 @@ auto IRCompiler::compile(std::string_view path, std::span<char const> bms_file_c
 		[&](HeaderCommand&& cmd) { handle_header(ir, std::move(cmd), maps); },
 		[&](ChannelCommand&& cmd) { handle_channel(ir, std::move(cmd), maps); }
 	);
+
+	ir.wav_slot_count = maps.wav.size();
 
 	return ir;
 }
