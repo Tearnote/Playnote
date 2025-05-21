@@ -84,6 +84,9 @@ private:
 auto Chart::from_ir(IR const& ir) -> std::pair<Chart, BulkRequest>
 {
 	auto chart = Chart{};
+
+	auto path = ir.get_path();
+
 	auto requests = BulkRequest{""/* todo */};
 
 	chart.slots.resize(ir.get_wav_slot_count());

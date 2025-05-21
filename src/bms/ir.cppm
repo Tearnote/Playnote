@@ -161,6 +161,9 @@ public:
 	template<stx::callable<void(ChannelEvent const&)> Func>
 	void each_channel_event(Func&& func) const { for (auto const& event: channel_events) func(event); }
 
+	// Return the full path of the BMS file that the IR was generated from
+	[[nodiscard]] auto get_path() const -> std::string_view { return path; }
+
 	// Get the total number of WAV slots referenced by the headers and channels
 	[[nodiscard]] auto get_wav_slot_count() const -> int { return wav_slot_count; }
 
