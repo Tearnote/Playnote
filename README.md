@@ -1,7 +1,7 @@
 # Playnote
 
-A stable, modern and intuitive [BMS](https://en.wikipedia.org/wiki/Be-Music_Source) player for Windows and Linux, written in C++23.
-Work in progress.
+A stable, modern and intuitive [BMS](https://en.wikipedia.org/wiki/Be-Music_Source) player for Windows and Linux, written
+in bleeding-edge C++.
 
 ## Goals
 
