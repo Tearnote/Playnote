@@ -200,7 +200,7 @@ public:
 	IRCompiler();
 
 	// Generate IR from an unmodified BMS file. The path is only used as metadata.
-	auto compile(std::string_view path, std::string_view bms_file_contents) -> IR;
+	auto compile(std::string_view path, std::span<char const> bms_file_contents) -> IR;
 
 private:
 	// A BMS channel command can contain multiple notes; we split them up into these
@@ -296,7 +296,7 @@ IRCompiler::IRCompiler()
 	register_channel_handlers();
 }
 
-auto IRCompiler::compile(std::string_view path, std::string_view bms_file_contents) -> IR
+auto IRCompiler::compile(std::string_view path, std::span<char const> bms_file_contents) -> IR
 {
 	L_INFO("Compiling BMS file \"{}\"", path);
 	auto ir = IR{};

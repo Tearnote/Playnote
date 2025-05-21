@@ -9,6 +9,7 @@ A BMS format parser - turns a complete BMS file into a list of commands.
 module;
 #include <string_view>
 #include <variant>
+#include <span>
 #include "util/log_macros.hpp"
 
 export module playnote.bms.parser;
@@ -122,7 +123,7 @@ export template<
 	stx::callable<void(HeaderCommand&&)> HFunc,
 	stx::callable<void(ChannelCommand&&)> CFunc
 >
-void parse(std::string_view bms_file_contents, HFunc&& header_func, CFunc&& channel_func)
+void parse(std::span<char const> bms_file_contents, HFunc&& header_func, CFunc&& channel_func)
 {
 	// Convert file to UTF-16
 	auto encoding = util::detect_text_encoding(bms_file_contents);
