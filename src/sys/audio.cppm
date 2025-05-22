@@ -37,7 +37,7 @@ using stx::usize;
 
 export class Audio {
 public:
-	Audio(int argc, char* argv[]);
+	Audio();
 	~Audio();
 
 	Audio(Audio const&) = delete;
@@ -72,8 +72,8 @@ private:
 	}
 };
 
-Audio::Audio(int argc, char* argv[]) {
-	pw_init(&argc, &argv);
+Audio::Audio() {
+	pw_init(nullptr, nullptr);
 	L_DEBUG("Using libpipewire {}\n", pw_get_library_version());
 
 	loop = ptr_check(pw_thread_loop_new(nullptr, nullptr));

@@ -74,11 +74,11 @@ auto load_bms(bms::IRCompiler& compiler, fs::path const& path) -> bms::IR
 	return ir;
 }
 
-export void audio_thread(sys::Window& window, int argc, char* argv[])
+export void audio_thread(sys::Window& window)
 try {
 	sys::set_thread_name("audio");
 
-	auto audio = sys::Audio{argc, argv};
+	auto audio = sys::Audio{};
 	auto bms_compiler = bms::IRCompiler{};
 	auto bms_ir = load_bms(bms_compiler, "songs/Ling Child/02_hyper.bme");
 	auto bms_chart = bms::Chart::from_ir(bms_ir);

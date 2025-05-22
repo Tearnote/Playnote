@@ -26,7 +26,7 @@ import playnote.globals;
 using namespace playnote; // Can't namespace main()
 using namespace std::chrono_literals;
 
-auto run(int argc, char* argv[]) -> int
+auto run() -> int
 {
 	auto scheduler_period = sys::SchedulerPeriod{1ms};
 	auto glfw = sys::GLFW{};
@@ -34,14 +34,14 @@ auto run(int argc, char* argv[]) -> int
 
 	// Spawn all threads. Every thread is assumed to eventually finish
 	// once window.is_closing() is true
-	auto audio_thread_stub = std::jthread{audio_thread, std::ref(window), argc, argv};
+	auto audio_thread_stub = std::jthread{audio_thread, std::ref(window)};
 	auto render_thread_stub = std::jthread{render_thread, std::ref(window)};
 	input_thread(glfw, window);
 
 	return EXIT_SUCCESS;
 }
 
-auto main(int const argc, char* argv[]) -> int
+auto main() -> int
 try {
 #if BUILD_TYPE == BUILD_DEBUG
 	sys::create_console();
@@ -49,7 +49,7 @@ try {
 	g_logger = util::Logger{};
 	L_INFO("{} {}.{}.{} starting up", AppTitle, AppVersion[0], AppVersion[1], AppVersion[2]);
 	util::init_global_formatters();
-	return run(argc, argv);
+	return run();
 }
 catch (std::exception const& e) {
 	// Handle any exception that happened outside of input_thread()
