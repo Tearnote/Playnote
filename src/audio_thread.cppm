@@ -7,15 +7,12 @@ Initializes audio and handles queueing of playback events.
 */
 
 module;
-#include <type_traits>
-#include <string_view>
+#include <filesystem>
 #include <thread>
 #include "util/log_macros.hpp"
 
 export module playnote.audio_thread;
 
-import playnote.stx.types;
-import playnote.util.charset;
 import playnote.io.file;
 import playnote.sys.window;
 import playnote.sys.audio;
@@ -26,7 +23,7 @@ import playnote.globals;
 
 namespace playnote {
 
-using util::to_utf8;
+namespace fs = std::filesystem;
 
 /*
 auto load_audio_file(std::string_view path) -> std::vector<float>
@@ -68,12 +65,12 @@ auto load_audio_file(std::string_view path) -> std::vector<float>
 	}
 }
 */
-auto load_bms(bms::IRCompiler& compiler, std::string_view path) -> bms::IR
+auto load_bms(bms::IRCompiler& compiler, fs::path const& path) -> bms::IR
 {
-	L_INFO("Loading BMS file \"{}\"", path);
+	L_INFO("Loading BMS file \"{}\"", path.c_str());
 	auto file = io::read_file(path);
 	auto ir = compiler.compile(path, file.contents);
-	L_INFO("Loaded BMS file \"{}\" successfully", path);
+	L_INFO("Loaded BMS file \"{}\" successfully", path.c_str());
 	return ir;
 }
 

@@ -10,6 +10,7 @@ but condensed, cleaned and serializable to a binary file.
 module;
 #include <memory_resource>
 #include <string_view>
+#include <filesystem>
 #include <exception>
 #include <utility>
 #include <variant>
@@ -35,6 +36,7 @@ import playnote.globals;
 namespace playnote::bms {
 
 namespace views = std::ranges::views;
+namespace fs = std::filesystem;
 template<typename Key, typename T, typename Hash>
 using unordered_map = ankerl::unordered_dense::map<Key, T, Hash>;
 using stx::uint8;
@@ -162,7 +164,7 @@ public:
 	void each_channel_event(Func&& func) const { for (auto const& event: channel_events) func(event); }
 
 	// Return the full path of the BMS file that the IR was generated from
-	[[nodiscard]] auto get_path() const -> std::string_view { return path; }
+	[[nodiscard]] auto get_path() const -> fs::path const& { return path; }
 
 	// Get the total number of WAV slots referenced by the headers and channels
 	[[nodiscard]] auto get_wav_slot_count() const -> int { return wav_slot_count; }
@@ -175,7 +177,7 @@ private:
 	std::unique_ptr<std::pmr::monotonic_buffer_resource> buffer_resource; // unique_ptr makes it moveable
 	std::pmr::polymorphic_allocator<> allocator;
 
-	std::string path;
+	fs::path path;
 	std::array<uint8, 16> md5{};
 	std::pmr::vector<HeaderEvent> header_events;
 	std::pmr::vector<ChannelEvent> channel_events;
@@ -208,7 +210,7 @@ public:
 	IRCompiler();
 
 	// Generate IR from an unmodified BMS file. The path is only used as metadata.
-	auto compile(std::string_view path, std::span<char const> bms_file_contents) -> IR;
+	auto compile(fs::path const& path, std::span<char const> bms_file_contents) -> IR;
 
 private:
 	// A BMS channel command can contain multiple notes; we split them up into these
@@ -304,14 +306,14 @@ IRCompiler::IRCompiler()
 	register_channel_handlers();
 }
 
-auto IRCompiler::compile(std::string_view path, std::span<char const> bms_file_contents) -> IR
+auto IRCompiler::compile(fs::path const& path, std::span<char const> bms_file_contents) -> IR
 {
-	L_INFO("Compiling BMS file \"{}\"", path);
+	L_INFO("Compiling BMS file \"{}\"", path.c_str());
 	auto ir = IR{};
 	auto maps = SlotMappings{};
 
 	// Fill in original metadata to maintain a link from the IR back to the BMS file
-	ir.path = std::string{path};
+	ir.path = path;
 	EVP_Q_digest(nullptr, "MD5", nullptr, bms_file_contents.data(), bms_file_contents.size(), ir.md5.data(), nullptr);
 
 	// Process UTF-16 converted and cleanly split BMS file commands
