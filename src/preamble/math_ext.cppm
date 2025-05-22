@@ -13,10 +13,10 @@ module;
 #include <concepts>
 #include <numbers>
 #include <ranges>
-#include <array>
 
 export module playnote.preamble:math_ext;
 
+import :container;
 import :types;
 
 namespace playnote {
@@ -131,7 +131,7 @@ public:
 	constexpr auto operator>>=(T other) -> self_t&;
 
 private:
-	std::array<T, Dim> arr;
+	array<T, Dim> arr;
 };
 
 template<usize Dim, arithmetic T>

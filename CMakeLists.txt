@@ -61,6 +61,7 @@ target_sources(Playnote PUBLIC
 	src/audio_thread.cppm
 	src/input_thread.cppm
 	src/globals.cppm
+	src/preamble/container.cppm
 	src/preamble/concepts.cppm
 	src/preamble/math_ext.cppm
 	src/preamble/utility.cppm

@@ -8,6 +8,7 @@ of the project.
 */
 
 export module playnote.preamble;
+export import :container;
 export import :concepts;
 export import :math_ext;
 export import :utility;

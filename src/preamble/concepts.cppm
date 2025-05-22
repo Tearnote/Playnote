@@ -8,9 +8,11 @@ Useful generic concepts.
 
 module;
 #include <type_traits>
-#include <variant>
+#include <concepts>
 
 export module playnote.preamble:concepts;
+
+import :utility;
 
 namespace playnote {
 
@@ -18,7 +20,7 @@ template<class T, class Variant>
 inline constexpr auto is_variant_alternative_v = false;
 
 template<class T, class... Ts>
-inline constexpr auto is_variant_alternative_v<T, std::variant<Ts...>> =
+inline constexpr auto is_variant_alternative_v<T, variant<Ts...>> =
 	(... || std::is_same_v<T, Ts>);
 
 // Constrain type T to one of a std::variant's available alternatives
@@ -54,7 +56,7 @@ struct callable_unpack;
 
 template<typename R, typename... Args>
 struct callable_unpack<R(Args...)> {
-	using args = std::tuple<Args...>;
+	using args = tuple<Args...>;
 	using rtype = R;
 };
 
