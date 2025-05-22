@@ -12,11 +12,11 @@ module;
 
 export module playnote.util.raii;
 
-import playnote.stx.callable;
+import playnote.preamble;
 
 namespace playnote::util {
 
-export template<typename T, stx::callable<void(T&)> Func>
+export template<typename T, callable<void(T&)> Func>
 class RAIIResource {
 public:
 	using Inner = T;
@@ -44,7 +44,7 @@ private:
 	std::optional<T> resource{std::nullopt}; // nullopt represents uninitialized and moved-out-from states
 };
 
-template<typename T, stx::callable<void(T&)> Func>
+template<typename T, callable<void(T&)> Func>
 auto RAIIResource<T, Func>::operator=(RAIIResource&& other) noexcept -> RAIIResource&
 {
 	resource = std::move(other.resource);

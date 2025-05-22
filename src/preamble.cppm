@@ -9,4 +9,5 @@ of the project.
 
 export module playnote.preamble;
 export import :types;
+export import :concepts;
 export import :math_ext;

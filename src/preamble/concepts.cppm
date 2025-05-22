@@ -2,19 +2,28 @@
 This software is dual-licensed. For more details, please consult LICENSE.txt.
 Copyright (c) 2025 Tearnote (Hubert Maraszek)
 
-stx/callable.cppm:
-A callable functor type concept with specific argument types and return type.
-Syntax analogous to the std::function template argument.
+stx/concepts.cppm:
+Useful generic concepts.
 */
 
 module;
 #include <type_traits>
-#include <concepts>
-#include <tuple>
+#include <variant>
 
-export module playnote.stx.callable;
+export module playnote.preamble:concepts;
 
-namespace playnote::stx {
+namespace playnote {
+
+template<class T, class Variant>
+inline constexpr auto is_variant_alternative_v = false;
+
+template<class T, class... Ts>
+inline constexpr auto is_variant_alternative_v<T, std::variant<Ts...>> =
+	(... || std::is_same_v<T, Ts>);
+
+// Constrain type T to one of a std::variant's available alternatives
+export template<class T, class Variant>
+concept is_variant_alternative = is_variant_alternative_v<T, Variant>;
 
 // "applicable" concept
 // Analogous to std::invocable but accepts a tuple rather than argument pack

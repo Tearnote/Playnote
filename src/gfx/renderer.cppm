@@ -12,7 +12,6 @@ module;
 export module playnote.gfx.renderer;
 
 import playnote.preamble;
-import playnote.stx.callable;
 import playnote.sys.gpu;
 import playnote.gfx.imgui;
 
@@ -45,7 +44,7 @@ public:
 	// Provide a queue to the function argument, and then draw contents of the queue to the screen
 	// Each call will wait block until the next frame begins
 	// Imgui:: calls are only allowed within the function argument
-	template<stx::callable<void(Queue&)> Func>
+	template<callable<void(Queue&)> Func>
 	void frame(Func&&);
 
 private:
@@ -56,7 +55,7 @@ private:
 	void draw(Queue const&);
 };
 
-template<stx::callable<void(Renderer::Queue&)> Func>
+template<callable<void(Renderer::Queue&)> Func>
 void Renderer::frame(Func&& func)
 {
 	auto queue = Queue{};

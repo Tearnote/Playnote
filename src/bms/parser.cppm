@@ -14,7 +14,7 @@ module;
 
 export module playnote.bms.parser;
 
-import playnote.stx.callable;
+import playnote.preamble;
 import playnote.util.charset;
 import playnote.globals;
 
@@ -120,8 +120,8 @@ auto parse_line(int line_index, UString&& line) -> std::variant<std::monostate, 
 // The functions are called in the same order the lines appear in the file.
 // The commands might be invalid, and some fields might be empty.
 export template<
-	stx::callable<void(HeaderCommand&&)> HFunc,
-	stx::callable<void(ChannelCommand&&)> CFunc
+	callable<void(HeaderCommand&&)> HFunc,
+	callable<void(ChannelCommand&&)> CFunc
 >
 void parse(std::span<char const> bms_file_contents, HFunc&& header_func, CFunc&& channel_func)
 {

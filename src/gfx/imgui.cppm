@@ -12,7 +12,7 @@ module;
 
 export module playnote.gfx.imgui;
 
-import playnote.stx.callable;
+import playnote.preamble;
 import playnote.sys.window;
 import playnote.sys.gpu;
 
@@ -25,7 +25,7 @@ public:
 
 	// Prepare Imgui to accept commands
 	// All ImGui:: functions must be run within the provided function
-	template<stx::callable<void()> Func>
+	template<callable<void()> Func>
 	void enqueue(Func);
 
 	// Draw enqueued Imgui state into the image
@@ -45,7 +45,7 @@ Imgui::Imgui(sys::GPU& gpu)
 	imgui_data = vuk::extra::ImGui_ImplVuk_Init(gpu.get_global_allocator());
 }
 
-template<stx::callable<void()> Func>
+template<callable<void()> Func>
 void Imgui::enqueue(Func func)
 {
 	ImGui_ImplGlfw_NewFrame();

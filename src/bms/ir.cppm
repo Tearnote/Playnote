@@ -26,8 +26,6 @@ module;
 export module playnote.bms.ir;
 
 import playnote.preamble;
-import playnote.stx.callable;
-import playnote.stx.concepts;
 import playnote.stx.except;
 import playnote.util.charset;
 import playnote.bms.parser;
@@ -155,11 +153,11 @@ public:
 	};
 
 	// Run the provided function on each header event, in original file order
-	template<stx::callable<void(HeaderEvent const&)> Func>
+	template<callable<void(HeaderEvent const&)> Func>
 	void each_header_event(Func&& func) const { for (auto const& event: header_events) func(event); }
 
 	// Run the provided function on each channel event, in original file order
-	template<stx::callable<void(ChannelEvent const&)> Func>
+	template<callable<void(ChannelEvent const&)> Func>
 	void each_channel_event(Func&& func) const { for (auto const& event: channel_events) func(event); }
 
 	// Return the full path of the BMS file that the IR was generated from
@@ -188,7 +186,7 @@ private:
 
 	// Add events, ensuring the IR allocator is used
 	template<typename T>
-		requires stx::is_variant_alternative<T*, HeaderEvent::ParamsType>
+		requires is_variant_alternative<T*, HeaderEvent::ParamsType>
 	void add_header_event(T&& event)
 	{
 		header_events.emplace_back(HeaderEvent{

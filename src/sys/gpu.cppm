@@ -29,7 +29,6 @@ module;
 export module playnote.sys.gpu;
 
 import playnote.preamble;
-import playnote.stx.callable;
 import playnote.stx.except;
 import playnote.util.raii;
 import playnote.sys.window;
@@ -54,7 +53,7 @@ public:
 	// Prepare and present a single frame
 	// All vuk draw commands must be submitted within the callback
 	// The callback is provided with the frame allocator and swapchain image
-	template<stx::callable<ManagedImage(vuk::Allocator&, ManagedImage&&)> Func>
+	template<callable<ManagedImage(vuk::Allocator&, ManagedImage&&)> Func>
 	void frame(Func&&);
 
 	GPU(GPU const&) = delete;
@@ -137,7 +136,7 @@ GPU::GPU(sys::Window& window):
 	L_INFO("Vulkan initialized");
 }
 
-template<stx::callable<ManagedImage(vuk::Allocator&, ManagedImage&&)> Func>
+template<callable<ManagedImage(vuk::Allocator&, ManagedImage&&)> Func>
 void GPU::frame(Func&& func)
 {
 	auto& frame_resource = global_resource.get_next_frame();

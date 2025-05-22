@@ -17,7 +17,6 @@ module;
 export module playnote.bms.chart;
 
 import playnote.preamble;
-import playnote.stx.callable;
 import playnote.io.bulk_request;
 import playnote.io.audio_codec;
 import playnote.util.charset;
@@ -90,7 +89,7 @@ auto Chart::from_ir(IR const& ir) -> std::pair<Chart, BulkRequest>
 
 	chart.slots.resize(ir.get_wav_slot_count());
 	ir.each_header_event([&](IR::HeaderEvent const& event) {
-		event.params.visit(stx::visitor {
+		event.params.visit(visitor {
 			[&](IR::HeaderEvent::Title const* title_params) { chart.title = title_params->title; },
 			[&](IR::HeaderEvent::Artist const* artist_params) { chart.artist = artist_params->artist; },
 			[&](IR::HeaderEvent::BPM const* bpm_params) { chart.bpm = bpm_params->bpm; },
