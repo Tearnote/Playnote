@@ -7,21 +7,20 @@ Additional math types and functions. Introduces 2-4 component vectors.
 */
 
 module;
-#include <initializer_list>
 #include <type_traits>
-#include <algorithm>
 #include <concepts>
 #include <numbers>
-#include <ranges>
 
 export module playnote.preamble:math_ext;
 
+import :algorithm;
 import :container;
+import :concepts;
+import :utility;
 import :types;
+import :math;
 
 namespace playnote {
-
-namespace views = std::ranges::views;
 
 // A built-in type with defined arithmetic operations (+, -, *, /)
 template<typename T>
@@ -57,7 +56,7 @@ export template<std::integral T>
 export template<arithmetic T>
 [[nodiscard]] constexpr auto clamp(T val, T vmin, T vmax) -> T
 {
-	return std::max(vmin, std::min(val, vmax));
+	return max(vmin, min(val, vmax));
 }
 
 // Generic math vector, of any dimension between 2 to 4 and any underlying type
@@ -72,10 +71,10 @@ public:
 	// Fill the vector with copies of the value
 	explicit constexpr vec(T fillVal) { fill(fillVal); }
 	// Create the vector with provided component values
-	constexpr vec(std::initializer_list<T> list) { std::ranges::copy(list, arr.begin()); }
+	constexpr vec(initializer_list<T> list) { copy(list, arr.begin()); }
 	// Variadic version of the above
 	template<typename... Args>
-	explicit constexpr vec(Args&&... args) { arr = std::to_array({static_cast<T>(args)...}); }
+	explicit constexpr vec(Args&&... args) { arr = to_array({static_cast<T>(args)...}); }
 
 	// Type cast
 	template<arithmetic U>
@@ -136,7 +135,7 @@ private:
 
 template<usize Dim, arithmetic T>
 template<arithmetic U>
-	requires (!std::same_as<T, U>)
+	requires (!same_as<T, U>)
 constexpr vec<Dim, T>::vec(vec<Dim, U> const& other)
 {
 	for (auto i: views::iota(0uz, Dim))
@@ -361,7 +360,7 @@ constexpr auto min(vec<Dim, T> const& left, vec<Dim, T> const& right) -> vec<Dim
 {
 	auto result = vec<Dim, T>();
 	for (auto i: views::iota(0uz, Dim))
-		result[i] = std::min(left[i], right[i]);
+		result[i] = min(left[i], right[i]);
 	return result;
 }
 
@@ -370,7 +369,7 @@ constexpr auto max(vec<Dim, T> const& left, vec<Dim, T> const& right) -> vec<Dim
 {
 	auto result = vec<Dim, T>();
 	for (auto i: views::iota(0uz, Dim))
-		result[i] = std::max(left[i], right[i]);
+		result[i] = max(left[i], right[i]);
 	return result;
 }
 
@@ -431,12 +430,12 @@ constexpr auto abs(vec<Dim, T> const& v) -> vec<Dim, T>
 export using vec2 = vec<2, float>;
 export using vec3 = vec<3, float>;
 export using vec4 = vec<4, float>;
-export using ivec2 = vec<2, int>;
-export using ivec3 = vec<3, int>;
-export using ivec4 = vec<4, int>;
-export using uvec2 = vec<2, uint>;
-export using uvec3 = vec<3, uint>;
-export using uvec4 = vec<4, uint>;
+export using ivec2 = vec<2, int32>;
+export using ivec3 = vec<3, int32>;
+export using ivec4 = vec<4, int32>;
+export using uvec2 = vec<2, uint32>;
+export using uvec3 = vec<3, uint32>;
+export using uvec4 = vec<4, uint32>;
 
 static_assert(std::is_trivially_constructible_v<vec2>);
 static_assert(std::is_trivially_constructible_v<vec3>);

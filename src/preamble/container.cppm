@@ -17,6 +17,7 @@ namespace playnote {
 
 export using std::vector;
 export using std::array;
+export using std::to_array;
 export template<typename Key, typename T, typename Hash = ankerl::unordered_dense::hash<Key>>
 using unordered_map = ankerl::unordered_dense::map<Key, T, Hash>;
 

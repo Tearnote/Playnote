@@ -8,8 +8,10 @@ of the project.
 */
 
 export module playnote.preamble;
+export import :algorithm;
 export import :container;
 export import :concepts;
 export import :math_ext;
 export import :utility;
 export import :types;
+export import :math;

@@ -16,6 +16,8 @@ import :utility;
 
 namespace playnote {
 
+export using std::same_as;
+
 template<class T, class Variant>
 inline constexpr auto is_variant_alternative_v = false;
 
