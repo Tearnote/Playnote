@@ -23,15 +23,13 @@ module;
 export module playnote.sys.window;
 
 import playnote.stx.except;
-import playnote.stx.math;
 import playnote.util.raii;
+import playnote.preamble;
 import playnote.globals;
 
 namespace playnote::sys {
 namespace chrono = std::chrono;
 using chrono::duration_cast;
-using stx::uvec2;
-using stx::vec2;
 
 // RAII abstraction for GLFW library initialization
 export class GLFW {

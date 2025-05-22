@@ -15,11 +15,12 @@ module;
 #include <ranges>
 #include <array>
 
-export module playnote.stx.math;
+export module playnote.preamble:math_ext;
 
-import playnote.preamble;
+import :types;
 
-namespace playnote::stx {
+namespace playnote {
+
 namespace views = std::ranges::views;
 
 // A built-in type with defined arithmetic operations (+, -, *, /)

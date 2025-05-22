@@ -13,14 +13,11 @@ export module playnote.gfx.renderer;
 
 import playnote.preamble;
 import playnote.stx.callable;
-import playnote.stx.math;
 import playnote.sys.gpu;
 import playnote.gfx.imgui;
 
 namespace playnote::gfx {
 
-using stx::ivec2;
-using stx::vec4;
 using sys::ManagedImage;
 
 export class Renderer {

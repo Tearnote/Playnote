@@ -44,7 +44,6 @@ target_sources(Playnote PUBLIC
 	src/stx/callable.cppm
 	src/stx/concepts.cppm
 	src/stx/except.cppm
-	src/stx/math.cppm
 	src/io/audio_codec.cppm
 	src/io/bulk_request.cppm
 	src/io/file.cppm
@@ -63,8 +62,10 @@ target_sources(Playnote PUBLIC
 	src/render_thread.cppm
 	src/audio_thread.cppm
 	src/input_thread.cppm
-	src/preamble.cppm
 	src/globals.cppm
+	src/preamble/math_ext.cppm
+	src/preamble/types.cppm
+	src/preamble.cppm
 )
 
 target_include_directories(Playnote PRIVATE src) # All includes start from src as root
