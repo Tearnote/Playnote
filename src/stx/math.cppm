@@ -17,11 +17,10 @@ module;
 
 export module playnote.stx.math;
 
-import playnote.stx.types;
+import playnote.preamble;
 
 namespace playnote::stx {
 namespace views = std::ranges::views;
-using stx::uint;
 
 // A built-in type with defined arithmetic operations (+, -, *, /)
 template<typename T>

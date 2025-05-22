@@ -22,16 +22,14 @@ module;
 
 export module playnote.util.charset;
 
+import playnote.preamble;
 import playnote.stx.except;
-import playnote.stx.types;
 import playnote.globals;
 
 namespace playnote::util {
 
 export using Encoding = std::string;
 export using UString = icu::UnicodeString;
-using stx::uint64;
-using stx::usize;
 
 // Wrapper enabling UString to be used as a hashmap key
 // We don't use UString.hashCode() because it's a low quality 32-bit hash

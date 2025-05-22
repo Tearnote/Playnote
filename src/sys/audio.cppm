@@ -23,17 +23,14 @@ module;
 
 export module playnote.sys.audio;
 
+import playnote.preamble;
 import playnote.stx.except;
-import playnote.stx.types;
 import playnote.stx.math;
 import playnote.globals;
 
 namespace playnote::sys {
 
 namespace ranges = std::ranges;
-using stx::uint;
-using stx::uint8;
-using stx::usize;
 
 export class Audio {
 public:

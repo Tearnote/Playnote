@@ -28,9 +28,9 @@ module;
 
 export module playnote.sys.gpu;
 
+import playnote.preamble;
 import playnote.stx.callable;
 import playnote.stx.except;
-import playnote.stx.types;
 import playnote.stx.math;
 import playnote.util.raii;
 import playnote.sys.window;
@@ -38,7 +38,6 @@ import playnote.globals;
 
 namespace playnote::sys {
 
-using stx::uint;
 using stx::uvec2;
 
 // Saves some typing

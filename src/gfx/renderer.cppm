@@ -11,8 +11,8 @@ module;
 
 export module playnote.gfx.renderer;
 
+import playnote.preamble;
 import playnote.stx.callable;
-import playnote.stx.types;
 import playnote.stx.math;
 import playnote.sys.gpu;
 import playnote.gfx.imgui;
@@ -21,7 +21,6 @@ namespace playnote::gfx {
 
 using stx::ivec2;
 using stx::vec4;
-using stx::uint;
 using sys::ManagedImage;
 
 export class Renderer {

@@ -16,8 +16,8 @@ module;
 
 export module playnote.bms.chart;
 
+import playnote.preamble;
 import playnote.stx.callable;
-import playnote.stx.types;
 import playnote.io.bulk_request;
 import playnote.io.audio_codec;
 import playnote.util.charset;
@@ -27,7 +27,6 @@ import playnote.globals;
 namespace playnote::bms {
 
 namespace chrono = std::chrono;
-using stx::usize;
 using io::BulkRequest;
 using io::AudioCodec;
 using util::UString;

@@ -44,7 +44,6 @@ target_sources(Playnote PUBLIC
 	src/stx/callable.cppm
 	src/stx/concepts.cppm
 	src/stx/except.cppm
-	src/stx/types.cppm
 	src/stx/math.cppm
 	src/io/audio_codec.cppm
 	src/io/bulk_request.cppm
@@ -64,6 +63,7 @@ target_sources(Playnote PUBLIC
 	src/render_thread.cppm
 	src/audio_thread.cppm
 	src/input_thread.cppm
+	src/preamble.cppm
 	src/globals.cppm
 )
 

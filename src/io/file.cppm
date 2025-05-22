@@ -13,13 +13,12 @@ module;
 
 export module playnote.io.file;
 
+import playnote.preamble;
 import playnote.stx.except;
-import playnote.stx.types;
 
 namespace playnote::io {
 
 namespace fs = std::filesystem;
-using stx::usize;
 
 // A file open for reading
 struct File {

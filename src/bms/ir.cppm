@@ -25,10 +25,10 @@ module;
 
 export module playnote.bms.ir;
 
+import playnote.preamble;
 import playnote.stx.callable;
 import playnote.stx.concepts;
 import playnote.stx.except;
-import playnote.stx.types;
 import playnote.util.charset;
 import playnote.bms.parser;
 import playnote.globals;
@@ -39,7 +39,6 @@ namespace views = std::ranges::views;
 namespace fs = std::filesystem;
 template<typename Key, typename T, typename Hash>
 using unordered_map = ankerl::unordered_dense::map<Key, T, Hash>;
-using stx::uint8;
 using util::UStringHash;
 using util::UString;
 using util::to_float;
