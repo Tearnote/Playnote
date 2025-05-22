@@ -22,7 +22,6 @@ module;
 
 export module playnote.sys.window;
 
-import playnote.stx.except;
 import playnote.util.raii;
 import playnote.preamble;
 import playnote.globals;
@@ -118,7 +117,7 @@ GLFW::GLFW()
 {
 	// Convert GLFW errors to exceptions, freeing us from having to check error codes
 	glfwSetErrorCallback([](int code, char const* str) {
-		throw stx::runtime_error_fmt("[GLFW] Error {}: {}", code, str);
+		throw runtime_error_fmt("[GLFW] Error {}: {}", code, str);
 	});
 	glfwInit();
 	L_INFO("GLFW initialized");

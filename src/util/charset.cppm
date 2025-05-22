@@ -23,7 +23,6 @@ module;
 export module playnote.util.charset;
 
 import playnote.preamble;
-import playnote.stx.except;
 import playnote.globals;
 
 namespace playnote::util {
@@ -56,7 +55,7 @@ export auto handle_icu_error(UErrorCode err)
 		L_WARN("Illegal character found in file");
 		return;
 	}
-	throw stx::runtime_error_fmt("ICU error: {}", u_errorName(err));
+	throw runtime_error_fmt("ICU error: {}", u_errorName(err));
 }
 
 // Convert a UString to a std::string.

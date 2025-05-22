@@ -14,7 +14,6 @@ module;
 export module playnote.io.file;
 
 import playnote.preamble;
-import playnote.stx.except;
 
 namespace playnote::io {
 
@@ -32,9 +31,9 @@ export auto read_file(fs::path const& path) -> File
 {
 	auto status = fs::status(path);
 	if (!fs::exists(status))
-		throw stx::runtime_error_fmt("\"{}\" does not exist", path.c_str());
+		throw runtime_error_fmt("\"{}\" does not exist", path.c_str());
 	if (!fs::is_regular_file(status))
-		throw stx::runtime_error_fmt("\"{}\" is not a regular file", path.c_str());
+		throw runtime_error_fmt("\"{}\" is not a regular file", path.c_str());
 
 	auto file = File{
 		.path = path,

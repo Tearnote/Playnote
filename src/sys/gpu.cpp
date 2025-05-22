@@ -27,7 +27,7 @@ module;
 
 module playnote.sys.gpu;
 
-import playnote.stx.except;
+import playnote.preamble;
 
 namespace playnote::sys {
 
@@ -47,7 +47,7 @@ auto GPU::debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT severityCode,
 			return "[VulkanSpec]";
 		if (typeCode & VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT)
 			return "[Vulkan]";
-		throw stx::logic_error_fmt("Unknown Vulkan diagnostic message type: #{}", typeCode);
+		throw logic_error_fmt("Unknown Vulkan diagnostic message type: #{}", typeCode);
 	}();
 
 	if (severityCode & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
@@ -59,7 +59,7 @@ auto GPU::debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT severityCode,
 	else if (severityCode & VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT)
 		L_DEBUG("{} {}", type, data->pMessage);
 	else
-		throw stx::logic_error_fmt("Unknown Vulkan diagnostic message severity: #{}",
+		throw logic_error_fmt("Unknown Vulkan diagnostic message severity: #{}",
 			std::to_underlying(severityCode));
 
 	return VK_FALSE;
@@ -91,7 +91,7 @@ auto GPU::create_instance() -> vkb::Instance
 		.set_app_version(AppVersion[0], AppVersion[1], AppVersion[2])
 		.build();
 	if (!instance_result)
-		throw stx::runtime_error_fmt("Failed to create a Vulkan instance: {}",
+		throw runtime_error_fmt("Failed to create a Vulkan instance: {}",
 			instance_result.error().message());
 	auto instance = vkb::Instance(instance_result.value());
 
@@ -159,7 +159,7 @@ auto GPU::select_physical_device(vkb::Instance& instance,
 #endif //VK_VALIDATION
 		.select();
 	if (!physical_device_selector_result) {
-		throw stx::runtime_error_fmt("Failed to find a suitable GPU for Vulkan: {}",
+		throw runtime_error_fmt("Failed to find a suitable GPU for Vulkan: {}",
 			physical_device_selector_result.error().message());
 	}
 	auto physical_device = physical_device_selector_result.value();
@@ -178,7 +178,7 @@ auto GPU::create_device(vkb::PhysicalDevice& physical_device) -> vkb::Device
 {
 	auto device_result = vkb::DeviceBuilder(physical_device).build();
 	if (!device_result)
-		throw stx::runtime_error_fmt("Failed to create Vulkan device: {}",
+		throw runtime_error_fmt("Failed to create Vulkan device: {}",
 			device_result.error().message());
 	auto device = vkb::Device(device_result.value());
 	volkLoadDevice(device);
@@ -271,7 +271,7 @@ auto GPU::create_swapchain(uvec2 size, vuk::Allocator& allocator, vkb::Device& d
 		)
 		.build();
 	if (!vkbswapchain_result)
-		throw stx::runtime_error_fmt("Failed to create the swapchain: {}",
+		throw runtime_error_fmt("Failed to create the swapchain: {}",
 			vkbswapchain_result.error().message());
 	auto vkbswapchain = vkbswapchain_result.value();
 

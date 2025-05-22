@@ -41,7 +41,6 @@ add_executable(Playnote
 )
 target_sources(Playnote PUBLIC
 	FILE_SET CXX_MODULES FILES
-	src/stx/except.cppm
 	src/io/audio_codec.cppm
 	src/io/bulk_request.cppm
 	src/io/file.cppm
@@ -66,6 +65,7 @@ target_sources(Playnote PUBLIC
 	src/preamble/concepts.cppm
 	src/preamble/math_ext.cppm
 	src/preamble/utility.cppm
+	src/preamble/except.cppm
 	src/preamble/types.cppm
 	src/preamble/math.cppm
 	src/preamble.cppm

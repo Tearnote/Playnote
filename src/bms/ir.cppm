@@ -26,7 +26,6 @@ module;
 export module playnote.bms.ir;
 
 import playnote.preamble;
-import playnote.stx.except;
 import playnote.util.charset;
 import playnote.bms.parser;
 import playnote.globals;
@@ -554,7 +553,7 @@ void IRCompiler::parse_header_unimplemented(IR&, HeaderCommand&& cmd, SlotMappin
 
 void IRCompiler::parse_header_unimplemented_critical(IR&, HeaderCommand&& cmd, SlotMappings&)
 {
-	throw stx::runtime_error_fmt("L{}: Critical unimplemented header: {}", cmd.line, to_utf8(cmd.header));
+	throw runtime_error_fmt("L{}: Critical unimplemented header: {}", cmd.line, to_utf8(cmd.header));
 }
 
 void IRCompiler::parse_channel_ignored_log(IR&, SingleChannelCommand&& cmd, SlotMappings&)
@@ -569,7 +568,7 @@ void IRCompiler::parse_channel_unimplemented(IR&, SingleChannelCommand&& cmd, Sl
 
 void IRCompiler::parse_channel_unimplemented_critical(IR&, SingleChannelCommand&& cmd, SlotMappings&)
 {
-	throw stx::runtime_error_fmt("L{}: Critical unimplemented channel: {}", cmd.line, to_utf8(cmd.channel));
+	throw runtime_error_fmt("L{}: Critical unimplemented channel: {}", cmd.line, to_utf8(cmd.channel));
 }
 
 void IRCompiler::parse_header_title(IR& ir, HeaderCommand&& cmd, SlotMappings&)
@@ -788,7 +787,7 @@ void IRCompiler::parse_channel_note(IR& ir, SingleChannelCommand&& cmd, SlotMapp
 		if (cmd.channel == "28") return IR::ChannelEvent::Type::Note_P2_Key6;
 		if (cmd.channel == "29") return IR::ChannelEvent::Type::Note_P2_Key7;
 		if (cmd.channel == "26") return IR::ChannelEvent::Type::Note_P2_KeyS;
-		throw stx::runtime_error_fmt("L{}: Unknown note channel: {}", cmd.line, to_utf8(cmd.value));
+		throw runtime_error_fmt("L{}: Unknown note channel: {}", cmd.line, to_utf8(cmd.value));
 	}();
 	auto slot_id = maps.get_slot_id(maps.wav, cmd.value);
 	L_TRACE("L{}: {} {}: {} -> #{}", cmd.line, to_string(cmd.position), IR::ChannelEvent::to_string(type), to_utf8(cmd.value), slot_id);

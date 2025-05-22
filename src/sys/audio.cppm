@@ -24,7 +24,6 @@ module;
 export module playnote.sys.audio;
 
 import playnote.preamble;
-import playnote.stx.except;
 import playnote.globals;
 
 namespace playnote::sys {
@@ -58,13 +57,13 @@ private:
 	template<typename T>
 	static auto ptr_check(T* ptr, std::string_view message = "libpipewire error") -> T*
 	{
-		if (!ptr) throw stx::system_error_fmt("{}", message);
+		if (!ptr) throw system_error_fmt("{}", message);
 		return ptr;
 	}
 
 	static void ret_check(int ret, std::string_view message = "libpipewire error")
 	{
-		if (ret < 0) throw stx::system_error_fmt("{}", message);
+		if (ret < 0) throw system_error_fmt("{}", message);
 	}
 };
 

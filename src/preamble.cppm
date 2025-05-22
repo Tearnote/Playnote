@@ -13,5 +13,6 @@ export import :container;
 export import :concepts;
 export import :math_ext;
 export import :utility;
+export import :except;
 export import :types;
 export import :math;
