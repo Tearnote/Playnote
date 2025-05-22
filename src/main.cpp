@@ -14,7 +14,6 @@ Entry point. Initializes basic facilities like logging and shared subsystems, th
 #include "util/log_macros.hpp"
 #include "config.hpp"
 
-import playnote.stx.math;
 import playnote.util.charset;
 import playnote.util.logger;
 import playnote.sys.window;
@@ -26,13 +25,12 @@ import playnote.globals;
 
 using namespace playnote; // Can't namespace main()
 using namespace std::chrono_literals;
-using stx::uvec2;
 
 auto run(int argc, char* argv[]) -> int
 {
 	auto scheduler_period = sys::SchedulerPeriod{1ms};
 	auto glfw = sys::GLFW{};
-	auto window = sys::Window{glfw, AppTitle, uvec2{640, 480}};
+	auto window = sys::Window{glfw, AppTitle, {640, 480}};
 
 	// Spawn all threads. Every thread is assumed to eventually finish
 	// once window.is_closing() is true
@@ -43,7 +41,7 @@ auto run(int argc, char* argv[]) -> int
 	return EXIT_SUCCESS;
 }
 
-auto main(int argc, char* argv[]) -> int
+auto main(int const argc, char* argv[]) -> int
 try {
 #if BUILD_TYPE == BUILD_DEBUG
 	sys::create_console();
