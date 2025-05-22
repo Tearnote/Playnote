@@ -2,7 +2,7 @@
 This software is dual-licensed. For more details, please consult LICENSE.txt.
 Copyright (c) 2025 Tearnote (Hubert Maraszek)
 
-stx/concepts.cppm:
+preamble/concepts.cppm:
 Useful generic concepts.
 */
 
@@ -63,11 +63,5 @@ export template<class F, typename Sig,
 	typename ArgsT = typename Unpack::args,
 	typename Rtype = typename Unpack::rtype>
 concept callable = applicable<F, ArgsT> && apply_results_in<F, Rtype, ArgsT>;
-
-// Constructs a type with overloaded operator()s, for use as a std::variant visitor
-export template<typename... Ts>
-struct visitor: Ts... {
-	using Ts::operator()...;
-};
 
 }

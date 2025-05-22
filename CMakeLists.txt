@@ -63,6 +63,7 @@ target_sources(Playnote PUBLIC
 	src/globals.cppm
 	src/preamble/concepts.cppm
 	src/preamble/math_ext.cppm
+	src/preamble/utility.cppm
 	src/preamble/types.cppm
 	src/preamble.cppm
 )
