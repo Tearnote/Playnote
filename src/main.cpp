@@ -36,11 +36,9 @@ auto run(int argc, char* argv[]) -> int
 
 	// Spawn all threads. Every thread is assumed to eventually finish
 	// once window.is_closing() is true
-	{
-		auto audio_thread_stub = std::jthread{audio_thread, std::ref(window), argc, argv};
-		auto render_thread_stub = std::jthread{render_thread, std::ref(window)};
-		input_thread(glfw, window);
-	}
+	auto audio_thread_stub = std::jthread{audio_thread, std::ref(window), argc, argv};
+	auto render_thread_stub = std::jthread{render_thread, std::ref(window)};
+	input_thread(glfw, window);
 
 	return EXIT_SUCCESS;
 }
