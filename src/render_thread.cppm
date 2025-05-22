@@ -13,11 +13,12 @@ module;
 
 export module playnote.render_thread;
 
+import playnote.preamble;
+import playnote.globals;
 import playnote.sys.window;
 import playnote.sys.gpu;
 import playnote.sys.os;
 import playnote.gfx.renderer;
-import playnote.globals;
 
 namespace playnote {
 
@@ -51,7 +52,7 @@ try {
 		FrameMark;
 	}
 }
-catch (std::exception const& e) {
+catch (exception const& e) {
 	L_CRIT("Uncaught exception: {}", e.what());
 	window.request_close();
 }

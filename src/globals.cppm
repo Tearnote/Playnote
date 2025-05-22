@@ -12,17 +12,17 @@ for inter-subsystem communication.
 */
 
 module;
-#include <optional>
 #include <unicode/numfmt.h>
 
 export module playnote.globals;
 
+import playnote.preamble;
 import playnote.util.logger;
 
 namespace playnote {
 
 // Global logger
-export auto g_logger = std::optional<util::Logger>{};
+export auto g_logger = optional<util::Logger>{};
 
 // Global integer formatter
 export auto* g_int_formatter = static_cast<icu::NumberFormat*>(nullptr);

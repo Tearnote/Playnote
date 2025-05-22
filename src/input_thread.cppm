@@ -8,16 +8,15 @@ Only the process's main thread can be the input thread.
 */
 
 module;
-#include <exception>
-#include <thread>
 #include "tracy/Tracy.hpp"
 #include "util/log_macros.hpp"
 
 export module playnote.input_thread;
 
+import playnote.preamble;
+import playnote.globals;
 import playnote.sys.window;
 import playnote.sys.os;
-import playnote.globals;
 
 namespace playnote {
 
@@ -28,10 +27,10 @@ try {
 	while (!window.is_closing()) {
 		glfw.poll();
 		FrameMarkNamed("input");
-		std::this_thread::yield();
+		yield();
 	}
 }
-catch (std::exception const& e) {
+catch (exception const& e) {
 	L_CRIT("Uncaught exception: {}", e.what());
 	window.request_close();
 }

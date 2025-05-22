@@ -7,24 +7,20 @@ Initializes audio and handles queueing of playback events.
 */
 
 module;
-#include <filesystem>
-#include <thread>
 #include "util/log_macros.hpp"
 
 export module playnote.audio_thread;
 
+import playnote.preamble;
+import playnote.globals;
 import playnote.io.file;
 import playnote.sys.window;
 import playnote.sys.audio;
 import playnote.sys.os;
 import playnote.bms.chart;
 import playnote.bms.ir;
-import playnote.globals;
 
 namespace playnote {
-
-namespace fs = std::filesystem;
-
 /*
 auto load_audio_file(std::string_view path) -> std::vector<float>
 {
@@ -68,7 +64,7 @@ auto load_audio_file(std::string_view path) -> std::vector<float>
 auto load_bms(bms::IRCompiler& compiler, fs::path const& path) -> bms::IR
 {
 	L_INFO("Loading BMS file \"{}\"", path.c_str());
-	auto file = io::read_file(path);
+	auto const file = io::read_file(path);
 	auto ir = compiler.compile(path, file.contents);
 	L_INFO("Loaded BMS file \"{}\" successfully", path.c_str());
 	return ir;
@@ -80,12 +76,12 @@ try {
 
 	auto audio = sys::Audio{};
 	auto bms_compiler = bms::IRCompiler{};
-	auto bms_ir = load_bms(bms_compiler, "songs/Ling Child/02_hyper.bme");
+	auto const bms_ir = load_bms(bms_compiler, "songs/Ling Child/02_hyper.bme");
 	auto bms_chart = bms::Chart::from_ir(bms_ir);
 	while (!window.is_closing())
-		std::this_thread::yield();
+		yield();
 }
-catch (std::exception const& e) {
+catch (exception const& e) {
 	L_CRIT("Uncaught exception: {}", e.what());
 	window.request_close();
 }
