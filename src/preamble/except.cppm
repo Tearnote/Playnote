@@ -16,6 +16,7 @@ module;
 export module playnote.preamble:except;
 
 import :utility;
+import :string;
 
 namespace playnote {
 
@@ -25,7 +26,7 @@ export using std::exception;
 template<typename Err, typename... Args>
 auto typed_error_fmt(std::format_string<Args...> fmt, Args&&... args) -> Err
 {
-	return Err{std::format(fmt, forward<Args>(args)...)};
+	return Err{format(fmt, forward<Args>(args)...)};
 }
 
 // A std::runtime_error with a formatted message
@@ -46,7 +47,7 @@ auto logic_error_fmt(std::format_string<Args...> fmt, Args&&... args)
 export template<typename... Args>
 auto system_error_fmt(std::format_string<Args...> fmt, Args&&... args)
 {
-	return std::system_error{errno, std::generic_category(), std::format(fmt, forward<Args>(args)...)};
+	return std::system_error{errno, std::generic_category(), format(fmt, forward<Args>(args)...)};
 };
 
 }

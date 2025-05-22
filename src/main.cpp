@@ -6,14 +6,12 @@ main.cpp:
 Entry point. Initializes basic facilities like logging and shared subsystems, then spawns threads.
 */
 
-#include <functional>
-#include <exception>
-#include <thread>
-#include <chrono>
 #include <print>
 #include "util/log_macros.hpp"
 #include "config.hpp"
 
+import playnote.preamble;
+import playnote.globals;
 import playnote.util.charset;
 import playnote.util.logger;
 import playnote.sys.window;
@@ -21,10 +19,8 @@ import playnote.sys.os;
 import playnote.render_thread;
 import playnote.audio_thread;
 import playnote.input_thread;
-import playnote.globals;
 
 using namespace playnote; // Can't namespace main()
-using namespace std::chrono_literals;
 
 auto run() -> int
 {
@@ -34,8 +30,8 @@ auto run() -> int
 
 	// Spawn all threads. Every thread is assumed to eventually finish
 	// once window.is_closing() is true
-	auto audio_thread_stub = std::jthread{audio_thread, std::ref(window)};
-	auto render_thread_stub = std::jthread{render_thread, std::ref(window)};
+	auto audio_thread_stub = jthread{audio_thread, ref(window)};
+	auto render_thread_stub = jthread{render_thread, ref(window)};
 	input_thread(glfw, window);
 
 	return EXIT_SUCCESS;
@@ -51,11 +47,11 @@ try {
 	util::init_global_formatters();
 	return run();
 }
-catch (std::exception const& e) {
+catch (exception const& e) {
 	// Handle any exception that happened outside of input_thread()
 	if (g_logger)
 		L_CRIT("Uncaught exception: {}", e.what());
 	else
-		std::print(stderr, "Uncaught exception: {}", e.what());
+		print(stderr, "Uncaught exception: {}", e.what());
 	return EXIT_FAILURE;
 }
