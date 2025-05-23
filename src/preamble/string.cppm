@@ -9,33 +9,24 @@ Imports for string and text IO.
 module;
 #include <filesystem>
 #include <string>
-#include <format>
-#include <print>
+#include "quill/bundled/fmt/format.h"
 
 export module playnote.preamble:string;
+
+import :os;
 
 namespace playnote {
 
 export using std::string;
-export using std::format;
-export using std::print;
+export using fmtquill::format;
+export using fmtquill::print;
 
 }
 
-// Simple fs::path formatter
-#ifndef __cpp_lib_format_path
-export template<typename CharT>
-struct std::formatter<std::filesystem::path, CharT> {
-	constexpr auto parse(std::format_parse_context& ctx) {
-		auto it = ctx.begin();
-		while (it != ctx.end() && *it != '}')
-			it += 1;
-		return it;
+export template<>
+struct fmtquill::formatter<playnote::fs::path>: formatter<std::string_view> {
+	auto format(playnote::fs::path const& c, format_context& ctx) const -> format_context::iterator
+	{
+		return formatter<std::string_view>::format(c.c_str(), ctx);
 	}
-
-	auto format(const std::filesystem::path& path, std::format_context& ctx) const {
-		return std::format_to(ctx.out(), "\"{}\"", path.c_str());
-	}
-
 };
-#endif

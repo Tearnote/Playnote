@@ -11,7 +11,7 @@ module;
 #include <exception>
 #include <stdexcept>
 #include <cerrno>
-#include <format>
+#include "quill/bundled/fmt/base.h"
 
 export module playnote.preamble:except;
 
@@ -26,21 +26,21 @@ export using std::runtime_error;
 
 // An arbitrary exception type with a formatted message
 template<typename Err, typename... Args>
-auto typed_error_fmt(std::format_string<Args...> fmt, Args&&... args) -> Err
+auto typed_error_fmt(fmtquill::format_string<Args...> fmt, Args&&... args) -> Err
 {
 	return Err{format(fmt, forward<Args>(args)...)};
 }
 
 // A std::runtime_error with a formatted message
 export template<typename... Args>
-auto runtime_error_fmt(std::format_string<Args...> fmt, Args&&... args)
+auto runtime_error_fmt(fmtquill::format_string<Args...> fmt, Args&&... args)
 {
 	return typed_error_fmt<std::runtime_error>(fmt, forward<Args>(args)...);
 };
 
 // A std::logic_error with a formatted message
 export template<typename... Args>
-auto logic_error_fmt(std::format_string<Args...> fmt, Args&&... args)
+auto logic_error_fmt(fmtquill::format_string<Args...> fmt, Args&&... args)
 {
 	return typed_error_fmt<std::logic_error>(fmt, forward<Args>(args)...);
 };
@@ -53,7 +53,7 @@ export auto system_error(string const& msg)
 
 // A std::system_error with a formatted message, using errno automatically
 export template<typename... Args>
-auto system_error_fmt(std::format_string<Args...> fmt, Args&&... args)
+auto system_error_fmt(fmtquill::format_string<Args...> fmt, Args&&... args)
 {
 	return std::system_error{errno, std::generic_category(), format(fmt, forward<Args>(args)...)};
 };
