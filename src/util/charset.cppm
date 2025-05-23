@@ -8,9 +8,6 @@ Text encoding detection and conversion.
 
 module;
 #include <string_view>
-#include <string>
-#include <vector>
-#include <span>
 #include <unicode/errorcode.h>
 #include <unicode/ucsdet.h>
 #include <unicode/unistr.h>
@@ -60,14 +57,14 @@ export auto handle_icu_error(UErrorCode err)
 
 // Convert a UString to a std::string.
 // Useful for debug output, but do not use carelessly as this allocates.
-export auto to_utf8(UString const& str) -> std::string
+export auto to_utf8(UString const& str) -> string
 {
-	auto result = std::string{};
+	auto result = string{};
 	return str.toUTF8String(result);
 }
 
 // Returns true if the encoding is one of the known BMS encodings.
-auto is_supported_encoding(std::string_view encoding) -> bool
+auto is_supported_encoding(string const& encoding) -> bool
 {
 	if (encoding == "UTF-8")
 		return true;
@@ -81,9 +78,9 @@ auto is_supported_encoding(std::string_view encoding) -> bool
 // Try to detect the encoding of a passage of text.
 // A few encodings known to be common to BMS files are supported. If none of them match,
 // an empty string is returned.
-export auto detect_text_encoding(std::span<char const> text) -> Encoding
+export auto detect_text_encoding(span<char const> text) -> Encoding
 {
-	using Detector = std::unique_ptr<UCharsetDetector, decltype([](auto* p) {
+	using Detector = unique_ptr<UCharsetDetector, decltype([](auto* p) {
 		ucsdet_close(p);
 	})>;
 
@@ -110,9 +107,9 @@ export auto detect_text_encoding(std::span<char const> text) -> Encoding
 
 // Convert a passage of text from a given encoding to Unicode (UTF-16).
 // Any bytes that are invalid in the specified encoding are turned into replacement characters.
-export auto text_to_unicode(std::span<char const> text, Encoding const& encoding) -> UString
+export auto text_to_unicode(span<char const> text, Encoding const& encoding) -> UString
 {
-	using Converter = std::unique_ptr<UConverter, decltype([](auto* p) {
+	using Converter = unique_ptr<UConverter, decltype([](auto* p) {
 		ucnv_close(p);
 	})>;
 

@@ -12,6 +12,7 @@ module;
 #include <optional>
 #include <variant>
 #include <utility>
+#include <memory>
 #include <tuple>
 
 export module playnote.preamble:utility;
@@ -19,6 +20,7 @@ export module playnote.preamble:utility;
 namespace playnote {
 
 export using std::optional;
+export using std::nullopt;
 export using std::variant;
 export using std::move;
 export using std::forward;
@@ -26,6 +28,7 @@ export using std::pair;
 export using std::tuple;
 export using std::ref;
 export using std::initializer_list;
+export using std::unique_ptr;
 
 // Constructs a type with overloaded operator()s, for use as a std::variant visitor
 export template<typename... Ts>

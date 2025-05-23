@@ -7,8 +7,6 @@ A wrapper for a C-style resource, guaranteeing that the cleanup function will be
 */
 
 module;
-#include <functional>
-#include <optional>
 
 export module playnote.util.raii;
 
@@ -23,7 +21,7 @@ public:
 
 	RAIIResource() = default;
 	RAIIResource(T const& resource): resource(resource) {}
-	~RAIIResource() { if (resource) std::invoke(Func{}, *resource); }
+	~RAIIResource() { if (resource) invoke(Func{}, *resource); }
 
 	auto get() -> T* { return &resource.value(); }
 	auto get() const -> T const* { return &resource.value(); }
@@ -35,20 +33,20 @@ public:
 	// Safely moveable
 	RAIIResource(RAIIResource const&) = delete;
 	auto operator=(RAIIResource const&) -> RAIIResource& = delete;
-	RAIIResource(RAIIResource&& other) noexcept { *this = std::move(other); }
+	RAIIResource(RAIIResource&& other) noexcept { *this = move(other); }
 	auto operator=(RAIIResource&&) noexcept -> RAIIResource&;
 
 	operator bool() const { return resource; }
 
 private:
-	std::optional<T> resource{std::nullopt}; // nullopt represents uninitialized and moved-out-from states
+	optional<T> resource{nullopt}; // nullopt represents uninitialized and moved-out-from states
 };
 
 template<typename T, callable<void(T&)> Func>
 auto RAIIResource<T, Func>::operator=(RAIIResource&& other) noexcept -> RAIIResource&
 {
-	resource = std::move(other.resource);
-	other.resource = std::nullopt;
+	resource = move(other.resource);
+	other.resource = nullopt;
 	return *this;
 }
 

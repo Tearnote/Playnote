@@ -7,7 +7,6 @@ Wrapper for the Quill threaded async logging library.
 */
 
 module;
-#include <utility>
 #include "libassert/assert.hpp"
 #include "quill/sinks/ConsoleSink.h"
 #include "quill/sinks/FileSink.h"
@@ -17,6 +16,8 @@ module;
 #include "config.hpp"
 
 export module playnote.util.logger;
+
+import playnote.preamble;
 
 namespace playnote::util {
 
@@ -44,7 +45,7 @@ Logger::Logger()
 	file_cfg.set_open_mode('w');
 	auto file_sink = quill::Frontend::create_or_get_sink<quill::FileSink>(LogfilePath, file_cfg);
 	logger = quill::Frontend::create_or_get_logger("root",
-		{std::move(console_sink), std::move(file_sink)},
+		{move(console_sink), move(file_sink)},
 		quill::PatternFormatterOptions{
 			"%(time) [%(log_level_short_code)] %(message)",
 			"%H:%M:%S.%Qms"
