@@ -7,16 +7,13 @@ A BMS format parser - turns a complete BMS file into a list of commands.
 */
 
 module;
-#include <string_view>
-#include <variant>
-#include <span>
 #include "util/log_macros.hpp"
 
 export module playnote.bms.parser;
 
 import playnote.preamble;
-import playnote.util.charset;
 import playnote.globals;
+import playnote.util.charset;
 
 namespace playnote::bms {
 
@@ -55,8 +52,8 @@ auto parse_channel(int line_index, UString&& command) -> ChannelCommand
 	return {
 		.line = line_index,
 		.measure = measure,
-		.channel = std::move(channel),
-		.value = std::move(value),
+		.channel = move(channel),
+		.value = move(value),
 	};
 }
 
@@ -68,7 +65,7 @@ auto parse_header(int line_index, UString&& command) -> HeaderCommand
 	if (first_space == -1) first_space = command.length();
 	auto first_tab = command.indexOf('\t');
 	if (first_tab == -1) first_tab = command.length();
-	auto first_whitespace = std::min(first_space, first_tab);
+	auto first_whitespace = min(first_space, first_tab);
 
 	auto header = UString{command, 1, first_whitespace - 1};
 	header.toUpper();
@@ -98,22 +95,22 @@ auto parse_header(int line_index, UString&& command) -> HeaderCommand
 	return {
 		.line = line_index,
 		.header = header,
-		.slot = std::move(slot),
-		.value = std::move(value)
+		.slot = move(slot),
+		.value = move(value)
 	};
 }
 
 // Parse a line into the appropriate command.
 // If the line doesn't contain a valid command, std::monostate is returned.
-auto parse_line(int line_index, UString&& line) -> std::variant<std::monostate, HeaderCommand, ChannelCommand>
+auto parse_line(int line_index, UString&& line) -> variant<monostate, HeaderCommand, ChannelCommand>
 {
 	line.trim(); // BMS occasionally uses leading whitespace
 	if (line.isEmpty()) return {};
 	if (line[0] != '#') return {}; // Ignore comments
 	if (line[1] >= '0' && line[1] <= '9')
-		return parse_channel(line_index, std::move(line));
+		return parse_channel(line_index, move(line));
 	else
-		return parse_header(line_index, std::move(line));
+		return parse_header(line_index, move(line));
 }
 
 // Parse an entire BMS file, running the provided functions once for each command.
@@ -123,7 +120,7 @@ export template<
 	callable<void(HeaderCommand&&)> HFunc,
 	callable<void(ChannelCommand&&)> CFunc
 >
-void parse(std::span<char const> bms_file_contents, HFunc&& header_func, CFunc&& channel_func)
+void parse(span<char const> bms_file_contents, HFunc&& header_func, CFunc&& channel_func)
 {
 	// Convert file to UTF-16
 	auto encoding = util::detect_text_encoding(bms_file_contents);
@@ -149,10 +146,10 @@ void parse(std::span<char const> bms_file_contents, HFunc&& header_func, CFunc&&
 
 		// Parse line and dispatch
 		auto result = parse_line(line_index, {bms_file_u16, pos, split_pos - pos});
-		if (std::holds_alternative<HeaderCommand>(result))
-			header_func(std::move(std::get<HeaderCommand>(result)));
-		else if (std::holds_alternative<ChannelCommand>(result))
-			channel_func(std::move(std::get<ChannelCommand>(result)));
+		if (holds_alternative<HeaderCommand>(result))
+			header_func(move(get<HeaderCommand>(result)));
+		else if (holds_alternative<ChannelCommand>(result))
+			channel_func(move(get<ChannelCommand>(result)));
 
 		pos = split_pos + 1; // Skip over the newline
 		line_index += 1;

@@ -27,5 +27,10 @@ using unordered_map = ankerl::unordered_dense::map<Key, T, Hash>;
 export using std::span;
 export using std::begin;
 export using std::end;
+namespace pmr {
+	export using std::pmr::vector;
+	export using std::pmr::monotonic_buffer_resource;
+	export using std::pmr::polymorphic_allocator;
+}
 
 }

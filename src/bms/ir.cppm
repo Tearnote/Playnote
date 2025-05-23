@@ -8,16 +8,6 @@ but condensed, cleaned and serializable to a binary file.
 */
 
 module;
-#include <memory_resource>
-#include <string_view>
-#include <filesystem>
-#include <exception>
-#include <utility>
-#include <variant>
-#include <format>
-#include <memory>
-#include <ranges>
-#include <string>
 #include <openssl/evp.h>
 #include <boost/rational.hpp>
 #include "ankerl/unordered_dense.h"
@@ -32,10 +22,6 @@ import playnote.globals;
 
 namespace playnote::bms {
 
-namespace views = std::ranges::views;
-namespace fs = std::filesystem;
-template<typename Key, typename T, typename Hash>
-using unordered_map = ankerl::unordered_dense::map<Key, T, Hash>;
 using util::UStringHash;
 using util::UString;
 using util::to_float;
@@ -47,9 +33,9 @@ using bms::HeaderCommand;
 using NotePosition = boost::rational<int>;
 
 // Print a note position for debug output
-export auto to_string(NotePosition pos) -> std::string
+export auto to_string(NotePosition pos) -> string
 {
-	return std::format("{} {}/{}",
+	return format("{} {}/{}",
 		pos.numerator() / pos.denominator(),
 		pos.numerator() % pos.denominator(),
 		pos.denominator());
@@ -105,7 +91,7 @@ public:
 			};
 			Level level;
 		};
-		using ParamsType = std::variant<
+		using ParamsType = variant<
 			std::monostate, //  0
 			Title*,         //  1
 			Subtitle*,      //  2
@@ -170,13 +156,13 @@ private:
 
 	// As IR events are typically iterated from start to end, a linear allocator is used when
 	// building the structures to maximize cache efficiency
-	std::unique_ptr<std::pmr::monotonic_buffer_resource> buffer_resource; // unique_ptr makes it moveable
-	std::pmr::polymorphic_allocator<> allocator;
+	unique_ptr<pmr::monotonic_buffer_resource> buffer_resource; // unique_ptr makes it moveable
+	pmr::polymorphic_allocator<> allocator;
 
 	fs::path path;
-	std::array<uint8, 16> md5{};
-	std::pmr::vector<HeaderEvent> header_events;
-	std::pmr::vector<ChannelEvent> channel_events;
+	array<uint8, 16> md5{};
+	pmr::vector<HeaderEvent> header_events;
+	pmr::vector<ChannelEvent> channel_events;
 
 	int wav_slot_count = 0;
 
@@ -189,7 +175,7 @@ private:
 	void add_header_event(T&& event)
 	{
 		header_events.emplace_back(HeaderEvent{
-			.params = allocator.new_object<T>(std::forward<T>(event)),
+			.params = allocator.new_object<T>(forward<T>(event)),
 		});
 	}
 
@@ -206,7 +192,7 @@ public:
 	IRCompiler();
 
 	// Generate IR from an unmodified BMS file. The path is only used as metadata.
-	auto compile(fs::path const& path, std::span<char const> bms_file_contents) -> IR;
+	auto compile(fs::path const& path, span<char const> bms_file_contents) -> IR;
 
 private:
 	// A BMS channel command can contain multiple notes; we split them up into these
@@ -291,7 +277,7 @@ auto IR::ChannelEvent::to_string(Type type) -> char const*
 }
 
 IR::IR():
-	buffer_resource{std::make_unique<std::pmr::monotonic_buffer_resource>()},
+	buffer_resource{make_unique<pmr::monotonic_buffer_resource>()},
 	allocator{buffer_resource.get()},
 	header_events{allocator},
 	channel_events{allocator} {}
@@ -302,7 +288,7 @@ IRCompiler::IRCompiler()
 	register_channel_handlers();
 }
 
-auto IRCompiler::compile(fs::path const& path, std::span<char const> bms_file_contents) -> IR
+auto IRCompiler::compile(fs::path const& path, span<char const> bms_file_contents) -> IR
 {
 	L_INFO("Compiling BMS file \"{}\"", path.c_str());
 	auto ir = IR{};
@@ -314,8 +300,8 @@ auto IRCompiler::compile(fs::path const& path, std::span<char const> bms_file_co
 
 	// Process UTF-16 converted and cleanly split BMS file commands
 	bms::parse(bms_file_contents,
-		[&](HeaderCommand&& cmd) { handle_header(ir, std::move(cmd), maps); },
-		[&](ChannelCommand&& cmd) { handle_channel(ir, std::move(cmd), maps); }
+		[&](HeaderCommand&& cmd) { handle_header(ir, move(cmd), maps); },
+		[&](ChannelCommand&& cmd) { handle_channel(ir, move(cmd), maps); }
 	);
 
 	ir.wav_slot_count = maps.wav.size();
@@ -487,7 +473,7 @@ void IRCompiler::handle_header(IR& ir, HeaderCommand&& cmd, SlotMappings& maps)
 	}
 	if (!cmd.slot.isEmpty())
 		cmd.slot.padLeading(2, '0'); // Just in case someone forgot the leading 0
-	(this->*header_handlers.at(cmd.header))(ir, std::move(cmd), maps);
+	(this->*header_handlers.at(cmd.header))(ir, move(cmd), maps);
 }
 
 void IRCompiler::handle_channel(IR& ir, ChannelCommand&& cmd, SlotMappings& maps)
@@ -521,7 +507,7 @@ void IRCompiler::handle_channel(IR& ir, ChannelCommand&& cmd, SlotMappings& maps
 			.line = cmd.line,
 			.position = cmd.measure,
 			.channel = cmd.channel,
-			.value = std::move(cmd.value),
+			.value = move(cmd.value),
 		}, maps);
 	} else { // Expected channel value is a series of 2-character slots
 		// Chop off unpaired characters
@@ -580,7 +566,7 @@ void IRCompiler::parse_header_title(IR& ir, HeaderCommand&& cmd, SlotMappings&)
 
 	L_TRACE("L{}: Title: {}", cmd.line, to_utf8(cmd.value));
 	ir.add_header_event(IR::HeaderEvent::Title{
-		.title = std::move(cmd.value),
+		.title = move(cmd.value),
 	});
 }
 
@@ -593,7 +579,7 @@ void IRCompiler::parse_header_subtitle(IR& ir, HeaderCommand&& cmd, SlotMappings
 
 	L_TRACE("L{}: Subtitle: {}", cmd.line, to_utf8(cmd.value));
 	ir.add_header_event(IR::HeaderEvent::Subtitle{
-		.subtitle = std::move(cmd.value),
+		.subtitle = move(cmd.value),
 	});
 }
 
@@ -606,7 +592,7 @@ void IRCompiler::parse_header_artist(IR& ir, HeaderCommand&& cmd, SlotMappings&)
 
 	L_TRACE("L{}: Artist: {}", cmd.line, to_utf8(cmd.value));
 	ir.add_header_event(IR::HeaderEvent::Artist{
-		.artist = std::move(cmd.value),
+		.artist = move(cmd.value),
 	});
 }
 
@@ -619,7 +605,7 @@ void IRCompiler::parse_header_subartist(IR& ir, HeaderCommand&& cmd, SlotMapping
 
 	L_TRACE("L{}: Subartist: {}", cmd.line, to_utf8(cmd.value));
 	ir.add_header_event(IR::HeaderEvent::Subartist{
-		.subartist = std::move(cmd.value),
+		.subartist = move(cmd.value),
 	});
 }
 
@@ -632,7 +618,7 @@ void IRCompiler::parse_header_genre(IR& ir, HeaderCommand&& cmd, SlotMappings&)
 
 	L_TRACE("L{}: Genre: {}", cmd.line, to_utf8(cmd.value));
 	ir.add_header_event(IR::HeaderEvent::Genre{
-		.genre = std::move(cmd.value),
+		.genre = move(cmd.value),
 	});
 }
 
@@ -645,7 +631,7 @@ void IRCompiler::parse_header_url(IR& ir, HeaderCommand&& cmd, SlotMappings&)
 
 	L_TRACE("L{}: URL: {}", cmd.line, to_utf8(cmd.value));
 	ir.add_header_event(IR::HeaderEvent::URL{
-		.url = std::move(cmd.value),
+		.url = move(cmd.value),
 	});
 }
 
@@ -658,7 +644,7 @@ void IRCompiler::parse_header_email(IR& ir, HeaderCommand&& cmd, SlotMappings&)
 
 	L_TRACE("L{}: URL: {}", cmd.line, to_utf8(cmd.value));
 	ir.add_header_event(IR::HeaderEvent::Email{
-		.email = std::move(cmd.value),
+		.email = move(cmd.value),
 	});
 }
 
@@ -679,7 +665,7 @@ void IRCompiler::parse_header_player(IR& ir, HeaderCommand&& cmd, SlotMappings&)
 		.count = count,
 	});
 }
-catch (std::exception const&) {
+catch (exception const&) {
 	L_WARN("L{}: Player header has an invalid value: {}", cmd.line, to_utf8(cmd.value));
 }
 
@@ -700,7 +686,7 @@ void IRCompiler::parse_header_bpm(IR& ir, HeaderCommand&& cmd, SlotMappings&) tr
 		.bpm = bpm,
 	});
 }
-catch (std::exception const&) {
+catch (exception const&) {
 	L_WARN("L{}: BPM header has an invalid value: {}", cmd.line, to_utf8(cmd.value));
 }
 

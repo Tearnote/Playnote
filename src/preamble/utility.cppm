@@ -22,13 +22,19 @@ namespace playnote {
 export using std::optional;
 export using std::nullopt;
 export using std::variant;
+export using std::monostate;
+export using std::holds_alternative;
+export using std::get;
 export using std::move;
 export using std::forward;
 export using std::pair;
+export using std::make_pair;
 export using std::tuple;
+export using std::make_tuple;
 export using std::ref;
 export using std::initializer_list;
 export using std::unique_ptr;
+export using std::make_unique;
 export using std::to_underlying;
 
 // Constructs a type with overloaded operator()s, for use as a std::variant visitor

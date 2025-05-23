@@ -7,11 +7,6 @@ A definite, playable rhythm game chart, constructed from an IR. Tracks playback 
 */
 
 module;
-#include <optional>
-#include <utility>
-#include <vector>
-#include <chrono>
-#include <array>
 #include "util/log_macros.hpp"
 
 export module playnote.bms.chart;
@@ -25,7 +20,6 @@ import playnote.globals;
 
 namespace playnote::bms {
 
-namespace chrono = std::chrono;
 using io::BulkRequest;
 using io::AudioCodec;
 using util::UString;
@@ -33,15 +27,15 @@ using util::to_utf8;
 
 export class Chart {
 public:
-	static auto from_ir(IR const&) -> std::pair<Chart, BulkRequest>;
+	static auto from_ir(IR const&) -> pair<Chart, BulkRequest>;
 
 private:
 	struct Note {
-		chrono::nanoseconds timestamp;
+		nanoseconds timestamp;
 		int slot;
 	};
 	struct Lane {
-		std::vector<Note> notes;
+		vector<Note> notes;
 		int next_note;
 	};
 	enum class LaneType {
@@ -75,11 +69,11 @@ private:
 	UString artist;
 	float bpm{130}; // BMS spec default
 
-	std::array<Lane, static_cast<usize>(LaneType::Size)> lanes;
-	std::vector<std::optional<Slot>> slots;
+	array<Lane, static_cast<usize>(LaneType::Size)> lanes;
+	vector<optional<Slot>> slots;
 };
 
-auto Chart::from_ir(IR const& ir) -> std::pair<Chart, BulkRequest>
+auto Chart::from_ir(IR const& ir) -> pair<Chart, BulkRequest>
 {
 	auto chart = Chart{};
 
@@ -106,7 +100,7 @@ auto Chart::from_ir(IR const& ir) -> std::pair<Chart, BulkRequest>
 	});
 	L_INFO("Built chart \"{}\"", to_utf8(chart.title));
 
-	return std::make_pair(chart, requests);
+	return make_pair(chart, requests);
 }
 
 }
