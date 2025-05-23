@@ -32,7 +32,7 @@ public:
 
 private:
 	PatternFormatterOptions const Pattern{
-		"%(time) [%(log_level_short_code)] %(message)",
+		"%(time) [%(log_level_short_code)] [%(logger)] %(message)",
 		"%H:%M:%S.%Qms"
 	};
 	static auto constexpr ShortCodes = to_array<string>({
