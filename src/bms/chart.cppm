@@ -22,8 +22,6 @@ namespace playnote::bms {
 
 using io::BulkRequest;
 using io::AudioCodec;
-using util::UString;
-using util::to_utf8;
 
 export class Chart {
 public:
@@ -65,8 +63,8 @@ private:
 
 	Chart() = default;
 
-	UString title;
-	UString artist;
+	string title;
+	string artist;
 	float bpm{130}; // BMS spec default
 
 	array<Lane, static_cast<usize>(LaneType::Size)> lanes;
@@ -91,14 +89,14 @@ auto Chart::from_ir(IR const& ir) -> pair<Chart, BulkRequest>
 				chart.slots[wav_params->slot].emplace(Slot{});
 				requests.enqueue<AudioCodec>(
 					chart.slots[wav_params->slot]->sample,
-					to_utf8(wav_params->name),
+					wav_params->name,
 					{"wav", "ogg", "mp3", "flac", "opus"}
 				);
 			},
 			[](auto&&) {}
 		});
 	});
-	INFO("Built chart \"{}\"", to_utf8(chart.title));
+	INFO("Built chart \"{}\"", chart.title);
 
 	return make_pair(chart, requests);
 }

@@ -11,7 +11,6 @@ Entry point. Initializes basic facilities like logging and shared subsystems, th
 #include "config.hpp"
 
 import playnote.preamble;
-import playnote.util.charset;
 import playnote.util.logger;
 import playnote.sys.window;
 import playnote.sys.os;
@@ -43,7 +42,6 @@ try {
 #endif
 	auto logger_stub = globals::logger.provide(LogfilePath, LoggingLevel);
 	INFO("{} {}.{}.{} starting up", AppTitle, AppVersion[0], AppVersion[1], AppVersion[2]);
-	util::init_global_formatters();
 	return run();
 }
 catch (exception const& e) {

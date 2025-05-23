@@ -17,37 +17,34 @@ import playnote.util.logger;
 
 namespace playnote::bms {
 
-using util::UString;
-using util::to_int;
-
 // A "header" type BMS command
 export struct HeaderCommand {
 	int line;
-	UString header;
-	UString slot;
-	UString value;
+	string header;
+	string slot;
+	string value;
 };
 
 // A "channel" type BMS command
 export struct ChannelCommand {
 	int line;
 	int measure;
-	UString channel;
-	UString value;
+	string channel;
+	string value;
 };
 
 // Parse a known "header" type command into its individual components.
 // If the command is malformed, measure will be set to -1 which is otherwise an invalid value.
-auto parse_channel(int line_index, UString&& command) -> ChannelCommand
+auto parse_channel(int line_index, string&& command) -> ChannelCommand
 {
-	auto colon_pos = command.indexOf(':');
+	auto colon_pos = command.find_first_of(':');
 	if (colon_pos != 6 || command.length() < 9) return {-1};
 
-	auto measure = to_int({command, 1, 3}); // We checked that at least the first character is a digit, so this won't throw
-	auto channel = UString{command, 4, 2};
-	channel.toUpper();
-	auto value = UString{command, 7};
-	value.toUpper();
+	auto measure = lexical_cast<int>(string{command, 1, 3}); // We checked that at least the first character is a digit, so this won't throw
+	auto channel = string{command, 4, 2};
+	to_upper(channel);
+	auto value = string{command, 7};
+	to_upper(value);
 
 	return {
 		.line = line_index,
@@ -59,38 +56,38 @@ auto parse_channel(int line_index, UString&& command) -> ChannelCommand
 
 // Parse a known "header" type command into its individual components.
 // Some fields might be returned empty if the command is malformed.
-auto parse_header(int line_index, UString&& command) -> HeaderCommand
+auto parse_header(int line_index, string&& command) -> HeaderCommand
 {
-	auto first_space = command.indexOf(' ');
-	if (first_space == -1) first_space = command.length();
-	auto first_tab = command.indexOf('\t');
-	if (first_tab == -1) first_tab = command.length();
+	auto first_space = command.find_first_of(' ');
+	if (first_space == string::npos) first_space = command.length();
+	auto first_tab = command.find_first_of('\t');
+	if (first_tab == string::npos) first_tab = command.length();
 	auto first_whitespace = min(first_space, first_tab);
 
-	auto header = UString{command, 1, first_whitespace - 1};
-	header.toUpper();
-	auto value = UString{command, first_whitespace + 1};
+	auto header = string{command, 1, first_whitespace - 1};
+	to_upper(header);
+	auto value = first_whitespace < command.size()? string{command, first_whitespace + 1} : "";
 
-	auto slot = UString{};
-	auto extract_slot = [&](int start) {
-		slot = UString{header, start};
-		header.truncate(start);
+	auto slot = string{};
+	auto extract_slot = [&](usize start) {
+		slot = string{header, start};
+		header.resize(start);
 	};
-	     if (header.startsWith("WAV"   )) extract_slot(3);
-	else if (header.startsWith("BMP"   )) extract_slot(3);
-	else if (header.startsWith("BGA"   )) extract_slot(3);
-	else if (header.startsWith("BPM"   )) extract_slot(3); // This will also match BPM rather than BPMxx, but slot will end up empty anyway
-	else if (header.startsWith("TEXT"  )) extract_slot(4);
-	else if (header.startsWith("SONG"  )) extract_slot(4);
-	else if (header.startsWith("@BGA"  )) extract_slot(4);
-	else if (header.startsWith("STOP"  )) extract_slot(4);
-	else if (header.startsWith("ARGB"  )) extract_slot(4);
-	else if (header.startsWith("SEEK"  )) extract_slot(4);
-	else if (header.startsWith("EXBPM" )) extract_slot(5);
-	else if (header.startsWith("EXWAV" )) extract_slot(5);
-	else if (header.startsWith("SWBGA" )) extract_slot(5);
-	else if (header.startsWith("EXRANK")) extract_slot(6);
-	else if (header.startsWith("CHANGEOPTION")) extract_slot(12);
+	     if (header.starts_with("WAV"   )) extract_slot(3);
+	else if (header.starts_with("BMP"   )) extract_slot(3);
+	else if (header.starts_with("BGA"   )) extract_slot(3);
+	else if (header.starts_with("BPM"   )) extract_slot(3); // This will also match BPM rather than BPMxx, but slot will end up empty anyway
+	else if (header.starts_with("TEXT"  )) extract_slot(4);
+	else if (header.starts_with("SONG"  )) extract_slot(4);
+	else if (header.starts_with("@BGA"  )) extract_slot(4);
+	else if (header.starts_with("STOP"  )) extract_slot(4);
+	else if (header.starts_with("ARGB"  )) extract_slot(4);
+	else if (header.starts_with("SEEK"  )) extract_slot(4);
+	else if (header.starts_with("EXBPM" )) extract_slot(5);
+	else if (header.starts_with("EXWAV" )) extract_slot(5);
+	else if (header.starts_with("SWBGA" )) extract_slot(5);
+	else if (header.starts_with("EXRANK")) extract_slot(6);
+	else if (header.starts_with("CHANGEOPTION")) extract_slot(12);
 
 	return {
 		.line = line_index,
@@ -102,10 +99,10 @@ auto parse_header(int line_index, UString&& command) -> HeaderCommand
 
 // Parse a line into the appropriate command.
 // If the line doesn't contain a valid command, std::monostate is returned.
-auto parse_line(int line_index, UString&& line) -> variant<monostate, HeaderCommand, ChannelCommand>
+auto parse_line(int line_index, string&& line) -> variant<monostate, HeaderCommand, ChannelCommand>
 {
-	line.trim(); // BMS occasionally uses leading whitespace
-	if (line.isEmpty()) return {};
+	trim(line); // BMS occasionally uses leading whitespace
+	if (line.size() < 2) return {};
 	if (line[0] != '#') return {}; // Ignore comments
 	if (line[1] >= '0' && line[1] <= '9')
 		return parse_channel(line_index, move(line));
@@ -122,26 +119,26 @@ export template<
 >
 void parse(span<char const> bms_file_contents, util::Logger::Category* cat, HFunc&& header_func, CFunc&& channel_func)
 {
-	// Convert file to UTF-16
+	// Convert file to UTF-8
 	auto encoding = util::detect_text_encoding(bms_file_contents);
 	if (!util::is_supported_encoding(encoding))
 		WARN_AS(cat, "Unexpected encoding #{}, proceeding with heuristics", to_underlying(encoding));
-	auto bms_file_u16 = util::text_to_unicode(bms_file_contents, encoding);
+	auto bms_file_u8 = util::text_to_unicode(bms_file_contents, encoding);
 
 	// Normalize line endings
-	bms_file_u16.findAndReplace("\r\n", "\n");
-	bms_file_u16.findAndReplace("\r", "\n");
+	replace_all(bms_file_u8, "\r\n", "\n");
+	replace_all(bms_file_u8, "\r", "\n");
 
 	// Split into lines
-	auto pos = 0;
-	auto len = bms_file_u16.length();
+	auto pos = 0zu;
+	auto len = bms_file_u8.length();
 	int line_index = 1;
 	while (pos < len) {
-		auto split_pos = bms_file_u16.indexOf('\n', pos);
-		if (split_pos == -1) split_pos = len;
+		auto split_pos = bms_file_u8.find_first_of('\n', pos);
+		if (split_pos == string::npos) split_pos = len;
 
 		// Parse line and dispatch
-		auto result = parse_line(line_index, {bms_file_u16, pos, split_pos - pos});
+		auto result = parse_line(line_index, {bms_file_u8, pos, split_pos - pos});
 		if (holds_alternative<HeaderCommand>(result))
 			header_func(move(get<HeaderCommand>(result)));
 		else if (holds_alternative<ChannelCommand>(result))

@@ -10,6 +10,11 @@ module;
 #include <string_view>
 #include <filesystem>
 #include <string>
+#include <boost/algorithm/string/case_conv.hpp>
+#include <boost/algorithm/string/replace.hpp>
+#include <boost/algorithm/string/trim.hpp>
+#include <boost/locale/conversion.hpp>
+#include <boost/lexical_cast.hpp>
 #include "quill/bundled/fmt/format.h"
 
 export module playnote.preamble:string;
@@ -22,6 +27,12 @@ export using std::string;
 export using std::string_view;
 export using fmtquill::format;
 export using fmtquill::print;
+export using boost::trim;
+export using boost::replace_all;
+export using boost::to_upper;
+export using boost::to_lower;
+export using boost::lexical_cast;
+export using boost::bad_lexical_cast;
 
 }
 

@@ -60,7 +60,6 @@ target_sources(Playnote PUBLIC
 	src/render_thread.cppm
 	src/audio_thread.cppm
 	src/input_thread.cppm
-	src/globals.cppm
 	src/preamble/algorithm.cppm
 	src/preamble/container.cppm
 	src/preamble/concepts.cppm
@@ -91,8 +90,6 @@ target_link_libraries(Playnote PRIVATE Boost::boost)
 target_link_libraries(Playnote PRIVATE quill)
 target_link_libraries(Playnote PRIVATE glfw)
 target_link_libraries(Playnote PRIVATE volk)
-target_link_libraries(Playnote PRIVATE ICU::i18n)
-target_link_libraries(Playnote PRIVATE ICU::uc)
 target_link_libraries(Playnote PRIVATE mio::mio)
 target_link_libraries(Playnote PRIVATE vuk-extra-imgui-platform)
 target_link_libraries(Playnote PRIVATE vuk)
