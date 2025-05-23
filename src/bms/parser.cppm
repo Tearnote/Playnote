@@ -120,12 +120,12 @@ export template<
 	callable<void(HeaderCommand&&)> HFunc,
 	callable<void(ChannelCommand&&)> CFunc
 >
-void parse(span<char const> bms_file_contents, HFunc&& header_func, CFunc&& channel_func)
+void parse(span<char const> bms_file_contents, util::Logger::Category* cat, HFunc&& header_func, CFunc&& channel_func)
 {
 	// Convert file to UTF-16
 	auto encoding = util::detect_text_encoding(bms_file_contents);
 	if (!util::is_supported_encoding(encoding))
-		WARN("Unexpected encoding #{}, proceeding with heuristics", to_underlying(encoding));
+		WARN_AS(cat, "Unexpected encoding #{}, proceeding with heuristics", to_underlying(encoding));
 	auto bms_file_u16 = util::text_to_unicode(bms_file_contents, encoding);
 
 	// Normalize line endings
