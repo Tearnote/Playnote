@@ -16,7 +16,8 @@ find_package(Vulkan REQUIRED # GPU API
 	COMPONENTS glslc glslangValidator # Shader compiler
 )
 find_package(glfw3 3.4 REQUIRED) # Windowing support
-find_package(Boost REQUIRED) # Rational numbers, improved containers
+find_package(Boost REQUIRED # Rational numbers, improved containers
+	COMPONENTS container)
 find_package(ICU REQUIRED # Unicode string handling, charset conversion
 	COMPONENTS uc i18n
 )

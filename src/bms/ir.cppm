@@ -156,7 +156,7 @@ private:
 	// As IR events are typically iterated from start to end, a linear allocator is used when
 	// building the structures to maximize cache efficiency
 	unique_ptr<pmr::monotonic_buffer_resource> buffer_resource; // unique_ptr makes it moveable
-	pmr::polymorphic_allocator<> allocator;
+	pmr::polymorphic_allocator<byte> allocator;
 
 	fs::path path;
 	array<uint8, 16> md5{};
@@ -173,14 +173,16 @@ private:
 		requires is_variant_alternative<T*, HeaderEvent::ParamsType>
 	void add_header_event(T&& event)
 	{
+		auto* event_ptr = static_cast<T*>(buffer_resource->allocate(sizeof(T), alignof(T)));
+		allocator.construct(event_ptr, forward<T>(event));
 		header_events.emplace_back(HeaderEvent{
-			.params = allocator.new_object<T>(forward<T>(event)),
+			.params = event_ptr,
 		});
 	}
 
 	void add_channel_event(ChannelEvent&& event)
 	{
-		channel_events.emplace_back(std::move(event));
+		channel_events.emplace_back(move(event));
 	}
 };
 

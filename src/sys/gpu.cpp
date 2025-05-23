@@ -7,6 +7,7 @@ sys/gpu implementation unit, to keep some of the larger imports out of the inter
 */
 
 module;
+#include <vector>
 #include "libassert/assert.hpp"
 #include "volk.h"
 #include "VkBootstrap.h"
@@ -219,7 +220,7 @@ auto GPU::create_runtime(VkInstance instance, VkPhysicalDevice physical_device, 
 #include "vuk/runtime/vk/VkPFNRequired.hpp"
 	};
 
-	auto executors = vector<unique_ptr<vuk::Executor>>{};
+	auto executors = std::vector<unique_ptr<vuk::Executor>>{};
 	executors.reserve(4);
 	executors.emplace_back(std::make_unique<vuk::ThisThreadExecutor>());
 	executors.emplace_back(vuk::create_vkqueue_executor(pointers, device, queues.graphics,
@@ -237,7 +238,7 @@ auto GPU::create_runtime(VkInstance instance, VkPhysicalDevice physical_device, 
 		.instance = instance,
 		.device = device,
 		.physical_device = physical_device,
-		.executors = std::move(executors),
+		.executors = move(executors),
 		.pointers = pointers,
 	}};
 }
