@@ -7,6 +7,7 @@ Imports for string and text IO.
 */
 
 module;
+#include <string_view>
 #include <filesystem>
 #include <string>
 #include "quill/bundled/fmt/format.h"
@@ -18,6 +19,7 @@ import :os;
 namespace playnote {
 
 export using std::string;
+export using std::string_view;
 export using fmtquill::format;
 export using fmtquill::print;
 

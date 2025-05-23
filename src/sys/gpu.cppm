@@ -58,9 +58,11 @@ public:
 	auto operator=(GPU&&) -> GPU& = delete;
 
 private:
+	util::Logger::Category* cat;
+
 	using Instance = util::RAIIResource<vkb::Instance, decltype([](auto& i) {
 		vkb::destroy_instance(i);
-		DEBUG("Vulkan instance cleaned up");
+		DEBUG_AS(globals::logger->get_category("Graphics"), "Vulkan instance cleaned up");
 	})>;
 
 	struct Surface_impl {
@@ -71,11 +73,11 @@ private:
 
 	using Surface = util::RAIIResource<Surface_impl, decltype([](auto& s) {
 		vkDestroySurfaceKHR(s.instance, s.surface, nullptr);
-		DEBUG("Vulkan surface cleaned up");
+		DEBUG_AS(globals::logger->get_category("Graphics"), "Vulkan surface cleaned up");
 	})>;
 	using Device = util::RAIIResource<vkb::Device, decltype([](auto& d) {
 		vkb::destroy_device(d);
-		DEBUG("Vulkan device cleaned up");
+		DEBUG_AS(globals::logger->get_category("Graphics"), "Vulkan device cleaned up");
 	})>;
 
 	struct Queues {
@@ -118,6 +120,7 @@ private:
 
 GPU::GPU(sys::Window& window):
 	// Beautiful, isn't it
+	cat{globals::logger->register_category("Graphics", util::Logger::Level::TraceL1)},
 	window{window},
 	instance{create_instance()},
 	surface{create_surface(*instance)},
@@ -129,7 +132,7 @@ GPU::GPU(sys::Window& window):
 	swapchain{create_swapchain(window.size(), global_allocator, *device, *surface)},
 	tracy_context{vuk::extra::init_Tracy(global_allocator)}
 {
-	INFO("Vulkan initialized");
+	INFO_AS(cat, "Vulkan initialized");
 }
 
 template<callable<ManagedImage(vuk::Allocator&, ManagedImage&&)> Func>

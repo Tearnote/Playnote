@@ -41,14 +41,14 @@ try {
 #if BUILD_TYPE == BUILD_DEBUG
 	sys::create_console();
 #endif
-	auto logger = util::Logger{LogfilePath, LoggingLevel};
+	auto logger_stub = globals::logger.provide(LogfilePath, LoggingLevel);
 	INFO("{} {}.{}.{} starting up", AppTitle, AppVersion[0], AppVersion[1], AppVersion[2]);
 	util::init_global_formatters();
 	return run();
 }
 catch (exception const& e) {
 	// Handle any exception that happened outside of input_thread()
-	if (util::log_category_global)
+	if (globals::logger)
 		CRIT("Uncaught exception: {}", e.what());
 	else
 		print(stderr, "Uncaught exception: {}", e.what());

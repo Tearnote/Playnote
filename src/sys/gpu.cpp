@@ -29,9 +29,10 @@ namespace playnote::sys {
 #ifdef VK_VALIDATION
 auto GPU::debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT severityCode,
 	VkDebugUtilsMessageTypeFlagsEXT typeCode, VkDebugUtilsMessengerCallbackDataEXT const* data,
-	void*) -> VkBool32
+	void* cat_ptr) -> VkBool32
 {
 	ASSERT(data);
+	auto* cat = static_cast<util::Logger::Category*>(cat_ptr);
 
 	auto type = [typeCode]() {
 		if (typeCode & VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT)
@@ -44,13 +45,13 @@ auto GPU::debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT severityCode,
 	}();
 
 	if (severityCode & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
-		ERROR("{} {}", type, data->pMessage);
+		ERROR_AS(cat, "{} {}", type, data->pMessage);
 	else if (severityCode & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
-		WARN("{} {}", type, data->pMessage);
+		WARN_AS(cat, "{} {}", type, data->pMessage);
 	else if (severityCode & VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT)
-		INFO("{} {}", type, data->pMessage);
+		INFO_AS(cat, "{} {}", type, data->pMessage);
 	else if (severityCode & VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT)
-		DEBUG("{} {}", type, data->pMessage);
+		DEBUG_AS(cat, "{} {}", type, data->pMessage);
 	else
 		throw logic_error_fmt("Unknown Vulkan diagnostic message severity: #{}",
 			to_underlying(severityCode));
@@ -67,6 +68,7 @@ auto GPU::create_instance() -> vkb::Instance
 		.add_validation_feature_enable(VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT)
 		.add_validation_feature_enable(VK_VALIDATION_FEATURE_ENABLE_DEBUG_PRINTF_EXT)
 		.set_debug_callback(debug_callback)
+		.set_debug_callback_user_data_pointer(cat)
 		.set_debug_messenger_severity(
 			VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT |
 			VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
@@ -91,7 +93,7 @@ auto GPU::create_instance() -> vkb::Instance
 	volkInitializeCustom(instance.fp_vkGetInstanceProcAddr);
 	volkLoadInstanceOnly(instance.instance);
 
-	DEBUG("Vulkan instance created");
+	DEBUG_AS(cat, "Vulkan instance created");
 	return instance;
 }
 
@@ -159,8 +161,8 @@ auto GPU::select_physical_device(vkb::Instance& instance,
 	physical_device.enable_extension_if_present(VK_EXT_CALIBRATED_TIMESTAMPS_EXTENSION_NAME); // for vuk's Tracy integration
 	physical_device.enable_extension_if_present(VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME);
 
-	INFO("GPU selected: {}", physical_device.properties.deviceName);
-	DEBUG("Vulkan driver version {}.{}.{}",
+	INFO_AS(cat, "GPU selected: {}", physical_device.properties.deviceName);
+	DEBUG_AS(cat, "Vulkan driver version {}.{}.{}",
 		VK_API_VERSION_MAJOR(physical_device.properties.driverVersion),
 		VK_API_VERSION_MINOR(physical_device.properties.driverVersion),
 		VK_API_VERSION_PATCH(physical_device.properties.driverVersion));
@@ -176,7 +178,7 @@ auto GPU::create_device(vkb::PhysicalDevice& physical_device) -> vkb::Device
 	auto device = vkb::Device(device_result.value());
 	volkLoadDevice(device);
 
-	DEBUG("Vulkan device created");
+	DEBUG_AS(cat, "Vulkan device created");
 	return device;
 }
 
@@ -294,7 +296,7 @@ auto GPU::create_swapchain(uvec2 size, vuk::Allocator& allocator, vkb::Device& d
 
 	swapchain.swapchain = vkbswapchain.swapchain;
 	swapchain.surface = surface;
-	DEBUG("Swapchain (re)created at {}x{}", size.x(), size.y());
+	DEBUG_AS(cat, "Swapchain (re)created at {}x{}", size.x(), size.y());
 
 	return move(swapchain);
 }

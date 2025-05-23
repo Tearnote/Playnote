@@ -22,31 +22,70 @@ namespace playnote::util {
 
 using namespace quill;
 
-export inline auto log_category_global = static_cast<Frontend::logger_t*>(nullptr);
-
 export class Logger {
+	class Impl {
+	public:
+		using Category = Frontend::logger_t;
+		using Level = LogLevel;
+
+		Category* global{nullptr};
+
+		Impl(string_view log_file_path, LogLevel);
+		auto register_category(string_view name, Level = Level::TraceL1,
+			bool log_to_console = true, bool log_to_file = true) -> Category*;
+		auto get_category(string_view name) -> Category* { return categories.at(name); }
+
+	private:
+		static inline auto const Pattern = PatternFormatterOptions{
+			"%(time) [%(log_level_short_code)] [%(logger)] %(message)",
+			"%H:%M:%S.%Qms"
+		};
+		static auto constexpr ShortCodes = to_array<string>({
+			"TR3", "TR2", "TRA", "DBG", "INF", "NTC",
+			"WRN", "ERR", "CRT", "BCT", "___", "DYN"
+		});
+
+		shared_ptr<ConsoleSink> console_sink;
+		shared_ptr<FileSink> file_sink;
+		unordered_map<string_view, Category*> categories;
+	};
+
+	class Stub {
+	public:
+		Stub(Logger& parent, string_view log_file_path, LogLevel global_level):
+			parent{parent}, logger{log_file_path, global_level}
+		{
+			parent.handle = &logger;
+		}
+		Stub(Stub const&) = delete;
+		auto operator=(Stub const&) -> Stub& = delete;
+		Stub(Stub&&) = delete;
+		auto operator=(Stub&&) -> Stub& = delete;
+
+	private:
+		Logger& parent;
+		Impl logger;
+	};
+
 public:
-	Logger(string const& log_file_path, LogLevel);
-	auto create_category(string const& name, LogLevel = LogLevel::TraceL1,
-		bool log_to_console = true, bool log_to_file = true) -> Frontend::logger_t&;
+	using Category = Impl::Category;
+	using Level = Impl::Level;
+
+	auto provide(string_view log_file_path, LogLevel global_level) -> Stub
+	{
+		return Stub{*this, log_file_path, global_level};
+	}
+
+	auto operator*() -> Impl& { return *ASSUME_VAL(handle); }
+	auto operator->() -> Impl* { return ASSUME_VAL(handle); }
+	operator bool() const { return handle != nullptr; } // NOLINT(*-explicit-constructor)
 
 private:
-	PatternFormatterOptions const Pattern{
-		"%(time) [%(log_level_short_code)] [%(logger)] %(message)",
-		"%H:%M:%S.%Qms"
-	};
-	static auto constexpr ShortCodes = to_array<string>({
-		"TR3", "TR2", "TRA", "DBG", "INF", "NTC",
-		"WRN", "ERR", "CRT", "BCT", "___", "DYN"
-	});
-
-	shared_ptr<ConsoleSink> console_sink;
-	shared_ptr<FileSink> file_sink;
+	Impl* handle{nullptr};
 };
 
-Logger::Logger(string const& log_file_path, LogLevel global_log_level)
+Logger::Impl::Impl(string_view log_file_path, LogLevel global_log_level)
 {
-	ASSUME(!log_category_global); // Avoid double-initialization
 	Backend::start<FrontendOptions>({
 		.thread_name = "Logging",
 		.enable_yield_when_idle = true,
@@ -60,20 +99,25 @@ Logger::Logger(string const& log_file_path, LogLevel global_log_level)
 	auto file_cfg = FileSinkConfig{};
 	file_cfg.set_open_mode('w');
 	file_sink = static_pointer_cast<FileSink>(
-		Frontend::create_or_get_sink<FileSink>(log_file_path, file_cfg));
+		Frontend::create_or_get_sink<FileSink>(string{log_file_path}, file_cfg));
 
-	log_category_global = &create_category("Global", global_log_level);
+	global = register_category("Global", global_log_level);
 }
 
-auto Logger::create_category(string const& name, LogLevel level, bool log_to_console,
-	bool log_to_file) -> Frontend::logger_t&
+auto Logger::Impl::register_category(string_view name, Level level, bool log_to_console,
+	bool log_to_file) -> Category*
 {
-	auto* category = Frontend::create_or_get_logger(name, {
+	auto* category = Frontend::create_or_get_logger(string{name}, {
 		log_to_console? console_sink : nullptr,
 		log_to_file? file_sink : nullptr
 	}, Pattern);
 	category->set_log_level(level);
-	return *category;
+	categories.emplace(name, category);
+	return category;
 }
 
+}
+
+namespace playnote::globals {
+export inline auto logger = util::Logger{};
 }
