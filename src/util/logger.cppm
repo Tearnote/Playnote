@@ -33,13 +33,15 @@ private:
 Logger::Logger()
 {
 	ASSUME(!logger);
-	quill::Backend::start({
+	quill::Backend::start<quill::FrontendOptions>({
 		.thread_name = "Logging",
+		.enable_yield_when_idle = true,
+		.sleep_duration = 0ns,
 		.log_level_short_codes = {
 			"TR3", "TR2", "TRA", "DBG", "INF", "NTC",
 			"WRN", "ERR", "CRT", "BCT", "___", "DYN"
 		},
-	});
+	}, quill::SignalHandlerOptions{});
 	auto console_sink = quill::Frontend::create_or_get_sink<quill::ConsoleSink>("console");
 	auto file_cfg = quill::FileSinkConfig{};
 	file_cfg.set_open_mode('w');
