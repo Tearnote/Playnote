@@ -17,7 +17,7 @@ module;
 export module playnote.sys.window;
 
 import playnote.preamble;
-import playnote.globals;
+import playnote.util.logger;
 import playnote.util.raii;
 
 namespace playnote::sys {

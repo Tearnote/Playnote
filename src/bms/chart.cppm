@@ -12,11 +12,11 @@ module;
 export module playnote.bms.chart;
 
 import playnote.preamble;
+import playnote.util.charset;
+import playnote.util.logger;
 import playnote.io.bulk_request;
 import playnote.io.audio_codec;
-import playnote.util.charset;
 import playnote.bms.ir;
-import playnote.globals;
 
 namespace playnote::bms {
 

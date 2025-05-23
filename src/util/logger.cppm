@@ -13,7 +13,6 @@ module;
 #include "quill/Frontend.h"
 #include "quill/Backend.h"
 #include "quill/Logger.h"
-#include "config.hpp"
 
 export module playnote.util.logger;
 
@@ -21,39 +20,60 @@ import playnote.preamble;
 
 namespace playnote::util {
 
+using namespace quill;
+
+export inline auto log_category_global = static_cast<Frontend::logger_t*>(nullptr);
+
 export class Logger {
 public:
-	Logger();
-	[[nodiscard]] auto get() -> quill::Logger* { return logger; }
+	Logger(string const& log_file_path, LogLevel);
+	auto create_category(string const& name, LogLevel = LogLevel::TraceL1,
+		bool log_to_console = true, bool log_to_file = true) -> Frontend::logger_t&;
 
 private:
-	inline static quill::Logger* logger{nullptr}; // Static to ensure only one can exist
+	PatternFormatterOptions const Pattern{
+		"%(time) [%(log_level_short_code)] %(message)",
+		"%H:%M:%S.%Qms"
+	};
+	static auto constexpr ShortCodes = to_array<string>({
+		"TR3", "TR2", "TRA", "DBG", "INF", "NTC",
+		"WRN", "ERR", "CRT", "BCT", "___", "DYN"
+	});
+
+	shared_ptr<ConsoleSink> console_sink;
+	shared_ptr<FileSink> file_sink;
 };
 
-Logger::Logger()
+Logger::Logger(string const& log_file_path, LogLevel global_log_level)
 {
-	ASSUME(!logger);
-	quill::Backend::start<quill::FrontendOptions>({
+	ASSUME(!log_category_global); // Avoid double-initialization
+	Backend::start<FrontendOptions>({
 		.thread_name = "Logging",
 		.enable_yield_when_idle = true,
 		.sleep_duration = 0ns,
-		.log_level_short_codes = {
-			"TR3", "TR2", "TRA", "DBG", "INF", "NTC",
-			"WRN", "ERR", "CRT", "BCT", "___", "DYN"
-		},
-	}, quill::SignalHandlerOptions{});
-	auto console_sink = quill::Frontend::create_or_get_sink<quill::ConsoleSink>("console");
-	auto file_cfg = quill::FileSinkConfig{};
+		.log_level_short_codes = ShortCodes,
+	}, SignalHandlerOptions{});
+
+	console_sink = static_pointer_cast<ConsoleSink>(
+		Frontend::create_or_get_sink<ConsoleSink>("console"));
+
+	auto file_cfg = FileSinkConfig{};
 	file_cfg.set_open_mode('w');
-	auto file_sink = quill::Frontend::create_or_get_sink<quill::FileSink>(LogfilePath, file_cfg);
-	logger = quill::Frontend::create_or_get_logger("root",
-		{move(console_sink), move(file_sink)},
-		quill::PatternFormatterOptions{
-			"%(time) [%(log_level_short_code)] %(message)",
-			"%H:%M:%S.%Qms"
-		}
-	);
-	logger->set_log_level(LoggingLevel);
+	file_sink = static_pointer_cast<FileSink>(
+		Frontend::create_or_get_sink<FileSink>(log_file_path, file_cfg));
+
+	log_category_global = &create_category("Global", global_log_level);
+}
+
+auto Logger::create_category(string const& name, LogLevel level, bool log_to_console,
+	bool log_to_file) -> Frontend::logger_t&
+{
+	auto* category = Frontend::create_or_get_logger(name, {
+		log_to_console? console_sink : nullptr,
+		log_to_file? file_sink : nullptr
+	}, Pattern);
+	category->set_log_level(level);
+	return *category;
 }
 
 }

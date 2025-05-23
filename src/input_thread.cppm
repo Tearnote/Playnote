@@ -14,7 +14,7 @@ module;
 export module playnote.input_thread;
 
 import playnote.preamble;
-import playnote.globals;
+import playnote.util.logger;
 import playnote.sys.window;
 import playnote.sys.os;
 

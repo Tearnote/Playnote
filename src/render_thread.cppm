@@ -14,7 +14,7 @@ module;
 export module playnote.render_thread;
 
 import playnote.preamble;
-import playnote.globals;
+import playnote.util.logger;
 import playnote.sys.window;
 import playnote.sys.gpu;
 import playnote.sys.os;

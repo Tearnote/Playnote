@@ -26,7 +26,7 @@ module;
 export module playnote.sys.gpu;
 
 import playnote.preamble;
-import playnote.globals;
+import playnote.util.logger;
 import playnote.util.raii;
 import playnote.sys.window;
 

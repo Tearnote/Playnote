@@ -21,9 +21,6 @@ import playnote.util.logger;
 
 namespace playnote {
 
-// Global logger
-export auto g_logger = optional<util::Logger>{};
-
 // Global integer formatter
 export auto* g_int_formatter = static_cast<icu::NumberFormat*>(nullptr);
 

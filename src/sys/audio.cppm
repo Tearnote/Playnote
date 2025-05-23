@@ -17,7 +17,7 @@ module;
 export module playnote.sys.audio;
 
 import playnote.preamble;
-import playnote.globals;
+import playnote.util.logger;
 
 namespace playnote::sys {
 

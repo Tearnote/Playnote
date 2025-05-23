@@ -12,8 +12,8 @@ module;
 export module playnote.bms.parser;
 
 import playnote.preamble;
-import playnote.globals;
 import playnote.util.charset;
+import playnote.util.logger;
 
 namespace playnote::bms {
 

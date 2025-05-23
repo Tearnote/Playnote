@@ -22,6 +22,7 @@ export module playnote.util.charset;
 
 import playnote.preamble;
 import playnote.globals;
+import playnote.util.logger;
 
 namespace playnote::util {
 
