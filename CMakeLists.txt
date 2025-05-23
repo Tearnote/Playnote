@@ -34,7 +34,7 @@ include(cmake/Dependencies.cmake)
 # Main target
 
 add_executable(Playnote
-	src/util/log_macros.hpp
+	src/util/logger.hpp
 	src/sys/gpu.cpp
 	src/gfx/renderer.cpp
 	src/config.hpp
@@ -86,6 +86,7 @@ target_link_libraries(Playnote PRIVATE PkgConfig::PipeWire)
 target_link_libraries(Playnote PRIVATE libassert::assert)
 target_link_libraries(Playnote PRIVATE OpenSSL::Crypto)
 target_link_libraries(Playnote PRIVATE Boost::container)
+target_link_libraries(Playnote PRIVATE Boost::locale)
 target_link_libraries(Playnote PRIVATE Boost::boost)
 target_link_libraries(Playnote PRIVATE quill)
 target_link_libraries(Playnote PRIVATE glfw)

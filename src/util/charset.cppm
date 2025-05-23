@@ -13,6 +13,7 @@ module;
 #include <unicode/unistr.h>
 #include <unicode/numfmt.h>
 #include <unicode/ucnv.h>
+#include <boost/locale/encoding_utf.hpp>
 #include <boost/container_hash/hash.hpp>
 #include "compact_enc_det/compact_enc_det.h"
 #include "libassert/assert.hpp"
@@ -60,8 +61,7 @@ export auto handle_icu_error(UErrorCode err)
 // Useful for debug output, but do not use carelessly as this allocates.
 export auto to_utf8(UString const& str) -> string
 {
-	auto result = string{};
-	return str.toUTF8String(result);
+	return boost::locale::conv::utf_to_utf<char>(str.getBuffer());
 }
 
 // Returns true if the encoding is one of the known BMS encodings.
