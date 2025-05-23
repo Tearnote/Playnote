@@ -10,7 +10,7 @@ module;
 #include <spa/param/audio/format-utils.h>
 #include <spa/param/latency-utils.h>
 #include <pipewire/pipewire.h>
-#include "util/log_macros.hpp"
+#include "util/logger.hpp"
 #include "config.hpp"
 #include "quill/bundled/fmt/base.h"
 
@@ -60,7 +60,7 @@ private:
 
 Audio::Audio() {
 	pw_init(nullptr, nullptr);
-	L_DEBUG("Using libpipewire {}\n", pw_get_library_version());
+	DEBUG("Using libpipewire {}\n", pw_get_library_version());
 
 	loop = ptr_check(pw_thread_loop_new(nullptr, nullptr));
 	stream = pw_stream_new_simple(
@@ -103,7 +103,7 @@ void Audio::on_process(void* userdata)
 
 	auto* buffer_outer = pw_stream_dequeue_buffer(self.stream);
 	if (!buffer_outer) {
-		L_WARN("Ran out of audio buffers");
+		WARN("Ran out of audio buffers");
 		return;
 	}
 	auto* buffer = buffer_outer->buffer;

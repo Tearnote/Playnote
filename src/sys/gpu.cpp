@@ -17,7 +17,7 @@ module;
 #include "vuk/runtime/ThisThreadExecutor.hpp"
 #include "vuk/ImageAttachment.hpp"
 #include "vuk/Types.hpp"
-#include "util/log_macros.hpp"
+#include "util/logger.hpp"
 #include "config.hpp"
 
 module playnote.sys.gpu;
@@ -44,13 +44,13 @@ auto GPU::debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT severityCode,
 	}();
 
 	if (severityCode & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
-		L_ERROR("{} {}", type, data->pMessage);
+		ERROR("{} {}", type, data->pMessage);
 	else if (severityCode & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
-		L_WARN("{} {}", type, data->pMessage);
+		WARN("{} {}", type, data->pMessage);
 	else if (severityCode & VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT)
-		L_INFO("{} {}", type, data->pMessage);
+		INFO("{} {}", type, data->pMessage);
 	else if (severityCode & VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT)
-		L_DEBUG("{} {}", type, data->pMessage);
+		DEBUG("{} {}", type, data->pMessage);
 	else
 		throw logic_error_fmt("Unknown Vulkan diagnostic message severity: #{}",
 			to_underlying(severityCode));
@@ -91,7 +91,7 @@ auto GPU::create_instance() -> vkb::Instance
 	volkInitializeCustom(instance.fp_vkGetInstanceProcAddr);
 	volkLoadInstanceOnly(instance.instance);
 
-	L_DEBUG("Vulkan instance created");
+	DEBUG("Vulkan instance created");
 	return instance;
 }
 
@@ -159,8 +159,8 @@ auto GPU::select_physical_device(vkb::Instance& instance,
 	physical_device.enable_extension_if_present(VK_EXT_CALIBRATED_TIMESTAMPS_EXTENSION_NAME); // for vuk's Tracy integration
 	physical_device.enable_extension_if_present(VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME);
 
-	L_INFO("GPU selected: {}", physical_device.properties.deviceName);
-	L_DEBUG("Vulkan driver version {}.{}.{}",
+	INFO("GPU selected: {}", physical_device.properties.deviceName);
+	DEBUG("Vulkan driver version {}.{}.{}",
 		VK_API_VERSION_MAJOR(physical_device.properties.driverVersion),
 		VK_API_VERSION_MINOR(physical_device.properties.driverVersion),
 		VK_API_VERSION_PATCH(physical_device.properties.driverVersion));
@@ -176,7 +176,7 @@ auto GPU::create_device(vkb::PhysicalDevice& physical_device) -> vkb::Device
 	auto device = vkb::Device(device_result.value());
 	volkLoadDevice(device);
 
-	L_DEBUG("Vulkan device created");
+	DEBUG("Vulkan device created");
 	return device;
 }
 
@@ -294,7 +294,7 @@ auto GPU::create_swapchain(uvec2 size, vuk::Allocator& allocator, vkb::Device& d
 
 	swapchain.swapchain = vkbswapchain.swapchain;
 	swapchain.surface = surface;
-	L_DEBUG("Swapchain (re)created at {}x{}", size.x(), size.y());
+	DEBUG("Swapchain (re)created at {}x{}", size.x(), size.y());
 
 	return move(swapchain);
 }

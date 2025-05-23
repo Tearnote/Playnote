@@ -7,7 +7,7 @@ A BMS format parser - turns a complete BMS file into a list of commands.
 */
 
 module;
-#include "util/log_macros.hpp"
+#include "util/logger.hpp"
 
 export module playnote.bms.parser;
 
@@ -125,7 +125,7 @@ void parse(span<char const> bms_file_contents, HFunc&& header_func, CFunc&& chan
 	// Convert file to UTF-16
 	auto encoding = util::detect_text_encoding(bms_file_contents);
 	if (!util::is_supported_encoding(encoding))
-		L_WARN("Unexpected encoding #{}, proceeding with heuristics", to_underlying(encoding));
+		WARN("Unexpected encoding #{}, proceeding with heuristics", to_underlying(encoding));
 	auto bms_file_u16 = util::text_to_unicode(bms_file_contents, encoding);
 
 	// Normalize line endings

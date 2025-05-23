@@ -9,7 +9,7 @@ Presents current game state onto the window at the screen's refresh rate.
 module;
 #include "tracy/Tracy.hpp"
 #include "imgui.h"
-#include "util/log_macros.hpp"
+#include "util/logger.hpp"
 
 export module playnote.render_thread;
 
@@ -53,7 +53,7 @@ try {
 	}
 }
 catch (exception const& e) {
-	L_CRIT("Uncaught exception: {}", e.what());
+	CRIT("Uncaught exception: {}", e.what());
 	window.request_close();
 }
 

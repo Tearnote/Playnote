@@ -7,7 +7,7 @@ A definite, playable rhythm game chart, constructed from an IR. Tracks playback 
 */
 
 module;
-#include "util/log_macros.hpp"
+#include "util/logger.hpp"
 
 export module playnote.bms.chart;
 
@@ -98,7 +98,7 @@ auto Chart::from_ir(IR const& ir) -> pair<Chart, BulkRequest>
 			[](auto&&) {}
 		});
 	});
-	L_INFO("Built chart \"{}\"", to_utf8(chart.title));
+	INFO("Built chart \"{}\"", to_utf8(chart.title));
 
 	return make_pair(chart, requests);
 }

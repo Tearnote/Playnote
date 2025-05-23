@@ -9,7 +9,7 @@ Only the process's main thread can be the input thread.
 
 module;
 #include "tracy/Tracy.hpp"
-#include "util/log_macros.hpp"
+#include "util/logger.hpp"
 
 export module playnote.input_thread;
 
@@ -31,7 +31,7 @@ try {
 	}
 }
 catch (exception const& e) {
-	L_CRIT("Uncaught exception: {}", e.what());
+	CRIT("Uncaught exception: {}", e.what());
 	window.request_close();
 }
 

@@ -16,7 +16,7 @@ module;
 #include <boost/container_hash/hash.hpp>
 #include "compact_enc_det/compact_enc_det.h"
 #include "libassert/assert.hpp"
-#include "util/log_macros.hpp"
+#include "util/logger.hpp"
 
 export module playnote.util.charset;
 
@@ -46,11 +46,11 @@ export auto handle_icu_error(UErrorCode err)
 {
 	if (err == U_ZERO_ERROR) return;
 	if (U_SUCCESS(err)) {
-		L_WARN("ICU warning: {}", u_errorName(err));
+		WARN("ICU warning: {}", u_errorName(err));
 		return;
 	}
 	if (err == U_ILLEGAL_CHAR_FOUND) {
-		L_WARN("Illegal character found in file");
+		WARN("Illegal character found in file");
 		return;
 	}
 	throw runtime_error_fmt("ICU error: {}", u_errorName(err));
@@ -93,9 +93,9 @@ export auto detect_text_encoding(span<char const> text) -> Encoding
 		&bytes_consumed,
 		&is_reliable);
 	if (is_reliable)
-		L_TRACE("Detected encoding #{}", to_underlying(encoding));
+		TRACE("Detected encoding #{}", to_underlying(encoding));
 	else
-		L_WARN("Detected encoding #{} (not reliable)", to_underlying(encoding));
+		WARN("Detected encoding #{} (not reliable)", to_underlying(encoding));
 	return encoding;
 }
 

@@ -7,7 +7,7 @@ Initializes audio and handles queueing of playback events.
 */
 
 module;
-#include "util/log_macros.hpp"
+#include "util/logger.hpp"
 
 export module playnote.audio_thread;
 
@@ -27,7 +27,7 @@ auto load_audio_file(std::string_view path) -> std::vector<float>
 	auto file_info = SF_INFO{};
 	auto* file = sf_open(std::string{path}.c_str(), SFM_READ, &file_info);
 	if (!file) {
-		L_ERROR("Failed to open assets/test.ogg: {}", sf_strerror(nullptr));
+		ERROR("Failed to open assets/test.ogg: {}", sf_strerror(nullptr));
 		return {};
 	}
 	ASSUME(file_info.channels == 2);
@@ -54,7 +54,7 @@ auto load_audio_file(std::string_view path) -> std::vector<float>
 		};
 		auto ret = src_simple(&src_data, SRC_SINC_BEST_QUALITY, file_info.channels);
 		if (ret != 0) {
-			L_ERROR("Failed to resample audio: {}", src_strerror(ret));
+			ERROR("Failed to resample audio: {}", src_strerror(ret));
 		}
 		samples.resize(src_data.output_frames_gen * file_info.channels);
 		return std::move(samples);
@@ -63,10 +63,10 @@ auto load_audio_file(std::string_view path) -> std::vector<float>
 */
 auto load_bms(bms::IRCompiler& compiler, fs::path const& path) -> bms::IR
 {
-	L_INFO("Loading BMS file \"{}\"", path.c_str());
+	INFO("Loading BMS file \"{}\"", path.c_str());
 	auto const file = io::read_file(path);
 	auto ir = compiler.compile(path, file.contents);
-	L_INFO("Loaded BMS file \"{}\" successfully", path.c_str());
+	INFO("Loaded BMS file \"{}\" successfully", path.c_str());
 	return ir;
 }
 
@@ -85,7 +85,7 @@ try {
 		yield();
 }
 catch (exception const& e) {
-	L_CRIT("Uncaught exception: {}", e.what());
+	CRIT("Uncaught exception: {}", e.what());
 	window.request_close();
 }
 

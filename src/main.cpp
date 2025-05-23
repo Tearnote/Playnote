@@ -7,7 +7,7 @@ Entry point. Initializes basic facilities like logging and shared subsystems, th
 */
 
 #include <print>
-#include "util/log_macros.hpp"
+#include "util/logger.hpp"
 #include "config.hpp"
 
 import playnote.preamble;
@@ -42,14 +42,14 @@ try {
 	sys::create_console();
 #endif
 	auto logger = util::Logger{LogfilePath, LoggingLevel};
-	L_INFO("{} {}.{}.{} starting up", AppTitle, AppVersion[0], AppVersion[1], AppVersion[2]);
+	INFO("{} {}.{}.{} starting up", AppTitle, AppVersion[0], AppVersion[1], AppVersion[2]);
 	util::init_global_formatters();
 	return run();
 }
 catch (exception const& e) {
 	// Handle any exception that happened outside of input_thread()
 	if (util::log_category_global)
-		L_CRIT("Uncaught exception: {}", e.what());
+		CRIT("Uncaught exception: {}", e.what());
 	else
 		print(stderr, "Uncaught exception: {}", e.what());
 	return EXIT_FAILURE;

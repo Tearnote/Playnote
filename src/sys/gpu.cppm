@@ -20,7 +20,7 @@ module;
 #include "vuk/RenderGraph.hpp"
 #include "vuk/Value.hpp"
 #include "vuk/Types.hpp"
-#include "util/log_macros.hpp"
+#include "util/logger.hpp"
 #include "config.hpp"
 
 export module playnote.sys.gpu;
@@ -60,7 +60,7 @@ public:
 private:
 	using Instance = util::RAIIResource<vkb::Instance, decltype([](auto& i) {
 		vkb::destroy_instance(i);
-		L_DEBUG("Vulkan instance cleaned up");
+		DEBUG("Vulkan instance cleaned up");
 	})>;
 
 	struct Surface_impl {
@@ -71,11 +71,11 @@ private:
 
 	using Surface = util::RAIIResource<Surface_impl, decltype([](auto& s) {
 		vkDestroySurfaceKHR(s.instance, s.surface, nullptr);
-		L_DEBUG("Vulkan surface cleaned up");
+		DEBUG("Vulkan surface cleaned up");
 	})>;
 	using Device = util::RAIIResource<vkb::Device, decltype([](auto& d) {
 		vkb::destroy_device(d);
-		L_DEBUG("Vulkan device cleaned up");
+		DEBUG("Vulkan device cleaned up");
 	})>;
 
 	struct Queues {
@@ -129,7 +129,7 @@ GPU::GPU(sys::Window& window):
 	swapchain{create_swapchain(window.size(), global_allocator, *device, *surface)},
 	tracy_context{vuk::extra::init_Tracy(global_allocator)}
 {
-	L_INFO("Vulkan initialized");
+	INFO("Vulkan initialized");
 }
 
 template<callable<ManagedImage(vuk::Allocator&, ManagedImage&&)> Func>

@@ -12,7 +12,7 @@ module;
 #include "libassert/assert.hpp"
 #include "volk.h"
 #include "GLFW/glfw3.h"
-#include "util/log_macros.hpp"
+#include "util/logger.hpp"
 
 export module playnote.sys.window;
 
@@ -95,7 +95,7 @@ private:
 	using WindowHandle = util::RAIIResource<GLFWwindow*, decltype([](auto* w) {
 		auto title = string{glfwGetWindowTitle(w)};
 		glfwDestroyWindow(w);
-		L_INFO("Window \"{}\" closed", title);
+		INFO("Window \"{}\" closed", title);
 	})>;
 
 	WindowHandle window_handle{};
@@ -112,13 +112,13 @@ GLFW::GLFW()
 		throw runtime_error_fmt("[GLFW] Error {}: {}", code, str);
 	});
 	glfwInit();
-	L_INFO("GLFW initialized");
+	INFO("GLFW initialized");
 }
 
 GLFW::~GLFW()
 {
 	glfwTerminate();
-	L_INFO("GLFW cleaned up");
+	INFO("GLFW cleaned up");
 }
 
 auto GLFW::get_time() const -> nanoseconds
@@ -163,7 +163,7 @@ Window::Window(GLFW&, string const& title, uvec2 size)
 		}
 	);
 
-	L_INFO("Created window \"{}\" at {}x{}", title, size.x(), size.y());
+	INFO("Created window \"{}\" at {}x{}", title, size.x(), size.y());
 }
 
 auto Window::size() const -> uvec2
