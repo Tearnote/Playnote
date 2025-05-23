@@ -7,9 +7,6 @@ Various OS-specific utilities.
 */
 
 module;
-#include <string_view>
-#include <string>
-#include <chrono>
 #include "tracy/Tracy.hpp"
 #include "config.hpp"
 
@@ -20,39 +17,31 @@ module;
 #ifdef WIN32_LEAN_AND_MEAN
 #undef WIN32_LEAN_AND_MEAN
 #endif
-#include <cstdio>
 #include <string>
+#include <cstdio>
 #include <Windows.h>
 #include <fcntl.h>
 #include <io.h>
 #elif TARGET == TARGET_LINUX
-#include <system_error>
-#include <string>
 #include <pthread.h>
 #endif
 
 export module playnote.sys.os;
 
-#if TARGET == TARGET_WINDOWS
-import playnote.stx.except;
-#endif
+import playnote.preamble;
 
 namespace playnote::sys {
-
-namespace chrono = std::chrono;
-using namespace std::chrono_literals;
-using chrono::duration_cast;
 
 // Sets the system thread scheduler period for the lifetime of the instance
 // This decreases the minimum possible duration of thread sleep
 export class SchedulerPeriod {
 public:
-	explicit SchedulerPeriod(chrono::nanoseconds period):
+	explicit SchedulerPeriod(nanoseconds period):
 		period{period}
 	{
 #if TARGET == TARGET_WINDOWS
-		if (timeBeginPeriod(duration_cast<chrono::milliseconds>(period).count()) != TIMERR_NOERROR)
-			throw std::runtime_error{"Failed to initialize Windows scheduler period"};
+		if (timeBeginPeriod(duration_cast<milliseconds>(period).count()) != TIMERR_NOERROR)
+			throw runtime_error{"Failed to initialize Windows scheduler period"};
 #endif
 	}
 
@@ -60,11 +49,11 @@ public:
 	{
 		if (period == -1ns) return;
 #if TARGET == TARGET_WINDOWS
-		timeEndPeriod(duration_cast<chrono::milliseconds>(period).count());
+		timeEndPeriod(duration_cast<milliseconds>(period).count());
 #endif
 	}
 
-	SchedulerPeriod(SchedulerPeriod&& other) noexcept { *this = std::move(other); }
+	SchedulerPeriod(SchedulerPeriod&& other) noexcept { *this = move(other); }
 
 	auto operator=(SchedulerPeriod&& other) noexcept -> SchedulerPeriod&
 	{
@@ -77,11 +66,11 @@ public:
 	auto operator=(SchedulerPeriod const&) -> SchedulerPeriod& = delete;
 
 private:
-	chrono::nanoseconds period{};
+	nanoseconds period{};
 };
 
 // Name the current thread
-export void set_thread_name(std::string_view name)
+export void set_thread_name(string const& name)
 {
 #ifdef THREAD_DEBUG
 #if TARGET == TARGET_WINDOWS
@@ -90,11 +79,11 @@ export void set_thread_name(std::string_view name)
 	if (FAILED(err))
 		throw stx::runtime_error_fmt{"Failed to set thread name: error {}", err};
 #elif TARGET == TARGET_LINUX
-	if (auto err = pthread_setname_np(pthread_self(), std::string{name}.c_str()); err != 0)
-		throw std::system_error{err, std::system_category(), "Failed to set thread name"};
+	if (auto err = pthread_setname_np(pthread_self(), name.c_str()); err != 0)
+		throw system_error("Failed to set thread name");
 #endif
 #endif
-	tracy::SetThreadName(std::string{name}.c_str());
+	tracy::SetThreadName(name.c_str());
 }
 
 // Open the console window and attach standard outputs to it

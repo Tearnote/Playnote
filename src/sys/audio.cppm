@@ -7,13 +7,6 @@ Initializes audio and submits buffers for playback.
 */
 
 module;
-#include <string_view>
-#include <algorithm>
-#include <vector>
-#include <thread>
-#include <ranges>
-#include <array>
-#include <cmath>
 #include <spa/param/audio/format-utils.h>
 #include <spa/param/latency-utils.h>
 #include <pipewire/pipewire.h>
@@ -27,8 +20,6 @@ import playnote.preamble;
 import playnote.globals;
 
 namespace playnote::sys {
-
-namespace ranges = std::ranges;
 
 export class Audio {
 public:
@@ -55,13 +46,13 @@ private:
 	};
 
 	template<typename T>
-	static auto ptr_check(T* ptr, std::string_view message = "libpipewire error") -> T*
+	static auto ptr_check(T* ptr, string const& message = "libpipewire error") -> T*
 	{
 		if (!ptr) throw system_error_fmt("{}", message);
 		return ptr;
 	}
 
-	static void ret_check(int ret, std::string_view message = "libpipewire error")
+	static void ret_check(int ret, string const& message = "libpipewire error")
 	{
 		if (ret < 0) throw system_error_fmt("{}", message);
 	}
@@ -73,7 +64,7 @@ Audio::Audio() {
 
 	loop = ptr_check(pw_thread_loop_new(nullptr, nullptr));
 	stream = pw_stream_new_simple(
-		pw_thread_loop_get_loop(loop), std::string{AppTitle}.c_str(),
+		pw_thread_loop_get_loop(loop), AppTitle,
 		pw_properties_new(
 			PW_KEY_MEDIA_TYPE, "Audio",
 			PW_KEY_MEDIA_CATEGORY, "Playback",
@@ -82,8 +73,8 @@ Audio::Audio() {
 		nullptr),
 		&StreamEvents, this);
 
-	auto params = std::array<spa_pod const*, 1>{};
-	auto buffer = std::array<uint8, 1024>{};
+	auto params = array<spa_pod const*, 1>{};
+	auto buffer = array<uint8, 1024>{};
 	auto builder = SPA_POD_BUILDER_INIT(buffer.data(), buffer.size());
 	auto audio_info = spa_audio_info_raw{
 		.format = SPA_AUDIO_FORMAT_F32,
@@ -121,7 +112,7 @@ void Audio::on_process(void* userdata)
 
 	constexpr auto Stride = sizeof(float) * ChannelCount;
 	const auto max_frames = buffer->datas[0].maxsize / Stride;
-	auto frames = std::min(max_frames, buffer_outer->requested);
+	auto frames = min(max_frames, buffer_outer->requested);
 /*
 	if (!self.audios.empty()) {
 		for (auto i: ranges::iota_view(0u, frames)) {

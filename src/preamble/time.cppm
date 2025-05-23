@@ -19,6 +19,7 @@ export using std::chrono_literals::operator ""s;
 export using std::chrono::nanoseconds;
 export using std::chrono::milliseconds;
 export using std::chrono::seconds;
+export using std::chrono::duration;
 export using std::chrono::duration_cast;
 
 }

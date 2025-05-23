@@ -7,12 +7,6 @@ sys/gpu implementation unit, to keep some of the larger imports out of the inter
 */
 
 module;
-#include <optional>
-#include <utility>
-#include <vector>
-#include <memory>
-#include <ranges>
-#include <span>
 #include "libassert/assert.hpp"
 #include "volk.h"
 #include "VkBootstrap.h"
@@ -30,8 +24,6 @@ module playnote.sys.gpu;
 import playnote.preamble;
 
 namespace playnote::sys {
-
-namespace ranges = std::ranges;
 
 #ifdef VK_VALIDATION
 auto GPU::debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT severityCode,
@@ -60,7 +52,7 @@ auto GPU::debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT severityCode,
 		L_DEBUG("{} {}", type, data->pMessage);
 	else
 		throw logic_error_fmt("Unknown Vulkan diagnostic message severity: #{}",
-			std::to_underlying(severityCode));
+			to_underlying(severityCode));
 
 	return VK_FALSE;
 }
@@ -227,7 +219,7 @@ auto GPU::create_runtime(VkInstance instance, VkPhysicalDevice physical_device, 
 #include "vuk/runtime/vk/VkPFNRequired.hpp"
 	};
 
-	auto executors = std::vector<std::unique_ptr<vuk::Executor>>{};
+	auto executors = vector<unique_ptr<vuk::Executor>>{};
 	executors.reserve(4);
 	executors.emplace_back(std::make_unique<vuk::ThisThreadExecutor>());
 	executors.emplace_back(vuk::create_vkqueue_executor(pointers, device, queues.graphics,
@@ -251,7 +243,7 @@ auto GPU::create_runtime(VkInstance instance, VkPhysicalDevice physical_device, 
 }
 
 auto GPU::create_swapchain(uvec2 size, vuk::Allocator& allocator, vkb::Device& device,
-	Surface_impl& surface, std::optional<vuk::Swapchain> old) -> vuk::Swapchain
+	Surface_impl& surface, optional<vuk::Swapchain> old) -> vuk::Swapchain
 {
 	auto vkbswapchain_result = vkb::SwapchainBuilder{device}
 		.set_old_swapchain(old? old->swapchain : VK_NULL_HANDLE)
@@ -276,15 +268,15 @@ auto GPU::create_swapchain(uvec2 size, vuk::Allocator& allocator, vkb::Device& d
 	auto vkbswapchain = vkbswapchain_result.value();
 
 	if (old) {
-		allocator.deallocate(std::span{&old->swapchain, 1});
+		allocator.deallocate(span{&old->swapchain, 1});
 		for (auto& image: old->images)
-			allocator.deallocate(std::span{&image.image_view, 1});
+			allocator.deallocate(span{&image.image_view, 1});
 	}
 
 	auto swapchain = vuk::Swapchain{allocator, vkbswapchain.image_count};
 
-	for (auto [image, view]: ranges::zip_view{*vkbswapchain.get_images(),
-		     *vkbswapchain.get_image_views()}) {
+	for (auto [image, view]: views::zip(*vkbswapchain.get_images(),
+		     *vkbswapchain.get_image_views())) {
 		swapchain.images.emplace_back(vuk::ImageAttachment{
 			.image = vuk::Image{image, nullptr},
 			.image_view = vuk::ImageView{{0}, view},
@@ -303,7 +295,7 @@ auto GPU::create_swapchain(uvec2 size, vuk::Allocator& allocator, vkb::Device& d
 	swapchain.surface = surface;
 	L_DEBUG("Swapchain (re)created at {}x{}", size.x(), size.y());
 
-	return std::move(swapchain);
+	return move(swapchain);
 }
 
 }

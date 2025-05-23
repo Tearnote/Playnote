@@ -21,6 +21,8 @@ import :string;
 namespace playnote {
 
 export using std::exception;
+export using std::logic_error;
+export using std::runtime_error;
 
 // An arbitrary exception type with a formatted message
 template<typename Err, typename... Args>
@@ -41,6 +43,12 @@ export template<typename... Args>
 auto logic_error_fmt(std::format_string<Args...> fmt, Args&&... args)
 {
 	return typed_error_fmt<std::logic_error>(fmt, forward<Args>(args)...);
+};
+
+// A std::system_error wrapper with default error type and errno use
+export auto system_error(string const& msg)
+{
+	return std::system_error{errno, std::generic_category(), msg};
 };
 
 // A std::system_error with a formatted message, using errno automatically

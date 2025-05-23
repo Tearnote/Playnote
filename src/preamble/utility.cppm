@@ -29,6 +29,7 @@ export using std::tuple;
 export using std::ref;
 export using std::initializer_list;
 export using std::unique_ptr;
+export using std::to_underlying;
 
 // Constructs a type with overloaded operator()s, for use as a std::variant visitor
 export template<typename... Ts>

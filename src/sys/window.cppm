@@ -8,13 +8,7 @@ Initializes GLFW and manages windows. Windows handle keyboard and mouse input, a
 */
 
 module;
-#include <string_view>
-#include <functional>
-#include <utility>
-#include <vector>
-#include <string>
 #include <vulkan/vulkan_core.h>
-
 #include "libassert/assert.hpp"
 #include "volk.h"
 #include "GLFW/glfw3.h"
@@ -22,13 +16,11 @@ module;
 
 export module playnote.sys.window;
 
-import playnote.util.raii;
 import playnote.preamble;
 import playnote.globals;
+import playnote.util.raii;
 
 namespace playnote::sys {
-namespace chrono = std::chrono;
-using chrono::duration_cast;
 
 // RAII abstraction for GLFW library initialization
 export class GLFW {
@@ -37,7 +29,7 @@ public:
 	~GLFW();
 
 	// Retrieve time since application start
-	[[nodiscard]] auto get_time() const -> chrono::nanoseconds;
+	[[nodiscard]] auto get_time() const -> nanoseconds;
 
 	// Pump the message queue
 	// Run this as often as possible to receive accurate event timestamps
@@ -52,7 +44,7 @@ public:
 // RAII abstraction of a single application window, providing a drawing surface and input handling
 export class Window {
 public:
-	Window(GLFW&, std::string_view title, uvec2 size);  // GLFW parameter is a semantic dependency
+	Window(GLFW&, string const& title, uvec2 size);  // GLFW parameter is a semantic dependency
 
 	// true if application close was requested (the X was pressed, or triggered manually from code
 	// to mark a user-requested quit event)
@@ -69,23 +61,23 @@ public:
 
 	// Run the provided function on any keyboard key press/release
 	// Function is provided with the keycode and key state (true for press, false for release)
-	void register_key_callback(std::function<void(int, bool)> func)
+	void register_key_callback(function<void(int, bool)> func)
 	{
-		key_callbacks.emplace_back(std::move(func));
+		key_callbacks.emplace_back(move(func));
 	}
 
 	// Run the provided function on any cursor move
 	// Function is provided with the new cursor position
-	void register_cursor_motion_callback(std::function<void(vec2)> func)
+	void register_cursor_motion_callback(function<void(vec2)> func)
 	{
-		cursor_motion_callbacks.emplace_back(std::move(func));
+		cursor_motion_callbacks.emplace_back(move(func));
 	}
 
 	// Run the provided function on any mouse button press/release
 	// Function is provided with the button index and state (true for press, false for release)
-	void register_mouse_button_callback(std::function<void(int, bool)> func)
+	void register_mouse_button_callback(function<void(int, bool)> func)
 	{
-		mouse_button_callbacks.emplace_back(std::move(func));
+		mouse_button_callbacks.emplace_back(move(func));
 	}
 
 	auto handle() -> GLFWwindow* { return *window_handle; }
@@ -101,16 +93,16 @@ public:
 
 private:
 	using WindowHandle = util::RAIIResource<GLFWwindow*, decltype([](auto* w) {
-		auto title = std::string{glfwGetWindowTitle(w)};
+		auto title = string{glfwGetWindowTitle(w)};
 		glfwDestroyWindow(w);
 		L_INFO("Window \"{}\" closed", title);
 	})>;
 
 	WindowHandle window_handle{};
 
-	std::vector<std::function<void(int, bool)>> key_callbacks;
-	std::vector<std::function<void(vec2)>> cursor_motion_callbacks;
-	std::vector<std::function<void(int, bool)>> mouse_button_callbacks;
+	vector<function<void(int, bool)>> key_callbacks;
+	vector<function<void(vec2)>> cursor_motion_callbacks;
+	vector<function<void(int, bool)>> mouse_button_callbacks;
 };
 
 GLFW::GLFW()
@@ -129,13 +121,13 @@ GLFW::~GLFW()
 	L_INFO("GLFW cleaned up");
 }
 
-auto GLFW::get_time() const -> chrono::nanoseconds
+auto GLFW::get_time() const -> nanoseconds
 {
-	auto time = std::chrono::duration<double>{glfwGetTime()};
-	return duration_cast<chrono::nanoseconds>(time);
+	auto time = duration<double>{glfwGetTime()};
+	return duration_cast<nanoseconds>(time);
 }
 
-Window::Window(GLFW&, std::string_view title, uvec2 size)
+Window::Window(GLFW&, string const& title, uvec2 size)
 {
 	ASSUME(size.x() > 0 && size.y() > 0);
 
@@ -143,7 +135,7 @@ Window::Window(GLFW&, std::string_view title, uvec2 size)
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 	window_handle = WindowHandle{
-		glfwCreateWindow(size.x(), size.y(), std::string{title}.c_str(), nullptr, nullptr)
+		glfwCreateWindow(size.x(), size.y(), title.c_str(), nullptr, nullptr)
 	};
 	ASSERT(*window_handle);
 

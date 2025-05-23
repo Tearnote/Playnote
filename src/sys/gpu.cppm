@@ -7,9 +7,6 @@ Initializes Vulkan and the rendergraph.
 */
 
 module;
-#include <optional>
-#include <utility>
-#include <memory>
 #include "libassert/assert.hpp"
 #include "volk.h"
 #include "VkBootstrap.h"
@@ -29,9 +26,9 @@ module;
 export module playnote.sys.gpu;
 
 import playnote.preamble;
+import playnote.globals;
 import playnote.util.raii;
 import playnote.sys.window;
-import playnote.globals;
 
 namespace playnote::sys {
 
@@ -104,7 +101,7 @@ private:
 	auto create_device(vkb::PhysicalDevice&) -> vkb::Device;
 	auto retrieve_queues(vkb::Device&) -> Queues;
 	auto create_runtime(VkInstance, VkPhysicalDevice, VkDevice, Queues const&) -> vuk::Runtime;
-	auto create_swapchain(uvec2 size, vuk::Allocator&, vkb::Device&, Surface_impl&, std::optional<vuk::Swapchain> old = std::nullopt) -> vuk::Swapchain;
+	auto create_swapchain(uvec2 size, vuk::Allocator&, vkb::Device&, Surface_impl&, optional<vuk::Swapchain> old = nullopt) -> vuk::Swapchain;
 
 	sys::Window& window;
 
@@ -116,7 +113,7 @@ private:
 	vuk::DeviceSuperFrameResource global_resource;
 	vuk::Allocator global_allocator;
 	vuk::Swapchain swapchain;
-	std::unique_ptr<vuk::extra::TracyContext> tracy_context;
+	unique_ptr<vuk::extra::TracyContext> tracy_context;
 };
 
 GPU::GPU(sys::Window& window):
@@ -142,7 +139,7 @@ void GPU::frame(Func&& func)
 	auto frame_allocator = vuk::Allocator{frame_resource};
 	runtime.next_frame();
 	auto imported_swapchain = vuk::acquire_swapchain(swapchain);
-	auto swapchain_image = vuk::acquire_next_image("swp_img", std::move(imported_swapchain));
+	auto swapchain_image = vuk::acquire_next_image("swp_img", move(imported_swapchain));
 
 	auto result = func(frame_allocator, std::move(swapchain_image));
 
