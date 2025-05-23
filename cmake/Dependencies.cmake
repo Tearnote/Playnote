@@ -16,7 +16,7 @@ find_package(Vulkan REQUIRED # GPU API
 	COMPONENTS glslc glslangValidator # Shader compiler
 )
 find_package(glfw3 3.4 REQUIRED) # Windowing support
-find_package(Boost REQUIRED # Rational numbers, improved containers, charset conversion
+find_package(Boost REQUIRED # Rational numbers, improved containers, charset conversion, string algorithms
 	COMPONENTS container locale)
 pkg_search_module(libsamplerate REQUIRED IMPORTED_TARGET samplerate) # Audio file decoding
 pkg_search_module(libsndfile REQUIRED IMPORTED_TARGET sndfile) # Audio file decoding
@@ -83,7 +83,7 @@ FetchContent_Declare(tracy # CPU/GPU profiler
 FetchContent_MakeAvailable(tracy)
 target_compile_definitions(TracyClient PUBLIC TRACY_VK_USE_SYMBOL_TABLE)
 
-FetchContent_Declare(compact_enc_det
+FetchContent_Declare(compact_enc_det # Text encoding detection
 	GIT_REPOSITORY https://github.com/google/compact_enc_det
 	GIT_TAG d127078cedef9c6642cbe592dacdd2292b50bb19
 	SOURCE_SUBDIR _
