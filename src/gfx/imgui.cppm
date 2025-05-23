@@ -56,7 +56,7 @@ void Imgui::enqueue(Func func)
 
 auto Imgui::draw(vuk::Allocator& allocator, sys::ManagedImage target) -> sys::ManagedImage
 {
-	return vuk::extra::ImGui_ImplVuk_Render(allocator, std::move(target), imgui_data);
+	return vuk::extra::ImGui_ImplVuk_Render(allocator, move(target), imgui_data);
 }
 
 }

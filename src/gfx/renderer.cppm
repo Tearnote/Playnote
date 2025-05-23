@@ -6,9 +6,6 @@ gfx/renderer.cppm:
 A renderer of primitives.
 */
 
-module;
-#include <vector>
-
 export module playnote.gfx.renderer;
 
 import playnote.preamble;
@@ -36,7 +33,7 @@ public:
 
 	private:
 		friend Renderer;
-		std::vector<Rect> rects{};
+		vector<Rect> rects{};
 	};
 
 	explicit Renderer(sys::GPU& gpu);

@@ -7,12 +7,13 @@ gfx/renderer implementation unit, to avoid the vuk include in the module interfa
 */
 
 module;
-#include <array>
 #include "vuk/runtime/vk/Pipeline.hpp"
 #include "vuk/vsl/Core.hpp"
 #include "vuk/RenderGraph.hpp"
 
 module playnote.gfx.renderer;
+
+import playnote.preamble;
 
 namespace playnote::gfx {
 
@@ -20,10 +21,10 @@ Renderer::Renderer(sys::GPU& gpu):
 	gpu{gpu},
 	imgui{gpu}
 {
-	constexpr auto rects_vert_src = std::to_array<uint>({
+	constexpr auto rects_vert_src = to_array<uint>({
 #include "spv/rects.vert.spv"
 	});
-	constexpr auto rects_frag_src = std::to_array<uint>({
+	constexpr auto rects_frag_src = to_array<uint>({
 #include "spv/rects.frag.spv"
 	});
 	auto pci = vuk::PipelineBaseCreateInfo{};
@@ -36,7 +37,7 @@ void Renderer::draw(Queue const& queue)
 {
 	gpu.frame([this, &queue](auto& allocator, auto&& target) -> ManagedImage {
 		auto [rects_buf, rects_fut] = vuk::create_buffer(allocator, vuk::MemoryUsage::eCPUtoGPU, vuk::DomainFlagBits::eTransferOnGraphics, std::span(queue.rects));
-		auto cleared = vuk::clear_image(std::move(target), vuk::ClearColor{0.0f, 0.0f, 0.0f, 1.0f});
+		auto cleared = vuk::clear_image(move(target), vuk::ClearColor{0.0f, 0.0f, 0.0f, 1.0f});
 
 		auto pass = vuk::make_pass("rects",
 			[window_size = gpu.get_window().size(), rects_len = queue.rects.size(), rects_buf = *rects_buf]
@@ -53,8 +54,8 @@ void Renderer::draw(Queue const& queue)
 
 			return target;
 		});
-		auto rects_drawn =  pass(std::move(cleared));
-		return imgui.draw(allocator, std::move(rects_drawn));
+		auto rects_drawn =  pass(move(cleared));
+		return imgui.draw(allocator, move(rects_drawn));
 	});
 }
 
