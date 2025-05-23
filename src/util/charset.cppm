@@ -10,11 +10,11 @@ module;
 #include <string_view>
 #include <type_traits>
 #include <unicode/errorcode.h>
-#include <unicode/ucsdet.h>
 #include <unicode/unistr.h>
 #include <unicode/numfmt.h>
 #include <unicode/ucnv.h>
 #include <boost/container_hash/hash.hpp>
+#include "compact_enc_det/compact_enc_det.h"
 #include "libassert/assert.hpp"
 #include "util/log_macros.hpp"
 
@@ -25,7 +25,6 @@ import playnote.globals;
 
 namespace playnote::util {
 
-export using Encoding = std::string;
 export using UString = icu::UnicodeString;
 
 // Wrapper enabling UString to be used as a hashmap key
@@ -65,13 +64,13 @@ export auto to_utf8(UString const& str) -> string
 }
 
 // Returns true if the encoding is one of the known BMS encodings.
-auto is_supported_encoding(string const& encoding) -> bool
+export auto is_supported_encoding(Encoding encoding) -> bool
 {
-	if (encoding == "UTF-8")
+	if (encoding == Encoding::ASCII_7BIT)
 		return true;
-	if (encoding == "Shift_JIS")
+	if (encoding == Encoding::JAPANESE_SHIFT_JIS)
 		return true;
-	if (encoding == "EUC-KR")
+	if (encoding == Encoding::KOREAN_EUC_KR)
 		return true;
 	return false;
 }
@@ -81,41 +80,41 @@ auto is_supported_encoding(string const& encoding) -> bool
 // an empty string is returned.
 export auto detect_text_encoding(span<char const> text) -> Encoding
 {
-	using Detector = unique_ptr<UCharsetDetector, decltype([](auto* p) {
-		ucsdet_close(p);
-	})>;
-
-	auto err = U_ZERO_ERROR;
-	auto detector = Detector{ASSUME_VAL(ucsdet_open(&err))};
-	handle_icu_error(err);
-	ucsdet_setText(detector.get(), text.data(), text.size(), &err);
-	handle_icu_error(err);
-
-	auto* matches_ptr = static_cast<UCharsetMatch const**>(nullptr);
-	auto matches_count = int{0};
-	matches_ptr = ucsdet_detectAll(detector.get(), &matches_count, &err);
-	handle_icu_error(err);
-	auto matches = std::span{matches_ptr, static_cast<usize>(matches_count)};
-
-	for (auto const& match: matches) {
-		auto* match_name = ucsdet_getName(match, &err);
-		handle_icu_error(err);
-		if (is_supported_encoding(match_name))
-			return match_name;
-	}
-	return "";
+	auto is_reliable{true};
+	auto bytes_consumed{0};
+	auto encoding = CompactEncDet::DetectEncoding(
+		text.data(), text.size(),
+		nullptr, nullptr, nullptr,
+		UNKNOWN_ENCODING,
+		UNKNOWN_LANGUAGE,
+		CompactEncDet::QUERY_CORPUS,
+		true,
+		&bytes_consumed,
+		&is_reliable);
+	if (is_reliable)
+		L_TRACE("Detected encoding #{}", to_underlying(encoding));
+	else
+		L_WARN("Detected encoding #{} (not reliable)", to_underlying(encoding));
+	return encoding;
 }
 
 // Convert a passage of text from a given encoding to Unicode (UTF-16).
 // Any bytes that are invalid in the specified encoding are turned into replacement characters.
-export auto text_to_unicode(span<char const> text, Encoding const& encoding) -> UString
+export auto text_to_unicode(span<char const> text, Encoding encoding) -> UString
 {
 	using Converter = unique_ptr<UConverter, decltype([](auto* p) {
 		ucnv_close(p);
 	})>;
 
 	auto err = U_ZERO_ERROR;
-	auto converter = Converter{ucnv_open(encoding.c_str(), &err)};
+	auto encoding_str = [&]() {
+		switch (encoding) {
+		case Encoding::JAPANESE_SHIFT_JIS: return "Shift_JIS";
+		case Encoding::KOREAN_EUC_KR: return "EUC-KR";
+		default: return "UTF-8";
+		}
+	}();
+	auto converter = Converter{ucnv_open(encoding_str, &err)};
 	handle_icu_error(err);
 	auto contents = UString{};
 	auto contents_capacity = text.size() + 1; // Add space for null terminator

@@ -77,6 +77,7 @@ target_sources(Playnote PUBLIC
 
 target_include_directories(Playnote PRIVATE src) # All includes start from src as root
 
+target_link_libraries(Playnote PRIVATE compact_enc_det)
 target_link_libraries(Playnote PRIVATE vk-bootstrap)
 target_link_libraries(Playnote PRIVATE TracyClient)
 target_link_libraries(Playnote PRIVATE PkgConfig::libsamplerate)

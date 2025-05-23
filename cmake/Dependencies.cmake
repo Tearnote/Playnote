@@ -85,3 +85,17 @@ FetchContent_Declare(tracy # CPU/GPU profiler
 )
 FetchContent_MakeAvailable(tracy)
 target_compile_definitions(TracyClient PUBLIC TRACY_VK_USE_SYMBOL_TABLE)
+
+FetchContent_Declare(compact_enc_det
+	GIT_REPOSITORY https://github.com/google/compact_enc_det
+	GIT_TAG d127078cedef9c6642cbe592dacdd2292b50bb19
+	SOURCE_SUBDIR _
+)
+FetchContent_MakeAvailable(compact_enc_det)
+add_library(compact_enc_det
+	${compact_enc_det_SOURCE_DIR}/compact_enc_det/compact_enc_det.cc
+	${compact_enc_det_SOURCE_DIR}/compact_enc_det/compact_enc_det_hint_code.cc
+	${compact_enc_det_SOURCE_DIR}/util/encodings/encodings.cc
+	${compact_enc_det_SOURCE_DIR}/util/languages/languages.cc
+)
+target_include_directories(compact_enc_det PUBLIC ${compact_enc_det_SOURCE_DIR})

@@ -124,12 +124,8 @@ void parse(span<char const> bms_file_contents, HFunc&& header_func, CFunc&& chan
 {
 	// Convert file to UTF-16
 	auto encoding = util::detect_text_encoding(bms_file_contents);
-	if (encoding.empty()) {
-		L_WARN("Failed to detect encoding, assuming Shift_JIS");
-		encoding = "Shift_JIS";
-	} else {
-		L_TRACE("Detected encoding: {}", encoding);
-	}
+	if (!util::is_supported_encoding(encoding))
+		L_WARN("Unexpected encoding #{}, proceeding with heuristics", to_underlying(encoding));
 	auto bms_file_u16 = util::text_to_unicode(bms_file_contents, encoding);
 
 	// Normalize line endings

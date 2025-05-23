@@ -77,6 +77,9 @@ try {
 	auto audio = sys::Audio{};
 	auto bms_compiler = bms::IRCompiler{};
 	auto const bms_ir = load_bms(bms_compiler, "songs/Ling Child/02_hyper.bme");
+	auto const bms_jp = load_bms(bms_compiler, "songs/地球塔デヴォーション/DVTN_0708_SPH.bme");
+	auto const bms_kr = load_bms(bms_compiler, "songs/kkotbat ui norae ~ song of flower bed/sofb_5h (2).bms");
+	auto const bms_kr2 = load_bms(bms_compiler, "songs/Seoul Subway Song/sss_7h.bme");
 	auto bms_chart = bms::Chart::from_ir(bms_ir);
 	while (!window.is_closing())
 		yield();
