@@ -8,6 +8,7 @@ Imports and helpers for STL algorithm support.
 
 module;
 #include <functional>
+#include <algorithm>
 #include <ranges>
 
 export module playnote.preamble:algorithm;
@@ -18,6 +19,7 @@ namespace views {
 	export using std::ranges::views::iota;
 }
 export using std::ranges::copy;
+export using std::ranges::transform;
 
 export using std::function;
 export using std::invoke;

@@ -6,11 +6,9 @@ io/audio_codec.cppm:
 The file codec to decode the audio format and convert sample rate.
 */
 
-module;
-#include <vector>
-#include <span>
-
 export module playnote.io.audio_codec;
+
+import playnote.preamble;
 
 namespace playnote::io {
 
@@ -20,12 +18,12 @@ public:
 		float left;
 		float right;
 	};
-	using Output = std::vector<Sample>;
+	using Output = vector<Sample>;
 
-	static auto process(std::span<char const> raw) -> Output;
+	static auto process(span<char const> raw) -> Output;
 };
 
-auto AudioCodec::process(std::span<char const> raw) -> Output
+auto AudioCodec::process(span<char const> raw) -> Output
 {
 	//todo
 	return {};

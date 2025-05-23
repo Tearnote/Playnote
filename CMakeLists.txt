@@ -19,6 +19,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Global build settings
 
 set(BUILD_SHARED_LIBS OFF) # Only build static libs
+add_compile_options(-Wno-deprecated-literal-operator -Wno-unqualified-std-cast-call)
 #TODO Compiler and linker flags:
 #TODO - nonstandard speedups (fastmath etc)
 #TODO - enable exceptions and RTTI

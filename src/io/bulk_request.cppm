@@ -7,37 +7,26 @@ A mechanism to request multiple files at once, to be fulfilled later on all at o
 */
 
 module;
-#include <initializer_list>
-#include <string_view>
-#include <functional>
-#include <algorithm>
-#include <iterator>
-#include <vector>
-#include <string>
-#include <span>
 
 export module playnote.io.bulk_request;
 
+import playnote.preamble;
 import playnote.io.file;
 
 namespace playnote::io {
 
 export class BulkRequest {
 public:
-	explicit BulkRequest(std::string_view domain): domain(domain) {}
+	explicit BulkRequest(string domain): domain{move(domain)} {}
 
 	template<typename T>
-	void enqueue(typename T::Output& output, std::string_view resource,
-		std::initializer_list<std::string_view> extensions = {})
+	void enqueue(typename T::Output& output, string resource, initializer_list<string> extensions = {})
 	{
-		auto extensions_vec = std::vector<std::string>{};
-		std::ranges::transform(extensions, std::back_inserter(extensions_vec),
-			[](auto const& ext) { return std::string{ext}; });
 		requests.emplace_back(Request{
-			.resource = std::string{resource},
-			.extensions = std::move(extensions_vec),
-			.processor = [&](std::span<char const> raw) {
-				output = std::move(T::process(raw));
+			.resource = move(resource),
+			.extensions = move(extensions),
+			.processor = [&](span<char const> raw) {
+				output = move(T::process(raw));
 			},
 		});
 	}
@@ -45,20 +34,21 @@ public:
 	void process()
 	{
 		for (auto& request: requests) {
-			auto raw = io::read_file(domain + "/" + request.resource); //todo extensions
+			auto const path = format("{}/{}", domain, request.resource);
+			auto const raw = io::read_file(path); //todo extensions
 			request.processor(raw.contents);
 		}
 	}
 
 private:
 	struct Request {
-		std::string resource;
-		std::vector<std::string> extensions;
-		std::function<void(std::span<char const>)> processor;
+		string resource;
+		vector<string> extensions;
+		function<void(span<char const>)> processor;
 	};
 
-	std::string domain;
-	std::vector<Request> requests;
+	string domain;
+	vector<Request> requests;
 };
 
 }

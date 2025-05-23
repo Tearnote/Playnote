@@ -7,8 +7,10 @@ Imports and helpers for container types.
 */
 
 module;
+#include <iterator>
 #include <vector>
 #include <array>
+#include <span>
 #include "ankerl/unordered_dense.h"
 
 export module playnote.preamble:container;
@@ -16,9 +18,14 @@ export module playnote.preamble:container;
 namespace playnote {
 
 export using std::vector;
+export using __gnu_cxx::operator==; // temporary hack
+export using std::back_inserter;
 export using std::array;
 export using std::to_array;
 export template<typename Key, typename T, typename Hash = ankerl::unordered_dense::hash<Key>>
 using unordered_map = ankerl::unordered_dense::map<Key, T, Hash>;
+export using std::span;
+export using std::begin;
+export using std::end;
 
 }

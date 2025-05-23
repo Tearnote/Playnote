@@ -7,8 +7,6 @@ Raw file I/O utilities.
 */
 
 module;
-#include <filesystem>
-#include <span>
 #include "mio/mmap.hpp"
 
 export module playnote.io.file;
@@ -17,23 +15,21 @@ import playnote.preamble;
 
 namespace playnote::io {
 
-namespace fs = std::filesystem;
-
 // A file open for reading
 struct File {
 	fs::path path;
 	mio::mmap_source map;
-	std::span<char const> contents;
+	span<char const> contents;
 };
 
 // Open a file for reading
 export auto read_file(fs::path const& path) -> File
 {
-	auto status = fs::status(path);
+	auto const status = fs::status(path);
 	if (!fs::exists(status))
-		throw runtime_error_fmt("\"{}\" does not exist", path.c_str());
+		throw runtime_error_fmt("{} does not exist", path);
 	if (!fs::is_regular_file(status))
-		throw runtime_error_fmt("\"{}\" is not a regular file", path.c_str());
+		throw runtime_error_fmt("{} is not a regular file", path);
 
 	auto file = File{
 		.path = path,
