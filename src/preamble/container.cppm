@@ -11,7 +11,7 @@ module;
 #include <vector>
 #include <array>
 #include <span>
-#include "ankerl/unordered_dense.h"
+#include <boost/unordered/unordered_flat_map.hpp>
 
 export module playnote.preamble:container;
 
@@ -22,8 +22,8 @@ export using __gnu_cxx::operator==; // temporary hack
 export using std::back_inserter;
 export using std::array;
 export using std::to_array;
-export template<typename Key, typename T, typename Hash = ankerl::unordered_dense::hash<Key>>
-using unordered_map = ankerl::unordered_dense::map<Key, T, Hash>;
+export template<typename Key, typename T, typename Hash = boost::hash<Key>>
+using unordered_map = boost::unordered_flat_map<Key, T, Hash>;
 export using std::span;
 export using std::begin;
 export using std::end;

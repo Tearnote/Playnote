@@ -16,7 +16,7 @@ find_package(Vulkan REQUIRED # GPU API
 	COMPONENTS glslc glslangValidator # Shader compiler
 )
 find_package(glfw3 3.4 REQUIRED) # Windowing support
-find_package(Boost REQUIRED) # Rational numbers
+find_package(Boost REQUIRED) # Rational numbers, improved containers
 find_package(ICU REQUIRED # Unicode string handling, charset conversion
 	COMPONENTS uc i18n
 )
@@ -40,12 +40,6 @@ FetchContent_Declare(mio # Memory-mapped disk IO
 	GIT_TAG 8b6b7d878c89e81614d05edca7936de41ccdd2da
 )
 FetchContent_MakeAvailable(mio)
-
-FetchContent_Declare(unordered_dense # std::unordered_map replacement
-	GIT_REPOSITORY https://github.com/martinus/unordered_dense
-	GIT_TAG v4.5.0
-)
-FetchContent_MakeAvailable(unordered_dense)
 
 FetchContent_Declare(quill # Threaded logger
 	GIT_REPOSITORY https://github.com/odygrd/quill

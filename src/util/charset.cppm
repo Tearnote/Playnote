@@ -8,13 +8,14 @@ Text encoding detection and conversion.
 
 module;
 #include <string_view>
+#include <type_traits>
 #include <unicode/errorcode.h>
 #include <unicode/ucsdet.h>
 #include <unicode/unistr.h>
 #include <unicode/numfmt.h>
 #include <unicode/ucnv.h>
+#include <boost/container_hash/hash.hpp>
 #include "libassert/assert.hpp"
-#include "ankerl/unordered_dense.h"
 #include "util/log_macros.hpp"
 
 export module playnote.util.charset;
@@ -31,9 +32,9 @@ export using UString = icu::UnicodeString;
 // We don't use UString.hashCode() because it's a low quality 32-bit hash
 export class UStringHash {
 public:
-	using is_avalanching = void;
+	using is_avalanching = std::true_type;
 	auto operator()(UString const& str) const noexcept -> uint64 {
-		using sv_hash = ankerl::unordered_dense::hash<std::basic_string_view<UChar>>;
+		using sv_hash = boost::hash<std::basic_string_view<UChar>>;
 		return sv_hash{}({str.getBuffer(), static_cast<usize>(str.length())});
 	}
 };
