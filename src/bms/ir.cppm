@@ -478,7 +478,7 @@ void IRCompiler::handle_header(IR& ir, HeaderCommand&& cmd, SlotMappings& maps)
 
 void IRCompiler::handle_channel(IR& ir, ChannelCommand&& cmd, SlotMappings& maps)
 {
-	if (cmd.measure <= 0) {
+	if (cmd.measure < 0) {
 		WARN_AS(cat, "L{}: Invalid measure: {}", cmd.line, cmd.measure);
 		return;
 	}
