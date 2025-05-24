@@ -16,7 +16,7 @@ find_package(Vulkan REQUIRED # GPU API
 	COMPONENTS glslc glslangValidator # Shader compiler
 )
 find_package(glfw3 3.4 REQUIRED) # Windowing support
-find_package(Boost REQUIRED # Rational numbers, improved containers, charset conversion, string algorithms
+find_package(Boost REQUIRED # Rational numbers, improved containers, charset conversion, string algorithms, resource wrapper
 	COMPONENTS container locale)
 pkg_search_module(libsamplerate REQUIRED IMPORTED_TARGET samplerate) # Audio file decoding
 pkg_search_module(libsndfile REQUIRED IMPORTED_TARGET sndfile) # Audio file decoding

@@ -46,7 +46,6 @@ target_sources(Playnote PUBLIC
 	src/io/file.cppm
 	src/util/charset.cppm
 	src/util/logger.cppm
-	src/util/raii.cppm
 	src/sys/window.cppm
 	src/sys/audio.cppm
 	src/sys/gpu.cppm

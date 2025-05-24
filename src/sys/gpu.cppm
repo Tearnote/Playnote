@@ -27,7 +27,6 @@ export module playnote.sys.gpu;
 import playnote.preamble;
 import playnote.config;
 import playnote.util.logger;
-import playnote.util.raii;
 import playnote.sys.window;
 
 namespace playnote::sys {

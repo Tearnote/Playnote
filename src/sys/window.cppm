@@ -18,7 +18,6 @@ export module playnote.sys.window;
 
 import playnote.preamble;
 import playnote.util.logger;
-import playnote.util.raii;
 
 namespace playnote::sys {
 
@@ -48,10 +47,10 @@ public:
 
 	// true if application close was requested (the X was pressed, or triggered manually from code
 	// to mark a user-requested quit event)
-	[[nodiscard]] auto is_closing() const -> bool { return glfwWindowShouldClose(*window_handle); }
+	[[nodiscard]] auto is_closing() const -> bool { return glfwWindowShouldClose(window_handle.get()); }
 
 	// Signal the application to cleanly close as soon as possible
-	void request_close() { glfwSetWindowShouldClose(*window_handle, true); }
+	void request_close() { glfwSetWindowShouldClose(window_handle.get(), true); }
 
 	// Size of the window's framebuffer
 	[[nodiscard]] auto size() const -> uvec2;
@@ -80,7 +79,7 @@ public:
 		mouse_button_callbacks.emplace_back(move(func));
 	}
 
-	auto handle() -> GLFWwindow* { return *window_handle; }
+	auto handle() -> GLFWwindow* { return window_handle.get(); }
 
 	// Create a Vulkan surface for the window's framebuffer
 	// Destruction needs to be handled manually by the caller
@@ -92,7 +91,7 @@ public:
 	auto operator=(Window&&) -> Window& = delete;
 
 private:
-	using WindowHandle = util::RAIIResource<GLFWwindow*, decltype([](auto* w) {
+	using WindowHandle = unique_resource<GLFWwindow*, decltype([](auto* w) {
 		auto title = string{glfwGetWindowTitle(w)};
 		glfwDestroyWindow(w);
 		INFO("Window \"{}\" closed", title);
@@ -137,25 +136,25 @@ Window::Window(GLFW&, string const& title, uvec2 size)
 	window_handle = WindowHandle{
 		glfwCreateWindow(size.x(), size.y(), title.c_str(), nullptr, nullptr)
 	};
-	ASSERT(*window_handle);
+	ASSERT(window_handle.get());
 
 	// Provide event callbacks full access to the associated Window instance
-	glfwSetWindowUserPointer(*window_handle, this);
+	glfwSetWindowUserPointer(window_handle.get(), this);
 
-	glfwSetKeyCallback(*window_handle, [](GLFWwindow* window_ptr, int key, int, int action, int) {
+	glfwSetKeyCallback(window_handle.get(), [](GLFWwindow* window_ptr, int key, int, int action, int) {
 		if (action == GLFW_REPEAT) return; // Only care about press and release
 		auto& window = *static_cast<Window*>(glfwGetWindowUserPointer(window_ptr));
 		for (auto& func: window.key_callbacks)
 			func(key, action == GLFW_PRESS);
 	});
 
-	glfwSetCursorPosCallback(*window_handle, [](GLFWwindow* window_ptr, double x, double y) {
+	glfwSetCursorPosCallback(window_handle.get(), [](GLFWwindow* window_ptr, double x, double y) {
 		auto& window = *static_cast<Window*>(glfwGetWindowUserPointer(window_ptr));
 		for (auto& func: window.cursor_motion_callbacks)
 			func(vec2{static_cast<float>(x), static_cast<float>(y)});
 	});
 
-	glfwSetMouseButtonCallback(*window_handle,
+	glfwSetMouseButtonCallback(window_handle.get(),
 		[](GLFWwindow* window_ptr, int button, int action, int) {
 			auto& window = *static_cast<Window*>(glfwGetWindowUserPointer(window_ptr));
 			for (auto& func: window.mouse_button_callbacks)
@@ -170,7 +169,7 @@ auto Window::size() const -> uvec2
 {
 	auto w = 0;
 	auto h = 0;
-	glfwGetFramebufferSize(*window_handle, &w, &h);
+	glfwGetFramebufferSize(window_handle.get(), &w, &h);
 	return uvec2{static_cast<uint>(w), static_cast<uint>(h)};
 }
 
@@ -178,14 +177,14 @@ auto Window::get_cursor_position() const -> vec2
 {
 	auto x = 0.0;
 	auto y = 0.0;
-	glfwGetCursorPos(*window_handle, &x, &y);
+	glfwGetCursorPos(window_handle.get(), &x, &y);
 	return vec2{static_cast<float>(x), static_cast<float>(y)};
 }
 
 auto Window::create_surface(VkInstance instance) -> VkSurfaceKHR
 {
 	auto result = VkSurfaceKHR{nullptr};
-	glfwCreateWindowSurface(instance, *window_handle, nullptr, &result);
+	glfwCreateWindowSurface(instance, window_handle.get(), nullptr, &result);
 	return result;
 }
 

@@ -14,6 +14,7 @@ module;
 #include <utility>
 #include <memory>
 #include <tuple>
+#include <boost/scope/unique_resource.hpp>
 
 export module playnote.preamble:utility;
 
@@ -38,6 +39,7 @@ export using std::make_unique;
 export using std::shared_ptr;
 export using std::make_shared;
 export using std::static_pointer_cast;
+export using boost::scope::unique_resource;
 export using std::to_underlying;
 
 // Constructs a type with overloaded operator()s, for use as a std::variant visitor
