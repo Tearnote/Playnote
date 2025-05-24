@@ -97,10 +97,21 @@ private:
 		Instance& instance;
 	};
 
-	using Device = util::RAIIResource<vkb::Device, decltype([](auto& d) {
-		vkb::destroy_device(d);
-		DEBUG_AS(globals::logger->get_category("Graphics"), "Vulkan device cleaned up");
-	})>;
+	class Device {
+	public:
+		vkb::Device device;
+
+		Device(util::Logger::Category*, vkb::PhysicalDevice&);
+		~Device();
+
+		Device(Device const&) = delete;
+		auto operator=(Device const&) -> Device& = delete;
+		Device(Device&&) = delete;
+		auto operator=(Device&&) -> Device& = delete;
+
+	private:
+		util::Logger::Category* cat;
+	};
 
 	struct Queues {
 		VkQueue graphics;
@@ -114,17 +125,16 @@ private:
 	// Helpers below use dumb types instead of RAII wrappers to avoid a linker bug
 	// (the lambda types are distinct in different TUs when modules are in use)
 	auto select_physical_device(Instance&, Surface&) -> vkb::PhysicalDevice;
-	auto create_device(vkb::PhysicalDevice&) -> vkb::Device;
-	auto retrieve_queues(vkb::Device&) -> Queues;
-	auto create_runtime(Instance&, VkPhysicalDevice, VkDevice, Queues const&) -> vuk::Runtime;
-	auto create_swapchain(uvec2 size, vuk::Allocator&, vkb::Device&, Surface&, optional<vuk::Swapchain> old = nullopt) -> vuk::Swapchain;
+	auto retrieve_queues(Device&) -> Queues;
+	auto create_runtime(Instance&, VkPhysicalDevice, Device&, Queues const&) -> vuk::Runtime;
+	auto create_swapchain(uvec2 size, vuk::Allocator&, Device&, Surface&, optional<vuk::Swapchain> old = nullopt) -> vuk::Swapchain;
 
 	sys::Window& window;
 
 	Instance instance;
 	Surface surface;
-	vkb::PhysicalDevice physical_device{};
-	Device device{};
+	vkb::PhysicalDevice physical_device;
+	Device device;
 	vuk::Runtime runtime;
 	vuk::DeviceSuperFrameResource global_resource;
 	vuk::Allocator global_allocator;
@@ -139,11 +149,11 @@ GPU::GPU(sys::Window& window):
 	instance{cat},
 	surface{cat, window, instance},
 	physical_device{select_physical_device(instance, surface)},
-	device{create_device(physical_device)},
-	runtime{create_runtime(instance, physical_device, *device, retrieve_queues(*device))},
+	device{cat, physical_device},
+	runtime{create_runtime(instance, physical_device, device, retrieve_queues(device))},
 	global_resource{runtime, FramesInFlight},
 	global_allocator{global_resource},
-	swapchain{create_swapchain(window.size(), global_allocator, *device, surface)},
+	swapchain{create_swapchain(window.size(), global_allocator, device, surface)},
 	tracy_context{vuk::extra::init_Tracy(global_allocator)}
 {
 	INFO_AS(cat, "Vulkan initialized");

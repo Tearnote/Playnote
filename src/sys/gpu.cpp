@@ -115,6 +115,25 @@ GPU::Surface::~Surface()
 	DEBUG_AS(cat, "Vulkan surface cleaned up");
 }
 
+GPU::Device::Device(util::Logger::Category* cat, vkb::PhysicalDevice& physical_device):
+	cat{cat}
+{
+	auto device_result = vkb::DeviceBuilder(physical_device).build();
+	if (!device_result)
+		throw runtime_error_fmt("Failed to create Vulkan device: {}",
+			device_result.error().message());
+	device = vkb::Device(device_result.value());
+	volkLoadDevice(device);
+
+	DEBUG_AS(cat, "Vulkan device created");
+}
+
+GPU::Device::~Device()
+{
+	vkb::destroy_device(device);
+	DEBUG_AS(cat, "Vulkan device cleaned up");
+}
+
 auto GPU::select_physical_device(Instance& instance, Surface& surface) -> vkb::PhysicalDevice
 {
 	auto physical_device_features = VkPhysicalDeviceFeatures{};
@@ -178,22 +197,10 @@ auto GPU::select_physical_device(Instance& instance, Surface& surface) -> vkb::P
 	return physical_device;
 }
 
-auto GPU::create_device(vkb::PhysicalDevice& physical_device) -> vkb::Device
-{
-	auto device_result = vkb::DeviceBuilder(physical_device).build();
-	if (!device_result)
-		throw runtime_error_fmt("Failed to create Vulkan device: {}",
-			device_result.error().message());
-	auto device = vkb::Device(device_result.value());
-	volkLoadDevice(device);
-
-	DEBUG_AS(cat, "Vulkan device created");
-	return device;
-}
-
-auto GPU::retrieve_queues(vkb::Device& device) -> Queues
+auto GPU::retrieve_queues(Device& device_wrap) -> Queues
 {
 	auto result = Queues{};
+	auto& device = device_wrap.device;
 
 	result.graphics = device.get_queue(vkb::QueueType::graphics).value();
 	result.graphics_family_index = device.get_queue_index(vkb::QueueType::graphics).value();
@@ -217,7 +224,7 @@ auto GPU::retrieve_queues(vkb::Device& device) -> Queues
 	return result;
 }
 
-auto GPU::create_runtime(Instance& instance, VkPhysicalDevice physical_device, VkDevice device,
+auto GPU::create_runtime(Instance& instance, VkPhysicalDevice physical_device, Device& device,
 	Queues const& queues) -> vuk::Runtime
 {
 	auto pointers = vuk::FunctionPointers{
@@ -234,30 +241,30 @@ auto GPU::create_runtime(Instance& instance, VkPhysicalDevice physical_device, V
 	auto executors = std::vector<unique_ptr<vuk::Executor>>{};
 	executors.reserve(4);
 	executors.emplace_back(std::make_unique<vuk::ThisThreadExecutor>());
-	executors.emplace_back(vuk::create_vkqueue_executor(pointers, device, queues.graphics,
+	executors.emplace_back(vuk::create_vkqueue_executor(pointers, device.device, queues.graphics,
 		queues.graphics_family_index, vuk::DomainFlagBits::eGraphicsQueue));
 	if (queues.compute) {
-		executors.emplace_back(vuk::create_vkqueue_executor(pointers, device, queues.compute,
+		executors.emplace_back(vuk::create_vkqueue_executor(pointers, device.device, queues.compute,
 			queues.compute_family_index, vuk::DomainFlagBits::eComputeQueue));
 	}
 	if (queues.transfer) {
-		executors.emplace_back(vuk::create_vkqueue_executor(pointers, device, queues.transfer,
+		executors.emplace_back(vuk::create_vkqueue_executor(pointers, device.device, queues.transfer,
 			queues.transfer_family_index, vuk::DomainFlagBits::eTransferQueue));
 	}
 
 	return vuk::Runtime{vuk::RuntimeCreateParameters{
 		.instance = instance.instance.instance, // lol
-		.device = device,
+		.device = device.device,
 		.physical_device = physical_device,
 		.executors = move(executors),
 		.pointers = pointers,
 	}};
 }
 
-auto GPU::create_swapchain(uvec2 size, vuk::Allocator& allocator, vkb::Device& device,
+auto GPU::create_swapchain(uvec2 size, vuk::Allocator& allocator, Device& device,
 	Surface& surface, optional<vuk::Swapchain> old) -> vuk::Swapchain
 {
-	auto vkbswapchain_result = vkb::SwapchainBuilder{device}
+	auto vkbswapchain_result = vkb::SwapchainBuilder{device.device}
 		.set_old_swapchain(old? old->swapchain : VK_NULL_HANDLE)
 		.set_desired_extent(size.x(), size.y())
 		.set_desired_format({
