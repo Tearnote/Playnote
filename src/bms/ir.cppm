@@ -15,6 +15,7 @@ module;
 export module playnote.bms.ir;
 
 import playnote.preamble;
+import playnote.config;
 import playnote.util.charset;
 import playnote.util.logger;
 import playnote.bms.parser;
@@ -282,7 +283,7 @@ IR::IR():
 
 IRCompiler::IRCompiler()
 {
-	cat = globals::logger->register_category("BMS parse", util::Logger::Level::Debug);
+	cat = globals::logger->register_category("BMS parse", LogLevelBMSBuild);
 	register_header_handlers();
 	register_channel_handlers();
 }

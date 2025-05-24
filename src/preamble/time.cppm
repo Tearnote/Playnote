@@ -13,9 +13,9 @@ export module playnote.preamble:time;
 
 namespace playnote {
 
-export using std::chrono_literals::operator ""ns;
-export using std::chrono_literals::operator ""ms;
-export using std::chrono_literals::operator ""s;
+export using std::literals::operator ""ns;
+export using std::literals::operator ""ms;
+export using std::literals::operator ""s;
 export using std::chrono::nanoseconds;
 export using std::chrono::milliseconds;
 export using std::chrono::seconds;

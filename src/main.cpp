@@ -6,11 +6,10 @@ main.cpp:
 Entry point. Initializes basic facilities like logging and shared subsystems, then spawns threads.
 */
 
-#include <print>
 #include "util/logger.hpp"
-#include "config.hpp"
 
 import playnote.preamble;
+import playnote.config;
 import playnote.util.logger;
 import playnote.sys.window;
 import playnote.sys.os;
@@ -37,10 +36,9 @@ auto run() -> int
 
 auto main() -> int
 try {
-#if BUILD_TYPE == BUILD_DEBUG
-	sys::create_console();
-#endif
-	auto logger_stub = globals::logger.provide(LogfilePath, LoggingLevel);
+	if constexpr (BuildType == Build::Debug)
+		sys::create_console();
+	auto logger_stub = globals::logger.provide(LogfilePath, LogLevelGlobal);
 	INFO("{} {}.{}.{} starting up", AppTitle, AppVersion[0], AppVersion[1], AppVersion[2]);
 	return run();
 }

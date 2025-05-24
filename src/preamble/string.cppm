@@ -13,7 +13,6 @@ module;
 #include <boost/algorithm/string/case_conv.hpp>
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/algorithm/string/trim.hpp>
-#include <boost/locale/conversion.hpp>
 #include <boost/lexical_cast.hpp>
 #include "quill/bundled/fmt/format.h"
 
@@ -25,6 +24,8 @@ namespace playnote {
 
 export using std::string;
 export using std::string_view;
+export using std::literals::operator ""s;
+export using std::literals::operator ""sv;
 export using fmtquill::format;
 export using fmtquill::print;
 export using boost::trim;

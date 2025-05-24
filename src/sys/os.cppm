@@ -8,9 +8,8 @@ Various OS-specific utilities.
 
 module;
 #include "tracy/Tracy.hpp"
-#include "config.hpp"
 
-#if TARGET == TARGET_WINDOWS
+#ifdef _WIN32
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
@@ -22,13 +21,14 @@ module;
 #include <Windows.h>
 #include <fcntl.h>
 #include <io.h>
-#elif TARGET == TARGET_LINUX
+#else
 #include <pthread.h>
 #endif
 
 export module playnote.sys.os;
 
 import playnote.preamble;
+import playnote.config;
 
 namespace playnote::sys {
 
@@ -39,7 +39,7 @@ public:
 	explicit SchedulerPeriod(nanoseconds period):
 		period{period}
 	{
-#if TARGET == TARGET_WINDOWS
+#ifdef _WIN32
 		if (timeBeginPeriod(duration_cast<milliseconds>(period).count()) != TIMERR_NOERROR)
 			throw runtime_error{"Failed to initialize Windows scheduler period"};
 #endif
@@ -48,7 +48,7 @@ public:
 	~SchedulerPeriod()
 	{
 		if (period == -1ns) return;
-#if TARGET == TARGET_WINDOWS
+#ifdef _WIN32
 		timeEndPeriod(duration_cast<milliseconds>(period).count());
 #endif
 	}
@@ -72,16 +72,15 @@ private:
 // Name the current thread
 export void set_thread_name(string const& name)
 {
-#ifdef THREAD_DEBUG
-#if TARGET == TARGET_WINDOWS
+	if constexpr (!ThreadNamesEnabled) return;
+#ifdef _WIN32
 	auto lname = std::wstring{name.begin(), name.end()};
 	auto err = SetThreadDescription(GetCurrentThread(), lname.c_str());
 	if (FAILED(err))
 		throw stx::runtime_error_fmt{"Failed to set thread name: error {}", err};
-#elif TARGET == TARGET_LINUX
+#else
 	if (auto err = pthread_setname_np(pthread_self(), name.c_str()); err != 0)
 		throw system_error("Failed to set thread name");
-#endif
 #endif
 	tracy::SetThreadName(name.c_str());
 }
@@ -90,7 +89,7 @@ export void set_thread_name(string const& name)
 // https://github.com/ocaml/ocaml/issues/9252#issuecomment-576383814
 export void create_console()
 {
-#if TARGET == TARGET_WINDOWS
+#ifdef _WIN32
 	AllocConsole();
 
 	freopen("CONOUT$", "w", stdout);

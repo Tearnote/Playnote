@@ -37,7 +37,6 @@ add_executable(Playnote
 	src/util/logger.hpp
 	src/sys/gpu.cpp
 	src/gfx/renderer.cpp
-	src/config.hpp
 	src/main.cpp
 )
 target_sources(Playnote PUBLIC
@@ -72,6 +71,7 @@ target_sources(Playnote PUBLIC
 	src/preamble/time.cppm
 	src/preamble/os.cppm
 	src/preamble.cppm
+	src/config.cppm
 )
 
 target_include_directories(Playnote PRIVATE src) # All includes start from src as root

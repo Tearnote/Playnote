@@ -21,11 +21,11 @@ module;
 #include "vuk/Value.hpp"
 #include "vuk/Types.hpp"
 #include "util/logger.hpp"
-#include "config.hpp"
 
 export module playnote.sys.gpu;
 
 import playnote.preamble;
+import playnote.config;
 import playnote.util.logger;
 import playnote.util.raii;
 import playnote.sys.window;
@@ -89,12 +89,11 @@ private:
 		uint compute_family_index;
 	};
 
-#ifdef VK_VALIDATION
 	// Forward Vulkan validation errors to the logger
 	static auto debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT,
 		VkDebugUtilsMessageTypeFlagsEXT, VkDebugUtilsMessengerCallbackDataEXT const*,
 		void*) -> VkBool32;
-#endif
+
 	// Helpers below use dumb types instead of RAII wrappers to avoid a linker bug
 	// (the lambda types are distinct in different TUs when modules are in use)
 	auto create_instance() -> vkb::Instance;
@@ -120,7 +119,7 @@ private:
 
 GPU::GPU(sys::Window& window):
 	// Beautiful, isn't it
-	cat{globals::logger->register_category("Graphics", util::Logger::Level::TraceL1)},
+	cat{globals::logger->register_category("Graphics", LogLevelGraphics)},
 	window{window},
 	instance{create_instance()},
 	surface{create_surface(*instance)},
