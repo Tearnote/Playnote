@@ -60,10 +60,25 @@ public:
 private:
 	util::Logger::Category* cat;
 
-	using Instance = util::RAIIResource<vkb::Instance, decltype([](auto& i) {
-		vkb::destroy_instance(i);
-		DEBUG_AS(globals::logger->get_category("Graphics"), "Vulkan instance cleaned up");
-	})>;
+	class Instance {
+	public:
+		vkb::Instance instance;
+
+		explicit Instance(util::Logger::Category*);
+		~Instance();
+
+		Instance(Instance const&) = delete;
+		auto operator=(Instance const&) -> Instance& = delete;
+		Instance(Instance&&) = delete;
+		auto operator=(Instance&&) -> Instance& = delete;
+
+	private:
+		util::Logger::Category* cat;
+
+		static auto debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT,
+			VkDebugUtilsMessageTypeFlagsEXT, VkDebugUtilsMessengerCallbackDataEXT const*,
+			void*) -> VkBool32;
+	};
 
 	struct Surface_impl {
 		VkSurfaceKHR surface;
@@ -89,24 +104,18 @@ private:
 		uint compute_family_index;
 	};
 
-	// Forward Vulkan validation errors to the logger
-	static auto debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT,
-		VkDebugUtilsMessageTypeFlagsEXT, VkDebugUtilsMessengerCallbackDataEXT const*,
-		void*) -> VkBool32;
-
 	// Helpers below use dumb types instead of RAII wrappers to avoid a linker bug
 	// (the lambda types are distinct in different TUs when modules are in use)
-	auto create_instance() -> vkb::Instance;
-	auto create_surface(vkb::Instance&) -> Surface_impl;
-	auto select_physical_device(vkb::Instance&, VkSurfaceKHR) -> vkb::PhysicalDevice;
+	auto create_surface(Instance&) -> Surface_impl;
+	auto select_physical_device(Instance&, VkSurfaceKHR) -> vkb::PhysicalDevice;
 	auto create_device(vkb::PhysicalDevice&) -> vkb::Device;
 	auto retrieve_queues(vkb::Device&) -> Queues;
-	auto create_runtime(VkInstance, VkPhysicalDevice, VkDevice, Queues const&) -> vuk::Runtime;
+	auto create_runtime(Instance&, VkPhysicalDevice, VkDevice, Queues const&) -> vuk::Runtime;
 	auto create_swapchain(uvec2 size, vuk::Allocator&, vkb::Device&, Surface_impl&, optional<vuk::Swapchain> old = nullopt) -> vuk::Swapchain;
 
 	sys::Window& window;
 
-	Instance instance{};
+	Instance instance;
 	Surface surface{};
 	vkb::PhysicalDevice physical_device{};
 	Device device{};
@@ -121,11 +130,11 @@ GPU::GPU(sys::Window& window):
 	// Beautiful, isn't it
 	cat{globals::logger->register_category("Graphics", LogLevelGraphics)},
 	window{window},
-	instance{create_instance()},
-	surface{create_surface(*instance)},
-	physical_device{select_physical_device(*instance, *surface)},
+	instance{cat},
+	surface{create_surface(instance)},
+	physical_device{select_physical_device(instance, *surface)},
 	device{create_device(physical_device)},
-	runtime{create_runtime(*instance, physical_device, *device, retrieve_queues(*device))},
+	runtime{create_runtime(instance, physical_device, *device, retrieve_queues(*device))},
 	global_resource{runtime, FramesInFlight},
 	global_allocator{global_resource},
 	swapchain{create_swapchain(window.size(), global_allocator, *device, *surface)},

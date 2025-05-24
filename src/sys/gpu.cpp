@@ -26,7 +26,51 @@ import playnote.config;
 
 namespace playnote::sys {
 
-auto GPU::debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT severityCode,
+GPU::Instance::Instance(util::Logger::Category* cat):
+	cat{cat}
+{
+	auto instance_builder = vkb::InstanceBuilder{}
+		.set_app_name(AppTitle)
+		.set_engine_name("vuk")
+		.require_api_version(1, 2, 0)
+		.set_app_version(AppVersion[0], AppVersion[1], AppVersion[2]);
+	if constexpr (VulkanValidationEnabled) {
+		instance_builder
+			.enable_layer("VK_LAYER_KHRONOS_validation")
+			.add_validation_feature_enable(VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT)
+			.add_validation_feature_enable(VK_VALIDATION_FEATURE_ENABLE_DEBUG_PRINTF_EXT)
+			.set_debug_callback(debug_callback)
+			.set_debug_callback_user_data_pointer(cat)
+			.set_debug_messenger_severity(
+				VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT |
+				VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+				VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT // Verbose, but debug printf messages are INFO
+			)
+			.set_debug_messenger_type(
+				VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
+				VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
+				VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT
+			);
+	}
+	auto instance_result = instance_builder.build();
+	if (!instance_result)
+		throw runtime_error_fmt("Failed to create a Vulkan instance: {}",
+			instance_result.error().message());
+	instance = vkb::Instance{instance_result.value()};
+
+	volkInitializeCustom(instance.fp_vkGetInstanceProcAddr);
+	volkLoadInstanceOnly(instance.instance);
+
+	DEBUG_AS(cat, "Vulkan instance created");
+}
+
+GPU::Instance::~Instance()
+{
+	vkb::destroy_instance(instance);
+	DEBUG_AS(cat, "Vulkan instance cleaned up");
+}
+
+auto GPU::Instance::debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT severityCode,
 	VkDebugUtilsMessageTypeFlagsEXT typeCode, VkDebugUtilsMessengerCallbackDataEXT const* data,
 	void* cat_ptr) -> VkBool32
 {
@@ -58,54 +102,15 @@ auto GPU::debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT severityCode,
 	return VK_FALSE;
 }
 
-auto GPU::create_instance() -> vkb::Instance
-{
-	auto instance_builder = vkb::InstanceBuilder{}
-		.set_app_name(AppTitle)
-		.set_engine_name("vuk")
-		.require_api_version(1, 2, 0)
-		.set_app_version(AppVersion[0], AppVersion[1], AppVersion[2]);
-	if constexpr (VulkanValidationEnabled) {
-		instance_builder
-			.enable_layer("VK_LAYER_KHRONOS_validation")
-			.add_validation_feature_enable(VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT)
-			.add_validation_feature_enable(VK_VALIDATION_FEATURE_ENABLE_DEBUG_PRINTF_EXT)
-			.set_debug_callback(debug_callback)
-			.set_debug_callback_user_data_pointer(cat)
-			.set_debug_messenger_severity(
-				VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT |
-				VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
-				VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT // Verbose, but debug printf messages are INFO
-			)
-			.set_debug_messenger_type(
-				VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
-				VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
-				VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT
-			);
-	}
-	auto instance_result = instance_builder.build();
-	if (!instance_result)
-		throw runtime_error_fmt("Failed to create a Vulkan instance: {}",
-			instance_result.error().message());
-	auto instance = vkb::Instance{instance_result.value()};
-
-	volkInitializeCustom(instance.fp_vkGetInstanceProcAddr);
-	volkLoadInstanceOnly(instance.instance);
-
-	DEBUG_AS(cat, "Vulkan instance created");
-	return instance;
-}
-
-auto GPU::create_surface(vkb::Instance& instance) -> Surface_impl
+auto GPU::create_surface(Instance& instance) -> Surface_impl
 {
 	return Surface_impl{
-		.surface = window.create_surface(instance),
-		.instance = instance,
+		.surface = window.create_surface(instance.instance),
+		.instance = instance.instance,
 	};
 }
 
-auto GPU::select_physical_device(vkb::Instance& instance,
-	VkSurfaceKHR surface) -> vkb::PhysicalDevice
+auto GPU::select_physical_device(Instance& instance, VkSurfaceKHR surface) -> vkb::PhysicalDevice
 {
 	auto physical_device_features = VkPhysicalDeviceFeatures{};
 	if constexpr (VulkanValidationEnabled) {
@@ -131,7 +136,7 @@ auto GPU::select_physical_device(vkb::Instance& instance,
 		.shaderOutputLayer = VK_TRUE,
 	};
 
-	auto physical_device_selector = vkb::PhysicalDeviceSelector{instance}
+	auto physical_device_selector = vkb::PhysicalDeviceSelector{instance.instance}
 		.set_surface(surface)
 		.set_minimum_version(1, 2) // vuk requirement
 		.set_required_features(physical_device_features)
@@ -207,7 +212,7 @@ auto GPU::retrieve_queues(vkb::Device& device) -> Queues
 	return result;
 }
 
-auto GPU::create_runtime(VkInstance instance, VkPhysicalDevice physical_device, VkDevice device,
+auto GPU::create_runtime(Instance& instance, VkPhysicalDevice physical_device, VkDevice device,
 	Queues const& queues) -> vuk::Runtime
 {
 	auto pointers = vuk::FunctionPointers{
@@ -236,7 +241,7 @@ auto GPU::create_runtime(VkInstance instance, VkPhysicalDevice physical_device, 
 	}
 
 	return vuk::Runtime{vuk::RuntimeCreateParameters{
-		.instance = instance,
+		.instance = instance.instance.instance, // lol
 		.device = device,
 		.physical_device = physical_device,
 		.executors = move(executors),
