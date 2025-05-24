@@ -102,15 +102,20 @@ auto GPU::Instance::debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT severi
 	return VK_FALSE;
 }
 
-auto GPU::create_surface(Instance& instance) -> Surface_impl
+GPU::Surface::Surface(util::Logger::Category* cat, sys::Window& window, Instance& instance):
+	cat{cat},
+	instance{instance}
 {
-	return Surface_impl{
-		.surface = window.create_surface(instance.instance),
-		.instance = instance.instance,
-	};
+	surface = window.create_surface(instance.instance);
 }
 
-auto GPU::select_physical_device(Instance& instance, VkSurfaceKHR surface) -> vkb::PhysicalDevice
+GPU::Surface::~Surface()
+{
+	vkDestroySurfaceKHR(instance.instance, surface, nullptr);
+	DEBUG_AS(cat, "Vulkan surface cleaned up");
+}
+
+auto GPU::select_physical_device(Instance& instance, Surface& surface) -> vkb::PhysicalDevice
 {
 	auto physical_device_features = VkPhysicalDeviceFeatures{};
 	if constexpr (VulkanValidationEnabled) {
@@ -137,7 +142,7 @@ auto GPU::select_physical_device(Instance& instance, VkSurfaceKHR surface) -> vk
 	};
 
 	auto physical_device_selector = vkb::PhysicalDeviceSelector{instance.instance}
-		.set_surface(surface)
+		.set_surface(surface.surface)
 		.set_minimum_version(1, 2) // vuk requirement
 		.set_required_features(physical_device_features)
 		.set_required_features_11(physical_device_vulkan11_features)
@@ -250,7 +255,7 @@ auto GPU::create_runtime(Instance& instance, VkPhysicalDevice physical_device, V
 }
 
 auto GPU::create_swapchain(uvec2 size, vuk::Allocator& allocator, vkb::Device& device,
-	Surface_impl& surface, optional<vuk::Swapchain> old) -> vuk::Swapchain
+	Surface& surface, optional<vuk::Swapchain> old) -> vuk::Swapchain
 {
 	auto vkbswapchain_result = vkb::SwapchainBuilder{device}
 		.set_old_swapchain(old? old->swapchain : VK_NULL_HANDLE)
@@ -299,7 +304,7 @@ auto GPU::create_swapchain(uvec2 size, vuk::Allocator& allocator, vkb::Device& d
 	}
 
 	swapchain.swapchain = vkbswapchain.swapchain;
-	swapchain.surface = surface;
+	swapchain.surface = surface.surface;
 	DEBUG_AS(cat, "Swapchain (re)created at {}x{}", size.x(), size.y());
 
 	return move(swapchain);

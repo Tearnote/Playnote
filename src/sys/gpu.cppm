@@ -80,16 +80,23 @@ private:
 			void*) -> VkBool32;
 	};
 
-	struct Surface_impl {
+	class Surface {
+	public:
 		VkSurfaceKHR surface;
-		vkb::Instance& instance;
-		operator VkSurfaceKHR() { return surface; }
+
+		Surface(util::Logger::Category*, sys::Window&, Instance&);
+		~Surface();
+
+		Surface(Surface const&) = delete;
+		auto operator=(Surface const&) -> Surface& = delete;
+		Surface(Surface&&) = delete;
+		auto operator=(Surface&&) -> Surface& = delete;
+
+	private:
+		util::Logger::Category* cat;
+		Instance& instance;
 	};
 
-	using Surface = util::RAIIResource<Surface_impl, decltype([](auto& s) {
-		vkDestroySurfaceKHR(s.instance, s.surface, nullptr);
-		DEBUG_AS(globals::logger->get_category("Graphics"), "Vulkan surface cleaned up");
-	})>;
 	using Device = util::RAIIResource<vkb::Device, decltype([](auto& d) {
 		vkb::destroy_device(d);
 		DEBUG_AS(globals::logger->get_category("Graphics"), "Vulkan device cleaned up");
@@ -106,17 +113,16 @@ private:
 
 	// Helpers below use dumb types instead of RAII wrappers to avoid a linker bug
 	// (the lambda types are distinct in different TUs when modules are in use)
-	auto create_surface(Instance&) -> Surface_impl;
-	auto select_physical_device(Instance&, VkSurfaceKHR) -> vkb::PhysicalDevice;
+	auto select_physical_device(Instance&, Surface&) -> vkb::PhysicalDevice;
 	auto create_device(vkb::PhysicalDevice&) -> vkb::Device;
 	auto retrieve_queues(vkb::Device&) -> Queues;
 	auto create_runtime(Instance&, VkPhysicalDevice, VkDevice, Queues const&) -> vuk::Runtime;
-	auto create_swapchain(uvec2 size, vuk::Allocator&, vkb::Device&, Surface_impl&, optional<vuk::Swapchain> old = nullopt) -> vuk::Swapchain;
+	auto create_swapchain(uvec2 size, vuk::Allocator&, vkb::Device&, Surface&, optional<vuk::Swapchain> old = nullopt) -> vuk::Swapchain;
 
 	sys::Window& window;
 
 	Instance instance;
-	Surface surface{};
+	Surface surface;
 	vkb::PhysicalDevice physical_device{};
 	Device device{};
 	vuk::Runtime runtime;
@@ -131,13 +137,13 @@ GPU::GPU(sys::Window& window):
 	cat{globals::logger->register_category("Graphics", LogLevelGraphics)},
 	window{window},
 	instance{cat},
-	surface{create_surface(instance)},
-	physical_device{select_physical_device(instance, *surface)},
+	surface{cat, window, instance},
+	physical_device{select_physical_device(instance, surface)},
 	device{create_device(physical_device)},
 	runtime{create_runtime(instance, physical_device, *device, retrieve_queues(*device))},
 	global_resource{runtime, FramesInFlight},
 	global_allocator{global_resource},
-	swapchain{create_swapchain(window.size(), global_allocator, *device, *surface)},
+	swapchain{create_swapchain(window.size(), global_allocator, *device, surface)},
 	tracy_context{vuk::extra::init_Tracy(global_allocator)}
 {
 	INFO_AS(cat, "Vulkan initialized");
