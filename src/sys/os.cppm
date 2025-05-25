@@ -7,8 +7,6 @@ Various OS-specific utilities.
 */
 
 module;
-#include "tracy/Tracy.hpp"
-
 #ifdef _WIN32
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -29,6 +27,7 @@ export module playnote.sys.os;
 
 import playnote.preamble;
 import playnote.config;
+import playnote.lib.tracing;
 
 namespace playnote::sys {
 
@@ -82,7 +81,7 @@ export void set_thread_name(string const& name)
 	if (auto err = pthread_setname_np(pthread_self(), name.c_str()); err != 0)
 		throw system_error("Failed to set thread name");
 #endif
-	tracy::SetThreadName(name.c_str());
+	lib::tracing_set_thread_name(name);
 }
 
 // Open the console window and attach standard outputs to it

@@ -8,7 +8,7 @@ Only the process's main thread can be the input thread.
 */
 
 module;
-#include "tracy/Tracy.hpp"
+#include "macros/tracing.hpp"
 #include "macros/logger.hpp"
 
 export module playnote.threads.input;
@@ -26,7 +26,7 @@ try {
 
 	while (!window.is_closing()) {
 		glfw.poll();
-		FrameMarkNamed("input");
+		FRAME_MARK_NAMED("input");
 		yield();
 	}
 }

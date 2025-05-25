@@ -7,8 +7,8 @@ Presents current game state onto the window at the screen's refresh rate.
 */
 
 module;
-#include "tracy/Tracy.hpp"
 #include "imgui.h"
+#include "macros/tracing.hpp"
 #include "macros/logger.hpp"
 
 export module playnote.threads.render;
@@ -49,7 +49,7 @@ try {
 			enqueue_test_scene(queue);
 			ImGui::ShowDemoWindow();
 		});
-		FrameMark;
+		FRAME_MARK();
 	}
 }
 catch (exception const& e) {

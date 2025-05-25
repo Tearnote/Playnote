@@ -34,6 +34,7 @@ include(cmake/Dependencies.cmake)
 # Main target
 
 add_executable(Playnote
+	src/macros/tracing.hpp
 	src/macros/assert.hpp
 	src/macros/logger.hpp
 	src/sys/gpu.cpp
@@ -54,6 +55,7 @@ target_sources(Playnote PUBLIC
 	src/preamble/time.cppm
 	src/preamble/os.cppm
 	src/preamble.cppm
+	src/lib/tracing.cppm
 	src/io/audio_codec.cppm
 	src/io/bulk_request.cppm
 	src/io/file.cppm
