@@ -7,13 +7,13 @@ A definite, playable rhythm game chart, constructed from an IR. Tracks playback 
 */
 
 module;
-#include "util/logger.hpp"
+#include "macros/logger.hpp"
 
 export module playnote.bms.chart;
 
 import playnote.preamble;
+import playnote.logger;
 import playnote.util.charset;
-import playnote.util.logger;
 import playnote.io.bulk_request;
 import playnote.io.audio_codec;
 import playnote.bms.ir;

@@ -20,13 +20,13 @@ module;
 #include "vuk/RenderGraph.hpp"
 #include "vuk/Value.hpp"
 #include "vuk/Types.hpp"
-#include "util/logger.hpp"
+#include "macros/logger.hpp"
 
 export module playnote.sys.gpu;
 
 import playnote.preamble;
 import playnote.config;
-import playnote.util.logger;
+import playnote.logger;
 import playnote.sys.window;
 
 namespace playnote::sys {
@@ -57,13 +57,13 @@ public:
 	auto operator=(GPU&&) -> GPU& = delete;
 
 private:
-	util::Logger::Category* cat;
+	Logger::Category* cat;
 
 	class Instance {
 	public:
 		vkb::Instance instance;
 
-		explicit Instance(util::Logger::Category*);
+		explicit Instance(Logger::Category*);
 		~Instance();
 
 		Instance(Instance const&) = delete;
@@ -72,7 +72,7 @@ private:
 		auto operator=(Instance&&) -> Instance& = delete;
 
 	private:
-		util::Logger::Category* cat;
+		Logger::Category* cat;
 
 		static auto debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT,
 			VkDebugUtilsMessageTypeFlagsEXT, VkDebugUtilsMessengerCallbackDataEXT const*,
@@ -83,7 +83,7 @@ private:
 	public:
 		VkSurfaceKHR surface;
 
-		Surface(util::Logger::Category*, sys::Window&, Instance&);
+		Surface(Logger::Category*, sys::Window&, Instance&);
 		~Surface();
 
 		Surface(Surface const&) = delete;
@@ -92,7 +92,7 @@ private:
 		auto operator=(Surface&&) -> Surface& = delete;
 
 	private:
-		util::Logger::Category* cat;
+		Logger::Category* cat;
 		Instance& instance;
 	};
 
@@ -100,7 +100,7 @@ private:
 	public:
 		vkb::Device device;
 
-		Device(util::Logger::Category*, vkb::PhysicalDevice&);
+		Device(Logger::Category*, vkb::PhysicalDevice&);
 		~Device();
 
 		Device(Device const&) = delete;
@@ -109,7 +109,7 @@ private:
 		auto operator=(Device&&) -> Device& = delete;
 
 	private:
-		util::Logger::Category* cat;
+		Logger::Category* cat;
 	};
 
 	struct Queues {

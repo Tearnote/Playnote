@@ -9,12 +9,12 @@ Presents current game state onto the window at the screen's refresh rate.
 module;
 #include "tracy/Tracy.hpp"
 #include "imgui.h"
-#include "util/logger.hpp"
+#include "macros/logger.hpp"
 
 export module playnote.render_thread;
 
 import playnote.preamble;
-import playnote.util.logger;
+import playnote.logger;
 import playnote.sys.window;
 import playnote.sys.gpu;
 import playnote.sys.os;

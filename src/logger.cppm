@@ -14,11 +14,11 @@ module;
 #include "quill/Backend.h"
 #include "quill/Logger.h"
 
-export module playnote.util.logger;
+export module playnote.logger;
 
 import playnote.preamble;
 
-namespace playnote::util {
+namespace playnote {
 
 using namespace quill;
 
@@ -119,5 +119,5 @@ auto Logger::Impl::register_category(string_view name, Level level, bool log_to_
 }
 
 namespace playnote::globals {
-export inline auto logger = util::Logger{};
+export inline auto logger = Logger{};
 }

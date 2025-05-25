@@ -7,12 +7,12 @@ Initializes audio and handles queueing of playback events.
 */
 
 module;
-#include "util/logger.hpp"
+#include "macros/logger.hpp"
 
 export module playnote.audio_thread;
 
 import playnote.preamble;
-import playnote.util.logger;
+import playnote.logger;
 import playnote.io.file;
 import playnote.sys.window;
 import playnote.sys.audio;

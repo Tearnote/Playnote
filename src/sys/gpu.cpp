@@ -17,7 +17,7 @@ module;
 #include "vuk/runtime/ThisThreadExecutor.hpp"
 #include "vuk/ImageAttachment.hpp"
 #include "vuk/Types.hpp"
-#include "util/logger.hpp"
+#include "macros/logger.hpp"
 
 module playnote.sys.gpu;
 
@@ -26,7 +26,7 @@ import playnote.config;
 
 namespace playnote::sys {
 
-GPU::Instance::Instance(util::Logger::Category* cat):
+GPU::Instance::Instance(Logger::Category* cat):
 	cat{cat}
 {
 	auto instance_builder = vkb::InstanceBuilder{}
@@ -75,7 +75,7 @@ auto GPU::Instance::debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT severi
 	void* cat_ptr) -> VkBool32
 {
 	ASSERT(data);
-	auto* cat = static_cast<util::Logger::Category*>(cat_ptr);
+	auto* cat = static_cast<Logger::Category*>(cat_ptr);
 
 	auto type = [typeCode]() {
 		if (typeCode & VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT)
@@ -102,7 +102,7 @@ auto GPU::Instance::debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT severi
 	return VK_FALSE;
 }
 
-GPU::Surface::Surface(util::Logger::Category* cat, sys::Window& window, Instance& instance):
+GPU::Surface::Surface(Logger::Category* cat, sys::Window& window, Instance& instance):
 	cat{cat},
 	instance{instance}
 {
@@ -115,7 +115,7 @@ GPU::Surface::~Surface()
 	DEBUG_AS(cat, "Vulkan surface cleaned up");
 }
 
-GPU::Device::Device(util::Logger::Category* cat, vkb::PhysicalDevice& physical_device):
+GPU::Device::Device(Logger::Category* cat, vkb::PhysicalDevice& physical_device):
 	cat{cat}
 {
 	auto device_result = vkb::DeviceBuilder(physical_device).build();

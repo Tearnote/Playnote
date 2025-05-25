@@ -15,7 +15,7 @@ module;
 export module playnote.util.charset;
 
 import playnote.preamble;
-import playnote.util.logger;
+import playnote.logger;
 
 namespace playnote::util {
 

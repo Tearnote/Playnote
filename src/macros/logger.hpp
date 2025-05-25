@@ -4,7 +4,7 @@ Copyright (c) 2025 Tearnote (Hubert Maraszek)
 
 util/logger.hpp:
 Macros for easy access to the global logger.
-Requires playnote.util.logger to be imported, and for the logger inside to be instantiated.
+Requires playnote.logger to be imported, and for the logger inside to be instantiated.
 */
 
 #ifndef UTIL_LOGGER_HPP

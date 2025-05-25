@@ -10,14 +10,14 @@ but condensed, cleaned and serializable to a binary file.
 module;
 #include <openssl/evp.h>
 #include <boost/rational.hpp>
-#include "util/logger.hpp"
+#include "macros/logger.hpp"
 
 export module playnote.bms.ir;
 
 import playnote.preamble;
 import playnote.config;
 import playnote.util.charset;
-import playnote.util.logger;
+import playnote.logger;
 import playnote.bms.parser;
 
 namespace playnote::bms {
@@ -208,7 +208,7 @@ private:
 		auto get_slot_id(unordered_map<string, int>& map, string const& key) -> int;
 	};
 
-	util::Logger::Category* cat;
+	Logger::Category* cat;
 
 	// Functions to process each type of header and channel
 	using HeaderHandlerFunc = void(IRCompiler::*)(IR&, HeaderCommand&&, SlotMappings&);

@@ -10,14 +10,14 @@ module;
 #include <spa/param/audio/format-utils.h>
 #include <spa/param/latency-utils.h>
 #include <pipewire/pipewire.h>
-#include "util/logger.hpp"
+#include "macros/logger.hpp"
 #include "quill/bundled/fmt/base.h"
 
 export module playnote.sys.audio;
 
 import playnote.preamble;
 import playnote.config;
-import playnote.util.logger;
+import playnote.logger;
 
 namespace playnote::sys {
 

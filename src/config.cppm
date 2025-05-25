@@ -10,7 +10,7 @@ and their hardcoded values.
 export module playnote.config;
 
 import playnote.preamble;
-import playnote.util.logger;
+import playnote.logger;
 
 namespace playnote {
 
@@ -78,9 +78,9 @@ export inline constexpr auto ThreadNamesEnabled = false;
 
 // Level of logging to file and/or console
 #if BUILD_TYPE != BUILD_RELEASE
-export inline constexpr auto LogLevelGlobal = util::Logger::Level::TraceL1;
-export inline constexpr auto LogLevelGraphics = util::Logger::Level::TraceL1;
-export inline constexpr auto LogLevelBMSBuild = util::Logger::Level::Debug;
+export inline constexpr auto LogLevelGlobal = Logger::Level::TraceL1;
+export inline constexpr auto LogLevelGraphics = Logger::Level::TraceL1;
+export inline constexpr auto LogLevelBMSBuild = Logger::Level::Debug;
 #else
 export inline constexpr auto LogLevelGlobal = util::Logger::Info;
 export inline constexpr auto LogLevelGraphics = util::Logger::Info;

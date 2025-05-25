@@ -12,12 +12,12 @@ module;
 #include "libassert/assert.hpp"
 #include "volk.h"
 #include "GLFW/glfw3.h"
-#include "util/logger.hpp"
+#include "macros/logger.hpp"
 
 export module playnote.sys.window;
 
 import playnote.preamble;
-import playnote.util.logger;
+import playnote.logger;
 
 namespace playnote::sys {
 
