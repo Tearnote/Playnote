@@ -13,7 +13,7 @@ export module playnote.bms.parser;
 
 import playnote.preamble;
 import playnote.logger;
-import playnote.util.charset;
+import playnote.bms.charset;
 
 namespace playnote::bms {
 
@@ -120,10 +120,10 @@ export template<
 void parse(span<char const> bms_file_contents, Logger::Category* cat, HFunc&& header_func, CFunc&& channel_func)
 {
 	// Convert file to UTF-8
-	auto encoding = util::detect_text_encoding(bms_file_contents);
-	if (!util::is_supported_encoding(encoding))
+	auto encoding = bms::detect_text_encoding(bms_file_contents);
+	if (!bms::is_supported_encoding(encoding))
 		WARN_AS(cat, "Unexpected encoding #{}, proceeding with heuristics", to_underlying(encoding));
-	auto bms_file_u8 = util::text_to_unicode(bms_file_contents, encoding);
+	auto bms_file_u8 = bms::text_to_unicode(bms_file_contents, encoding);
 
 	// Normalize line endings
 	replace_all(bms_file_u8, "\r\n", "\n");

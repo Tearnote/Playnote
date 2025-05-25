@@ -44,13 +44,13 @@ target_sources(Playnote PUBLIC
 	src/io/audio_codec.cppm
 	src/io/bulk_request.cppm
 	src/io/file.cppm
-	src/util/charset.cppm
 	src/sys/window.cppm
 	src/sys/audio.cppm
 	src/sys/gpu.cppm
 	src/sys/os.cppm
 	src/gfx/renderer.cppm
 	src/gfx/imgui.cppm
+	src/bms/charset.cppm
 	src/bms/parser.cppm
 	src/bms/chart.cppm
 	src/bms/ir.cppm

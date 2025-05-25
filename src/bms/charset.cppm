@@ -2,7 +2,7 @@
 This software is dual-licensed. For more details, please consult LICENSE.txt.
 Copyright (c) 2025 Tearnote (Hubert Maraszek)
 
-util/charset.cppm:
+bms/charset.cppm:
 Text encoding detection and conversion.
 */
 
@@ -12,12 +12,12 @@ module;
 #include "compact_enc_det/compact_enc_det.h"
 #include "libassert/assert.hpp"
 
-export module playnote.util.charset;
+export module playnote.bms.charset;
 
 import playnote.preamble;
 import playnote.logger;
 
-namespace playnote::util {
+namespace playnote::bms {
 
 // Returns true if the encoding is one of the known BMS encodings.
 export auto is_supported_encoding(Encoding encoding) -> bool

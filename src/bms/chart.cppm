@@ -13,9 +13,9 @@ export module playnote.bms.chart;
 
 import playnote.preamble;
 import playnote.logger;
-import playnote.util.charset;
 import playnote.io.bulk_request;
 import playnote.io.audio_codec;
+import playnote.bms.charset;
 import playnote.bms.ir;
 
 namespace playnote::bms {
