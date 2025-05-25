@@ -56,6 +56,8 @@ target_sources(Playnote PUBLIC
 	src/preamble/os.cppm
 	src/preamble.cppm
 	src/lib/tracing.cppm
+	src/lib/thread.cppm
+	src/lib/debug.cppm
 	src/io/audio_codec.cppm
 	src/io/bulk_request.cppm
 	src/io/file.cppm
