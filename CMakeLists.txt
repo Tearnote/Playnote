@@ -54,9 +54,9 @@ target_sources(Playnote PUBLIC
 	src/bms/parser.cppm
 	src/bms/chart.cppm
 	src/bms/ir.cppm
-	src/render_thread.cppm
-	src/audio_thread.cppm
-	src/input_thread.cppm
+	src/threads/render.cppm
+	src/threads/audio.cppm
+	src/threads/input.cppm
 	src/preamble/algorithm.cppm
 	src/preamble/container.cppm
 	src/preamble/concepts.cppm

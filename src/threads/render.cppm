@@ -2,7 +2,7 @@
 This software is dual-licensed. For more details, please consult LICENSE.txt.
 Copyright (c) 2025 Tearnote (Hubert Maraszek)
 
-render_thread.cppm:
+threads/render.cppm:
 Presents current game state onto the window at the screen's refresh rate.
 */
 
@@ -11,7 +11,7 @@ module;
 #include "imgui.h"
 #include "macros/logger.hpp"
 
-export module playnote.render_thread;
+export module playnote.threads.render;
 
 import playnote.preamble;
 import playnote.logger;
@@ -20,7 +20,7 @@ import playnote.sys.gpu;
 import playnote.sys.os;
 import playnote.gfx.renderer;
 
-namespace playnote {
+namespace playnote::threads {
 
 // Welcome back, LR2
 void enqueue_test_scene(gfx::Renderer::Queue& queue)
@@ -38,7 +38,7 @@ void enqueue_test_scene(gfx::Renderer::Queue& queue)
 	queue.enqueue_rect({{255,   0}, {  2, 315}, {0.376f, 0.376f, 0.376f, 0.376f}});
 }
 
-export void render_thread(sys::Window& window)
+export void render(sys::Window& window)
 try {
 	sys::set_thread_name("render");
 	auto gpu = sys::GPU{window};

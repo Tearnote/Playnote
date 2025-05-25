@@ -2,14 +2,14 @@
 This software is dual-licensed. For more details, please consult LICENSE.txt.
 Copyright (c) 2025 Tearnote (Hubert Maraszek)
 
-audio_thread.cppm:
+threads/audio.cppm:
 Initializes audio and handles queueing of playback events.
 */
 
 module;
 #include "macros/logger.hpp"
 
-export module playnote.audio_thread;
+export module playnote.threads.audio;
 
 import playnote.preamble;
 import playnote.logger;
@@ -20,7 +20,7 @@ import playnote.sys.os;
 import playnote.bms.chart;
 import playnote.bms.ir;
 
-namespace playnote {
+namespace playnote::threads {
 /*
 auto load_audio_file(std::string_view path) -> std::vector<float>
 {
@@ -70,7 +70,7 @@ auto load_bms(bms::IRCompiler& compiler, fs::path const& path) -> bms::IR
 	return ir;
 }
 
-export void audio_thread(sys::Window& window)
+export void audio(sys::Window& window)
 try {
 	sys::set_thread_name("audio");
 

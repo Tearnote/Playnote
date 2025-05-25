@@ -13,9 +13,9 @@ import playnote.config;
 import playnote.logger;
 import playnote.sys.window;
 import playnote.sys.os;
-import playnote.render_thread;
-import playnote.audio_thread;
-import playnote.input_thread;
+import playnote.threads.render;
+import playnote.threads.audio;
+import playnote.threads.input;
 
 using namespace playnote; // Can't namespace main()
 
@@ -27,9 +27,9 @@ auto run() -> int
 
 	// Spawn all threads. Every thread is assumed to eventually finish
 	// once window.is_closing() is true
-	auto audio_thread_stub = jthread{audio_thread, ref(window)};
-	auto render_thread_stub = jthread{render_thread, ref(window)};
-	input_thread(glfw, window);
+	auto audio_thread_stub = jthread{threads::audio, ref(window)};
+	auto render_thread_stub = jthread{threads::render, ref(window)};
+	threads::input(glfw, window);
 
 	return EXIT_SUCCESS;
 }
