@@ -7,6 +7,7 @@ Wrapper for OS-specific debugging enablement.
 */
 
 module;
+#include "libassert/assert.hpp"
 #ifdef _WIN32
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -24,7 +25,18 @@ module;
 
 export module playnote.lib.debug;
 
+import playnote.preamble;
+
 namespace playnote::lib {
+
+// Register a handler to make all assert failures throw.
+export void set_assert_handler() noexcept
+{
+	libassert::set_failure_handler([](auto const& info) {
+		throw runtime_error{info.to_string()};
+	});
+	libassert::set_color_scheme(libassert::color_scheme::blank);
+}
 
 // Open the console window and attach standard outputs to it. Errors are ignored.
 // https://github.com/ocaml/ocaml/issues/9252#issuecomment-576383814

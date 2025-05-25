@@ -17,13 +17,4 @@ Wrapper for assert macros of libassert. Registers the assert handler, ensures co
 // _VAL suffix - returns the result of the tested expression.
 //     For comparisons, the left side is returned.
 
-// Register a handler to make all assert failures throw
-inline void set_assert_handler()
-{
-	libassert::set_failure_handler([](auto const& info) {
-		throw std::runtime_error(info.to_string());
-	});
-	libassert::set_color_scheme(libassert::color_scheme::blank);
-}
-
 #endif
