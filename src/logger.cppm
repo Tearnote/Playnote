@@ -7,7 +7,7 @@ Wrapper for the Quill threaded async logging library.
 */
 
 module;
-#include "libassert/assert.hpp"
+#include "macros/assert.hpp"
 #include "quill/sinks/ConsoleSink.h"
 #include "quill/sinks/FileSink.h"
 #include "quill/Frontend.h"

@@ -34,6 +34,7 @@ include(cmake/Dependencies.cmake)
 # Main target
 
 add_executable(Playnote
+	src/macros/assert.hpp
 	src/macros/logger.hpp
 	src/sys/gpu.cpp
 	src/gfx/renderer.cpp
@@ -41,6 +42,18 @@ add_executable(Playnote
 )
 target_sources(Playnote PUBLIC
 	FILE_SET CXX_MODULES FILES
+	src/preamble/algorithm.cppm
+	src/preamble/container.cppm
+	src/preamble/concepts.cppm
+	src/preamble/math_ext.cppm
+	src/preamble/utility.cppm
+	src/preamble/string.cppm
+	src/preamble/except.cppm
+	src/preamble/types.cppm
+	src/preamble/math.cppm
+	src/preamble/time.cppm
+	src/preamble/os.cppm
+	src/preamble.cppm
 	src/io/audio_codec.cppm
 	src/io/bulk_request.cppm
 	src/io/file.cppm
@@ -57,18 +70,6 @@ target_sources(Playnote PUBLIC
 	src/threads/render.cppm
 	src/threads/audio.cppm
 	src/threads/input.cppm
-	src/preamble/algorithm.cppm
-	src/preamble/container.cppm
-	src/preamble/concepts.cppm
-	src/preamble/math_ext.cppm
-	src/preamble/utility.cppm
-	src/preamble/string.cppm
-	src/preamble/except.cppm
-	src/preamble/types.cppm
-	src/preamble/math.cppm
-	src/preamble/time.cppm
-	src/preamble/os.cppm
-	src/preamble.cppm
 	src/logger.cppm
 	src/config.cppm
 )

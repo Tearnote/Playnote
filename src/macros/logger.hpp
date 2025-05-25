@@ -2,13 +2,13 @@
 This software is dual-licensed. For more details, please consult LICENSE.txt.
 Copyright (c) 2025 Tearnote (Hubert Maraszek)
 
-util/logger.hpp:
+macros/logger.hpp:
 Macros for easy access to the global logger.
 Requires playnote.logger to be imported, and for the logger inside to be instantiated.
 */
 
-#ifndef UTIL_LOGGER_HPP
-#define UTIL_LOGGER_HPP
+#ifndef PLAYNOTE_MACROS_LOGGER_HPP
+#define PLAYNOTE_MACROS_LOGGER_HPP
 
 #include "quill/LogMacros.h"
 

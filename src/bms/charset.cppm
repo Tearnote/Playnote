@@ -10,7 +10,7 @@ module;
 #include <boost/locale/encoding.hpp>
 #include <boost/container_hash/hash.hpp>
 #include "compact_enc_det/compact_enc_det.h"
-#include "libassert/assert.hpp"
+#include "macros/assert.hpp"
 
 export module playnote.bms.charset;
 

@@ -7,7 +7,7 @@ Initializes Vulkan and the rendergraph.
 */
 
 module;
-#include "libassert/assert.hpp"
+#include "macros/assert.hpp"
 #include "volk.h"
 #include "VkBootstrap.h"
 #include "vuk/runtime/vk/DeviceFrameResource.hpp"

@@ -6,6 +6,7 @@ main.cpp:
 Entry point. Initializes basic facilities like logging and shared subsystems, then spawns threads.
 */
 
+#include "macros/assert.hpp"
 #include "macros/logger.hpp"
 
 import playnote.preamble;
@@ -36,6 +37,7 @@ auto run() -> int
 
 auto main() -> int
 try {
+	set_assert_handler();
 	if constexpr (BuildType == Build::Debug)
 		sys::create_console();
 	auto logger_stub = globals::logger.provide(LogfilePath, LogLevelGlobal);

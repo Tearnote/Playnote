@@ -9,7 +9,7 @@ Initializes GLFW and manages windows. Windows handle keyboard and mouse input, a
 
 module;
 #include <vulkan/vulkan_core.h>
-#include "libassert/assert.hpp"
+#include "macros/assert.hpp"
 #include "volk.h"
 #include "GLFW/glfw3.h"
 #include "macros/logger.hpp"
