@@ -39,7 +39,7 @@ private:
 	milliseconds period;
 };
 
-// Name the current thread
+// Name the current thread.
 export void set_thread_name(string_view name)
 {
 	if constexpr (!ThreadNamesEnabled) return;

@@ -8,81 +8,88 @@ Initializes GLFW and manages windows. Windows handle keyboard and mouse input, a
 */
 
 module;
-#include <vulkan/vulkan_core.h>
-#include "macros/assert.hpp"
 #include "volk.h"
-#include "GLFW/glfw3.h"
+#include "macros/assert.hpp"
 #include "macros/logger.hpp"
 
 export module playnote.sys.window;
 
+import playnote.lib.window;
 import playnote.preamble;
 import playnote.logger;
 
 namespace playnote::sys {
 
-// RAII abstraction for GLFW library initialization
+// RAII abstraction for GLFW library initialization.
 export class GLFW {
 public:
 	GLFW();
-	~GLFW();
+	~GLFW() noexcept;
 
-	// Retrieve time since application start
-	[[nodiscard]] auto get_time() const -> nanoseconds;
+	// Retrieve time since application start.
+	[[nodiscard]] auto get_time() const noexcept -> nanoseconds { return lib::time_since_glfw_init(); }
 
-	// Pump the message queue
-	// Run this as often as possible to receive accurate event timestamps
-	void poll() { glfwPollEvents(); }
+	// Pump the message queue.
+	// Run this as often as possible to receive accurate event timestamps.
+	void poll() { lib::process_window_events(); }
 
 	GLFW(GLFW const&) = delete;
 	auto operator=(GLFW const&) -> GLFW& = delete;
 	GLFW(GLFW&&) = delete;
 	auto operator=(GLFW&&) -> GLFW& = delete;
+
+private:
+	static inline auto initialized = false;
 };
 
-// RAII abstraction of a single application window, providing a drawing surface and input handling
+// RAII abstraction of a single application window, providing a drawing surface and input handling.
 export class Window {
 public:
-	Window(GLFW&, string const& title, uvec2 size);  // GLFW parameter is a semantic dependency
+	using KeyCode = lib::KeyCode;
+	using KeyAction = lib::KeyAction;
+	using MouseButton = lib::MouseButton;
+	using MouseButtonAction = lib::MouseButtonAction;
+
+	Window(GLFW&, string_view title, uvec2 size);  // GLFW parameter is a semantic dependency
 
 	// true if application close was requested (the X was pressed, or triggered manually from code
-	// to mark a user-requested quit event)
-	[[nodiscard]] auto is_closing() const -> bool { return glfwWindowShouldClose(window_handle.get()); }
+	// to mark a user-requested quit event).
+	[[nodiscard]] auto is_closing() const noexcept -> bool
+	{
+		return lib::get_window_closing_flag(window_handle.get());
+	}
 
-	// Signal the application to cleanly close as soon as possible
-	void request_close() { glfwSetWindowShouldClose(window_handle.get(), true); }
+	// Signal the application to cleanly close as soon as possible.
+	void request_close() noexcept { lib::set_window_closing_flag(window_handle.get(), true); }
 
-	// Size of the window's framebuffer
+	// Size of the window's framebuffer.
 	[[nodiscard]] auto size() const -> uvec2;
 
-	// Position of the cursor relative to the window's framebuffer
-	[[nodiscard]] auto get_cursor_position() const -> vec2;
-
-	// Run the provided function on any keyboard key press/release
-	// Function is provided with the keycode and key state (true for press, false for release)
-	void register_key_callback(function<void(int, bool)> func)
+	// Run the provided function on any keyboard key press/release.
+	// Function is provided with the keycode and key state (true for press, false for release).
+	void register_key_callback(function<void(KeyCode, bool)>&& func) noexcept
 	{
 		key_callbacks.emplace_back(move(func));
 	}
 
-	// Run the provided function on any cursor move
-	// Function is provided with the new cursor position
-	void register_cursor_motion_callback(function<void(vec2)> func)
+	// Run the provided function on any cursor move.
+	// Function is provided with the new cursor position.
+	void register_cursor_motion_callback(function<void(vec2)>&& func) noexcept
 	{
 		cursor_motion_callbacks.emplace_back(move(func));
 	}
 
-	// Run the provided function on any mouse button press/release
-	// Function is provided with the button index and state (true for press, false for release)
-	void register_mouse_button_callback(function<void(int, bool)> func)
+	// Run the provided function on any mouse button press/release.
+	// Function is provided with the button index and state (true for press, false for release).
+	void register_mouse_button_callback(function<void(MouseButton, bool)>&& func) noexcept
 	{
 		mouse_button_callbacks.emplace_back(move(func));
 	}
 
-	auto handle() -> GLFWwindow* { return window_handle.get(); }
+	auto handle() noexcept -> lib::Window { return window_handle.get(); }
 
-	// Create a Vulkan surface for the window's framebuffer
-	// Destruction needs to be handled manually by the caller
+	// Create a Vulkan surface for the window's framebuffer.
+	// Destruction needs to be handled manually by the caller.
 	auto create_surface(VkInstance) -> VkSurfaceKHR;
 
 	Window(Window const&) = delete;
@@ -91,101 +98,78 @@ public:
 	auto operator=(Window&&) -> Window& = delete;
 
 private:
-	using WindowHandle = unique_resource<GLFWwindow*, decltype([](auto* w) {
-		auto title = string{glfwGetWindowTitle(w)};
-		glfwDestroyWindow(w);
+	using WindowHandle = unique_resource<lib::Window, decltype([](auto* w) noexcept {
+		auto const title = lib::get_window_title(w);
+		lib::destroy_window(w);
 		INFO("Window \"{}\" closed", title);
 	})>;
 
 	WindowHandle window_handle{};
 
-	vector<function<void(int, bool)>> key_callbacks;
+	vector<function<void(KeyCode, bool)>> key_callbacks;
 	vector<function<void(vec2)>> cursor_motion_callbacks;
-	vector<function<void(int, bool)>> mouse_button_callbacks;
+	vector<function<void(MouseButton, bool)>> mouse_button_callbacks;
 };
 
 GLFW::GLFW()
 {
+	if (initialized) throw runtime_error{"Attempted to initialize GLFW twice"};
 	// Convert GLFW errors to exceptions, freeing us from having to check error codes
-	glfwSetErrorCallback([](int code, char const* str) {
-		throw runtime_error_fmt("[GLFW] Error {}: {}", code, str);
-	});
-	glfwInit();
+	lib::register_glfw_error_handler();
+	lib::init_glfw();
+	lib::set_window_creation_hints();
+	initialized = true;
 	INFO("GLFW initialized");
 }
 
-GLFW::~GLFW()
+GLFW::~GLFW() noexcept
 {
-	glfwTerminate();
+	if (!initialized) return;
+	lib::cleanup_glfw();
 	INFO("GLFW cleaned up");
 }
 
-auto GLFW::get_time() const -> nanoseconds
+Window::Window(GLFW&, string_view title, uvec2 size)
 {
-	auto time = duration<double>{glfwGetTime()};
-	return duration_cast<nanoseconds>(time);
-}
+	ASSERT(size.x() > 0 && size.y() > 0);
 
-Window::Window(GLFW&, string const& title, uvec2 size)
-{
-	ASSUME(size.x() > 0 && size.y() > 0);
-
-	// Create the window
-	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-	glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-	window_handle = WindowHandle{
-		glfwCreateWindow(size.x(), size.y(), title.c_str(), nullptr, nullptr)
-	};
-	ASSERT(window_handle.get());
+	window_handle = WindowHandle{lib::create_window(size, title)};
 
 	// Provide event callbacks full access to the associated Window instance
-	glfwSetWindowUserPointer(window_handle.get(), this);
+	lib::set_window_user_pointer(window_handle.get(), this);
 
-	glfwSetKeyCallback(window_handle.get(), [](GLFWwindow* window_ptr, int key, int, int action, int) {
-		if (action == GLFW_REPEAT) return; // Only care about press and release
-		auto& window = *static_cast<Window*>(glfwGetWindowUserPointer(window_ptr));
+	lib::set_key_handler(window_handle.get(), [](lib::Window window_ptr, int key, int, int action, int) {
+		if (action == to_underlying(KeyAction::Repeat)) return; // Only care about press and release
+		auto& window = *lib::get_window_user_pointer<Window>(window_ptr);
 		for (auto& func: window.key_callbacks)
-			func(key, action == GLFW_PRESS);
+			func(KeyCode{key}, action == to_underlying(KeyAction::Press));
 	});
 
-	glfwSetCursorPosCallback(window_handle.get(), [](GLFWwindow* window_ptr, double x, double y) {
-		auto& window = *static_cast<Window*>(glfwGetWindowUserPointer(window_ptr));
+	lib::set_cursor_motion_handler(window_handle.get(), [](lib::Window window_ptr, double x, double y) {
+		auto& window = *lib::get_window_user_pointer<Window>(window_ptr);
 		for (auto& func: window.cursor_motion_callbacks)
 			func(vec2{static_cast<float>(x), static_cast<float>(y)});
 	});
 
-	glfwSetMouseButtonCallback(window_handle.get(),
-		[](GLFWwindow* window_ptr, int button, int action, int) {
-			auto& window = *static_cast<Window*>(glfwGetWindowUserPointer(window_ptr));
+	lib::set_mouse_button_handler(window_handle.get(),
+		[](lib::Window window_ptr, int button, int action, int) {
+			auto& window = *lib::get_window_user_pointer<Window>(window_ptr);
 			for (auto& func: window.mouse_button_callbacks)
-				func(button, action == GLFW_PRESS);
+				func(MouseButton{button}, action == to_underlying(MouseButtonAction::Press));
 		}
 	);
 
-	INFO("Created window \"{}\" at {}x{}", title, size.x(), size.y());
+	INFO("Created window {}, size {}", title, size);
 }
 
 auto Window::size() const -> uvec2
 {
-	auto w = 0;
-	auto h = 0;
-	glfwGetFramebufferSize(window_handle.get(), &w, &h);
-	return uvec2{static_cast<uint>(w), static_cast<uint>(h)};
-}
-
-auto Window::get_cursor_position() const -> vec2
-{
-	auto x = 0.0;
-	auto y = 0.0;
-	glfwGetCursorPos(window_handle.get(), &x, &y);
-	return vec2{static_cast<float>(x), static_cast<float>(y)};
+	return lib::get_window_framebuffer_size(window_handle.get());
 }
 
 auto Window::create_surface(VkInstance instance) -> VkSurfaceKHR
 {
-	auto result = VkSurfaceKHR{nullptr};
-	glfwCreateWindowSurface(instance, window_handle.get(), nullptr, &result);
-	return result;
+	return lib::create_window_surface(window_handle.get(), instance);
 }
 
 }
