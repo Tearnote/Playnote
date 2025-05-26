@@ -15,9 +15,11 @@ module;
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/lexical_cast.hpp>
 #include "quill/bundled/fmt/format.h"
+#include "quill/DeferredFormatCodec.h"
 
 export module playnote.preamble:string;
 
+import :math_ext;
 import :os;
 
 namespace playnote {
@@ -44,3 +46,31 @@ struct fmtquill::formatter<playnote::fs::path>: formatter<std::string_view> {
 		return formatter<std::string_view>::format(c.c_str(), ctx);
 	}
 };
+export template<>
+struct quill::Codec<playnote::fs::path>: DeferredFormatCodec<playnote::fs::path> {};
+
+export template<playnote::usize Dim, typename T>
+struct fmtquill::formatter<playnote::vec<Dim, T>> {
+	template<typename Ctx>
+	constexpr auto parse(Ctx& ctx) { return formatter<T>{}.parse(ctx); }
+
+	template<typename Ctx>
+	auto format(playnote::vec<Dim, T> const& v, Ctx& ctx) const -> format_context::iterator
+	{
+		format_to(ctx.out(), "(");
+		format_to(formatter<T>{}.format(v.x(), ctx), ", ");
+		if constexpr(Dim == 2) {
+			format_to(formatter<T>{}.format(v.y(), ctx), "");
+		} else if constexpr(Dim == 3) {
+			format_to(formatter<T>{}.format(v.y(), ctx), ", ");
+			format_to(formatter<T>{}.format(v.z(), ctx), "");
+		} else if constexpr(Dim == 4) {
+			format_to(formatter<T>{}.format(v.y(), ctx), ", ");
+			format_to(formatter<T>{}.format(v.z(), ctx), ", ");
+			format_to(formatter<T>{}.format(v.w(), ctx), "");
+		}
+		return format_to(ctx.out(), ")");
+	}
+};
+export template<playnote::usize Dim, typename T>
+struct quill::Codec<playnote::vec<Dim, T>>: DeferredFormatCodec<playnote::vec<Dim, T>> {};
