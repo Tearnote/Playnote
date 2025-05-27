@@ -14,9 +14,9 @@ module;
 
 export module playnote.sys.window;
 
-import playnote.lib.window;
 import playnote.preamble;
 import playnote.logger;
+import playnote.lib.glfw;
 
 namespace playnote::sys {
 

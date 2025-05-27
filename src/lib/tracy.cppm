@@ -2,14 +2,14 @@
 This software is dual-licensed. For more details, please consult LICENSE.txt.
 Copyright (c) 2025 Tearnote (Hubert Maraszek)
 
-lib/tracing.cppm:
+lib/tracy.cppm:
 Wrapper for Tracy profiler functions.
 */
 
 module;
 #include "tracy/Tracy.hpp"
 
-export module playnote.lib.tracing;
+export module playnote.lib.tracy;
 
 import playnote.preamble;
 

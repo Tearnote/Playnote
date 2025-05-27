@@ -10,8 +10,8 @@ export module playnote.sys.os;
 
 import playnote.preamble;
 import playnote.config;
-import playnote.lib.tracing;
 import playnote.lib.thread;
+import playnote.lib.tracy;
 
 namespace playnote::sys {
 
@@ -25,10 +25,7 @@ public:
 		lib::begin_thread_scheduler_period(period);
 	}
 
-	~SchedulerPeriod() noexcept
-	{
-		lib::end_thread_scheduler_period(period);
-	}
+	~SchedulerPeriod() noexcept { lib::end_thread_scheduler_period(period); }
 
 	SchedulerPeriod(SchedulerPeriod const&) = delete;
 	auto operator=(SchedulerPeriod const&) -> SchedulerPeriod& = delete;

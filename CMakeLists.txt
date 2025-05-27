@@ -55,10 +55,10 @@ target_sources(Playnote PUBLIC
 	src/preamble/time.cppm
 	src/preamble/os.cppm
 	src/preamble.cppm
-	src/lib/tracing.cppm
-	src/lib/window.cppm
 	src/lib/thread.cppm
+	src/lib/tracy.cppm
 	src/lib/debug.cppm
+	src/lib/glfw.cppm
 	src/io/audio_codec.cppm
 	src/io/bulk_request.cppm
 	src/io/file.cppm
