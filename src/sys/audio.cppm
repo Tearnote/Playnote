@@ -7,9 +7,6 @@ Initializes audio and submits buffers for playback.
 */
 
 module;
-#include <spa/param/audio/format-utils.h>
-#include <spa/param/latency-utils.h>
-#include <pipewire/pipewire.h>
 #include "macros/logger.hpp"
 
 export module playnote.sys.audio;
@@ -17,8 +14,11 @@ export module playnote.sys.audio;
 import playnote.preamble;
 import playnote.config;
 import playnote.logger;
+import playnote.lib.pipewire;
 
 namespace playnote::sys {
+
+namespace pw = lib::pw;
 
 export class Audio {
 public:
@@ -33,85 +33,37 @@ public:
 private:
 	static constexpr auto ChannelCount = 2u;
 	static constexpr auto SamplingRate = 48000u;
-	static constexpr auto Latency = "256/48000";
+	static constexpr auto Latency = 256u;
 
-	pw_thread_loop* loop{nullptr};
-	pw_stream* stream{nullptr};
+	pw::ThreadLoop loop;
+	pw::Stream stream;
 
-	static void on_process(void*);
-	inline static const auto StreamEvents = pw_stream_events{
-		.version = PW_VERSION_STREAM_EVENTS,
-		.process = on_process,
-	};
-
-	template<typename T>
-	static auto ptr_check(T* ptr, string const& message = "libpipewire error") -> T*
-	{
-		if (!ptr) throw system_error_fmt("{}", message);
-		return ptr;
-	}
-
-	static void ret_check(int ret, string const& message = "libpipewire error")
-	{
-		if (ret < 0) throw system_error_fmt("{}", message);
-	}
+	static void on_process(void*) noexcept;
 };
 
 Audio::Audio() {
-	pw_init(nullptr, nullptr);
-	DEBUG("Using libpipewire {}\n", pw_get_library_version());
+	pw::init();
+	DEBUG("Using libpipewire {}", pw::get_version());
 
-	loop = ptr_check(pw_thread_loop_new(nullptr, nullptr));
-	stream = pw_stream_new_simple(
-		pw_thread_loop_get_loop(loop), AppTitle,
-		pw_properties_new(
-			PW_KEY_MEDIA_TYPE, "Audio",
-			PW_KEY_MEDIA_CATEGORY, "Playback",
-			PW_KEY_MEDIA_ROLE, "Game",
-			PW_KEY_NODE_LATENCY, Latency,
-		nullptr),
-		&StreamEvents, this);
-
-	auto params = array<spa_pod const*, 1>{};
-	auto buffer = array<uint8, 1024>{};
-	auto builder = SPA_POD_BUILDER_INIT(buffer.data(), buffer.size());
-	auto audio_info = spa_audio_info_raw{
-		.format = SPA_AUDIO_FORMAT_F32,
-		.rate = SamplingRate,
-		.channels = ChannelCount,
-	};
-	params[0] = spa_format_audio_raw_build(&builder, SPA_PARAM_EnumFormat, &audio_info);
-	ret_check(pw_stream_connect(stream, PW_DIRECTION_OUTPUT, PW_ID_ANY,
-		static_cast<pw_stream_flags>(PW_STREAM_FLAG_AUTOCONNECT | PW_STREAM_FLAG_MAP_BUFFERS | PW_STREAM_FLAG_RT_PROCESS),
-		params.data(), 1));
-
-	pw_thread_loop_start(loop);
+	loop = pw::create_thread_loop();
+	stream = pw::create_stream(loop, AppTitle, SamplingRate, Latency, &on_process, this);
+	pw::start_thread_loop(loop);
 }
 
 Audio::~Audio()
 {
-	pw_thread_loop_lock(loop);
-	pw_stream_destroy(stream);
-	pw_thread_loop_unlock(loop);
-	pw_thread_loop_destroy(loop);
+	pw::destroy_stream(loop, stream);
+	pw::destroy_thread_loop(loop);
 }
 
-void Audio::on_process(void* userdata)
+void Audio::on_process(void* userdata) noexcept
 {
 	auto& self = *static_cast<Audio*>(userdata);
+	auto& stream = self.stream;
 
-	auto* buffer_outer = pw_stream_dequeue_buffer(self.stream);
-	if (!buffer_outer) {
-		WARN("Ran out of audio buffers");
-		return;
-	}
-	auto* buffer = buffer_outer->buffer;
-	auto* output = static_cast<float*>(buffer->datas[0].data);
-	if (!output) return;
-
-	constexpr auto Stride = sizeof(float) * ChannelCount;
-	const auto max_frames = buffer->datas[0].maxsize / Stride;
-	auto frames = min(max_frames, buffer_outer->requested);
+	auto buffer_opt = pw::dequeue_buffer(stream);
+	if (!buffer_opt) return;
+	auto& [buffer, request] = buffer_opt.value();
 /*
 	if (!self.audios.empty()) {
 		for (auto i: ranges::iota_view(0u, frames)) {
@@ -128,10 +80,7 @@ void Audio::on_process(void* userdata)
 		}
 	}
 */
-	buffer->datas[0].chunk->offset = 0;
-	buffer->datas[0].chunk->stride = Stride;
-	buffer->datas[0].chunk->size = frames * Stride;
-	pw_stream_queue_buffer(self.stream, buffer_outer);
+	pw::enqueue_buffer(stream, request);
 }
 
 }
