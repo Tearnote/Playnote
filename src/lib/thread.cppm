@@ -23,11 +23,11 @@ export module playnote.lib.thread;
 
 import playnote.preamble;
 
-namespace playnote::lib {
+namespace playnote::lib::thread {
 
-// Set thread name in the OS scheduler, which can help with debugging.
+// Set current thread name in the OS scheduler, which can help with debugging.
 // Throws runtime_error on failure.
-export void set_thread_name(string_view name)
+export void name_current(string_view name)
 {
 #ifdef _WIN32
 	auto const lname = std::wstring{name.begin(), name.end()};
@@ -45,7 +45,7 @@ export void set_thread_name(string_view name)
 // of thread sleep and yield. Pair with a matching callto end_thread_scheduler_period
 // with the same period.
 // Throws runtime_error on failure.
-export void begin_thread_scheduler_period([[maybe_unused]] milliseconds period)
+export void begin_scheduler_period([[maybe_unused]] milliseconds period)
 {
 #ifdef _WIN32
 	if (timeBeginPeriod(period.count()) != TIMERR_NOERROR)
@@ -54,7 +54,7 @@ export void begin_thread_scheduler_period([[maybe_unused]] milliseconds period)
 }
 
 // End a previously started thread scheduler period. Failure is ignored.
-export void end_thread_scheduler_period([[maybe_unused]] milliseconds period) noexcept
+export void end_scheduler_period([[maybe_unused]] milliseconds period) noexcept
 {
 #ifdef _WIN32
 	timeEndPeriod(period.count());

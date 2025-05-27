@@ -15,6 +15,9 @@ import playnote.lib.tracy;
 
 namespace playnote::sys {
 
+namespace thread = lib::thread;
+namespace tracy = lib::tracy;
+
 // Sets the system thread scheduler period for the lifetime of the instance.
 // This decreases the minimum possible duration of thread sleep and yield.
 export class SchedulerPeriod {
@@ -22,10 +25,10 @@ public:
 	explicit SchedulerPeriod(milliseconds period):
 		period{period}
 	{
-		lib::begin_thread_scheduler_period(period);
+		thread::begin_scheduler_period(period);
 	}
 
-	~SchedulerPeriod() noexcept { lib::end_thread_scheduler_period(period); }
+	~SchedulerPeriod() noexcept { thread::end_scheduler_period(period); }
 
 	SchedulerPeriod(SchedulerPeriod const&) = delete;
 	auto operator=(SchedulerPeriod const&) -> SchedulerPeriod& = delete;
@@ -36,12 +39,12 @@ private:
 	milliseconds period;
 };
 
-// Name the current thread.
-export void set_thread_name(string_view name)
+// Name the current thread. This name is visible in debuggers and profilers.
+export void name_current_thread(string_view name)
 {
 	if constexpr (!ThreadNamesEnabled) return;
-	lib::set_thread_name(name);
-	lib::tracing_set_thread_name(name);
+	thread::name_current(name);
+	tracy::name_current_thread(name);
 }
 
 }

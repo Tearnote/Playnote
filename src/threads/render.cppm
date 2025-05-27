@@ -40,7 +40,7 @@ void enqueue_test_scene(gfx::Renderer::Queue& queue)
 
 export void render(sys::Window& window)
 try {
-	sys::set_thread_name("render");
+	sys::name_current_thread("render");
 	auto gpu = sys::GPU{window};
 	auto renderer = gfx::Renderer{gpu};
 

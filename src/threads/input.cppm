@@ -22,7 +22,7 @@ namespace playnote::threads {
 
 export void input(sys::GLFW& glfw, sys::Window& window)
 try {
-	sys::set_thread_name("input");
+	sys::name_current_thread("input");
 
 	while (!window.is_closing()) {
 		glfw.poll();

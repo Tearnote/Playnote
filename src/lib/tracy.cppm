@@ -13,12 +13,12 @@ export module playnote.lib.tracy;
 
 import playnote.preamble;
 
-namespace playnote::lib {
+namespace playnote::lib::tracy {
 
 // Set thread name as it's going to appear in the Tracy client.
-export void tracing_set_thread_name(string_view name) noexcept
+export void name_current_thread(string_view name) noexcept
 {
-	tracy::SetThreadName(string{name}.c_str());
+	::tracy::SetThreadName(string{name}.c_str());
 }
 
 }

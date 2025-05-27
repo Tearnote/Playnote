@@ -16,13 +16,13 @@ export module playnote.lib.glfw;
 
 import playnote.preamble;
 
-namespace playnote::lib {
+namespace playnote::lib::glfw {
 
 // Opaque handle to a window.
 export using Window = GLFWwindow*;
 
 // Make GLFW throw on any error. Can be called anytime.
-export void register_glfw_error_handler() noexcept
+export void register_error_handler() noexcept
 {
 	glfwSetErrorCallback([](int code, char const* str) {
 		throw runtime_error_fmt("[GLFW] Error #{}: {}", code, str);
@@ -31,15 +31,15 @@ export void register_glfw_error_handler() noexcept
 
 // Initialize GLFW.
 // Throws runtime_error on failure.
-export void init_glfw() { glfwInit(); }
+export void init() { glfwInit(); }
 
 // Clean up GLFW.
 // Errors are ignored.
-export void cleanup_glfw() noexcept try { glfwTerminate(); }
+export void cleanup() noexcept try { glfwTerminate(); }
 catch (runtime_error const&) {}
 
 // Return the me passed since the call to init_glfw(). If GLFW is not initialized, returns 0.
-export [[nodiscard]] auto time_since_glfw_init() noexcept -> nanoseconds try
+export [[nodiscard]] auto time_since_init() noexcept -> nanoseconds try
 {
 	auto const time = duration<double>{glfwGetTime()};
 	return duration_cast<nanoseconds>(time);
@@ -50,7 +50,7 @@ catch (runtime_error const&) {
 
 // Check for all open windows' events, and dispatch registered callbacks.
 // Throws runtime_error on failure, or if a callback throws.
-export void process_window_events() { glfwPollEvents(); }
+export void process_events() { glfwPollEvents(); }
 
 // Return the current value of the window's "closing" flag. This flag is set automatically
 // if the user presses the "X" in the corner, or programmatically via set_window_closing_flag.
@@ -129,7 +129,7 @@ export enum class KeyAction: int {
 // Set the handler for keyboard inputs.
 // Param 2 is KeyCode, param 4 is KeyAction
 export template<callable<void(Window, int, int, int, int)> Func>
-void set_key_handler(Window window, Func&& func) noexcept
+void set_window_key_handler(Window window, Func&& func) noexcept
 {
 	ASSERT(window);
 	glfwSetKeyCallback(window, func);
@@ -138,7 +138,7 @@ void set_key_handler(Window window, Func&& func) noexcept
 // Set the handler for mouse cursor movement.
 // Param 2 is x coordinate (in pixels), param 3 is y coordinate (in pixels)
 export template<callable<void(Window, double, double)> Func>
-void set_cursor_motion_handler(Window window, Func&& func) noexcept
+void set_window_cursor_motion_handler(Window window, Func&& func) noexcept
 {
 	ASSERT(window);
 	glfwSetCursorPosCallback(window, func);
@@ -158,7 +158,7 @@ export enum class MouseButtonAction: int {
 // Set the handler for mouse button inputs.
 // Param 2 is MouseButton, param 3 is MouseButtonAction
 export template<callable<void(Window, int, int, int)> Func>
-void set_mouse_button_handler(Window window, Func&& func) noexcept
+void set_window_mouse_button_handler(Window window, Func&& func) noexcept
 {
 	ASSERT(window);
 	glfwSetMouseButtonCallback(window, func);

@@ -72,7 +72,7 @@ auto load_bms(bms::IRCompiler& compiler, fs::path const& path) -> bms::IR
 
 export void audio(sys::Window& window)
 try {
-	sys::set_thread_name("audio");
+	sys::name_current_thread("audio");
 
 	auto audio = sys::Audio{};
 	auto bms_compiler = bms::IRCompiler{};

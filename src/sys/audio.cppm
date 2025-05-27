@@ -11,7 +11,6 @@ module;
 #include <spa/param/latency-utils.h>
 #include <pipewire/pipewire.h>
 #include "macros/logger.hpp"
-#include "quill/bundled/fmt/base.h"
 
 export module playnote.sys.audio;
 

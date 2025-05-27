@@ -27,7 +27,7 @@ export module playnote.lib.debug;
 
 import playnote.preamble;
 
-namespace playnote::lib {
+namespace playnote::lib::dbg {
 
 // Register a handler to make all assert failures throw.
 export void set_assert_handler() noexcept
