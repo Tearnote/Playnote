@@ -13,15 +13,15 @@ module;
 export module playnote.gfx.imgui;
 
 import playnote.preamble;
-import playnote.sys.window;
-import playnote.sys.gpu;
+import playnote.dev.window;
+import playnote.dev.gpu;
 
 namespace playnote::gfx {
 
 // Encapsulation of Dear ImGui initialization and drawing
 export class Imgui {
 public:
-	explicit Imgui(sys::GPU&);
+	explicit Imgui(dev::GPU&);
 
 	// Prepare Imgui to accept commands
 	// All ImGui:: functions must be run within the provided function
@@ -30,13 +30,13 @@ public:
 
 	// Draw enqueued Imgui state into the image
 	// Must be run once and after enqueue()
-	auto draw(vuk::Allocator&, sys::ManagedImage) -> sys::ManagedImage;
+	auto draw(vuk::Allocator&, dev::ManagedImage) -> dev::ManagedImage;
 
 private:
 	vuk::extra::ImGuiData imgui_data;
 };
 
-Imgui::Imgui(sys::GPU& gpu)
+Imgui::Imgui(dev::GPU& gpu)
 {
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
@@ -54,7 +54,7 @@ void Imgui::enqueue(Func func)
 	ImGui::Render();
 }
 
-auto Imgui::draw(vuk::Allocator& allocator, sys::ManagedImage target) -> sys::ManagedImage
+auto Imgui::draw(vuk::Allocator& allocator, dev::ManagedImage target) -> dev::ManagedImage
 {
 	return vuk::extra::ImGui_ImplVuk_Render(allocator, move(target), imgui_data);
 }

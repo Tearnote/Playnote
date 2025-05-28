@@ -15,9 +15,9 @@ export module playnote.threads.render;
 
 import playnote.preamble;
 import playnote.logger;
-import playnote.sys.window;
-import playnote.sys.gpu;
-import playnote.sys.os;
+import playnote.dev.window;
+import playnote.dev.gpu;
+import playnote.dev.os;
 import playnote.gfx.renderer;
 
 namespace playnote::threads {
@@ -38,10 +38,10 @@ void enqueue_test_scene(gfx::Renderer::Queue& queue)
 	queue.enqueue_rect({{255,   0}, {  2, 315}, {0.376f, 0.376f, 0.376f, 0.376f}});
 }
 
-export void render(sys::Window& window)
+export void render(dev::Window& window)
 try {
-	sys::name_current_thread("render");
-	auto gpu = sys::GPU{window};
+	dev::name_current_thread("render");
+	auto gpu = dev::GPU{window};
 	auto renderer = gfx::Renderer{gpu};
 
 	while (!window.is_closing()) {

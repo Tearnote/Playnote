@@ -2,7 +2,7 @@
 This software is dual-licensed. For more details, please consult LICENSE.txt.
 Copyright (c) 2025 Tearnote (Hubert Maraszek)
 
-sys/gpu.cppm:
+dev/gpu.cppm:
 Initializes Vulkan and the rendergraph.
 */
 
@@ -10,15 +10,15 @@ module;
 #include "macros/assert.hpp"
 #include "macros/logger.hpp"
 
-export module playnote.sys.gpu;
+export module playnote.dev.gpu;
 
 import playnote.preamble;
 import playnote.config;
 import playnote.logger;
 import playnote.lib.vulkan;
-import playnote.sys.window;
+import playnote.dev.window;
 
-namespace playnote::sys {
+namespace playnote::dev {
 
 namespace vk = lib::vk;
 
@@ -29,10 +29,10 @@ export class GPU {
 public:
 	static constexpr auto FramesInFlight = 2u; // 2 or 3, low latency vs smoothness
 
-	explicit GPU(sys::Window&);
+	explicit GPU(dev::Window&);
 	~GPU() { runtime.wait_idle(); }
 
-	[[nodiscard]] auto get_window() const -> sys::Window& { return window; }
+	[[nodiscard]] auto get_window() const -> dev::Window& { return window; }
 	[[nodiscard]] auto get_global_allocator() -> vk::Allocator& { return global_allocator; }
 
 	// Prepare and present a single frame. All vuk draw commands must be submitted within
@@ -70,7 +70,7 @@ private:
 	public:
 		vk::Surface surface;
 
-		Surface(Logger::Category*, sys::Window&, Instance&);
+		Surface(Logger::Category*, dev::Window&, Instance&);
 		~Surface() noexcept;
 
 		Surface(Surface const&) = delete;
@@ -105,7 +105,7 @@ private:
 	auto create_swapchain(vk::Allocator& allocator, Device& device, uvec2 size,
 		optional<vk::Swapchain> old = nullopt) const -> vk::Swapchain;
 
-	sys::Window& window;
+	dev::Window& window;
 
 	Instance instance;
 	Surface surface;
@@ -129,7 +129,7 @@ GPU::Instance::~Instance() noexcept
 	DEBUG_AS(cat, "Vulkan instance cleaned up");
 }
 
-GPU::Surface::Surface(Logger::Category* cat, sys::Window& window, Instance& instance):
+GPU::Surface::Surface(Logger::Category* cat, dev::Window& window, Instance& instance):
 	cat{cat},
 	instance{instance},
 	surface{window.create_surface(instance.instance)} {}
@@ -173,7 +173,7 @@ auto GPU::create_swapchain(vk::Allocator& allocator, Device& device, uvec2 size,
 	return move(swapchain);
 }
 
-GPU::GPU(sys::Window& window):
+GPU::GPU(dev::Window& window):
 	// Beautiful, isn't it
 	cat{globals::logger->register_category("Graphics", LogLevelGraphics)},
 	window{window},

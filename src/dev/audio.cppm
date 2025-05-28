@@ -2,21 +2,21 @@
 This software is dual-licensed. For more details, please consult LICENSE.txt.
 Copyright (c) 2025 Tearnote (Hubert Maraszek)
 
-sys/audio.cppm:
+dev/audio.cppm:
 Initializes audio and submits buffers for playback.
 */
 
 module;
 #include "macros/logger.hpp"
 
-export module playnote.sys.audio;
+export module playnote.dev.audio;
 
 import playnote.preamble;
 import playnote.config;
 import playnote.logger;
 import playnote.lib.pipewire;
 
-namespace playnote::sys {
+namespace playnote::dev {
 
 namespace pw = lib::pw;
 

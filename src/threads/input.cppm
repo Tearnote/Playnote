@@ -15,14 +15,14 @@ export module playnote.threads.input;
 
 import playnote.preamble;
 import playnote.logger;
-import playnote.sys.window;
-import playnote.sys.os;
+import playnote.dev.window;
+import playnote.dev.os;
 
 namespace playnote::threads {
 
-export void input(sys::GLFW& glfw, sys::Window& window)
+export void input(dev::GLFW& glfw, dev::Window& window)
 try {
-	sys::name_current_thread("input");
+	dev::name_current_thread("input");
 
 	while (!window.is_closing()) {
 		glfw.poll();

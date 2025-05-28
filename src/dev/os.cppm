@@ -2,18 +2,18 @@
 This software is dual-licensed. For more details, please consult LICENSE.txt.
 Copyright (c) 2025 Tearnote (Hubert Maraszek)
 
-sys/os.cppm:
+dev/os.cppm:
 Various OS-specific utilities.
 */
 
-export module playnote.sys.os;
+export module playnote.dev.os;
 
 import playnote.preamble;
 import playnote.config;
 import playnote.lib.thread;
 import playnote.lib.tracy;
 
-namespace playnote::sys {
+namespace playnote::dev {
 
 namespace thread = lib::thread;
 namespace tracy = lib::tracy;

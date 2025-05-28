@@ -14,9 +14,9 @@ export module playnote.threads.audio;
 import playnote.preamble;
 import playnote.logger;
 import playnote.io.file;
-import playnote.sys.window;
-import playnote.sys.audio;
-import playnote.sys.os;
+import playnote.dev.window;
+import playnote.dev.audio;
+import playnote.dev.os;
 import playnote.bms.chart;
 import playnote.bms.ir;
 
@@ -70,11 +70,11 @@ auto load_bms(bms::IRCompiler& compiler, fs::path const& path) -> bms::IR
 	return ir;
 }
 
-export void audio(sys::Window& window)
+export void audio(dev::Window& window)
 try {
-	sys::name_current_thread("audio");
+	dev::name_current_thread("audio");
 
-	auto audio = sys::Audio{};
+	auto audio = dev::Audio{};
 	auto bms_compiler = bms::IRCompiler{};
 	auto const bms_ir = load_bms(bms_compiler, "songs/Ling Child/02_hyper.bme");
 	auto const bms_jp = load_bms(bms_compiler, "songs/地球塔デヴォーション/DVTN_0708_SPH.bme");

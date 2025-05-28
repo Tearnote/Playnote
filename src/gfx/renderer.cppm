@@ -9,12 +9,12 @@ A renderer of primitives.
 export module playnote.gfx.renderer;
 
 import playnote.preamble;
-import playnote.sys.gpu;
+import playnote.dev.gpu;
 import playnote.gfx.imgui;
 
 namespace playnote::gfx {
 
-using sys::ManagedImage;
+using dev::ManagedImage;
 
 export class Renderer {
 public:
@@ -36,7 +36,7 @@ public:
 		vector<Rect> rects{};
 	};
 
-	explicit Renderer(sys::GPU& gpu);
+	explicit Renderer(dev::GPU& gpu);
 
 	// Provide a queue to the function argument, and then draw contents of the queue to the screen
 	// Each call will wait block until the next frame begins
@@ -45,7 +45,7 @@ public:
 	void frame(Func&&);
 
 private:
-	sys::GPU& gpu;
+	dev::GPU& gpu;
 	gfx::Imgui imgui;
 
 	// Drawing logic separated from frame() so that it's not templated

@@ -2,7 +2,7 @@
 This software is dual-licensed. For more details, please consult LICENSE.txt.
 Copyright (c) 2025 Tearnote (Hubert Maraszek)
 
-sys/window.cppm:
+dev/window.cppm:
 Initializes GLFW and manages windows. Windows handle keyboard and mouse input, and the window's
 "should close" state manages application lifetime.
 */
@@ -11,14 +11,14 @@ module;
 #include "macros/assert.hpp"
 #include "macros/logger.hpp"
 
-export module playnote.sys.window;
+export module playnote.dev.window;
 
 import playnote.preamble;
 import playnote.logger;
 import playnote.lib.vulkan;
 import playnote.lib.glfw;
 
-namespace playnote::sys {
+namespace playnote::dev {
 
 namespace glfw = lib::glfw;
 

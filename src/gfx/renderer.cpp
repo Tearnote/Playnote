@@ -17,7 +17,7 @@ import playnote.preamble;
 
 namespace playnote::gfx {
 
-Renderer::Renderer(sys::GPU& gpu):
+Renderer::Renderer(dev::GPU& gpu):
 	gpu{gpu},
 	imgui{gpu}
 {

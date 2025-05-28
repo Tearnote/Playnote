@@ -12,8 +12,8 @@ import playnote.preamble;
 import playnote.config;
 import playnote.logger;
 import playnote.lib.debug;
-import playnote.sys.window;
-import playnote.sys.os;
+import playnote.dev.window;
+import playnote.dev.os;
 import playnote.threads.render;
 import playnote.threads.audio;
 import playnote.threads.input;
@@ -22,9 +22,9 @@ using namespace playnote; // Can't namespace main()
 
 auto run() -> int
 {
-	auto const scheduler_period = sys::SchedulerPeriod{1ms};
-	auto glfw = sys::GLFW{};
-	auto window = sys::Window{glfw, AppTitle, {640, 480}};
+	auto const scheduler_period = dev::SchedulerPeriod{1ms};
+	auto glfw = dev::GLFW{};
+	auto window = dev::Window{glfw, AppTitle, {640, 480}};
 
 	// Spawn all threads. Every thread is assumed to eventually finish
 	// once window.is_closing() is true
