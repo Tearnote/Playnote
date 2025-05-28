@@ -15,9 +15,11 @@ module;
 #include "vuk/runtime/vk/VkSwapchain.hpp"
 #include "vuk/runtime/vk/Allocator.hpp"
 #include "vuk/runtime/vk/VkRuntime.hpp"
+#include "vuk/runtime/vk/Pipeline.hpp"
 #include "vuk/runtime/ThisThreadExecutor.hpp"
 #include "vuk/runtime/CommandBuffer.hpp" // Required to work around bug in TracyIntegration.hpp
 #include "vuk/extra/TracyIntegration.hpp"
+#include "vuk/vsl/Core.hpp"
 #include "vuk/ImageAttachment.hpp"
 #include "vuk/RenderGraph.hpp"
 #include "vuk/Value.hpp"
@@ -47,12 +49,12 @@ auto debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT severity_code,
 
 	auto const type = [type_code]() {
 		if (type_code & VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT) return "[VulkanPerf]";
-		if (type_code & VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT)  return "[VulkanSpec]";
-		if (type_code & VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT)     return "[Vulkan]";
+		if (type_code & VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT) return "[VulkanSpec]";
+		if (type_code & VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT) return "[Vulkan]";
 		PANIC("Unknown Vulkan diagnostic message type: #{}", type_code);
 	}();
 
-	     if (severity_code & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
+	if (severity_code & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
 		ERROR_AS(logger, "{} {}", type, data->pMessage);
 	else if (severity_code & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
 		WARN_AS(logger, "{} {}", type, data->pMessage);
@@ -78,7 +80,8 @@ export auto create_instance(string_view name, Logger::Category* debug_logger) ->
 	if constexpr (VulkanValidationEnabled) {
 		instance_builder
 			.enable_layer("VK_LAYER_KHRONOS_validation")
-			.add_validation_feature_enable(VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT)
+			.add_validation_feature_enable(
+				VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT)
 			.add_validation_feature_enable(VK_VALIDATION_FEATURE_ENABLE_DEBUG_PRINTF_EXT)
 			.set_debug_callback(debug_callback)
 			.set_debug_callback_user_data_pointer(debug_logger)
@@ -262,7 +265,8 @@ export using Runtime = vuk::Runtime;
 
 // Initialize vuk by building a Runtime object.
 // Throws if vuk throws.
-export auto create_runtime(Instance const& instance, Device const& device, QueueSet const& queues) -> Runtime
+export auto create_runtime(Instance const& instance, Device const& device,
+	QueueSet const& queues) -> Runtime
 {
 	auto const pointers = vuk::FunctionPointers{
 		vkGetInstanceProcAddr,
@@ -285,8 +289,8 @@ export auto create_runtime(Instance const& instance, Device const& device, Queue
 			queues.compute_family_index, vuk::DomainFlagBits::eComputeQueue));
 	}
 	if (queues.transfer) {
-		executors.emplace_back(vuk::create_vkqueue_executor(pointers, device.device, queues.transfer,
-			queues.transfer_family_index, vuk::DomainFlagBits::eTransferQueue));
+		executors.emplace_back(vuk::create_vkqueue_executor(pointers, device.device,
+			queues.transfer, queues.transfer_family_index, vuk::DomainFlagBits::eTransferQueue));
 	}
 
 	return Runtime{vuk::RuntimeCreateParameters{
@@ -345,7 +349,7 @@ export [[nodiscard]] auto create_swapchain(Allocator& allocator, Device& device,
 	auto swapchain = vuk::Swapchain{allocator, vkbswapchain.image_count};
 
 	for (auto [image, view]: views::zip(*vkbswapchain.get_images(),
-			 *vkbswapchain.get_image_views())) {
+		     *vkbswapchain.get_image_views())) {
 		swapchain.images.emplace_back(vuk::ImageAttachment{
 			.image = vuk::Image{image, nullptr},
 			.image_view = vuk::ImageView{{}, view},
@@ -386,7 +390,8 @@ export auto begin_frame(Runtime& runtime, GlobalResource& resource) -> vk::Alloc
 
 // Retrieve and acquire the next image in the swapchain.
 // Throws if vuk throws.
-export [[nodiscard]] auto acquire_swapchain_image(Swapchain& swapchain, string_view name) -> ManagedImage
+export [[nodiscard]] auto acquire_swapchain_image(Swapchain& swapchain,
+	string_view name) -> ManagedImage
 {
 	auto acquired_swapchain = vuk::acquire_swapchain(swapchain);
 	return vuk::acquire_next_image(name, move(acquired_swapchain));
@@ -399,7 +404,63 @@ export void submit(Allocator& allocator, TracyContext const& tracy_context, Mana
 	auto entire_thing = vuk::enqueue_presentation(move(image));
 	auto compiler = vuk::Compiler{};
 	auto const profiling_cbs = vuk::extra::make_Tracy_callbacks(*tracy_context);
-	entire_thing.submit(allocator, compiler, { .callbacks = profiling_cbs });
+	entire_thing.submit(allocator, compiler, {.callbacks = profiling_cbs});
+}
+
+// Compile a vertex and fragment shader pair into a graphics pipeline.
+// Throws if vuk throws.
+export template<usize NVert, usize NFrag>
+void create_graphics_pipeline(Runtime& runtime, string_view name,
+	array<uint32, NVert> const& vertex_shader, array<uint32, NFrag> const& fragment_shader)
+{
+	auto const vert_name = format("{}.vert", name);
+	auto const frag_name = format("{}.frag", name);
+	auto pci = vuk::PipelineBaseCreateInfo{};
+	pci.add_static_spirv(vertex_shader.data(), NVert, move(vert_name));
+	pci.add_static_spirv(fragment_shader.data(), NFrag, move(frag_name));
+	runtime.create_named_pipeline(name, pci);
+}
+
+// Clear an image with a solid color.
+// Throws if vuk throws.
+export auto clear_image(ManagedImage&& input, vec4 color) -> ManagedImage
+{
+	return vuk::clear_image(move(input), vuk::ClearColor{color.r(), color.g(), color.b(), color.a()});
+}
+
+// macros/vuk.hpp support
+
+export using vuk::Access;
+export using vuk::Arg;
+export using vuk::ImageAttachment;
+export using vuk::Buffer;
+export using vuk::tag_type;
+
+// Rendergraph support
+
+export using vuk::make_pass;
+export using vuk::CommandBuffer;
+
+// Create a host-visible buffer with the provided data. Memory is never freed, so use with
+// a frame allocator.
+// Throws if vuk throws.
+export template<typename T>
+auto create_scratch_buffer(Allocator& allocator, span<T> data) -> Buffer
+{
+	auto [buf, fut] = vuk::create_buffer(allocator, vuk::MemoryUsage::eCPUtoGPU, vuk::DomainFlagBits::eTransferOnGraphics, data);
+	return buf.release();
+}
+
+// Set the default command buffer configuration used by this application.
+// Throws if vuk throws.
+export auto set_cmd_defaults(CommandBuffer& cmd) -> CommandBuffer&
+{
+	return cmd
+		.set_dynamic_state(vuk::DynamicStateFlagBits::eScissor | vuk::DynamicStateFlagBits::eViewport)
+		.set_viewport(0, vuk::Rect2D::framebuffer())
+		.set_scissor(0, vuk::Rect2D::framebuffer())
+		.set_rasterization({})
+		.broadcast_color_blend({});
 }
 
 }

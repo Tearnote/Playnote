@@ -37,7 +37,7 @@ add_executable(Playnote
 	src/macros/tracing.hpp
 	src/macros/assert.hpp
 	src/macros/logger.hpp
-	src/gfx/renderer.cpp
+	src/macros/vuk.hpp
 	src/main.cpp
 )
 target_sources(Playnote PUBLIC
