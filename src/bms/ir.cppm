@@ -189,7 +189,7 @@ public:
 	IRCompiler();
 
 	// Generate IR from an unmodified BMS file. The path is only used as metadata.
-	auto compile(fs::path const& path, span<char const> bms_file_contents) -> IR;
+	auto compile(fs::path const& path, span<byte const> bms_file_contents) -> IR;
 
 private:
 	// A BMS channel command can contain multiple notes; we split them up into these
@@ -288,7 +288,7 @@ IRCompiler::IRCompiler()
 	register_channel_handlers();
 }
 
-auto IRCompiler::compile(fs::path const& path, span<char const> bms_file_contents) -> IR
+auto IRCompiler::compile(fs::path const& path, span<byte const> bms_file_contents) -> IR
 {
 	INFO_AS(cat, "Compiling BMS file \"{}\"", path.c_str());
 	auto ir = IR{};

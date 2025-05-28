@@ -117,7 +117,7 @@ export template<
 	callable<void(HeaderCommand&&)> HFunc,
 	callable<void(ChannelCommand&&)> CFunc
 >
-void parse(span<char const> bms_file_contents, Logger::Category* cat, HFunc&& header_func, CFunc&& channel_func)
+void parse(span<byte const> bms_file_contents, Logger::Category* cat, HFunc&& header_func, CFunc&& channel_func)
 {
 	// Convert file to UTF-8
 	auto encoding = bms::detect_text_encoding(bms_file_contents);

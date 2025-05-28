@@ -9,21 +9,19 @@ The file codec to decode the audio format and convert sample rate.
 export module playnote.io.audio_codec;
 
 import playnote.preamble;
+import playnote.lib.pipewire;
 
 namespace playnote::io {
 
 export class AudioCodec {
 public:
-	struct Sample {
-		float left;
-		float right;
-	};
+	using Sample = lib::pw::Sample;
 	using Output = vector<Sample>;
 
-	static auto process(span<char const> raw) -> Output;
+	static auto process(span<byte const> raw) -> Output;
 };
 
-auto AudioCodec::process(span<char const> raw) -> Output
+auto AudioCodec::process(span<byte const> raw) -> Output
 {
 	//todo
 	return {};

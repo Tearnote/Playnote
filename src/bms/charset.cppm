@@ -34,12 +34,12 @@ export auto is_supported_encoding(Encoding encoding) -> bool
 // Try to detect the encoding of a passage of text.
 // A few encodings known to be common to BMS files are supported. If none of them match,
 // an empty string is returned.
-export auto detect_text_encoding(span<char const> text) -> Encoding
+export auto detect_text_encoding(span<byte const> text) -> Encoding
 {
 	auto is_reliable{true};
 	auto bytes_consumed{0};
 	auto encoding = CompactEncDet::DetectEncoding(
-		text.data(), text.size(),
+		reinterpret_cast<char const*>(text.data()), text.size(),
 		nullptr, nullptr, nullptr,
 		UNKNOWN_ENCODING,
 		UNKNOWN_LANGUAGE,
@@ -52,16 +52,17 @@ export auto detect_text_encoding(span<char const> text) -> Encoding
 
 // Convert a passage of text from a given encoding to Unicode (UTF-8).
 // Any bytes that are invalid in the specified encoding are skipped.
-export auto text_to_unicode(span<char const> text, Encoding encoding) -> string
+export auto text_to_unicode(span<byte const> text, Encoding encoding) -> string
 {
-	auto encoding_str = [&]() {
+	auto const encoding_str = [&]() {
 		switch (encoding) {
 		case Encoding::JAPANESE_SHIFT_JIS: return "Shift_JIS";
 		case Encoding::KOREAN_EUC_KR: return "EUC-KR";
 		default: return "UTF-8";
 		}
 	}();
-	return boost::locale::conv::to_utf<char>(text.data(), text.data() + text.size(), encoding_str);
+	auto* as_char = reinterpret_cast<char const*>(text.data());
+	return boost::locale::conv::to_utf<char>(as_char, as_char + text.size(), encoding_str);
 }
 
 }

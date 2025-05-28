@@ -60,6 +60,7 @@ target_sources(Playnote PUBLIC
 	src/lib/tracy.cppm
 	src/lib/debug.cppm
 	src/lib/glfw.cppm
+	src/lib/mio.cppm
 	src/io/audio_codec.cppm
 	src/io/bulk_request.cppm
 	src/io/file.cppm

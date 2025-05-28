@@ -17,15 +17,19 @@ namespace playnote::io {
 
 export class BulkRequest {
 public:
-	explicit BulkRequest(string domain): domain{move(domain)} {}
+	explicit BulkRequest(string_view domain): domain{domain} {}
 
 	template<typename T>
-	void enqueue(typename T::Output& output, string resource, initializer_list<string> extensions = {})
+	void enqueue(typename T::Output& output, string_view resource, initializer_list<string_view> extensions = {})
 	{
+		auto extensions_vec = vector<string>{};
+		extensions_vec.reserve(extensions.size());
+		transform(extensions, back_inserter(extensions_vec), [](auto& in) { return string{in}; });
+
 		requests.emplace_back(Request{
-			.resource = move(resource),
-			.extensions = move(extensions),
-			.processor = [&](span<char const> raw) {
+			.resource = string{resource},
+			.extensions = move(extensions_vec),
+			.processor = [&](span<byte const> raw) {
 				output = move(T::process(raw));
 			},
 		});
@@ -44,7 +48,7 @@ private:
 	struct Request {
 		string resource;
 		vector<string> extensions;
-		function<void(span<char const>)> processor;
+		function<void(span<byte const>)> processor;
 	};
 
 	string domain;
