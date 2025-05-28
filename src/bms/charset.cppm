@@ -7,10 +7,11 @@ Text encoding detection and conversion.
 */
 
 module;
+#include <unicode/ucsdet.h>
 #include <boost/locale/encoding.hpp>
 #include <boost/container_hash/hash.hpp>
-#include "compact_enc_det/compact_enc_det.h"
 #include "macros/assert.hpp"
+#include "macros/logger.hpp"
 
 export module playnote.bms.charset;
 
@@ -19,14 +20,29 @@ import playnote.logger;
 
 namespace playnote::bms {
 
-// Returns true if the encoding is one of the known BMS encodings.
-export auto is_supported_encoding(Encoding encoding) -> bool
+// Throw runtime_error on any ICU error other than invalid byte during decoding.
+auto handle_icu_error(UErrorCode err)
 {
-	if (encoding == Encoding::ASCII_7BIT)
+	if (err == U_ZERO_ERROR) return;
+	if (U_SUCCESS(err)) {
+		WARN("ICU warning: {}", u_errorName(err));
+		return;
+	}
+	if (err == U_ILLEGAL_CHAR_FOUND) {
+		WARN("Illegal character found in file");
+		return;
+	}
+	throw runtime_error_fmt("ICU error: {}", u_errorName(err));
+}
+
+// Returns true if the encoding is one of the known BMS encodings.
+export auto is_supported_encoding(string_view encoding) -> bool
+{
+	if (encoding == "UTF-8")
 		return true;
-	if (encoding == Encoding::JAPANESE_SHIFT_JIS)
+	if (encoding == "Shift_JIS")
 		return true;
-	if (encoding == Encoding::KOREAN_EUC_KR)
+	if (encoding == "EUC-KR")
 		return true;
 	return false;
 }
@@ -34,35 +50,39 @@ export auto is_supported_encoding(Encoding encoding) -> bool
 // Try to detect the encoding of a passage of text.
 // A few encodings known to be common to BMS files are supported. If none of them match,
 // an empty string is returned.
-export auto detect_text_encoding(span<byte const> text) -> Encoding
+export auto detect_text_encoding(span<byte const> text) -> string_view
 {
-	auto is_reliable{true};
-	auto bytes_consumed{0};
-	auto encoding = CompactEncDet::DetectEncoding(
-		reinterpret_cast<char const*>(text.data()), text.size(),
-		nullptr, nullptr, nullptr,
-		UNKNOWN_ENCODING,
-		UNKNOWN_LANGUAGE,
-		CompactEncDet::QUERY_CORPUS,
-		true,
-		&bytes_consumed,
-		&is_reliable);
-	return encoding;
+	using Detector = unique_resource<UCharsetDetector*, decltype([](auto* p) {
+		ucsdet_close(p);
+	})>;
+
+	auto err = U_ZERO_ERROR;
+	auto const detector = Detector{ASSUME_VAL(ucsdet_open(&err))};
+	handle_icu_error(err);
+	ucsdet_setText(detector.get(), reinterpret_cast<char const*>(text.data()), text.size(), &err);
+	handle_icu_error(err);
+
+	auto* matches_ptr = static_cast<UCharsetMatch const**>(nullptr);
+	auto matches_count = 0;
+	matches_ptr = ucsdet_detectAll(detector.get(), &matches_count, &err);
+	handle_icu_error(err);
+	auto const matches = std::span{matches_ptr, static_cast<usize>(matches_count)};
+
+	for (auto const& match: matches) {
+		auto* match_name = ucsdet_getName(match, &err);
+		handle_icu_error(err);
+		if (is_supported_encoding(match_name))
+			return match_name;
+	}
+	return "";
 }
 
 // Convert a passage of text from a given encoding to Unicode (UTF-8).
 // Any bytes that are invalid in the specified encoding are skipped.
-export auto text_to_unicode(span<byte const> text, Encoding encoding) -> string
+export auto text_to_unicode(span<byte const> text, string_view encoding) -> string
 {
-	auto const encoding_str = [&]() {
-		switch (encoding) {
-		case Encoding::JAPANESE_SHIFT_JIS: return "Shift_JIS";
-		case Encoding::KOREAN_EUC_KR: return "EUC-KR";
-		default: return "UTF-8";
-		}
-	}();
 	auto* as_char = reinterpret_cast<char const*>(text.data());
-	return boost::locale::conv::to_utf<char>(as_char, as_char + text.size(), encoding_str);
+	return boost::locale::conv::to_utf<char>(as_char, as_char + text.size(), string{encoding});
 }
 
 }

@@ -84,7 +84,6 @@ target_sources(Playnote PUBLIC
 
 target_include_directories(Playnote PRIVATE src) # All includes start from src as root
 
-target_link_libraries(Playnote PRIVATE compact_enc_det)
 target_link_libraries(Playnote PRIVATE vk-bootstrap)
 target_link_libraries(Playnote PRIVATE TracyClient)
 target_link_libraries(Playnote PRIVATE PkgConfig::libsamplerate)
@@ -98,6 +97,8 @@ target_link_libraries(Playnote PRIVATE Boost::boost)
 target_link_libraries(Playnote PRIVATE quill)
 target_link_libraries(Playnote PRIVATE glfw)
 target_link_libraries(Playnote PRIVATE volk)
+target_link_libraries(Playnote PRIVATE ICU::i18n)
+target_link_libraries(Playnote PRIVATE ICU::uc)
 target_link_libraries(Playnote PRIVATE mio::mio)
 target_link_libraries(Playnote PRIVATE vuk-extra-imgui-platform)
 target_link_libraries(Playnote PRIVATE vuk)

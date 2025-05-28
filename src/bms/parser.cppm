@@ -17,18 +17,18 @@ import playnote.bms.charset;
 
 namespace playnote::bms {
 
-// A "header" type BMS command
+// A "header" type BMS command.
 export struct HeaderCommand {
-	int line;
+	int32 line;
 	string header;
 	string slot;
 	string value;
 };
 
-// A "channel" type BMS command
+// A "channel" type BMS command.
 export struct ChannelCommand {
-	int line;
-	int measure;
+	int32 line;
+	int32 measure;
 	string channel;
 	string value;
 };
@@ -112,7 +112,7 @@ auto parse_line(int line_index, string&& line) -> variant<monostate, HeaderComma
 
 // Parse an entire BMS file, running the provided functions once for each command.
 // The functions are called in the same order the lines appear in the file.
-// The commands might be invalid, and some fields might be empty.
+// Only basic tokenization is done and the commands are not validated; some fields might be empty.
 export template<
 	callable<void(HeaderCommand&&)> HFunc,
 	callable<void(ChannelCommand&&)> CFunc
@@ -120,9 +120,9 @@ export template<
 void parse(span<byte const> bms_file_contents, Logger::Category* cat, HFunc&& header_func, CFunc&& channel_func)
 {
 	// Convert file to UTF-8
-	auto encoding = bms::detect_text_encoding(bms_file_contents);
+	auto const encoding = bms::detect_text_encoding(bms_file_contents);
 	if (!bms::is_supported_encoding(encoding))
-		WARN_AS(cat, "Unexpected encoding #{}, proceeding with heuristics", to_underlying(encoding));
+		WARN_AS(cat, "Unexpected encoding {}, proceeding with heuristics", encoding);
 	auto bms_file_u8 = bms::text_to_unicode(bms_file_contents, encoding);
 
 	// Normalize line endings

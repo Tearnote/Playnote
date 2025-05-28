@@ -38,6 +38,7 @@ Required to be installed locally:
 - [Clang](https://clang.llvm.org/) ([Apache](https://github.com/llvm/llvm-project/blob/main/LICENSE.TXT))
 - [Boost](https://www.boost.org/) ([Boost](https://www.boost.org/doc/user-guide/bsl.html))
 - [OpenSSL](https://openssl-library.org/) ([Apache](https://github.com/openssl/openssl?tab=Apache-2.0-1-ov-file#readme))
+- [ICU](https://icu.unicode.org/) ([Unicode](https://github.com/unicode-org/icu/blob/main/LICENSE))
 - [Vulkan SDK](https://www.lunarg.com/vulkan-sdk/) (with [glslc](https://github.com/google/shaderc) and [glslangValidator](https://github.com/KhronosGroup/glslang)) ([various licenses](https://vulkan.lunarg.com/software/license/vulkan-1.4.313.0-linux-license-summary.txt))
 - [glfw](https://www.glfw.org/) ([zlib](https://www.glfw.org/license.html))
 - [libsndfile](https://libsndfile.github.io/libsndfile/) ([LGPL](https://libsndfile.github.io/libsndfile/#licensing))
@@ -53,4 +54,3 @@ Retrieved via CMake [FetchContent](https://cmake.org/cmake/help/latest/module/Fe
 - [vk-bootstrap](https://github.com/charles-lunarg/vk-bootstrap) ([MIT](https://github.com/charles-lunarg/vk-bootstrap?tab=MIT-1-ov-file#readme))
 - [vuk](https://github.com/martty/vuk) ([MIT](https://github.com/martty/vuk?tab=MIT-1-ov-file#readme))
 - [tracy](https://github.com/wolfpld/tracy) ([BSD](https://github.com/wolfpld/tracy?tab=License-1-ov-file#readme))
-- [compact_enc_det](https://github.com/google/compact_enc_det) ([Apache](https://github.com/google/compact_enc_det?tab=Apache-2.0-1-ov-file#readme))
