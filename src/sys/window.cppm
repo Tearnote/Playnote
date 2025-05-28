@@ -8,7 +8,6 @@ Initializes GLFW and manages windows. Windows handle keyboard and mouse input, a
 */
 
 module;
-#include "volk.h"
 #include "macros/assert.hpp"
 #include "macros/logger.hpp"
 
@@ -16,6 +15,7 @@ export module playnote.sys.window;
 
 import playnote.preamble;
 import playnote.logger;
+import playnote.lib.vulkan;
 import playnote.lib.glfw;
 
 namespace playnote::sys {
@@ -92,7 +92,7 @@ public:
 
 	// Create a Vulkan surface for the window's framebuffer.
 	// Destruction needs to be handled manually by the caller.
-	auto create_surface(VkInstance) -> VkSurfaceKHR;
+	auto create_surface(lib::vk::Instance const&) -> lib::vk::Surface;
 
 	Window(Window const&) = delete;
 	auto operator=(Window const&) -> Window& = delete;
@@ -169,7 +169,7 @@ auto Window::size() const -> uvec2
 	return glfw::get_window_framebuffer_size(window_handle.get());
 }
 
-auto Window::create_surface(VkInstance instance) -> VkSurfaceKHR
+auto Window::create_surface(lib::vk::Instance const& instance) -> lib::vk::Surface
 {
 	return glfw::create_window_surface(window_handle.get(), instance);
 }

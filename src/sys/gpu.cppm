@@ -8,18 +8,6 @@ Initializes Vulkan and the rendergraph.
 
 module;
 #include "macros/assert.hpp"
-#include "volk.h"
-#include "VkBootstrap.h"
-#include "vuk/runtime/vk/DeviceFrameResource.hpp"
-#include "vuk/runtime/vk/VkSwapchain.hpp"
-#include "vuk/runtime/vk/Allocator.hpp"
-#include "vuk/runtime/vk/VkRuntime.hpp"
-#include "vuk/runtime/CommandBuffer.hpp" // Required to work around bug in TracyIntegration.hpp
-#include "vuk/extra/TracyIntegration.hpp"
-#include "vuk/ImageAttachment.hpp"
-#include "vuk/RenderGraph.hpp"
-#include "vuk/Value.hpp"
-#include "vuk/Types.hpp"
 #include "macros/logger.hpp"
 
 export module playnote.sys.gpu;
@@ -27,12 +15,14 @@ export module playnote.sys.gpu;
 import playnote.preamble;
 import playnote.config;
 import playnote.logger;
+import playnote.lib.vulkan;
 import playnote.sys.window;
 
 namespace playnote::sys {
 
-// Saves some typing
-export using ManagedImage = vuk::Value<vuk::ImageAttachment>;
+namespace vk = lib::vk;
+
+export using vk::ManagedImage;
 
 // RAII encapsulation of GPU state, handling initialization and frame preparation/presentation
 export class GPU {
@@ -42,13 +32,12 @@ public:
 	explicit GPU(sys::Window&);
 	~GPU() { runtime.wait_idle(); }
 
-	auto get_window() -> sys::Window& { return window; }
-	auto get_global_allocator() -> vuk::Allocator& { return global_allocator; }
+	[[nodiscard]] auto get_window() const -> sys::Window& { return window; }
+	[[nodiscard]] auto get_global_allocator() -> vk::Allocator& { return global_allocator; }
 
-	// Prepare and present a single frame
-	// All vuk draw commands must be submitted within the callback
-	// The callback is provided with the frame allocator and swapchain image
-	template<callable<ManagedImage(vuk::Allocator&, ManagedImage&&)> Func>
+	// Prepare and present a single frame. All vuk draw commands must be submitted within
+	// the callback. The callback is provided with the frame allocator and swapchain image.
+	template<callable<ManagedImage(vk::Allocator&, ManagedImage&&)> Func>
 	void frame(Func&&);
 
 	GPU(GPU const&) = delete;
@@ -59,12 +48,13 @@ public:
 private:
 	Logger::Category* cat;
 
+	// RAII wrapper of a Vulkan instance.
 	class Instance {
 	public:
-		vkb::Instance instance;
+		vk::Instance instance;
 
 		explicit Instance(Logger::Category*);
-		~Instance();
+		~Instance() noexcept;
 
 		Instance(Instance const&) = delete;
 		auto operator=(Instance const&) -> Instance& = delete;
@@ -73,18 +63,15 @@ private:
 
 	private:
 		Logger::Category* cat;
-
-		static auto debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT,
-			VkDebugUtilsMessageTypeFlagsEXT, VkDebugUtilsMessengerCallbackDataEXT const*,
-			void*) -> VkBool32;
 	};
 
+	// RAII wrapper of a Vulkan surface.
 	class Surface {
 	public:
-		VkSurfaceKHR surface;
+		vk::Surface surface;
 
 		Surface(Logger::Category*, sys::Window&, Instance&);
-		~Surface();
+		~Surface() noexcept;
 
 		Surface(Surface const&) = delete;
 		auto operator=(Surface const&) -> Surface& = delete;
@@ -96,12 +83,13 @@ private:
 		Instance& instance;
 	};
 
+	// RAII wrapper of a Vulkan device.
 	class Device {
 	public:
-		vkb::Device device;
+		vk::Device device;
 
-		Device(Logger::Category*, vkb::PhysicalDevice&);
-		~Device();
+		Device(Logger::Category*, vk::PhysicalDevice const&);
+		~Device() noexcept;
 
 		Device(Device const&) = delete;
 		auto operator=(Device const&) -> Device& = delete;
@@ -112,34 +100,78 @@ private:
 		Logger::Category* cat;
 	};
 
-	struct Queues {
-		VkQueue graphics;
-		uint graphics_family_index;
-		VkQueue transfer;
-		uint transfer_family_index;
-		VkQueue compute;
-		uint compute_family_index;
-	};
-
-	// Helpers below use dumb types instead of RAII wrappers to avoid a linker bug
-	// (the lambda types are distinct in different TUs when modules are in use)
-	auto select_physical_device(Instance&, Surface&) -> vkb::PhysicalDevice;
-	auto retrieve_queues(Device&) -> Queues;
-	auto create_runtime(Instance&, VkPhysicalDevice, Device&, Queues const&) -> vuk::Runtime;
-	auto create_swapchain(uvec2 size, vuk::Allocator&, Device&, Surface&, optional<vuk::Swapchain> old = nullopt) -> vuk::Swapchain;
+	// Logging wrappers.
+	[[nodiscard]] auto select_physical_device(Instance const&, Surface const&) const -> vk::PhysicalDevice;
+	auto create_swapchain(vk::Allocator& allocator, Device& device, uvec2 size,
+		optional<vk::Swapchain> old = nullopt) const -> vk::Swapchain;
 
 	sys::Window& window;
 
 	Instance instance;
 	Surface surface;
-	vkb::PhysicalDevice physical_device;
+	vk::PhysicalDevice physical_device;
 	Device device;
-	vuk::Runtime runtime;
-	vuk::DeviceSuperFrameResource global_resource;
-	vuk::Allocator global_allocator;
-	vuk::Swapchain swapchain;
-	unique_ptr<vuk::extra::TracyContext> tracy_context;
+	vk::Runtime runtime;
+	vk::GlobalResource global_resource;
+	vk::Allocator global_allocator;
+	vk::Swapchain swapchain;
+	vk::TracyContext tracy_context;
 };
+
+GPU::Instance::Instance(Logger::Category* cat):
+	instance{vk::create_instance(AppTitle, cat)},
+	cat{cat}
+{ DEBUG_AS(cat, "Vulkan instance created"); }
+
+GPU::Instance::~Instance() noexcept
+{
+	vk::destroy_instance(instance);
+	DEBUG_AS(cat, "Vulkan instance cleaned up");
+}
+
+GPU::Surface::Surface(Logger::Category* cat, sys::Window& window, Instance& instance):
+	cat{cat},
+	instance{instance},
+	surface{window.create_surface(instance.instance)} {}
+
+GPU::Surface::~Surface() noexcept
+{
+	vk::destroy_surface(instance.instance, surface);
+	DEBUG_AS(cat, "Vulkan surface cleaned up");
+}
+
+GPU::Device::Device(Logger::Category* cat, vk::PhysicalDevice const& physical_device):
+	device{vk::create_device(physical_device)},
+	cat{cat}
+{ DEBUG_AS(cat, "Vulkan device created"); }
+
+GPU::Device::~Device() noexcept
+{
+	vk::destroy_device(device);
+	DEBUG_AS(cat, "Vulkan device cleaned up");
+}
+
+[[nodiscard]] auto GPU::select_physical_device(Instance const& instance, Surface const& surface) const -> vk::PhysicalDevice
+{
+	auto physical_device = vk::select_physical_device(instance.instance, surface.surface);
+	auto const version = vk::get_driver_version(physical_device);
+
+	INFO_AS(cat, "GPU selected: {}", physical_device.properties.deviceName);
+	DEBUG_AS(cat, "Vulkan driver version {}.{}.{}", version[0], version[1], version[2]);
+	return physical_device;
+}
+
+auto GPU::create_swapchain(vk::Allocator& allocator, Device& device, uvec2 size,
+	optional<vk::Swapchain> old) const -> vk::Swapchain
+{
+	auto const recreating = old.has_value();
+	auto swapchain = vk::create_swapchain(allocator, device.device, size, move(old));
+	if (!recreating)
+		DEBUG_AS(cat, "Created swapchain at {}", size);
+	else
+		DEBUG_AS(cat, "Recreated swapchain at {}", size);
+	return move(swapchain);
+}
 
 GPU::GPU(sys::Window& window):
 	// Beautiful, isn't it
@@ -149,30 +181,23 @@ GPU::GPU(sys::Window& window):
 	surface{cat, window, instance},
 	physical_device{select_physical_device(instance, surface)},
 	device{cat, physical_device},
-	runtime{create_runtime(instance, physical_device, device, retrieve_queues(device))},
+	runtime{vk::create_runtime(instance.instance, device.device, vk::retrieve_device_queues(device.device))},
 	global_resource{runtime, FramesInFlight},
 	global_allocator{global_resource},
-	swapchain{create_swapchain(window.size(), global_allocator, device, surface)},
-	tracy_context{vuk::extra::init_Tracy(global_allocator)}
+	swapchain{create_swapchain(global_allocator, device, window.size())},
+	tracy_context{vk::create_tracy_context(global_allocator)}
 {
 	INFO_AS(cat, "Vulkan initialized");
 }
 
-template<callable<ManagedImage(vuk::Allocator&, ManagedImage&&)> Func>
+template<callable<ManagedImage(vk::Allocator&, ManagedImage&&)> Func>
 void GPU::frame(Func&& func)
 {
-	auto& frame_resource = global_resource.get_next_frame();
-	auto frame_allocator = vuk::Allocator{frame_resource};
-	runtime.next_frame();
-	auto imported_swapchain = vuk::acquire_swapchain(swapchain);
-	auto swapchain_image = vuk::acquire_next_image("swp_img", move(imported_swapchain));
+	auto frame_allocator = vk::begin_frame(runtime, global_resource);
+	auto swapchain_image = vk::acquire_swapchain_image(swapchain, "swp_img");
+	auto result = func(frame_allocator, move(swapchain_image));
+	vk::submit(frame_allocator, tracy_context, move(result));
 
-	auto result = func(frame_allocator, std::move(swapchain_image));
-
-	auto entire_thing = vuk::enqueue_presentation(std::move(result));
-	auto compiler = vuk::Compiler{};
-	auto profiling_cbs = vuk::extra::make_Tracy_callbacks(*tracy_context);
-	entire_thing.submit(frame_allocator, compiler, { .callbacks = profiling_cbs });
 }
 
 }

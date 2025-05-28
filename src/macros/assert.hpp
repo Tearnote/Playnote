@@ -14,6 +14,7 @@ Wrapper for assert macros of libassert. Registers the assert handler, ensures co
 
 // ASSERT() - checked in both debug and release
 // ASSUME() - checked in debug only
+// PANIC() - unconditional failuire in both debug and release
 // _VAL suffix - returns the result of the tested expression.
 //     For comparisons, the left side is returned.
 

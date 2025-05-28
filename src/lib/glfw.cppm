@@ -15,6 +15,7 @@ module;
 export module playnote.lib.glfw;
 
 import playnote.preamble;
+import playnote.lib.vulkan;
 
 namespace playnote::lib::glfw {
 
@@ -177,7 +178,7 @@ export [[nodiscard]] auto get_window_framebuffer_size(Window window) -> uvec2
 
 // Create a Vulkan surface for the window.
 // Throws runtime_error on failure.
-export [[nodiscard]] auto create_window_surface(Window window, VkInstance instance) -> VkSurfaceKHR
+export [[nodiscard]] auto create_window_surface(Window window, vk::Instance const& instance) -> vk::Surface
 {
 	auto result = VkSurfaceKHR{nullptr};
 	glfwCreateWindowSurface(instance, window, nullptr, &result);

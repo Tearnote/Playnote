@@ -37,7 +37,6 @@ add_executable(Playnote
 	src/macros/tracing.hpp
 	src/macros/assert.hpp
 	src/macros/logger.hpp
-	src/sys/gpu.cpp
 	src/gfx/renderer.cpp
 	src/main.cpp
 )
@@ -57,6 +56,7 @@ target_sources(Playnote PUBLIC
 	src/preamble.cppm
 	src/lib/pipewire.cppm
 	src/lib/thread.cppm
+	src/lib/vulkan.cppm
 	src/lib/tracy.cppm
 	src/lib/debug.cppm
 	src/lib/glfw.cppm
