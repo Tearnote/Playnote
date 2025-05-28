@@ -101,7 +101,7 @@ public:
 
 private:
 	using WindowHandle = unique_resource<glfw::Window, decltype([](auto* w) noexcept {
-		auto const title = glfw::get_window_title(w);
+		auto const title = string{glfw::get_window_title(w)};
 		glfw::destroy_window(w);
 		INFO("Window \"{}\" closed", title);
 	})>;
