@@ -19,6 +19,7 @@ namespace views {
 	export using std::ranges::views::iota;
 	export using std::ranges::views::zip;
 }
+export using std::ranges::contains;
 export using std::ranges::copy;
 export using std::ranges::transform;
 

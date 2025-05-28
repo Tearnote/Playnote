@@ -61,6 +61,7 @@ target_sources(Playnote PUBLIC
 	src/lib/tracy.cppm
 	src/lib/debug.cppm
 	src/lib/glfw.cppm
+	src/lib/icu.cppm
 	src/lib/mio.cppm
 	src/io/audio_codec.cppm
 	src/io/bulk_request.cppm
@@ -71,7 +72,6 @@ target_sources(Playnote PUBLIC
 	src/dev/os.cppm
 	src/gfx/renderer.cppm
 	src/gfx/imgui.cppm
-	src/bms/charset.cppm
 	src/bms/parser.cppm
 	src/bms/chart.cppm
 	src/bms/ir.cppm

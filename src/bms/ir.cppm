@@ -17,7 +17,6 @@ export module playnote.bms.ir;
 import playnote.preamble;
 import playnote.config;
 import playnote.logger;
-import playnote.bms.charset;
 import playnote.bms.parser;
 
 namespace playnote::bms {

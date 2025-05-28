@@ -13,9 +13,11 @@ export module playnote.bms.parser;
 
 import playnote.preamble;
 import playnote.logger;
-import playnote.bms.charset;
+import playnote.lib.icu;
 
 namespace playnote::bms {
+
+namespace icu = lib::icu;
 
 // A "header" type BMS command.
 export struct HeaderCommand {
@@ -120,10 +122,12 @@ export template<
 void parse(span<byte const> bms_file_contents, Logger::Category* cat, HFunc&& header_func, CFunc&& channel_func)
 {
 	// Convert file to UTF-8
-	auto const encoding = bms::detect_text_encoding(bms_file_contents);
-	if (!bms::is_supported_encoding(encoding))
-		WARN_AS(cat, "Unexpected encoding {}, proceeding with heuristics", encoding);
-	auto bms_file_u8 = bms::text_to_unicode(bms_file_contents, encoding);
+	auto encoding = icu::detect_encoding(bms_file_contents, {"UTF-8", "Shift_JIS", "EUC-KR"});
+	if (!encoding) {
+		WARN_AS(cat, "Unexpected encoding found; assuming Shift_JIS");
+		encoding = "Shift_JIS";
+	}
+	auto bms_file_u8 = icu::to_utf8(bms_file_contents, *encoding);
 
 	// Normalize line endings
 	replace_all(bms_file_u8, "\r\n", "\n");
