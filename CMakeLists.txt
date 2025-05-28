@@ -57,6 +57,7 @@ target_sources(Playnote PUBLIC
 	src/lib/pipewire.cppm
 	src/lib/thread.cppm
 	src/lib/vulkan.cppm
+	src/lib/imgui.cppm
 	src/lib/tracy.cppm
 	src/lib/debug.cppm
 	src/lib/glfw.cppm

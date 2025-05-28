@@ -6,57 +6,49 @@ gfx/imgui.cppm:
 Wrapper for vuk's Imgui integration.
 */
 
-module;
-#include "vuk/extra/ImGuiIntegration.hpp"
-#include "backends/imgui_impl_glfw.h"
-
 export module playnote.gfx.imgui;
 
 import playnote.preamble;
-import playnote.dev.window;
+import playnote.lib.vulkan;
+import playnote.lib.imgui;
 import playnote.dev.gpu;
 
 namespace playnote::gfx {
 
-// Encapsulation of Dear ImGui initialization and drawing
+namespace imgui = lib::imgui;
+namespace vk = lib::vk;
+
+// Encapsulation of Dear ImGui initialization and drawing.
 export class Imgui {
 public:
-	explicit Imgui(dev::GPU&);
+	explicit Imgui(dev::GPU& gpu):
+		context{imgui::init(gpu.get_window().handle(), gpu.get_global_allocator())}
+	{}
 
-	// Prepare Imgui to accept commands
-	// All ImGui:: functions must be run within the provided function
+	// Prepare Imgui to accept commands.
+	// All imgui:: functions must be run within the provided function.
 	template<callable<void()> Func>
 	void enqueue(Func);
 
-	// Draw enqueued Imgui state into the image
-	// Must be run once and after enqueue()
-	auto draw(vuk::Allocator&, dev::ManagedImage) -> dev::ManagedImage;
+	// Draw enqueued Imgui state into the image. Must be run once and after enqueue().
+	auto draw(vk::Allocator&, dev::ManagedImage) -> dev::ManagedImage;
 
 private:
-	vuk::extra::ImGuiData imgui_data;
+	InstanceLimit<Imgui, 1> instance_limit;
+	imgui::Context context;
 };
-
-Imgui::Imgui(dev::GPU& gpu)
-{
-	IMGUI_CHECKVERSION();
-	ImGui::CreateContext();
-	ImGui::StyleColorsDark();
-	ImGui_ImplGlfw_InitForVulkan(gpu.get_window().handle(), true);
-	imgui_data = vuk::extra::ImGui_ImplVuk_Init(gpu.get_global_allocator());
-}
 
 template<callable<void()> Func>
 void Imgui::enqueue(Func func)
 {
-	ImGui_ImplGlfw_NewFrame();
-	ImGui::NewFrame();
+	imgui::begin();
 	func();
-	ImGui::Render();
+	imgui::end();
 }
 
-auto Imgui::draw(vuk::Allocator& allocator, dev::ManagedImage target) -> dev::ManagedImage
+auto Imgui::draw(vk::Allocator& allocator, dev::ManagedImage target) -> dev::ManagedImage
 {
-	return vuk::extra::ImGui_ImplVuk_Render(allocator, move(target), imgui_data);
+	return imgui::render(allocator, move(target), context);
 }
 
 }
