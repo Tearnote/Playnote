@@ -41,7 +41,7 @@ public:
 	auto operator=(GLFW&&) -> GLFW& = delete;
 
 private:
-	static inline auto initialized = false;
+	InstanceLimit<GLFW, 1> instance_limit;
 };
 
 // RAII abstraction of a single application window, providing a drawing surface and input handling.
@@ -115,18 +115,15 @@ private:
 
 GLFW::GLFW()
 {
-	if (initialized) throw runtime_error{"Attempted to initialize GLFW twice"};
 	// Convert GLFW errors to exceptions, freeing us from having to check error codes
 	glfw::register_error_handler();
 	glfw::init();
 	glfw::set_window_creation_hints();
-	initialized = true;
 	INFO("GLFW initialized");
 }
 
 GLFW::~GLFW() noexcept
 {
-	if (!initialized) return;
 	glfw::cleanup();
 	INFO("GLFW cleaned up");
 }

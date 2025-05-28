@@ -46,6 +46,7 @@ public:
 	auto operator=(GPU&&) -> GPU& = delete;
 
 private:
+	InstanceLimit<GPU, 1> instance_limit;
 	Logger::Category* cat;
 
 	// RAII wrapper of a Vulkan instance.
@@ -167,9 +168,9 @@ auto GPU::create_swapchain(vk::Allocator& allocator, Device& device, uvec2 size,
 	auto const recreating = old.has_value();
 	auto swapchain = vk::create_swapchain(allocator, device.device, size, move(old));
 	if (!recreating)
-		DEBUG_AS(cat, "Created swapchain at {}", size);
+		DEBUG_AS(cat, "Created swapchain, size {}", size);
 	else
-		DEBUG_AS(cat, "Recreated swapchain at {}", size);
+		DEBUG_AS(cat, "Recreated swapchain, size {}", size);
 	return move(swapchain);
 }
 

@@ -35,6 +35,8 @@ private:
 	static constexpr auto SamplingRate = 48000u;
 	static constexpr auto Latency = 256u;
 
+	InstanceLimit<Audio, 1> instance_limit;
+
 	pw::ThreadLoop loop;
 	pw::Stream stream;
 

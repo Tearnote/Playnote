@@ -9,6 +9,7 @@ Imports and helpers for generic utilities.
 module;
 #include <initializer_list>
 #include <functional>
+#include <stdexcept>
 #include <optional>
 #include <variant>
 #include <utility>
@@ -17,6 +18,8 @@ module;
 #include <boost/scope/unique_resource.hpp>
 
 export module playnote.preamble:utility;
+
+import :types;
 
 namespace playnote {
 
@@ -46,6 +49,25 @@ export using std::to_underlying;
 export template<typename... Ts>
 struct visitor: Ts... {
 	using Ts::operator()...;
+};
+
+// Add as class member to limit the number of simultaneous instances.
+// Throws logic_error if the limit is reached.
+export template<typename, usize Limit>
+class InstanceLimit {
+public:
+	InstanceLimit()
+	{
+		count += 1;
+		if (count > Limit) throw std::logic_error{"Instance limit reached"};
+	}
+
+	~InstanceLimit() noexcept { count -= 1; }
+
+	// Default copy and move constructors should behave as expected
+
+private:
+	static inline auto count = 0zu;
 };
 
 }
