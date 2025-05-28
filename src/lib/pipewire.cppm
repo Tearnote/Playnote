@@ -35,13 +35,13 @@ void ret_check(int ret, string_view message = "libpipewire error")
 export void init() noexcept { pw_init(nullptr, nullptr); }
 
 // Return the runtime version of PipeWire.
-export auto get_version() noexcept -> string_view { return ASSERT_VAL(pw_get_library_version()); }
+export [[nodiscard]] auto get_version() noexcept -> string_view { return ASSERT_VAL(pw_get_library_version()); }
 
 export using ThreadLoop = pw_thread_loop*;
 
 // Create a new thread loop object.
 // Throws system_error on failure.
-export auto create_thread_loop() -> ThreadLoop
+export [[nodiscard]] auto create_thread_loop() -> ThreadLoop
 {
 	return ptr_check(pw_thread_loop_new(nullptr, nullptr));
 }
@@ -62,7 +62,7 @@ using ProcessCallback = void(*)(void*);
 // 2 audio channels and 32-bit float sample format.
 // Throws system_error on failure.
 export template<typename T = void, typename = decltype([]{})> // Thumbprint ensures static data is unique per callsite
-auto create_stream(ThreadLoop loop, string_view name, uint32 sampling_rate, uint32 latency, ProcessCallback on_process, T* user_ptr = nullptr) -> Stream
+[[nodiscard]] auto create_stream(ThreadLoop loop, string_view name, uint32 sampling_rate, uint32 latency, ProcessCallback on_process, T* user_ptr = nullptr) -> Stream
 {
 	static auto const StreamEvents = pw_stream_events{
 		.version = PW_VERSION_STREAM_EVENTS,
@@ -115,7 +115,7 @@ export using BufferRequest = pw_buffer*;
 // Retrieve a buffer request from the queue. If return value is nullopt, a buffer is unavailable,
 // and there is nothing to do. Otherwise, return value is the buffer which needs to be filled
 // to its full size, and the request object to submit back when finished.
-export auto dequeue_buffer(Stream stream) noexcept -> optional<pair<span<Sample>, BufferRequest>>
+export [[nodiscard]] auto dequeue_buffer(Stream stream) noexcept -> optional<pair<span<Sample>, BufferRequest>>
 {
 	auto* buffer_outer = pw_stream_dequeue_buffer(stream);
 	if (!buffer_outer) return nullopt;
