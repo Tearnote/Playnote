@@ -42,18 +42,15 @@ public:
 
 	explicit Renderer(dev::GPU& gpu);
 
-	// Provide a queue to the function argument, and then draw contents of the queue to the screen
-	// Each call will wait block until the next frame begins
-	// Imgui:: calls are only allowed within the function argument
+	// Provide a queue to the function argument, and then draw contents of the queue to the screen.
+	// Each call will wait block until the next frame begins.
+	// imgui:: calls are only allowed within the function argument.
 	template<callable<void(Queue&)> Func>
 	void frame(Func&&);
 
 private:
 	dev::GPU& gpu;
 	gfx::Imgui imgui;
-
-	// Drawing logic separated from frame() so that it's not templated
-	void draw(Queue const&);
 };
 
 Renderer::Renderer(dev::GPU& gpu):
@@ -75,11 +72,7 @@ void Renderer::frame(Func&& func)
 {
 	auto queue = Queue{};
 	imgui.enqueue([&]() { func(queue); });
-	draw(queue);
-}
 
-void Renderer::draw(Queue const& queue)
-{
 	gpu.frame([this, &queue](auto& allocator, auto&& target) -> vk::ManagedImage {
 		auto cleared = vk::clear_image(move(target), {0.0f, 0.0f, 0.0f, 1.0f});
 		auto rects = vk::create_scratch_buffer(allocator, span(queue.rects));
