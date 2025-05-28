@@ -8,8 +8,7 @@ Text encoding detection and conversion.
 
 module;
 #include <unicode/ucsdet.h>
-#include <boost/locale/encoding.hpp>
-#include <boost/container_hash/hash.hpp>
+#include <unicode/ucnv.h>
 #include "macros/assert.hpp"
 #include "macros/logger.hpp"
 
@@ -81,8 +80,23 @@ export auto detect_text_encoding(span<byte const> text) -> string_view
 // Any bytes that are invalid in the specified encoding are skipped.
 export auto text_to_unicode(span<byte const> text, string_view encoding) -> string
 {
-	auto* as_char = reinterpret_cast<char const*>(text.data());
-	return boost::locale::conv::to_utf<char>(as_char, as_char + text.size(), string{encoding});
+	using Converter = unique_ptr<UConverter, decltype([](auto* p) {
+		ucnv_close(p);
+	})>;
+
+	auto contents = string{};
+	auto contents_capacity = text.size() * 2; // Most pessimistic case of 100% DBCS
+	contents.resize(contents_capacity);
+	auto err = U_ZERO_ERROR;
+	auto converted = ucnv_convert(string{encoding}.c_str(), "UTF-8",
+		contents.data(), contents_capacity,
+		reinterpret_cast<char const*>(text.data()), text.size(), &err);
+	handle_icu_error(err);
+	TRACE("Charset conversion: input {} bytes, encoding {}, reserved {} bytes, needed {} bytes", text.size(), encoding, contents_capacity, converted);
+	ASSUME(converted < contents_capacity);
+	contents.resize(converted);
+	ASSUME(contents[contents.size()] == '\0');
+	return contents;
 }
 
 }

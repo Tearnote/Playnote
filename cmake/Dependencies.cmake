@@ -19,8 +19,8 @@ find_package(ICU REQUIRED # Charset detection and conversion
 	COMPONENTS uc i18n
 )
 find_package(glfw3 3.4 REQUIRED) # Windowing support
-find_package(Boost REQUIRED # Rational numbers, improved containers, charset conversion, string algorithms, resource wrapper
-	COMPONENTS container locale)
+find_package(Boost REQUIRED # Rational numbers, improved containers, string algorithms, resource wrapper
+	COMPONENTS container)
 pkg_search_module(libsamplerate REQUIRED IMPORTED_TARGET samplerate) # Audio file decoding
 pkg_search_module(libsndfile REQUIRED IMPORTED_TARGET sndfile) # Audio file decoding
 
