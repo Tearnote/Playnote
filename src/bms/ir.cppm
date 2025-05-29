@@ -8,7 +8,6 @@ but condensed, cleaned and serializable to a binary file.
 */
 
 module;
-#include <openssl/evp.h>
 #include "macros/logger.hpp"
 
 export module playnote.bms.ir;
@@ -16,10 +15,12 @@ export module playnote.bms.ir;
 import playnote.preamble;
 import playnote.config;
 import playnote.logger;
+import playnote.lib.openssl;
 import playnote.bms.parser;
 
 namespace playnote::bms {
 
+namespace openssl = lib::openssl;
 using bms::HeaderCommand;
 
 // Whole part - measure, fractional part - position within measure
@@ -85,18 +86,18 @@ public:
 			Level level;
 		};
 		using ParamsType = variant<
-			std::monostate, //  0
-			Title*,         //  1
-			Subtitle*,      //  2
-			Artist*,        //  3
-			Subartist*,     //  4
-			Genre*,         //  5
-			URL*,           //  6
-			Email*,         //  7
-			Player*,        //  8
-			BPM*,           //  9
-			Difficulty*,    // 10
-			WAV*            // 11
+			monostate,   //  0
+			Title*,      //  1
+			Subtitle*,   //  2
+			Artist*,     //  3
+			Subartist*,  //  4
+			Genre*,      //  5
+			URL*,        //  6
+			Email*,      //  7
+			Player*,     //  8
+			BPM*,        //  9
+			Difficulty*, // 10
+			WAV*         // 11
 		>;
 
 		ParamsType params;
@@ -153,7 +154,7 @@ private:
 	pmr::polymorphic_allocator<byte> allocator;
 
 	fs::path path;
-	array<uint8, 16> md5{};
+	array<byte, 16> md5;
 	pmr::vector<HeaderEvent> header_events;
 	pmr::vector<ChannelEvent> channel_events;
 
@@ -294,7 +295,7 @@ auto IRCompiler::compile(fs::path const& path, span<byte const> bms_file_content
 
 	// Fill in original metadata to maintain a link from the IR back to the BMS file
 	ir.path = path;
-	EVP_Q_digest(nullptr, "MD5", nullptr, bms_file_contents.data(), bms_file_contents.size(), ir.md5.data(), nullptr);
+	ir.md5 = openssl::md5(bms_file_contents);
 
 	// Process UTF-16 converted and cleanly split BMS file commands
 	bms::parse(cat, bms_file_contents,
