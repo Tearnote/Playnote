@@ -81,10 +81,10 @@ auto Chart::from_ir(IR const& ir) -> pair<Chart, BulkRequest>
 	chart.slots.resize(ir.get_wav_slot_count());
 	ir.each_header_event([&](IR::HeaderEvent const& event) {
 		event.params.visit(visitor {
-			[&](IR::HeaderEvent::Title const* title_params) { chart.title = title_params->title; },
-			[&](IR::HeaderEvent::Artist const* artist_params) { chart.artist = artist_params->artist; },
-			[&](IR::HeaderEvent::BPM const* bpm_params) { chart.bpm = bpm_params->bpm; },
-			[&](IR::HeaderEvent::WAV const* wav_params) {
+			[&](IR::HeaderEvent::Title* title_params) { chart.title = title_params->title; },
+			[&](IR::HeaderEvent::Artist* artist_params) { chart.artist = artist_params->artist; },
+			[&](IR::HeaderEvent::BPM* bpm_params) { chart.bpm = bpm_params->bpm; },
+			[&](IR::HeaderEvent::WAV* wav_params) {
 				chart.slots[wav_params->slot].emplace(Slot{});
 				requests.enqueue<AudioCodec>(
 					chart.slots[wav_params->slot]->sample,
