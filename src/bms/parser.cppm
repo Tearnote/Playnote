@@ -104,9 +104,9 @@ auto parse_header(string_view command, usize line_index) noexcept -> HeaderComma
 	to_upper(header);
 	auto value = header.size() < command.size()? command.substr(header.size() + 1) : ""sv;
 
-	auto slot = ""sv;
+	auto slot = string{};
 	auto extract_slot = [&](usize start) {
-		slot = string_view{header.begin() + start, header.end()};
+		slot = header.substr(start);
 		header.resize(start);
 	};
 	     if (header.starts_with("WAV"   )) extract_slot(3);
