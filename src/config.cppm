@@ -80,7 +80,7 @@ export inline constexpr auto ThreadNamesEnabled = false;
 #if BUILD_TYPE != BUILD_RELEASE
 export inline constexpr auto LogLevelGlobal = Logger::Level::TraceL1;
 export inline constexpr auto LogLevelGraphics = Logger::Level::TraceL1;
-export inline constexpr auto LogLevelBMSBuild = Logger::Level::Debug;
+export inline constexpr auto LogLevelBMSBuild = Logger::Level::TraceL1;
 #else
 export inline constexpr auto LogLevelGlobal = util::Logger::Info;
 export inline constexpr auto LogLevelGraphics = util::Logger::Info;

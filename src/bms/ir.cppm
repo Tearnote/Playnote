@@ -193,7 +193,7 @@ public:
 private:
 	// A BMS channel command can contain multiple notes; we split them up into these
 	struct SingleChannelCommand {
-		int line;
+		usize line;
 		NotePosition position;
 		string channel;
 		string value;
@@ -298,7 +298,7 @@ auto IRCompiler::compile(fs::path const& path, span<byte const> bms_file_content
 	EVP_Q_digest(nullptr, "MD5", nullptr, bms_file_contents.data(), bms_file_contents.size(), ir.md5.data(), nullptr);
 
 	// Process UTF-16 converted and cleanly split BMS file commands
-	bms::parse(bms_file_contents, cat,
+	bms::parse(cat, bms_file_contents,
 		[&](HeaderCommand&& cmd) { handle_header(ir, move(cmd), maps); },
 		[&](ChannelCommand&& cmd) { handle_channel(ir, move(cmd), maps); }
 	);

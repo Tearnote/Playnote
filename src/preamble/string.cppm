@@ -9,6 +9,7 @@ Imports for string and text IO.
 module;
 #include <string_view>
 #include <filesystem>
+#include <ranges>
 #include <string>
 #include <boost/algorithm/string/case_conv.hpp>
 #include <boost/algorithm/string/replace.hpp>
@@ -31,6 +32,7 @@ export using std::literals::operator ""sv;
 export using fmtquill::format;
 export using fmtquill::print;
 export using boost::trim;
+export using boost::trim_copy;
 export using boost::replace_all;
 export using boost::to_upper;
 export using boost::to_lower;

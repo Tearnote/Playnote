@@ -8,6 +8,7 @@ A BMS format parser - turns a complete BMS file into a list of commands.
 
 module;
 #include "macros/logger.hpp"
+#include "macros/assert.hpp"
 
 export module playnote.bms.parser;
 
@@ -21,31 +22,64 @@ namespace icu = lib::icu;
 
 // A "header" type BMS command.
 export struct HeaderCommand {
-	int32 line;
-	string header;
-	string slot;
-	string value;
+	usize line; // Line counter, for diagnostics
+	string header; // Name of the command, uppercased
+	string slot; // Slot affected by the command; empty or up to 2 characters
+	string value; // Everything that comes after command name and slot, untrimmed
 };
 
 // A "channel" type BMS command.
 export struct ChannelCommand {
-	int32 line;
-	int32 measure;
-	string channel;
-	string value;
+	usize line; // Line counter, for diagnostics
+	int32 measure; // Which measure is receiving events, starting at 0
+	string channel; // Which channel is receiving events, up to 2 characters
+	string value; // Everything after the ':', possibly empty or with odd char count
 };
+
+// The list of encodings that are known to be used by BMS files in the wild.
+// Encoding detection is limited to this list to help avoid false positives.
+static inline constexpr auto KnownEncodings = {"UTF-8"sv, "Shift_JIS"sv, "EUC-KR"sv};
+
+// Convert a BMS of unknown encoding into UTF-8. Output is guaranteed to be valid UTF-8, possibly
+// with replacement characters (U+FFFD).
+// Throws if ICU throws.
+auto raw_to_utf8(Logger::Category* cat, span<byte const> raw_file_contents) -> string
+{
+	auto encoding = icu::detect_encoding(raw_file_contents, KnownEncodings);
+	if (!encoding) {
+		WARN_AS(cat, "Found an unexpected encoding; assuming Shift_JIS");
+		encoding = "Shift_JIS";
+	}
+	return icu::to_utf8(raw_file_contents, *encoding);
+}
+
+// Ensure all line endings are '\n' (UNIX style).
+void normalize_line_endings(string& text) noexcept
+{
+	replace_all(text, "\r\n", "\n");
+	replace_all(text, "\r", "\n");
+}
+
+// Return a prefix of a string until a character that matches a predicate, not including
+// that character.
+template<callable<bool(char)> Func>
+auto substr_until(string_view text, Func&& pred) noexcept -> string_view
+{
+	auto found = find_if(text, pred);
+	return string_view{text.begin(), found};
+}
 
 // Parse a known "header" type command into its individual components.
 // If the command is malformed, measure will be set to -1 which is otherwise an invalid value.
-auto parse_channel(int line_index, string&& command) -> ChannelCommand
+auto parse_channel(string_view command, usize line_index) noexcept -> ChannelCommand
 {
-	auto colon_pos = command.find_first_of(':');
-	if (colon_pos != 6 || command.length() < 9) return {-1};
+	if (command.size() < 4) return { .measure = -1 }; // Not enough space for even the measure number
+	auto const measure = lexical_cast<int32>(command.substr(1, 3)); // We checked that at least the first character is a digit, so this won't throw
 
-	auto measure = lexical_cast<int>(string{command, 1, 3}); // We checked that at least the first character is a digit, so this won't throw
-	auto channel = string{command, 4, 2};
+	auto const colon_pos = command.find_first_of(':');
+	auto channel = string{command.substr(4, colon_pos - 4)};
 	to_upper(channel);
-	auto value = string{command, 7};
+	auto value = colon_pos < command.size()? string{command.substr(colon_pos + 1)} : ""s;
 	to_upper(value);
 
 	return {
@@ -56,23 +90,23 @@ auto parse_channel(int line_index, string&& command) -> ChannelCommand
 	};
 }
 
-// Parse a known "header" type command into its individual components.
-// Some fields might be returned empty if the command is malformed.
-auto parse_header(int line_index, string&& command) -> HeaderCommand
+// Parse a known "header" type command into its individual components. Some fields might be returned
+// empty if the command is malformed. Command is expected to be trimmed, start with '#' and have
+// at least 1 more character.
+auto parse_header(string_view command, usize line_index) noexcept -> HeaderCommand
 {
-	auto first_space = command.find_first_of(' ');
-	if (first_space == string::npos) first_space = command.length();
-	auto first_tab = command.find_first_of('\t');
-	if (first_tab == string::npos) first_tab = command.length();
-	auto first_whitespace = min(first_space, first_tab);
+	ASSUME(!command.empty());
+	ASSUME(command[0] == '#');
+	ASSUME(command.size() >= 2);
 
-	auto header = string{command, 1, first_whitespace - 1};
+	command = command.substr(1); // Trim the '#'
+	auto header = string{substr_until(command, [](auto c) { return c == ' ' || c == '\t'; })};
 	to_upper(header);
-	auto value = first_whitespace < command.size()? string{command, first_whitespace + 1} : "";
+	auto value = header.size() < command.size()? command.substr(header.size() + 1) : ""sv;
 
-	auto slot = string{};
+	auto slot = ""sv;
 	auto extract_slot = [&](usize start) {
-		slot = string{header, start};
+		slot = string_view{header.begin() + start, header.end()};
 		header.resize(start);
 	};
 	     if (header.starts_with("WAV"   )) extract_slot(3);
@@ -93,64 +127,39 @@ auto parse_header(int line_index, string&& command) -> HeaderCommand
 
 	return {
 		.line = line_index,
-		.header = header,
-		.slot = move(slot),
-		.value = move(value)
+		.header = move(header),
+		.slot = string{slot},
+		.value = string{value}
 	};
 }
 
 // Parse a line into the appropriate command.
 // If the line doesn't contain a valid command, std::monostate is returned.
-auto parse_line(int line_index, string&& line) -> variant<monostate, HeaderCommand, ChannelCommand>
+auto parse_line(string_view line, usize line_index) noexcept -> variant<monostate, HeaderCommand, ChannelCommand>
 {
-	trim(line); // BMS occasionally uses leading whitespace
-	if (line.size() < 2) return {};
+	line = trim_copy(line); // BMS occasionally uses leading whitespace
+	if (line.empty()) return {};
 	if (line[0] != '#') return {}; // Ignore comments
+	if (line.size() < 2) return {}; // Just "#" is meaningless
 	if (line[1] >= '0' && line[1] <= '9')
-		return parse_channel(line_index, move(line));
-	else
-		return parse_header(line_index, move(line));
+		return parse_channel(line, line_index);
+	return parse_header(line, line_index);
 }
 
-// Parse an entire BMS file, running the provided functions once for each command.
-// The functions are called in the same order the lines appear in the file.
-// Only basic tokenization is done and the commands are not validated; some fields might be empty.
+// Parse an entire BMS file, running the provided functions once for each command. The functions
+// are called in the same order the lines appear in the file. Only basic tokenization is done
+// and the commands are not validated; some fields might be empty.
 export template<
 	callable<void(HeaderCommand&&)> HFunc,
 	callable<void(ChannelCommand&&)> CFunc
 >
-void parse(span<byte const> bms_file_contents, Logger::Category* cat, HFunc&& header_func, CFunc&& channel_func)
+void parse(Logger::Category* cat, span<byte const> raw_file_contents, HFunc&& header_func, CFunc&& channel_func)
 {
-	// Convert file to UTF-8
-	auto encoding = icu::detect_encoding(bms_file_contents, {"UTF-8", "Shift_JIS", "EUC-KR"});
-	if (!encoding) {
-		WARN_AS(cat, "Unexpected encoding found; assuming Shift_JIS");
-		encoding = "Shift_JIS";
-	}
-	auto bms_file_u8 = icu::to_utf8(bms_file_contents, *encoding);
-
-	// Normalize line endings
-	replace_all(bms_file_u8, "\r\n", "\n");
-	replace_all(bms_file_u8, "\r", "\n");
-
-	// Split into lines
-	auto pos = 0zu;
-	auto len = bms_file_u8.length();
-	int line_index = 1;
-	while (pos < len) {
-		auto split_pos = bms_file_u8.find_first_of('\n', pos);
-		if (split_pos == string::npos) split_pos = len;
-
-		// Parse line and dispatch
-		auto result = parse_line(line_index, {bms_file_u8, pos, split_pos - pos});
-		if (holds_alternative<HeaderCommand>(result))
-			header_func(move(get<HeaderCommand>(result)));
-		else if (holds_alternative<ChannelCommand>(result))
-			channel_func(move(get<ChannelCommand>(result)));
-
-		pos = split_pos + 1; // Skip over the newline
-		line_index += 1;
-	}
+	auto file_contents = raw_to_utf8(cat, raw_file_contents);
+	normalize_line_endings(file_contents);
+	auto line_index = 1zu;
+	for (auto line: file_contents | views::split('\n') | views::to_sv)
+		parse_line(line, line_index++).visit(visitor { header_func, channel_func, [](auto){} });
 }
 
 }
