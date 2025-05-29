@@ -484,8 +484,8 @@ void IRCompiler::handle_header(IR& ir, HeaderCommand&& cmd, SlotMappings& maps)
 		WARN_AS(cat, "L{}: Unknown header: {}", cmd.line, cmd.header);
 		return;
 	}
-	if (cmd.slot.size() < 2)
-		cmd.slot.insert(0, 2 - cmd.slot.size(), '0'); // Just in case someone forgot the leading 0
+	if (!cmd.slot.empty() && cmd.slot.size() < 2)
+		cmd.slot.insert(cmd.slot.begin(), 2 - cmd.slot.size(), '0'); // Just in case someone forgot the leading 0
 	(this->*header_handlers.at(cmd.header))(ir, move(cmd), maps);
 }
 
