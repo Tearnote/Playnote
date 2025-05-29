@@ -125,11 +125,12 @@ auto parse_header(string_view command, usize line_index) noexcept -> HeaderComma
 	else if (header.starts_with("EXRANK")) extract_slot(6);
 	else if (header.starts_with("CHANGEOPTION")) extract_slot(12);
 
+	auto value_copy = string{value}; // If constructed in-place, it would happen after header is moved-out-from
 	return {
 		.line = line_index,
 		.header = move(header),
-		.slot = string{slot},
-		.value = string{value}
+		.slot = move(slot),
+		.value = move(value_copy)
 	};
 }
 
