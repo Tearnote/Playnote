@@ -9,6 +9,7 @@ but condensed, cleaned and serializable to a binary file.
 
 module;
 #include "macros/logger.hpp"
+#include "macros/assert.hpp"
 
 export module playnote.bms.ir;
 
@@ -28,7 +29,7 @@ export using bms::HeaderCommand;
 export using NotePosition = rational<int32>;
 
 // Print a note position for debug output.
-export auto to_string(NotePosition pos) noexcept -> string
+export auto to_str(NotePosition pos) noexcept -> string
 {
 	return format("{} {}/{}",
 		pos.numerator() / pos.denominator(),
@@ -150,7 +151,7 @@ public:
 	[[nodiscard]] auto get_path() const noexcept -> fs::path const& { return path; }
 
 	// Get the total number of WAV slots referenced by the headers and channels.
-	[[nodiscard]] auto get_wav_slot_count() const noexcept -> int { return wav_slot_count; }
+	[[nodiscard]] auto get_wav_slot_count() const noexcept -> usize { return wav_slot_count; }
 
 private:
 	friend IRCompiler;
@@ -317,7 +318,7 @@ auto IRCompiler::compile(fs::path const& path, span<byte const> bms_file_content
 
 	// Mappings aren't stored in the IR, but IR users might still want to know the range of slot
 	// values used by command and channel events. As they're monotonic, the slot count is always
-	// [0, *_slot_count)
+	// [0, [slot]_slot_count)
 	ir.wav_slot_count = maps.wav.size();
 
 	return ir;
@@ -417,13 +418,13 @@ void IRCompiler::register_channel_handlers() noexcept
 {
 	// Implemented channels
 	channel_handlers.emplace("01" /* BGM                 */, &IRCompiler::parse_channel_bgm);
-	for (auto i: views::iota(1, 10)) // P1 notes
+	for (auto const i: views::iota(1zu, 10zu)) // P1 notes
 		channel_handlers.emplace(string{"1"} + static_cast<char>('0' + i), &IRCompiler::parse_channel_note);
-	for (auto i: views::iota(0, 26)) // ^
+	for (auto const i: views::iota(0zu, 26zu)) // ^
 		channel_handlers.emplace(string{"1"} + static_cast<char>('A' + i), &IRCompiler::parse_channel_note);
-	for (auto i: views::iota(1, 10)) // P2 notes
+	for (auto const i: views::iota(1zu, 10zu)) // P2 notes
 		channel_handlers.emplace(string{"2"} + static_cast<char>('0' + i), &IRCompiler::parse_channel_note);
-	for (auto i: views::iota(0, 26)) // ^
+	for (auto const i: views::iota(0zu, 26zu)) // ^
 		channel_handlers.emplace(string{"2"} + static_cast<char>('A' + i), &IRCompiler::parse_channel_note);
 
 	// Unimplemented channels
@@ -441,25 +442,25 @@ void IRCompiler::register_channel_handlers() noexcept
 	channel_handlers.emplace("A3" /* BGA layer 2 overlay */, &IRCompiler::parse_channel_unimplemented);
 	channel_handlers.emplace("A4" /* BGA poor overlay    */, &IRCompiler::parse_channel_unimplemented);
 	channel_handlers.emplace("A5" /* BGA key-bound       */, &IRCompiler::parse_channel_unimplemented);
-	for (auto i: views::iota(1, 10))// P1 notes (adlib)
+	for (auto const i: views::iota(1zu, 10zu))// P1 notes (adlib)
 		channel_handlers.emplace(string{"3"} + static_cast<char>('0' + i), &IRCompiler::parse_channel_unimplemented);
-	for (auto i: views::iota(0, 26)) // ^
+	for (auto const i: views::iota(0zu, 26zu)) // ^
 		channel_handlers.emplace(string{"3"} + static_cast<char>('A' + i), &IRCompiler::parse_channel_unimplemented);
-	for (auto i: views::iota(1, 10)) // P2 notes (adlib)
+	for (auto const i: views::iota(1zu, 10zu)) // P2 notes (adlib)
 		channel_handlers.emplace(string{"4"} + static_cast<char>('0' + i), &IRCompiler::parse_channel_unimplemented);
-	for (auto i: views::iota(0, 26)) // ^
+	for (auto const i: views::iota(0zu, 26zu)) // ^
 		channel_handlers.emplace(string{"4"} + static_cast<char>('A' + i), &IRCompiler::parse_channel_unimplemented);
-	for (auto i: views::iota(1, 10)) // P1 long notes
+	for (auto const i: views::iota(1zu, 10zu)) // P1 long notes
 		channel_handlers.emplace(string{"5"} + static_cast<char>('0' + i), &IRCompiler::parse_channel_unimplemented);
-	for (auto i: views::iota(0, 26)) // ^
+	for (auto const i: views::iota(0zu, 26zu)) // ^
 		channel_handlers.emplace(string{"5"} + static_cast<char>('A' + i), &IRCompiler::parse_channel_unimplemented);
-	for (auto i: views::iota(1, 10)) // P2 long notes
+	for (auto const i: views::iota(1zu, 10zu)) // P2 long notes
 		channel_handlers.emplace(string{"6"} + static_cast<char>('0' + i), &IRCompiler::parse_channel_unimplemented);
-	for (auto i: views::iota(0, 26)) // ^
+	for (auto const i: views::iota(0zu, 26zu)) // ^
 		channel_handlers.emplace(string{"6"} + static_cast<char>('A' + i), &IRCompiler::parse_channel_unimplemented);
-	for (auto i: views::iota(1, 10)) // P1 mines
+	for (auto const i: views::iota(1zu, 10zu)) // P1 mines
 		channel_handlers.emplace(string{"D"} + static_cast<char>('0' + i), &IRCompiler::parse_channel_unimplemented);
-	for (auto i: views::iota(1, 10)) // P2 mines
+	for (auto const i: views::iota(1zu, 10zu)) // P2 mines
 		channel_handlers.emplace(string{"E"} + static_cast<char>('0' + i), &IRCompiler::parse_channel_unimplemented);
 
 	// Critical unimplemented channels
@@ -491,30 +492,27 @@ void IRCompiler::handle_header(IR& ir, HeaderCommand&& cmd, SlotMappings& maps)
 
 void IRCompiler::handle_channel(IR& ir, ChannelCommand&& cmd, SlotMappings& maps)
 {
+	// Validate measure
 	if (cmd.measure < 0) {
 		WARN_AS(cat, "L{}: Invalid measure: {}", cmd.line, cmd.measure);
 		return;
 	}
 
+	// Validate channel
 	if (cmd.channel.empty()) {
 		WARN_AS(cat, "L{}: Missing measure channel", cmd.line);
 		return;
 	}
 	if (cmd.channel.size() < 2)
-		cmd.channel.insert(0, 2 - cmd.channel.size(), '0'); // Just in case someone forgot the leading 0
+		cmd.channel.insert(cmd.channel.begin(), 2 - cmd.channel.size(), '0'); // Just in case someone forgot the leading 0
 	if (!channel_handlers.contains(cmd.channel)) {
 		WARN_AS(cat, "L{}: Unknown channel: {}", cmd.line, cmd.channel);
 		return;
 	}
 
-	// Treat any data not immediately following the ":" as a comment
-	auto first_space = cmd.value.find_first_of(' ');
-	if (first_space != string::npos)
-		cmd.value.resize(first_space);
-	auto first_tab = cmd.value.find_first_of('\t');
-	if (first_tab != string::npos)
-		cmd.value.resize(first_tab);
-	if (cmd.value.empty()) {
+	// Truncate value at first whitespace
+	auto value = substr_until(cmd.value, [](auto c) { return c == ' ' || c == '\t'; });
+	if (value.empty()) {
 		WARN_AS(cat, "L{}: No valid measure value", cmd.line);
 		return;
 	}
@@ -524,23 +522,28 @@ void IRCompiler::handle_channel(IR& ir, ChannelCommand&& cmd, SlotMappings& maps
 		(this->*channel_handlers.at(cmd.channel))(ir, SingleChannelCommand{
 			.line = cmd.line,
 			.position = cmd.measure,
-			.channel = cmd.channel,
-			.value = move(cmd.value),
+			.channel = move(cmd.channel),
+			.value = string{value},
 		}, maps);
-	} else { // Expected channel value is a series of 2-character slots
+	} else { // Expected channel value is a series of 2-character notes
 		// Chop off unpaired characters
-		if (cmd.value.length() % 2 != 0) {
-			WARN_AS(cat, "L{}: Stray character in measure: {}", cmd.line, string{cmd.value, cmd.value.length() - 1});
-			cmd.value.resize(cmd.value.length() - 1);
+		if (value.size() % 2 != 0) {
+			WARN_AS(cat, "L{}: Stray character in measure: {}", cmd.line, value.back());
+			value.remove_suffix(1);
+			// This might've emptied the view, but then the loop below will run 0 times
 		}
-		auto denominator = cmd.value.length() / 2;
-		for (auto i: views::iota(0zu, denominator)) {
+
+		// Advance 2 chars at a time, creating an event for each note
+		auto numerator = 0zu;
+		auto const denominator = cmd.value.size() / 2;
+		for (auto note: value | views::chunk(2) | views::to_sv) {
 			(this->*channel_handlers.at(cmd.channel))(ir, SingleChannelCommand{
 				.line = cmd.line,
-				.position = cmd.measure + NotePosition{i, denominator},
+				.position = cmd.measure + NotePosition{numerator, denominator},
 				.channel = cmd.channel,
-				.value = string{cmd.value, i * 2, 2},
+				.value = string{note},
 			}, maps);
+			numerator += 1;
 		}
 	}
 }
@@ -583,9 +586,7 @@ void IRCompiler::parse_header_title(IR& ir, HeaderCommand&& cmd, SlotMappings&) 
 	}
 
 	TRACE_AS(cat, "L{}: Title: {}", cmd.line, cmd.value);
-	ir.add_header_event(IR::HeaderEvent::Title{
-		.title = move(cmd.value),
-	});
+	ir.add_header_event(IR::HeaderEvent::Title{ .title = move(cmd.value) });
 }
 
 void IRCompiler::parse_header_subtitle(IR& ir, HeaderCommand&& cmd, SlotMappings&) noexcept
@@ -596,9 +597,7 @@ void IRCompiler::parse_header_subtitle(IR& ir, HeaderCommand&& cmd, SlotMappings
 	}
 
 	TRACE_AS(cat, "L{}: Subtitle: {}", cmd.line, cmd.value);
-	ir.add_header_event(IR::HeaderEvent::Subtitle{
-		.subtitle = move(cmd.value),
-	});
+	ir.add_header_event(IR::HeaderEvent::Subtitle{ .subtitle = move(cmd.value) });
 }
 
 void IRCompiler::parse_header_artist(IR& ir, HeaderCommand&& cmd, SlotMappings&) noexcept
@@ -609,9 +608,7 @@ void IRCompiler::parse_header_artist(IR& ir, HeaderCommand&& cmd, SlotMappings&)
 	}
 
 	TRACE_AS(cat, "L{}: Artist: {}", cmd.line, cmd.value);
-	ir.add_header_event(IR::HeaderEvent::Artist{
-		.artist = move(cmd.value),
-	});
+	ir.add_header_event(IR::HeaderEvent::Artist{ .artist = move(cmd.value) });
 }
 
 void IRCompiler::parse_header_subartist(IR& ir, HeaderCommand&& cmd, SlotMappings&) noexcept
@@ -622,9 +619,7 @@ void IRCompiler::parse_header_subartist(IR& ir, HeaderCommand&& cmd, SlotMapping
 	}
 
 	TRACE_AS(cat, "L{}: Subartist: {}", cmd.line, cmd.value);
-	ir.add_header_event(IR::HeaderEvent::Subartist{
-		.subartist = move(cmd.value),
-	});
+	ir.add_header_event(IR::HeaderEvent::Subartist{ .subartist = move(cmd.value) });
 }
 
 void IRCompiler::parse_header_genre(IR& ir, HeaderCommand&& cmd, SlotMappings&) noexcept
@@ -635,9 +630,7 @@ void IRCompiler::parse_header_genre(IR& ir, HeaderCommand&& cmd, SlotMappings&) 
 	}
 
 	TRACE_AS(cat, "L{}: Genre: {}", cmd.line, cmd.value);
-	ir.add_header_event(IR::HeaderEvent::Genre{
-		.genre = move(cmd.value),
-	});
+	ir.add_header_event(IR::HeaderEvent::Genre{ .genre = move(cmd.value) });
 }
 
 void IRCompiler::parse_header_url(IR& ir, HeaderCommand&& cmd, SlotMappings&) noexcept
@@ -648,9 +641,7 @@ void IRCompiler::parse_header_url(IR& ir, HeaderCommand&& cmd, SlotMappings&) no
 	}
 
 	TRACE("L{}: URL: {}", cmd.line, cmd.value);
-	ir.add_header_event(IR::HeaderEvent::URL{
-		.url = move(cmd.value),
-	});
+	ir.add_header_event(IR::HeaderEvent::URL{ .url = move(cmd.value) });
 }
 
 void IRCompiler::parse_header_email(IR& ir, HeaderCommand&& cmd, SlotMappings&) noexcept
@@ -661,9 +652,7 @@ void IRCompiler::parse_header_email(IR& ir, HeaderCommand&& cmd, SlotMappings&) 
 	}
 
 	TRACE_AS(cat, "L{}: URL: {}", cmd.line, cmd.value);
-	ir.add_header_event(IR::HeaderEvent::Email{
-		.email = move(cmd.value),
-	});
+	ir.add_header_event(IR::HeaderEvent::Email{ .email = move(cmd.value) });
 }
 
 void IRCompiler::parse_header_player(IR& ir, HeaderCommand&& cmd, SlotMappings&) noexcept try
@@ -672,16 +661,14 @@ void IRCompiler::parse_header_player(IR& ir, HeaderCommand&& cmd, SlotMappings&)
 		WARN_AS(cat, "L{}: Player header has no value", cmd.line);
 		return;
 	}
-	auto count = lexical_cast<int>(cmd.value);
+	auto count = lexical_cast<int32>(cmd.value);
 	if (count != 1 && count != 3) { // 1: SP, 3: DP
 		WARN_AS(cat, "L{}: Player header has an invalid value: {}", cmd.line, count);
 		return;
 	}
 
 	TRACE_AS(cat, "L{}: Player: {}", cmd.line, count);
-	ir.add_header_event(IR::HeaderEvent::Player{
-		.count = count,
-	});
+	ir.add_header_event(IR::HeaderEvent::Player{ .count = count });
 }
 catch (exception const&) {
 	WARN_AS(cat, "L{}: Player header has an invalid value: {}", cmd.line, cmd.value);
@@ -700,9 +687,7 @@ void IRCompiler::parse_header_bpm(IR& ir, HeaderCommand&& cmd, SlotMappings&) no
 	auto bpm = lexical_cast<float>(cmd.value);
 
 	TRACE_AS(cat, "L{}: BPM: {}", cmd.line, bpm);
-	ir.add_header_event(IR::HeaderEvent::BPM{
-		.bpm = bpm,
-	});
+	ir.add_header_event(IR::HeaderEvent::BPM{ .bpm = bpm });
 }
 catch (exception const&) {
 	WARN_AS(cat, "L{}: BPM header has an invalid value: {}", cmd.line, cmd.value);
@@ -714,7 +699,7 @@ void IRCompiler::parse_header_difficulty(IR& ir, HeaderCommand&& cmd, SlotMappin
 		WARN_AS(cat, "L{}: Difficulty header has no value", cmd.line);
 		return;
 	}
-	auto level = lexical_cast<int>(cmd.value);
+	auto level = lexical_cast<int32>(cmd.value);
 	if (level < 1 || level > 5) {
 		WARN_AS(cat, "L{}: Difficulty header has an invalid value: {}", cmd.line, level);
 		return;
@@ -725,7 +710,7 @@ void IRCompiler::parse_header_difficulty(IR& ir, HeaderCommand&& cmd, SlotMappin
 		.level = static_cast<IR::HeaderEvent::Difficulty::Level>(level),
 	});
 }
-catch (std::exception const&) {
+catch (exception const&) {
 	WARN_AS(cat, "L{}: Difficulty header has an invalid value: {}", cmd.line, cmd.value);
 }
 
@@ -741,29 +726,26 @@ void IRCompiler::parse_header_wav(IR& ir, HeaderCommand&& cmd, SlotMappings& map
 	}
 
 	// Remove extension and trailing dots
-	auto separator_pos = cmd.value.find_last_of('.');
+	auto const separator_pos = cmd.value.find_last_of('.');
 	if (separator_pos != string::npos) {
 		cmd.value.resize(separator_pos);
 		while (cmd.value.ends_with('.'))
-			cmd.value.resize(cmd.value.length() - 1);
+			cmd.value.resize(cmd.value.size() - 1);
 	}
 
 	// Treat filenames as canonically lowercase for case-insensitivity
 	to_lower(cmd.value);
 
-	auto slot_id = maps.get_slot_id(maps.wav, cmd.slot);
+	auto const slot_id = maps.get_slot_id(maps.wav, cmd.slot);
 	TRACE_AS(cat, "L{}: WAV: {} -> #{}, {}", cmd.line, cmd.slot, slot_id, cmd.value);
-	ir.add_header_event(IR::HeaderEvent::WAV{
-		.slot = slot_id,
-		.name = move(cmd.value),
-	});
+	ir.add_header_event(IR::HeaderEvent::WAV{ .slot = slot_id, .name = move(cmd.value) });
 }
 
 void IRCompiler::parse_channel_bgm(IR& ir, SingleChannelCommand&& cmd, SlotMappings& maps) noexcept
 {
-	if (cmd.value == "00") return;
-	auto slot_id = maps.get_slot_id(maps.wav, cmd.value);
-	TRACE_AS(cat, "L{}: {} BGM: {} -> #{}", cmd.line, to_string(cmd.position), cmd.value, slot_id);
+	if (cmd.value == "00") return; // Rest note
+	auto const slot_id = maps.get_slot_id(maps.wav, cmd.value);
+	TRACE_AS(cat, "L{}: {} BGM: {} -> #{}", cmd.line, to_str(cmd.position), cmd.value, slot_id);
 	ir.add_channel_event({
 		.position = cmd.position,
 		.type = IR::ChannelEvent::Type::BGM,
@@ -773,8 +755,8 @@ void IRCompiler::parse_channel_bgm(IR& ir, SingleChannelCommand&& cmd, SlotMappi
 
 void IRCompiler::parse_channel_note(IR& ir, SingleChannelCommand&& cmd, SlotMappings& maps)
 {
-	if (cmd.value == "00") return;
-	auto type = [&]() {
+	if (cmd.value == "00") return; // Rest note
+	auto const type = [&]() {
 		if (cmd.channel == "11") return IR::ChannelEvent::Type::Note_P1_Key1;
 		if (cmd.channel == "12") return IR::ChannelEvent::Type::Note_P1_Key2;
 		if (cmd.channel == "13") return IR::ChannelEvent::Type::Note_P1_Key3;
@@ -791,15 +773,11 @@ void IRCompiler::parse_channel_note(IR& ir, SingleChannelCommand&& cmd, SlotMapp
 		if (cmd.channel == "28") return IR::ChannelEvent::Type::Note_P2_Key6;
 		if (cmd.channel == "29") return IR::ChannelEvent::Type::Note_P2_Key7;
 		if (cmd.channel == "26") return IR::ChannelEvent::Type::Note_P2_KeyS;
-		throw runtime_error_fmt("L{}: Unknown note channel: {}", cmd.line, cmd.value);
+		PANIC();
 	}();
-	auto slot_id = maps.get_slot_id(maps.wav, cmd.value);
-	TRACE_AS(cat, "L{}: {} {}: {} -> #{}", cmd.line, to_string(cmd.position), IR::ChannelEvent::to_str(type), cmd.value, slot_id);
-	ir.add_channel_event({
-		.position = cmd.position,
-		.type = type,
-		.slot = slot_id,
-	});
+	auto const slot_id = maps.get_slot_id(maps.wav, cmd.value);
+	TRACE_AS(cat, "L{}: {} {}: {} -> #{}", cmd.line, to_str(cmd.position), IR::ChannelEvent::to_str(type), cmd.value, slot_id);
+	ir.add_channel_event({ .position = cmd.position, .type = type, .slot = slot_id });
 }
 
 }

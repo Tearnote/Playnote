@@ -20,7 +20,9 @@ module;
 
 export module playnote.preamble:string;
 
+import :algorithm;
 import :math_ext;
+import :concepts;
 import :os;
 
 namespace playnote {
@@ -38,6 +40,15 @@ export using boost::to_upper;
 export using boost::to_lower;
 export using boost::lexical_cast;
 export using boost::bad_lexical_cast;
+
+// Return a prefix of a string until a character that matches a predicate, not including
+// that character.
+export template<callable<bool(char)> Func>
+auto substr_until(string_view text, Func&& pred) noexcept -> string_view
+{
+	auto found = find_if(text, pred);
+	return string_view{text.begin(), found};
+}
 
 }
 

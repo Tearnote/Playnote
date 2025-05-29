@@ -60,15 +60,6 @@ void normalize_line_endings(string& text) noexcept
 	replace_all(text, "\r", "\n");
 }
 
-// Return a prefix of a string until a character that matches a predicate, not including
-// that character.
-template<callable<bool(char)> Func>
-auto substr_until(string_view text, Func&& pred) noexcept -> string_view
-{
-	auto found = find_if(text, pred);
-	return string_view{text.begin(), found};
-}
-
 // Parse a known "header" type command into its individual components.
 // If the command is malformed, measure will be set to -1 which is otherwise an invalid value.
 auto parse_channel(string_view command, usize line_index) noexcept -> ChannelCommand
