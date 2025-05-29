@@ -71,7 +71,7 @@ public:
 			float bpm;
 		};
 		struct WAV {
-			int slot;
+			usize slot;
 			string name;
 		};
 		struct Difficulty {
@@ -128,7 +128,7 @@ public:
 
 		NotePosition position;
 		Type type;
-		int slot;
+		usize slot;
 	};
 
 	// Run the provided function on each header event, in original file order
@@ -158,7 +158,7 @@ private:
 	pmr::vector<HeaderEvent> header_events;
 	pmr::vector<ChannelEvent> channel_events;
 
-	int wav_slot_count = 0;
+	usize wav_slot_count = 0zu;
 
 	// Only constructible by friends
 	IR();
@@ -201,19 +201,20 @@ private:
 
 	// Tracks the mappings from slot strings to monotonic indices
 	struct SlotMappings {
-		unordered_map<string, int> wav;
+		using Mapping = unordered_map<string, usize, string_hash>;
+		Mapping wav;
 
 		// Retrieve the slot's index, or register a new one
-		auto get_slot_id(unordered_map<string, int>& map, string const& key) -> int;
+		auto get_slot_id(Mapping& map, string_view key) noexcept -> usize;
 	};
 
 	Logger::Category* cat;
 
 	// Functions to process each type of header and channel
 	using HeaderHandlerFunc = void(IRCompiler::*)(IR&, HeaderCommand&&, SlotMappings&);
-	unordered_map<string, HeaderHandlerFunc> header_handlers{};
+	unordered_map<string, HeaderHandlerFunc, string_hash> header_handlers{};
 	using ChannelHandlerFunc = void(IRCompiler::*)(IR&, SingleChannelCommand&&, SlotMappings&);
-	unordered_map<string, ChannelHandlerFunc> channel_handlers{};
+	unordered_map<string, ChannelHandlerFunc, string_hash> channel_handlers{};
 
 	void register_header_handlers();
 	void register_channel_handlers();
@@ -308,8 +309,7 @@ auto IRCompiler::compile(fs::path const& path, span<byte const> bms_file_content
 	return ir;
 }
 
-auto IRCompiler::SlotMappings::get_slot_id(unordered_map<string, int>& map,
-	string const& key) -> int
+auto IRCompiler::SlotMappings::get_slot_id(Mapping& map, string_view key) noexcept -> usize
 {
 	return map.contains(key)?
 		map.at(key) :
