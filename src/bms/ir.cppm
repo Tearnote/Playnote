@@ -9,7 +9,6 @@ but condensed, cleaned and serializable to a binary file.
 
 module;
 #include <openssl/evp.h>
-#include <boost/rational.hpp>
 #include "macros/logger.hpp"
 
 export module playnote.bms.ir;
@@ -24,7 +23,7 @@ namespace playnote::bms {
 using bms::HeaderCommand;
 
 // Whole part - measure, fractional part - position within measure
-using NotePosition = boost::rational<int>;
+using NotePosition = rational<int32>;
 
 // Print a note position for debug output
 export auto to_string(NotePosition pos) -> string
