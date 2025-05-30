@@ -82,9 +82,9 @@ export inline constexpr auto LogLevelGlobal = Logger::Level::TraceL1;
 export inline constexpr auto LogLevelGraphics = Logger::Level::Warning;
 export inline constexpr auto LogLevelBMSBuild = Logger::Level::Debug;
 #else
-export inline constexpr auto LogLevelGlobal = util::Logger::Info;
-export inline constexpr auto LogLevelGraphics = util::Logger::Info;
-export inline constexpr auto LogLevelBMSBuild = util::Logger::Info;
+export inline constexpr auto LogLevelGlobal = Logger::Level::Info;
+export inline constexpr auto LogLevelGraphics = Logger::Level::Info;
+export inline constexpr auto LogLevelBMSBuild = Logger::Level::Info;
 #endif
 
 // Whether Vulkan validation layers are enabled

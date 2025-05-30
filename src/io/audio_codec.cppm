@@ -10,6 +10,7 @@ export module playnote.io.audio_codec;
 
 import playnote.preamble;
 import playnote.lib.pipewire;
+import playnote.lib.sndfile;
 
 namespace playnote::io {
 
@@ -23,9 +24,7 @@ public:
 
 auto AudioCodec::process(span<byte const> raw) -> Output
 {
-	auto result = Output{};
-	result.resize(8);
-	return result;
+	return lib::sndfile::decode_and_resample_file_buffer(raw, 48000);
 }
 
 }

@@ -75,6 +75,7 @@ public:
 			auto const raw = io::read_file(domain / *match);
 			request.processor(raw.contents);
 		}
+		INFO("Finished reading files from \"{}\"", domain);
 	}
 
 private:
