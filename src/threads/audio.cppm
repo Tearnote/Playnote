@@ -80,7 +80,8 @@ try {
 //	auto const bms_jp = load_bms(bms_compiler, "songs/地球塔デヴォーション/DVTN_0708_SPH.bme");
 //	auto const bms_kr = load_bms(bms_compiler, "songs/kkotbat ui norae ~ song of flower bed/sofb_5h (2).bms");
 //	auto const bms_kr2 = load_bms(bms_compiler, "songs/Seoul Subway Song/sss_7h.bme");
-	auto [bms_chart, bulk_request] = bms::Chart::from_ir(bms_ir);
+	auto bms_chart = bms::Chart::from_ir(bms_ir);
+	auto bulk_request = bms_chart.make_file_requests();
 	bulk_request.process();
 	while (!window.is_closing())
 		yield();

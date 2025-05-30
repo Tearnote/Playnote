@@ -21,85 +21,148 @@ namespace playnote::bms {
 
 export class Chart {
 public:
-	static auto from_ir(IR const&) -> pair<Chart, io::BulkRequest>;
+	static auto from_ir(IR const&) noexcept -> Chart;
+
+	[[nodiscard]] auto make_file_requests() noexcept -> io::BulkRequest;
 
 private:
-	struct Note {
-		nanoseconds timestamp;
-		usize slot;
-	};
+	static constexpr auto AudioExtensions = {"wav"sv, "ogg"sv, "mp3"sv, "flac"sv, "opus"sv};
+
 	struct Lane {
+		struct Note {
+			using Position = NotePosition;
+			Position position;
+			nanoseconds timestamp;
+			usize slot;
+		};
+		enum class Type: usize {
+			BGM,
+			P1_Key1,
+			P1_Key2,
+			P1_Key3,
+			P1_Key4,
+			P1_Key5,
+			P1_Key6,
+			P1_Key7,
+			P1_KeyS,
+			P2_Key1,
+			P2_Key2,
+			P2_Key3,
+			P2_Key4,
+			P2_Key5,
+			P2_Key6,
+			P2_Key7,
+			P2_KeyS,
+			Size,
+		};
+
 		vector<Note> notes;
 		usize next_note;
 	};
-	enum class LaneType {
-		BGM,
-		P1_Key1,
-		P1_Key2,
-		P1_Key3,
-		P1_Key4,
-		P1_Key5,
-		P1_Key6,
-		P1_Key7,
-		P1_KeyS,
-		P2_Key1,
-		P2_Key2,
-		P2_Key3,
-		P2_Key4,
-		P2_Key5,
-		P2_Key6,
-		P2_Key7,
-		P2_KeyS,
-		Size,
-	};
-	struct Slot {
+
+	array<Lane, to_underlying(Lane::Type::Size)> lanes;
+
+	struct WavSlot {
 		static constexpr auto Stopped = -1zu;
-		unique_ptr<io::AudioCodec::Output> audio; // Codec output needs a stable address
+		io::AudioCodec::Output audio;
 		usize playback_pos;
 	};
 
+	vector<optional<WavSlot>> wav_slots;
+
+	struct FileReferences {
+		vector<optional<string>> wav;
+	};
+
+	FileReferences file_references;
+
 	Chart() = default; // Can only be created with factory methods
 
+	fs::path domain;
 	string title;
 	string artist;
 	float bpm = 130.0f; // BMS spec default
 
-	array<Lane, static_cast<usize>(LaneType::Size)> lanes;
-	vector<optional<Slot>> slots;
+	[[nodiscard]] static auto channel_to_lane(IR::ChannelEvent::Type) noexcept -> Lane::Type;
+
 };
 
-auto Chart::from_ir(IR const& ir) -> pair<Chart, io::BulkRequest>
+auto Chart::from_ir(IR const& ir) noexcept -> Chart
 {
-	auto result = pair<Chart, io::BulkRequest>{
-		piecewise_construct,
-		make_tuple(Chart{}),
-		make_tuple(ir.get_path().parent_path())
-	};
-	auto& [chart, requests] = result;
+	auto chart = Chart{};
 
-	chart.slots.resize(ir.get_wav_slot_count());
-	ir.each_header_event([&](IR::HeaderEvent const& event) {
+	chart.domain = ir.get_path().parent_path();
+	chart.wav_slots.resize(ir.get_wav_slot_count());
+	chart.file_references.wav.resize(ir.get_wav_slot_count());
+
+	ir.each_header_event([&](IR::HeaderEvent const& event) noexcept {
 		event.params.visit(visitor {
-			[&](IR::HeaderEvent::Title* title_params) { chart.title = title_params->title; },
-			[&](IR::HeaderEvent::Artist* artist_params) { chart.artist = artist_params->artist; },
-			[&](IR::HeaderEvent::BPM* bpm_params) { chart.bpm = bpm_params->bpm; },
-			[&](IR::HeaderEvent::WAV* wav_params) {
-				chart.slots[wav_params->slot].emplace(Slot{
-					.audio = make_unique<io::AudioCodec::Output>(),
-					.playback_pos = Slot::Stopped,
-				});
-				requests.enqueue<io::AudioCodec>(
-					*chart.slots[wav_params->slot]->audio,
-					wav_params->name,
-					{"wav", "ogg", "mp3", "flac", "opus"}, false
-				);
+			[&](IR::HeaderEvent::Title* title_params) noexcept { chart.title = title_params->title; },
+			[&](IR::HeaderEvent::Artist* artist_params) noexcept { chart.artist = artist_params->artist; },
+			[&](IR::HeaderEvent::BPM* bpm_params) noexcept { chart.bpm = bpm_params->bpm; },
+			[&](IR::HeaderEvent::WAV* wav_params) noexcept {
+				chart.file_references.wav[wav_params->slot] = wav_params->name;
 			},
-			[](auto&&) {}
+			[](auto&&) noexcept {}
 		});
 	});
+
+	ir.each_channel_event([&](IR::ChannelEvent const& event) noexcept {
+		auto const lane_id = channel_to_lane(event.type);
+		if (lane_id == Lane::Type::Size) return;
+		chart.lanes[to_underlying(lane_id)].notes.emplace_back(Lane::Note{
+			.position = event.position,
+			.slot = event.slot,
+		});
+	});
+
 	INFO("Built chart \"{}\"", chart.title);
 
-	return result;
+	return chart;
+}
+
+auto Chart::make_file_requests() noexcept -> io::BulkRequest
+{
+	auto needed_slots = vector<bool>{};
+	needed_slots.resize(wav_slots.size(), false);
+
+	// Mark used slots
+	for (auto const& lane: lanes) {
+		for (auto const& note: lane.notes) {
+			needed_slots[note.slot] = true;
+		}
+	}
+
+	// Enqueue file requests for used slots
+	auto requests = io::BulkRequest{domain};
+	for (auto const& [needed, request, wav_slot]: views::zip(needed_slots, file_references.wav, wav_slots)) {
+		if (!needed || !request) continue;
+		wav_slot = WavSlot{ .playback_pos = WavSlot::Stopped };
+		requests.enqueue<io::AudioCodec>(wav_slot->audio, *request, AudioExtensions, false);
+	}
+	return requests;
+}
+
+auto Chart::channel_to_lane(IR::ChannelEvent::Type ch) noexcept -> Lane::Type
+{
+	switch (ch) {
+	case IR::ChannelEvent::Type::BGM: return Lane::Type::BGM;
+	case IR::ChannelEvent::Type::Note_P1_Key1: return Lane::Type::P1_Key1;
+	case IR::ChannelEvent::Type::Note_P1_Key2: return Lane::Type::P1_Key2;
+	case IR::ChannelEvent::Type::Note_P1_Key3: return Lane::Type::P1_Key3;
+	case IR::ChannelEvent::Type::Note_P1_Key4: return Lane::Type::P1_Key4;
+	case IR::ChannelEvent::Type::Note_P1_Key5: return Lane::Type::P1_Key5;
+	case IR::ChannelEvent::Type::Note_P1_Key6: return Lane::Type::P1_Key6;
+	case IR::ChannelEvent::Type::Note_P1_Key7: return Lane::Type::P1_Key7;
+	case IR::ChannelEvent::Type::Note_P2_Key1: return Lane::Type::P2_Key1;
+	case IR::ChannelEvent::Type::Note_P2_Key2: return Lane::Type::P2_Key2;
+	case IR::ChannelEvent::Type::Note_P2_Key3: return Lane::Type::P2_Key3;
+	case IR::ChannelEvent::Type::Note_P2_Key4: return Lane::Type::P2_Key4;
+	case IR::ChannelEvent::Type::Note_P2_Key5: return Lane::Type::P2_Key5;
+	case IR::ChannelEvent::Type::Note_P2_Key6: return Lane::Type::P2_Key6;
+	case IR::ChannelEvent::Type::Note_P2_Key7: return Lane::Type::P2_Key7;
+	default: return Lane::Type::Size;
+	}
 }
 
 }
