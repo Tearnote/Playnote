@@ -54,7 +54,7 @@ private:
 	};
 	struct Slot {
 		static constexpr auto Stopped = -1zu;
-		io::AudioCodec::Output audio;
+		unique_ptr<io::AudioCodec::Output> audio; // Codec output needs a stable address
 		usize playback_pos;
 	};
 
@@ -84,9 +84,11 @@ auto Chart::from_ir(IR const& ir) -> pair<Chart, io::BulkRequest>
 			[&](IR::HeaderEvent::Artist* artist_params) { chart.artist = artist_params->artist; },
 			[&](IR::HeaderEvent::BPM* bpm_params) { chart.bpm = bpm_params->bpm; },
 			[&](IR::HeaderEvent::WAV* wav_params) {
-				chart.slots[wav_params->slot].emplace(Slot{});
+				chart.slots[wav_params->slot].emplace(Slot{
+					.audio = make_unique<io::AudioCodec::Output>()
+				});
 				requests.enqueue<io::AudioCodec>(
-					chart.slots[wav_params->slot]->audio,
+					*chart.slots[wav_params->slot]->audio,
 					wav_params->name,
 					{"wav", "ogg", "mp3", "flac", "opus"}, false
 				);
