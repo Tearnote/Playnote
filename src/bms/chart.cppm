@@ -85,7 +85,8 @@ auto Chart::from_ir(IR const& ir) -> pair<Chart, io::BulkRequest>
 			[&](IR::HeaderEvent::BPM* bpm_params) { chart.bpm = bpm_params->bpm; },
 			[&](IR::HeaderEvent::WAV* wav_params) {
 				chart.slots[wav_params->slot].emplace(Slot{
-					.audio = make_unique<io::AudioCodec::Output>()
+					.audio = make_unique<io::AudioCodec::Output>(),
+					.playback_pos = Slot::Stopped,
 				});
 				requests.enqueue<io::AudioCodec>(
 					*chart.slots[wav_params->slot]->audio,
