@@ -7,20 +7,23 @@ A mechanism to request multiple files at once, to be fulfilled later on all at o
 */
 
 module;
+#include "macros/logger.hpp"
 
 export module playnote.io.bulk_request;
 
 import playnote.preamble;
+import playnote.logger;
 import playnote.io.file;
 
 namespace playnote::io {
 
 export class BulkRequest {
 public:
-	explicit BulkRequest(string_view domain): domain{domain} {}
+	explicit BulkRequest(fs::path domain): domain{move(domain)} {}
 
 	template<typename T>
-	void enqueue(typename T::Output& output, string_view resource, initializer_list<string_view> extensions = {})
+	void enqueue(typename T::Output& output, string_view resource,
+		initializer_list<string_view> extensions = {}, bool case_sensitive = true)
 	{
 		auto extensions_vec = vector<string>{};
 		extensions_vec.reserve(extensions.size());
@@ -29,17 +32,47 @@ public:
 		requests.emplace_back(Request{
 			.resource = string{resource},
 			.extensions = move(extensions_vec),
-			.processor = [&](span<byte const> raw) {
-				output = move(T::process(raw));
-			},
+			.case_sensitive = case_sensitive,
+			.processor = [&](span<byte const> raw) { output = move(T::process(raw)); },
 		});
 	}
 
 	void process()
 	{
+		// Enumerate available files
+		vector<fs::path> file_list;
+		for (auto const& entry: fs::recursive_directory_iterator{domain}) {
+			if (!entry.is_regular_file()) continue;
+			file_list.emplace_back(fs::relative(entry, domain));
+		}
+
+		// Process each request for matches in the file list
 		for (auto& request: requests) {
-			auto const path = format("{}/{}", domain, request.resource);
-			auto const raw = io::read_file(path); //todo extensions
+			auto match = find_if(file_list, [&](auto const& path) {
+				auto path_str = path.string();
+
+				// Handle case sensitivity (request is expected to already be lowercase)
+				if (!request.case_sensitive)
+					to_lower(path_str);
+
+				// Handle extension matching
+				if (!request.extensions.empty()) {
+					for (auto const& ext: request.extensions) {
+						if (path_str.ends_with(ext)) {
+							path_str.resize(path_str.size() - ext.size());
+							while (path_str.ends_with('.')) path_str.pop_back();
+						}
+					}
+				}
+
+				return path_str == request.resource;
+			});
+			if (match == file_list.end()) {
+				WARN("Unable to load \"{}\": File not found", request.resource);
+				continue;
+			}
+			TRACE("Found \"{}\", reading at \"{}\"", request.resource, domain / *match);
+			auto const raw = io::read_file(domain / *match);
 			request.processor(raw.contents);
 		}
 	}
@@ -48,10 +81,11 @@ private:
 	struct Request {
 		string resource;
 		vector<string> extensions;
+		bool case_sensitive;
 		function<void(span<byte const>)> processor;
 	};
 
-	string domain;
+	fs::path domain;
 	vector<Request> requests;
 };
 

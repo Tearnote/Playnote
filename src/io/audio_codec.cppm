@@ -23,8 +23,9 @@ public:
 
 auto AudioCodec::process(span<byte const> raw) -> Output
 {
-	//todo
-	return {};
+	auto result = Output{};
+	result.resize(8);
+	return result;
 }
 
 }

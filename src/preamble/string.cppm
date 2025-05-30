@@ -62,6 +62,16 @@ struct fmtquill::formatter<playnote::fs::path>: formatter<std::string_view> {
 export template<>
 struct quill::Codec<playnote::fs::path>: DeferredFormatCodec<playnote::fs::path> {};
 
+export template<>
+struct fmtquill::formatter<std::filesystem::directory_entry>: formatter<std::string_view> {
+	auto format(std::filesystem::directory_entry const& d, format_context& ctx) const -> format_context::iterator
+	{
+		return formatter<playnote::fs::path>{}.format(d.path(), ctx);
+	}
+};
+export template<>
+struct quill::Codec<std::filesystem::directory_entry>: DeferredFormatCodec<std::filesystem::directory_entry> {};
+
 export template<playnote::usize Dim, typename T>
 struct fmtquill::formatter<playnote::vec<Dim, T>> {
 	template<typename Ctx>

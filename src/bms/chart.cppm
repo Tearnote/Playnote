@@ -19,21 +19,18 @@ import playnote.bms.ir;
 
 namespace playnote::bms {
 
-using io::BulkRequest;
-using io::AudioCodec;
-
 export class Chart {
 public:
-	static auto from_ir(IR const&) -> pair<Chart, BulkRequest>;
+	static auto from_ir(IR const&) -> pair<Chart, io::BulkRequest>;
 
 private:
 	struct Note {
 		nanoseconds timestamp;
-		int slot;
+		usize slot;
 	};
 	struct Lane {
 		vector<Note> notes;
-		int next_note;
+		usize next_note;
 	};
 	enum class LaneType {
 		BGM,
@@ -56,27 +53,29 @@ private:
 		Size,
 	};
 	struct Slot {
-		AudioCodec::Output sample;
-		int playback_pos;
+		static constexpr auto Stopped = -1zu;
+		io::AudioCodec::Output audio;
+		usize playback_pos;
 	};
 
-	Chart() = default;
+	Chart() = default; // Can only be created with factory methods
 
 	string title;
 	string artist;
-	float bpm{130}; // BMS spec default
+	float bpm = 130.0f; // BMS spec default
 
 	array<Lane, static_cast<usize>(LaneType::Size)> lanes;
 	vector<optional<Slot>> slots;
 };
 
-auto Chart::from_ir(IR const& ir) -> pair<Chart, BulkRequest>
+auto Chart::from_ir(IR const& ir) -> pair<Chart, io::BulkRequest>
 {
-	auto chart = Chart{};
-
-	auto path = ir.get_path();
-
-	auto requests = BulkRequest{""/* todo */};
+	auto result = pair<Chart, io::BulkRequest>{
+		piecewise_construct,
+		make_tuple(Chart{}),
+		make_tuple(ir.get_path().parent_path())
+	};
+	auto& [chart, requests] = result;
 
 	chart.slots.resize(ir.get_wav_slot_count());
 	ir.each_header_event([&](IR::HeaderEvent const& event) {
@@ -86,10 +85,10 @@ auto Chart::from_ir(IR const& ir) -> pair<Chart, BulkRequest>
 			[&](IR::HeaderEvent::BPM* bpm_params) { chart.bpm = bpm_params->bpm; },
 			[&](IR::HeaderEvent::WAV* wav_params) {
 				chart.slots[wav_params->slot].emplace(Slot{});
-				requests.enqueue<AudioCodec>(
-					chart.slots[wav_params->slot]->sample,
+				requests.enqueue<io::AudioCodec>(
+					chart.slots[wav_params->slot]->audio,
 					wav_params->name,
-					{"wav", "ogg", "mp3", "flac", "opus"}
+					{"wav", "ogg", "mp3", "flac", "opus"}, false
 				);
 			},
 			[](auto&&) {}
@@ -97,7 +96,7 @@ auto Chart::from_ir(IR const& ir) -> pair<Chart, BulkRequest>
 	});
 	INFO("Built chart \"{}\"", chart.title);
 
-	return make_pair(chart, requests);
+	return result;
 }
 
 }

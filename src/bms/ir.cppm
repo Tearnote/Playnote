@@ -575,7 +575,7 @@ void IRCompiler::parse_channel_unimplemented(IR&, SingleChannelCommand&& cmd, Sl
 
 void IRCompiler::parse_channel_unimplemented_critical(IR&, SingleChannelCommand&& cmd, SlotMappings&)
 {
-//	throw runtime_error_fmt("L{}: Critical unimplemented channel: {}", cmd.line, cmd.channel);
+	throw runtime_error_fmt("L{}: Critical unimplemented channel: {}", cmd.line, cmd.channel);
 }
 
 void IRCompiler::parse_header_title(IR& ir, HeaderCommand&& cmd, SlotMappings&) noexcept
