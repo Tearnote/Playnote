@@ -3,12 +3,15 @@ This software is dual-licensed. For more details, please consult LICENSE.txt.
 Copyright (c) 2025 Tearnote (Hubert Maraszek)
 
 lib/sndfile.cppm:
-Wrapper for libsndfile decoding.
+Wrapper for libsndfile decoding and libswresample resampling.
 */
 
 module;
-#include "samplerate.h"
-#include "sndfile.h"
+extern "C" {
+#include <libswresample/swresample.h>
+#include <libavutil/opt.h>
+}
+#include <sndfile.h>
 #include "macros/assert.hpp"
 #include "macros/logger.hpp"
 
@@ -101,25 +104,35 @@ auto decode_file_buffer(span<byte const> file_contents) -> pair<vector<pw::Sampl
 	return make_pair(move(samples), file_info);
 }
 
+auto check_ret(int ret) -> int
+{
+	if (ret < 0) throw runtime_error_fmt("ffmpeg error: {}", av_err2str(ret));
+	return ret;
+}
+
 auto resample_buffer(vector<pw::Sample> const& input, SF_INFO const& file_info, uint32 sampling_rate) -> vector<pw::Sample>
 {
-	auto const ratio = static_cast<double>(sampling_rate) / static_cast<double>(file_info.samplerate);
-	auto output_frame_count = static_cast<long>(ceil(file_info.frames * ratio));
-	output_frame_count = output_frame_count + 8 - (output_frame_count % 8); // Padding
-	auto samples = vector<pw::Sample>{};
-	samples.resize(output_frame_count);
+	auto* swr = static_cast<SwrContext*>(nullptr);
+	constexpr auto channel_layout = (AVChannelLayout)AV_CHANNEL_LAYOUT_STEREO;
+	check_ret(swr_alloc_set_opts2(&swr,
+		&channel_layout, AV_SAMPLE_FMT_FLT, sampling_rate,
+		&channel_layout, AV_SAMPLE_FMT_FLT, file_info.samplerate,
+		0, nullptr));
+	check_ret(av_opt_set_int(swr, "resampler", SWR_ENGINE_SOXR, 0));
+	check_ret(swr_init(swr));
 
-	auto src_data = SRC_DATA{
-		.data_in = reinterpret_cast<float const*>(input.data()),
-		.data_out = reinterpret_cast<float*>(samples.data()),
-		.input_frames = file_info.frames,
-		.output_frames = output_frame_count,
-		.src_ratio = ratio,
-	};
-	auto const ret = src_simple(&src_data, SRC_SINC_BEST_QUALITY, file_info.channels);
-	if (ret != 0) throw runtime_error_fmt("Failed to resample audio: {}", src_strerror(ret));
-	samples.resize(src_data.output_frames_gen * file_info.channels);
-	return samples;
+	auto max_out_samples = check_ret(swr_get_out_samples(swr, file_info.frames));
+	auto output = vector<pw::Sample>{};
+	output.resize(max_out_samples);
+	auto* in_ptr = reinterpret_cast<uint8_t const*>(input.data());
+	auto* out_ptr = reinterpret_cast<uint8_t*>(output.data());
+	auto out_samples = check_ret(swr_convert(swr, &out_ptr, output.size(), &in_ptr, input.size()));
+	out_samples += check_ret(swr_convert(swr, &out_ptr, output.size(), nullptr, 0)); // Flush final samples
+	ASSERT(max_out_samples >= out_samples);
+	output.resize(out_samples);
+
+	swr_free(&swr);
+	return output;
 }
 
 export auto decode_and_resample_file_buffer(span<byte const> file_contents, uint32 sampling_rate) -> vector<pw::Sample>
