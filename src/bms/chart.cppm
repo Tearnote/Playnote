@@ -13,6 +13,7 @@ export module playnote.bms.chart;
 
 import playnote.preamble;
 import playnote.logger;
+import playnote.lib.pipewire;
 import playnote.io.bulk_request;
 import playnote.io.audio_codec;
 import playnote.bms.ir;
@@ -25,7 +26,10 @@ public:
 
 	[[nodiscard]] auto make_file_requests() noexcept -> io::BulkRequest;
 
-	void advance_to(nanoseconds) noexcept;
+	void trigger_notes_until(nanoseconds) noexcept;
+
+	template<callable<void(lib::pw::Sample)> Func>
+	void advance_slots(Func&& func) noexcept;
 
 private:
 	static constexpr auto AudioExtensions = {"wav"sv, "ogg"sv, "mp3"sv, "flac"sv, "opus"sv};
@@ -88,6 +92,20 @@ private:
 	[[nodiscard]] static auto channel_to_lane(IR::ChannelEvent::Type) noexcept -> Lane::Type;
 
 };
+
+template<callable<void(lib::pw::Sample)> Func>
+void Chart::advance_slots(Func&& func) noexcept
+{
+	for (auto& slot: wav_slots) {
+		if (!slot) continue;
+		if (slot->playback_pos == WavSlot::Stopped) continue;
+		auto const result = slot->audio[slot->playback_pos];
+		slot->playback_pos += 1;
+		if (slot->playback_pos >= slot->audio.size())
+			slot->playback_pos = WavSlot::Stopped;
+		func(result);
+	}
+}
 
 auto Chart::from_ir(IR const& ir) noexcept -> Chart
 {
@@ -161,7 +179,7 @@ auto Chart::make_file_requests() noexcept -> io::BulkRequest
 	return requests;
 }
 
-void Chart::advance_to(nanoseconds time) noexcept
+void Chart::trigger_notes_until(nanoseconds time) noexcept
 {
 	for (auto& lane: lanes) {
 		if (lane.next_note >= lane.notes.size()) continue;

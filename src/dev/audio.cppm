@@ -8,6 +8,7 @@ Initializes audio and submits buffers for playback.
 
 module;
 #include "macros/logger.hpp"
+#include "macros/assert.hpp"
 
 export module playnote.dev.audio;
 
@@ -74,6 +75,8 @@ void Audio::play_chart(bms::Chart& chart)
 
 void Audio::on_process(void* userdata) noexcept
 {
+	static constexpr auto Volume = 1.0f / 8.0f;
+
 	auto& self = *static_cast<Audio*>(userdata);
 	auto& stream = self.stream;
 
@@ -84,24 +87,23 @@ void Audio::on_process(void* userdata) noexcept
 	if (self.chart_playback_started) {
 		auto const current_time = pw::get_stream_time(stream);
 		auto const chart_time = current_time - self.chart_start_time;
-		self.chart->get().advance_to(chart_time);
-	}
-/*
-	if (!self.audios.empty()) {
-		for (auto i: ranges::iota_view(0u, frames)) {
-			auto frame = std::array<float, ChannelCount>{};
-			for (auto& audio: self.audios) {
-				if (self.audio_progress * 2 >= audio.size()) continue;
-				frame[0] += audio[self.audio_progress * 2    ] / self.audios.size();
-				frame[1] += audio[self.audio_progress * 2 + 1] / self.audios.size();
-			}
+		self.chart->get().trigger_notes_until(chart_time);
 
-			output[i * ChannelCount    ] = frame[0];
-			output[i * ChannelCount + 1] = frame[1];
-			self.audio_progress += 1;
+		for (auto& dest: buffer) {
+			dest = {};
+			ASSUME(dest.left == 0 && dest.right == 0);
+			self.chart->get().advance_slots([&](pw::Sample sample) {
+				dest.left += sample.left * Volume;
+				dest.right += sample.right * Volume;
+			});
+			if (abs(dest.left) > 1.0f || abs(dest.right) > 1.0f) {
+				WARN("Sample overflow detected, clipping");
+				dest.left = clamp(dest.left, -1.0f, 1.0f);
+				dest.right = clamp(dest.right, -1.0f, 1.0f);
+			}
 		}
 	}
-*/
+
 	pw::enqueue_buffer(stream, request);
 }
 
