@@ -7,7 +7,6 @@ Presents current game state onto the window at the screen's refresh rate.
 */
 
 module;
-#include "imgui.h"
 #include "macros/tracing.hpp"
 #include "macros/logger.hpp"
 
@@ -47,7 +46,6 @@ try {
 	while (!window.is_closing()) {
 		renderer.frame([](gfx::Renderer::Queue& queue) {
 			enqueue_test_scene(queue);
-			ImGui::ShowDemoWindow();
 		});
 		FRAME_MARK();
 	}
