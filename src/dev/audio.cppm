@@ -15,6 +15,7 @@ import playnote.preamble;
 import playnote.config;
 import playnote.logger;
 import playnote.lib.pipewire;
+import playnote.bms.chart;
 
 namespace playnote::dev {
 
@@ -24,6 +25,8 @@ export class Audio {
 public:
 	Audio();
 	~Audio();
+
+	void play_chart(bms::Chart& chart);
 
 	Audio(Audio const&) = delete;
 	auto operator=(Audio const&) -> Audio& = delete;
@@ -39,6 +42,10 @@ private:
 
 	pw::ThreadLoop loop;
 	pw::Stream stream;
+
+	atomic<bool> chart_playback_started = false;
+	optional<reference_wrapper<bms::Chart>> chart;
+	nanoseconds chart_start_time;
 
 	static void on_process(void*) noexcept;
 };
@@ -58,6 +65,13 @@ Audio::~Audio()
 	pw::destroy_thread_loop(loop);
 }
 
+void Audio::play_chart(bms::Chart& chart)
+{
+	this->chart = chart;
+	chart_start_time = pw::get_stream_time(stream);
+	chart_playback_started = true;
+}
+
 void Audio::on_process(void* userdata) noexcept
 {
 	auto& self = *static_cast<Audio*>(userdata);
@@ -66,6 +80,12 @@ void Audio::on_process(void* userdata) noexcept
 	auto buffer_opt = pw::dequeue_buffer(stream);
 	if (!buffer_opt) return;
 	auto& [buffer, request] = buffer_opt.value();
+
+	if (self.chart_playback_started) {
+		auto const current_time = pw::get_stream_time(stream);
+		auto const chart_time = current_time - self.chart_start_time;
+		self.chart->get().advance_to(chart_time);
+	}
 /*
 	if (!self.audios.empty()) {
 		for (auto i: ranges::iota_view(0u, frames)) {

@@ -36,6 +36,7 @@ export using std::make_pair;
 export using std::tuple;
 export using std::make_tuple;
 export using std::piecewise_construct;
+export using std::reference_wrapper;
 export using std::ref;
 export using std::initializer_list;
 export using std::unique_ptr;

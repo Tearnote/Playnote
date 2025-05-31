@@ -21,6 +21,7 @@ export using std::chrono::milliseconds;
 export using std::chrono::seconds;
 export using std::chrono::duration;
 export using std::chrono::duration_cast;
+export using std::ratio;
 export using std::chrono::operator==;
 export using std::chrono::operator<;
 export using std::chrono::operator<=;

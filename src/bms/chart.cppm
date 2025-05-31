@@ -25,6 +25,8 @@ public:
 
 	[[nodiscard]] auto make_file_requests() noexcept -> io::BulkRequest;
 
+	void advance_to(nanoseconds) noexcept;
+
 private:
 	static constexpr auto AudioExtensions = {"wav"sv, "ogg"sv, "mp3"sv, "flac"sv, "opus"sv};
 
@@ -157,6 +159,19 @@ auto Chart::make_file_requests() noexcept -> io::BulkRequest
 		requests.enqueue<io::AudioCodec>(wav_slot->audio, *request, AudioExtensions, false);
 	}
 	return requests;
+}
+
+void Chart::advance_to(nanoseconds time) noexcept
+{
+	for (auto& lane: lanes) {
+		if (lane.next_note >= lane.notes.size()) continue;
+		auto const& note = lane.notes[lane.next_note];
+		if (time >= note.timestamp) {
+			lane.next_note += 1;
+			if (!wav_slots[note.slot]) continue;
+			wav_slots[note.slot]->playback_pos = 0;
+		}
+	}
 }
 
 auto Chart::channel_to_lane(IR::ChannelEvent::Type ch) noexcept -> Lane::Type

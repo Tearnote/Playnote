@@ -104,6 +104,11 @@ export void destroy_stream(ThreadLoop loop, Stream stream) noexcept
 	pw_thread_loop_unlock(loop);
 }
 
+export auto get_stream_time(Stream stream) noexcept -> nanoseconds
+{
+	return nanoseconds{pw_stream_get_nsec(stream)};
+}
+
 // A single audio sample (frame).
 export struct Sample {
 	float left;

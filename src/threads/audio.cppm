@@ -44,6 +44,7 @@ try {
 	auto bms_chart = bms::Chart::from_ir(bms_ir);
 	auto bulk_request = bms_chart.make_file_requests();
 	bulk_request.process();
+	audio.play_chart(bms_chart);
 	while (!window.is_closing())
 		yield();
 }

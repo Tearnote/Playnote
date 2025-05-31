@@ -25,6 +25,7 @@ namespace fs {
 export using std::jthread;
 export using std::this_thread::sleep_for;
 export using std::this_thread::yield;
+export using std::atomic;
 
 }
 
