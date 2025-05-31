@@ -23,10 +23,10 @@ in bleeding-edge C++.
   - [x] Dear ImGui debug controls support
   - [x] BMS text encoding detection and conversion
   - [x] BMS command parsing
-  - [ ] Compilation of BMS commands into IR
-  - [ ] Generation of a playable song from IR
-  - [ ] Loading song assets
-  - [ ] Song audio mixing and playback
+  - [x] Compilation of BMS commands into IR
+  - [x] Generation of a playable song from IR
+  - [x] Loading song assets
+  - [x] Song audio mixing and playback
   - [ ] Basic Imgui playback controls
   - [ ] Basic timeline visualization
 
