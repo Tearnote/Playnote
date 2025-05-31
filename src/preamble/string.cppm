@@ -15,6 +15,7 @@ module;
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/rational.hpp>
 #include "quill/bundled/fmt/format.h"
 #include "quill/DeferredFormatCodec.h"
 
@@ -97,3 +98,15 @@ struct fmtquill::formatter<playnote::vec<Dim, T>> {
 };
 export template<playnote::usize Dim, typename T>
 struct quill::Codec<playnote::vec<Dim, T>>: DeferredFormatCodec<playnote::vec<Dim, T>> {};
+
+export template<typename T>
+struct fmtquill::formatter<boost::rational<T>>: formatter<int> {
+	auto format(boost::rational<T> const& r, format_context& ctx) const -> format_context::iterator
+	{
+		format_to(formatter<T>{}.format(r.numerator() / r.denominator(), ctx), " ");
+		format_to(formatter<T>{}.format(r.numerator() % r.denominator(), ctx), "/");
+		return format_to(formatter<T>{}.format(r.denominator(), ctx), "");
+	}
+};
+export template<typename T>
+struct quill::Codec<boost::rational<T>>: DeferredFormatCodec<boost::rational<T>> {};
