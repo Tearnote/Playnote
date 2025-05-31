@@ -221,9 +221,7 @@ auto resample_buffer(DecoderOutput const& input, uint32 sampling_rate) -> vector
 export auto decode_and_resample_file_buffer(span<byte const> file_contents, uint32 sampling_rate) -> vector<pw::Sample>
 {
 	auto decoder_output = decode_file_buffer(file_contents);
-	TRACE("Decoded");
 	auto result = resample_buffer(decoder_output, sampling_rate);
-	TRACE("Resampled");
 	return result;
 }
 
