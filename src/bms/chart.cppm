@@ -122,6 +122,16 @@ auto Chart::from_ir(IR const& ir) noexcept -> Chart
 		});
 	}
 
+	auto const beat_duration = duration_cast<nanoseconds>(duration<double>{60.0 / chart.bpm});
+	auto const measure_duration = beat_duration * 4;
+	for (auto& lane: chart.lanes) {
+		for (auto& note: lane.notes) {
+			auto const measures = note.position.numerator() / note.position.denominator();
+			note.timestamp = measures * measure_duration;
+			note.timestamp += (measure_duration / note.position.denominator()) * note.position.numerator();
+		}
+	}
+
 	INFO("Built chart \"{}\"", chart.title);
 
 	return chart;
