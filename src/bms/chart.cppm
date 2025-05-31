@@ -148,7 +148,8 @@ auto Chart::from_ir(IR const& ir) noexcept -> Chart
 		for (auto& note: lane.notes) {
 			auto const measures = note.position.numerator() / note.position.denominator();
 			note.timestamp = measures * measure_duration;
-			note.timestamp += (measure_duration / note.position.denominator()) * note.position.numerator();
+			auto const proper_numerator = note.position.numerator() % note.position.denominator();
+			note.timestamp += (measure_duration / note.position.denominator()) * proper_numerator;
 		}
 	}
 
