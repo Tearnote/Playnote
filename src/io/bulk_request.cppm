@@ -39,6 +39,8 @@ public:
 
 	void process()
 	{
+		INFO("Beginning file loads from \"{}\"", domain);
+
 		// Enumerate available files
 		vector<fs::path> file_list;
 		for (auto const& entry: fs::recursive_directory_iterator{domain}) {

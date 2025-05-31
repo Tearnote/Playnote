@@ -41,8 +41,7 @@ Required to be installed locally:
 - [ICU](https://icu.unicode.org/) ([Unicode](https://github.com/unicode-org/icu/blob/main/LICENSE))
 - [Vulkan SDK](https://www.lunarg.com/vulkan-sdk/) (with [glslc](https://github.com/google/shaderc) and [glslangValidator](https://github.com/KhronosGroup/glslang)) ([various licenses](https://vulkan.lunarg.com/software/license/vulkan-1.4.313.0-linux-license-summary.txt))
 - [glfw](https://www.glfw.org/) ([zlib](https://www.glfw.org/license.html))
-- [libsndfile](https://libsndfile.github.io/libsndfile/) ([LGPL](https://libsndfile.github.io/libsndfile/#licensing))
-- [libswresample](https://ffmpeg.org/libswresample.html) ([LGPL](https://git.ffmpeg.org/gitweb/ffmpeg.git/blob/HEAD:/LICENSE.md))
+- [FFmpeg](https://ffmpeg.org/) ([LGPL](https://git.ffmpeg.org/gitweb/ffmpeg.git/blob/HEAD:/LICENSE.md))
 - [libpipewire](https://pipewire.org/) ([MIT](https://gitlab.freedesktop.org/pipewire/pipewire/-/blob/master/COPYING))
 
 Retrieved via CMake [FetchContent](https://cmake.org/cmake/help/latest/module/FetchContent.html):

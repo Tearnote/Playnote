@@ -21,9 +21,10 @@ find_package(ICU REQUIRED # Charset detection and conversion
 find_package(glfw3 3.4 REQUIRED) # Windowing support
 find_package(Boost REQUIRED # Rational numbers, improved containers, string algorithms, resource wrapper
 	COMPONENTS container)
-pkg_search_module(libavutil REQUIRED IMPORTED_TARGET libavutil) # FFmpeg library dependency
 pkg_search_module(libswresample REQUIRED IMPORTED_TARGET libswresample) # Sample rate conversion
-pkg_search_module(libsndfile REQUIRED IMPORTED_TARGET sndfile) # Audio file decoding
+pkg_search_module(libavformat REQUIRED IMPORTED_TARGET libavformat) # Audio file demuxing
+pkg_search_module(libavcodec REQUIRED IMPORTED_TARGET libavcodec) # Audio file decoding
+pkg_search_module(libavutil REQUIRED IMPORTED_TARGET libavutil) # FFmpeg utilities
 
 if(UNIX)
 	pkg_search_module(PipeWire REQUIRED IMPORTED_TARGET libpipewire-0.3) # Low latency Linux audio

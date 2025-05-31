@@ -56,7 +56,7 @@ target_sources(Playnote PUBLIC
 	src/preamble.cppm
 	src/lib/pipewire.cppm
 	src/lib/openssl.cppm
-	src/lib/sndfile.cppm
+	src/lib/ffmpeg.cppm
 	src/lib/thread.cppm
 	src/lib/vulkan.cppm
 	src/lib/imgui.cppm
@@ -89,7 +89,8 @@ target_include_directories(Playnote PRIVATE src) # All includes start from src a
 target_link_libraries(Playnote PRIVATE vk-bootstrap)
 target_link_libraries(Playnote PRIVATE TracyClient)
 target_link_libraries(Playnote PRIVATE PkgConfig::libswresample)
-target_link_libraries(Playnote PRIVATE PkgConfig::libsndfile)
+target_link_libraries(Playnote PRIVATE PkgConfig::libavformat)
+target_link_libraries(Playnote PRIVATE PkgConfig::libavcodec)
 target_link_libraries(Playnote PRIVATE PkgConfig::libavutil)
 target_link_libraries(Playnote PRIVATE PkgConfig::PipeWire)
 target_link_libraries(Playnote PRIVATE libassert::assert)
