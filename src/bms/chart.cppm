@@ -116,6 +116,12 @@ auto Chart::from_ir(IR const& ir) noexcept -> Chart
 		});
 	});
 
+	for (auto& lane: chart.lanes) {
+		sort(lane.notes, [](auto const& a, auto const& b) noexcept {
+			return a.position < b.position;
+		});
+	}
+
 	INFO("Built chart \"{}\"", chart.title);
 
 	return chart;
