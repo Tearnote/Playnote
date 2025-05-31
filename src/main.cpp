@@ -24,7 +24,7 @@ auto run() -> int
 {
 	auto const scheduler_period = dev::SchedulerPeriod{1ms};
 	auto glfw = dev::GLFW{};
-	auto window = dev::Window{glfw, AppTitle, {640, 480}};
+	auto window = dev::Window{glfw, AppTitle, {1280, 720}};
 
 	// Spawn all threads. Every thread is assumed to eventually finish
 	// once window.is_closing() is true
