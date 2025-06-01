@@ -204,6 +204,7 @@ auto Chart::channel_to_lane(IR::ChannelEvent::Type ch) noexcept -> Lane::Type
 	case IR::ChannelEvent::Type::Note_P1_Key5: return Lane::Type::P1_Key5;
 	case IR::ChannelEvent::Type::Note_P1_Key6: return Lane::Type::P1_Key6;
 	case IR::ChannelEvent::Type::Note_P1_Key7: return Lane::Type::P1_Key7;
+	case IR::ChannelEvent::Type::Note_P1_KeyS: return Lane::Type::P1_KeyS;
 	case IR::ChannelEvent::Type::Note_P2_Key1: return Lane::Type::P2_Key1;
 	case IR::ChannelEvent::Type::Note_P2_Key2: return Lane::Type::P2_Key2;
 	case IR::ChannelEvent::Type::Note_P2_Key3: return Lane::Type::P2_Key3;
@@ -211,6 +212,7 @@ auto Chart::channel_to_lane(IR::ChannelEvent::Type ch) noexcept -> Lane::Type
 	case IR::ChannelEvent::Type::Note_P2_Key5: return Lane::Type::P2_Key5;
 	case IR::ChannelEvent::Type::Note_P2_Key6: return Lane::Type::P2_Key6;
 	case IR::ChannelEvent::Type::Note_P2_Key7: return Lane::Type::P2_Key7;
+	case IR::ChannelEvent::Type::Note_P2_KeyS: return Lane::Type::P2_KeyS;
 	default: return Lane::Type::Size;
 	}
 }
