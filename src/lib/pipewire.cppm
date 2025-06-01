@@ -141,6 +141,7 @@ export [[nodiscard]] auto dequeue_buffer(Stream stream) noexcept -> optional<pai
 	buffer->datas[0].chunk->offset = 0;
 	buffer->datas[0].chunk->stride = Stride;
 	buffer->datas[0].chunk->size = frames * Stride;
+	fill(span{static_cast<byte*>(output), frames * Stride}, static_cast<byte>(0));
 
 	return make_pair(span{static_cast<Sample*>(output), frames}, buffer_outer);
 }
