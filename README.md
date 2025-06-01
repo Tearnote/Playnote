@@ -13,7 +13,7 @@ in bleeding-edge C++.
 
 ## Milestones
 
-- [ ] `0.0.1`: A usable non-interactive player of BMS songs.
+- [x] `0.0.1`: A usable non-interactive player of BMS songs.
   - [x] Quill low-latency logging
   - [x] GLFW windowing and input
   - [x] Direct Pipewire audio interface
@@ -27,7 +27,7 @@ in bleeding-edge C++.
   - [x] Generation of a playable song from IR
   - [x] Loading song assets
   - [x] Song audio mixing and playback
-  - [ ] Basic Imgui playback controls
+  - [x] Basic Imgui playback controls
   - [x] Basic timeline visualization
 
 ## [Dependencies](./cmake/Dependencies.cmake)

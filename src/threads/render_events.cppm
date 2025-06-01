@@ -12,6 +12,8 @@ namespace playnote::threads {
 
 // User requested an action on the playing chart.
 export enum class PlayerControl {
+	Play,
+	Pause,
 	Restart,
 };
 

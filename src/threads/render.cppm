@@ -158,6 +158,8 @@ try {
 		renderer.frame([&](gfx::Renderer::Queue& queue) {
 			enqueue_test_scene(queue);
 			if (chart) {
+				if (im::button("Play")) broadcaster.shout(PlayerControl::Play);
+				if (im::button("Pause")) broadcaster.shout(PlayerControl::Pause);
 				if (im::button("Restart")) broadcaster.shout(PlayerControl::Restart);
 				enqueue_chart_objects(queue, *chart);
 			}

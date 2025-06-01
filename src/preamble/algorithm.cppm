@@ -28,6 +28,7 @@ namespace views {
 	});
 }
 export using std::ranges::contains;
+export using std::ranges::fill;
 export using std::ranges::copy;
 export using std::ranges::transform;
 export using std::ranges::find_if;

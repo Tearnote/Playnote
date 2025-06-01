@@ -55,6 +55,12 @@ try {
 	while (!window.is_closing()) {
 		broadcaster.receive_all<PlayerControl>([&](auto ev) {
 			switch (ev) {
+			case PlayerControl::Play:
+				audio.resume();
+				break;
+			case PlayerControl::Pause:
+				audio.pause();
+				break;
 			case PlayerControl::Restart:
 				bms_chart->restart();
 				audio.play_chart(bms_chart);

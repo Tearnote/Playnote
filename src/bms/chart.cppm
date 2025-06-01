@@ -63,10 +63,8 @@ public:
 
 	[[nodiscard]] auto make_file_requests() noexcept -> io::BulkRequest;
 
-	void trigger_notes_until(nanoseconds) noexcept;
-
 	template<callable<void(lib::pw::Sample)> Func>
-	void advance_slots(Func&& func) noexcept;
+	void advance_one_sample(Func&& func) noexcept;
 
 	template<callable<void(Note const&, NoteType, nanoseconds)> Func>
 	void upcoming_notes(nanoseconds max_distance, Func&& func) const noexcept;
@@ -85,7 +83,7 @@ private:
 
 	array<Lane, to_underlying(Lane::Type::Size)> lanes;
 
-	nanoseconds progress = 0ns;
+	usize progress = 0zu;
 
 	vector<optional<WavSlot>> wav_slots;
 
@@ -100,11 +98,25 @@ private:
 
 	[[nodiscard]] static auto channel_to_lane(IR::ChannelEvent::Type) noexcept -> Lane::Type;
 
+	[[nodiscard]] static auto progress_to_ns(usize) noexcept -> nanoseconds;
+
 };
 
 template<callable<void(lib::pw::Sample)> Func>
-void Chart::advance_slots(Func&& func) noexcept
+void Chart::advance_one_sample(Func&& func) noexcept
 {
+	progress += 1;
+	auto const progress_ns = progress_to_ns(progress);
+	for (auto& lane: lanes) {
+		if (lane.next_note >= lane.notes.size()) continue;
+		auto const& note = lane.notes[lane.next_note];
+		if (progress_ns >= note.timestamp) {
+			lane.next_note += 1;
+			if (!wav_slots[note.slot]) continue;
+			wav_slots[note.slot]->playback_pos = 0;
+		}
+	}
+
 	for (auto& slot: wav_slots) {
 		if (!slot) continue;
 		if (slot->playback_pos == WavSlot::Stopped) continue;
@@ -127,7 +139,7 @@ void Chart::upcoming_notes(nanoseconds max_distance, Func&& func) const noexcept
 			lane.notes.begin() + lane.next_note,
 			lane.notes.end()
 		}) {
-			auto const distance = note.timestamp - progress;
+			auto const distance = note.timestamp - progress_to_ns(progress);
 			if (distance > max_distance) break;
 			func(note, static_cast<NoteType>(&lane - &lanes.front()), distance);
 		}
@@ -191,7 +203,7 @@ void Chart::restart() noexcept
 		if (!slot) continue;
 		slot->playback_pos = WavSlot::Stopped;
 	}
-	progress = 0ns;
+	progress = 0zu;
 	for (auto& lane: lanes) {
 		lane.next_note = 0;
 	}
@@ -219,20 +231,6 @@ auto Chart::make_file_requests() noexcept -> io::BulkRequest
 	return requests;
 }
 
-void Chart::trigger_notes_until(nanoseconds time) noexcept
-{
-	for (auto& lane: lanes) {
-		if (lane.next_note >= lane.notes.size()) continue;
-		auto const& note = lane.notes[lane.next_note];
-		if (time >= note.timestamp) {
-			lane.next_note += 1;
-			if (!wav_slots[note.slot]) continue;
-			wav_slots[note.slot]->playback_pos = 0;
-		}
-	}
-	progress = time;
-}
-
 auto Chart::channel_to_lane(IR::ChannelEvent::Type ch) noexcept -> Lane::Type
 {
 	switch (ch) {
@@ -255,6 +253,15 @@ auto Chart::channel_to_lane(IR::ChannelEvent::Type ch) noexcept -> Lane::Type
 	case IR::ChannelEvent::Type::Note_P2_KeyS: return Lane::Type::P2_KeyS;
 	default: return Lane::Type::Size;
 	}
+}
+
+auto Chart::progress_to_ns(usize samples) noexcept -> nanoseconds
+{
+	constexpr auto SamplingRate = 48000zu;
+	constexpr auto NsPerSample = duration_cast<nanoseconds>(duration<double>{1.0 / SamplingRate});
+	auto const whole_seconds = samples / SamplingRate;
+	auto const remainder = samples % SamplingRate;
+	return 1s * whole_seconds + NsPerSample * remainder;
 }
 
 }
