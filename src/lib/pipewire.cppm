@@ -52,6 +52,12 @@ export void destroy_thread_loop(ThreadLoop loop) noexcept { pw_thread_loop_destr
 // Start the thread loop. It will begin to process events on its own thread.
 export void start_thread_loop(ThreadLoop loop) noexcept { pw_thread_loop_start(loop); }
 
+// Lock the thread loop. This ensures that succeeding code won't run concurrently with the callback.
+export void lock_thread_loop(ThreadLoop loop) noexcept { pw_thread_loop_lock(loop); }
+
+// Unlock the thread loop, allowing the callbacks to run again.
+export void unlock_thread_loop(ThreadLoop loop) noexcept { pw_thread_loop_unlock(loop); }
+
 export using Stream = pw_stream*;
 using ProcessCallback = void(*)(void*);
 

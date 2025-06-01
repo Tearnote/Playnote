@@ -59,6 +59,8 @@ public:
 
 	static auto from_ir(IR const&) noexcept -> Chart;
 
+	void restart() noexcept;
+
 	[[nodiscard]] auto make_file_requests() noexcept -> io::BulkRequest;
 
 	void trigger_notes_until(nanoseconds) noexcept;
@@ -181,6 +183,18 @@ auto Chart::from_ir(IR const& ir) noexcept -> Chart
 	INFO("Built chart \"{}\"", chart.title);
 
 	return chart;
+}
+
+void Chart::restart() noexcept
+{
+	for (auto& slot: wav_slots) {
+		if (!slot) continue;
+		slot->playback_pos = WavSlot::Stopped;
+	}
+	progress = 0ns;
+	for (auto& lane: lanes) {
+		lane.next_note = 0;
+	}
 }
 
 auto Chart::make_file_requests() noexcept -> io::BulkRequest

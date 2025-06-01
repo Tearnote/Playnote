@@ -8,6 +8,7 @@ Initializes audio and handles queueing of playback events.
 
 module;
 #include "macros/logger.hpp"
+#include "macros/assert.hpp"
 
 export module playnote.threads.audio;
 
@@ -19,6 +20,7 @@ import playnote.dev.audio;
 import playnote.dev.os;
 import playnote.bms.chart;
 import playnote.bms.ir;
+import playnote.threads.render_events;
 import playnote.threads.broadcaster;
 
 namespace playnote::threads {
@@ -36,6 +38,7 @@ export void audio(threads::Broadcaster& broadcaster, dev::Window& window)
 try {
 	dev::name_current_thread("audio");
 	broadcaster.register_as_endpoint();
+	broadcaster.subscribe<PlayerControl>();
 	broadcaster.wait_for_others(3);
 
 	auto audio = dev::Audio{};
@@ -49,7 +52,18 @@ try {
 	bulk_request.process();
 	audio.play_chart(bms_chart);
 	broadcaster.shout(bms_chart);
-	while (!window.is_closing()) yield();
+	while (!window.is_closing()) {
+		broadcaster.receive_all<PlayerControl>([&](auto ev) {
+			switch (ev) {
+			case PlayerControl::Restart:
+				bms_chart->restart();
+				audio.play_chart(bms_chart);
+				break;
+			default: PANIC();
+			}
+		});
+		yield();
+	}
 }
 catch (exception const& e) {
 	CRIT("Uncaught exception: {}", e.what());

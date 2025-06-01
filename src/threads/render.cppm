@@ -15,14 +15,18 @@ export module playnote.threads.render;
 
 import playnote.preamble;
 import playnote.logger;
+import playnote.lib.imgui;
 import playnote.dev.window;
 import playnote.dev.gpu;
 import playnote.dev.os;
 import playnote.gfx.renderer;
 import playnote.bms.chart;
+import playnote.threads.render_events;
 import playnote.threads.broadcaster;
 
 namespace playnote::threads {
+
+namespace im = lib::imgui;
 
 void enqueue_test_scene(gfx::Renderer::Queue& queue)
 {
@@ -153,7 +157,10 @@ try {
 		});
 		renderer.frame([&](gfx::Renderer::Queue& queue) {
 			enqueue_test_scene(queue);
-			if (chart) enqueue_chart_objects(queue, *chart);
+			if (chart) {
+				if (im::button("Restart")) broadcaster.shout(PlayerControl::Restart);
+				enqueue_chart_objects(queue, *chart);
+			}
 		});
 		FRAME_MARK();
 	}

@@ -49,4 +49,10 @@ export auto render(vk::Allocator& frame_allocator, vk::ManagedImage&& target, Co
 	return vuk::extra::ImGui_ImplVuk_Render(frame_allocator, move(target), context);
 }
 
+// A clickable button. Returns true when clicked.
+export auto button(char const* text) noexcept -> bool
+{
+	return ImGui::Button(text);
+}
+
 }
