@@ -8,6 +8,7 @@ Presents current game state onto the window at the screen's refresh rate.
 
 module;
 #include "macros/tracing.hpp"
+#include "macros/assert.hpp"
 #include "macros/logger.hpp"
 
 export module playnote.threads.render;
@@ -60,7 +61,79 @@ void enqueue_test_scene(gfx::Renderer::Queue& queue)
 
 void enqueue_chart_objects(gfx::Renderer::Queue& queue, bms::Chart const& chart)
 {
-	//todo
+	enum class NoteVisual { White, Blue, Red };
+	auto get_note_visual = [](bms::Chart::NoteType type) {
+		switch (type) {
+		case bms::Chart::NoteType::P1_KeyS:
+		case bms::Chart::NoteType::P2_KeyS:
+			return NoteVisual::Red;
+		case bms::Chart::NoteType::P1_Key1:
+		case bms::Chart::NoteType::P1_Key3:
+		case bms::Chart::NoteType::P1_Key5:
+		case bms::Chart::NoteType::P1_Key7:
+		case bms::Chart::NoteType::P2_Key1:
+		case bms::Chart::NoteType::P2_Key3:
+		case bms::Chart::NoteType::P2_Key5:
+		case bms::Chart::NoteType::P2_Key7:
+			return NoteVisual::White;
+		case bms::Chart::NoteType::P1_Key2:
+		case bms::Chart::NoteType::P1_Key4:
+		case bms::Chart::NoteType::P1_Key6:
+		case bms::Chart::NoteType::P2_Key2:
+		case bms::Chart::NoteType::P2_Key4:
+		case bms::Chart::NoteType::P2_Key6:
+			return NoteVisual::Blue;
+		default: PANIC();
+		}
+	};
+	auto get_note_x = [](bms::Chart::NoteType type) {
+		switch (type) {
+		case bms::Chart::NoteType::P1_KeyS: return 44;
+		case bms::Chart::NoteType::P1_Key1: return 118;
+		case bms::Chart::NoteType::P1_Key2: return 160;
+		case bms::Chart::NoteType::P1_Key3: return 194;
+		case bms::Chart::NoteType::P1_Key4: return 236;
+		case bms::Chart::NoteType::P1_Key5: return 270;
+		case bms::Chart::NoteType::P1_Key6: return 312;
+		case bms::Chart::NoteType::P1_Key7: return 346;
+		case bms::Chart::NoteType::P2_Key1: return 478;
+		case bms::Chart::NoteType::P2_Key2: return 520;
+		case bms::Chart::NoteType::P2_Key3: return 554;
+		case bms::Chart::NoteType::P2_Key4: return 596;
+		case bms::Chart::NoteType::P2_Key5: return 630;
+		case bms::Chart::NoteType::P2_Key6: return 672;
+		case bms::Chart::NoteType::P2_Key7: return 706;
+		case bms::Chart::NoteType::P2_KeyS: return 748;
+		default: PANIC();
+		}
+	};
+	auto get_note_color = [](NoteVisual visual) {
+		switch (visual) {
+		case NoteVisual::White: return vec4{0.800f, 0.800f, 0.800f, 1.000f};
+		case NoteVisual::Blue:  return vec4{0.200f, 0.600f, 0.800f, 1.000f};
+		case NoteVisual::Red:   return vec4{0.800f, 0.200f, 0.200f, 1.000f};
+		default: PANIC();
+		}
+	};
+	auto get_note_width = [](NoteVisual visual) {
+		switch (visual) {
+		case NoteVisual::White: return 40;
+		case NoteVisual::Blue:  return 32;
+		case NoteVisual::Red:   return 72;
+		default: PANIC();
+		}
+	};
+
+	constexpr auto max_distance = duration_cast<nanoseconds>(1s);
+	chart.upcoming_notes(max_distance, [&](auto const& note, bms::Chart::NoteType type, nanoseconds distance) {
+		auto const visual = get_note_visual(type);
+		auto const x = get_note_x(type);
+		constexpr auto max_y = 539 + 6 - 13;
+		auto const y = static_cast<int>(max_y - distance.count() / 1000000000.0 * max_y);
+		auto const width = get_note_width(visual);
+		auto const color = get_note_color(visual);
+		queue.enqueue_rect({{x, y}, {width, 13}, color});
+	});
 }
 
 export void render(threads::Broadcaster& broadcaster, dev::Window& window)

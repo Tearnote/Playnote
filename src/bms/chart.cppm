@@ -21,19 +21,6 @@ import playnote.bms.ir;
 namespace playnote::bms {
 
 export class Chart {
-public:
-	static auto from_ir(IR const&) noexcept -> Chart;
-
-	[[nodiscard]] auto make_file_requests() noexcept -> io::BulkRequest;
-
-	void trigger_notes_until(nanoseconds) noexcept;
-
-	template<callable<void(lib::pw::Sample)> Func>
-	void advance_slots(Func&& func) noexcept;
-
-private:
-	static constexpr auto AudioExtensions = {"wav"sv, "ogg"sv, "mp3"sv, "flac"sv, "opus"sv};
-
 	struct Lane {
 		struct Note {
 			using Position = NotePosition;
@@ -66,19 +53,39 @@ private:
 		usize next_note;
 	};
 
-	array<Lane, to_underlying(Lane::Type::Size)> lanes;
+public:
+	using Note = Lane::Note;
+	using NoteType = Lane::Type;
+
+	static auto from_ir(IR const&) noexcept -> Chart;
+
+	[[nodiscard]] auto make_file_requests() noexcept -> io::BulkRequest;
+
+	void trigger_notes_until(nanoseconds) noexcept;
+
+	template<callable<void(lib::pw::Sample)> Func>
+	void advance_slots(Func&& func) noexcept;
+
+	template<callable<void(Note const&, NoteType, nanoseconds)> Func>
+	void upcoming_notes(nanoseconds max_distance, Func&& func) const noexcept;
+
+private:
+	static constexpr auto AudioExtensions = {"wav"sv, "ogg"sv, "mp3"sv, "flac"sv, "opus"sv};
 
 	struct WavSlot {
 		static constexpr auto Stopped = -1zu;
 		io::AudioCodec::Output audio;
 		usize playback_pos;
 	};
-
-	vector<optional<WavSlot>> wav_slots;
-
 	struct FileReferences {
 		vector<optional<string>> wav;
 	};
+
+	array<Lane, to_underlying(Lane::Type::Size)> lanes;
+
+	nanoseconds progress = 0ns;
+
+	vector<optional<WavSlot>> wav_slots;
 
 	FileReferences file_references;
 
@@ -104,6 +111,24 @@ void Chart::advance_slots(Func&& func) noexcept
 		if (slot->playback_pos >= slot->audio.size())
 			slot->playback_pos = WavSlot::Stopped;
 		func(result);
+	}
+}
+
+template<callable<void(Chart::Note const&, Chart::NoteType, nanoseconds)> Func>
+void Chart::upcoming_notes(nanoseconds max_distance, Func&& func) const noexcept
+{
+	for (auto& lane: span{
+		lanes.begin() + to_underlying(Lane::Type::P1_Key1),
+		lanes.begin() + to_underlying(Lane::Type::P2_KeyS) + 1
+	}) {
+		for (auto& note: span{
+			lane.notes.begin() + lane.next_note,
+			lane.notes.end()
+		}) {
+			auto const distance = note.timestamp - progress;
+			if (distance > max_distance) break;
+			func(note, static_cast<NoteType>(&lane - &lanes.front()), distance);
+		}
 	}
 }
 
@@ -191,6 +216,7 @@ void Chart::trigger_notes_until(nanoseconds time) noexcept
 			wav_slots[note.slot]->playback_pos = 0;
 		}
 	}
+	progress = time;
 }
 
 auto Chart::channel_to_lane(IR::ChannelEvent::Type ch) noexcept -> Lane::Type

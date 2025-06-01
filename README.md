@@ -28,7 +28,7 @@ in bleeding-edge C++.
   - [x] Loading song assets
   - [x] Song audio mixing and playback
   - [ ] Basic Imgui playback controls
-  - [ ] Basic timeline visualization
+  - [x] Basic timeline visualization
 
 ## [Dependencies](./cmake/Dependencies.cmake)
 
