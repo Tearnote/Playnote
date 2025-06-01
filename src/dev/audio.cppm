@@ -44,7 +44,7 @@ private:
 	pw::ThreadLoop loop;
 	pw::Stream stream;
 
-	atomic<bool> chart_playback_started = false;
+	bool chart_playback_started = false;
 	shared_ptr<bms::Chart> chart;
 	nanoseconds chart_start_time;
 
@@ -68,9 +68,11 @@ Audio::~Audio()
 
 void Audio::play_chart(shared_ptr<bms::Chart> const& chart)
 {
+	pw::lock_thread_loop(loop);
 	this->chart = chart;
 	chart_start_time = pw::get_stream_time(stream);
 	chart_playback_started = true;
+	pw::unlock_thread_loop(loop);
 }
 
 void Audio::on_process(void* userdata) noexcept
