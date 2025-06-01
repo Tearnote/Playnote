@@ -29,6 +29,21 @@ in bleeding-edge C++.
   - [x] Song audio mixing and playback
   - [x] Basic Imgui playback controls
   - [x] Basic timeline visualization
+- [ ] `0.0.2`: Correctness, efficiency and UX improvements.
+  - [ ] Universal timing system synchronizing wall clock and audio thread
+  - [ ] Long Note support
+  - [ ] BPM change support
+  - [ ] Precomputed acceleration structure for reachable slots
+  - [ ] Basic metadata display
+  - [ ] Chart loading from command line argument
+  - [ ] Catching BMS loading errors and communicating them to the user
+  - [ ] Working Windows build
+  - [ ] WASAPI audio backend
+  - [ ] Optimized build flags and platform support checks
+  - [ ] Multithreaded decoding and resampling
+  - [ ] Loading feedback
+  - [ ] Normalize volume via ReplayGain
+  - [ ] Protect from clipping with a limiter
 
 ## [Dependencies](./cmake/Dependencies.cmake)
 

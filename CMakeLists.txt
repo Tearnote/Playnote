@@ -8,7 +8,7 @@
 
 cmake_minimum_required(VERSION 3.30)
 project(Playnote
-	VERSION 0.0.1
+	VERSION 0.0.2
 	DESCRIPTION "A BMS player hobby project"
 	LANGUAGES C CXX)
 set(CMAKE_C_STANDARD 11)
