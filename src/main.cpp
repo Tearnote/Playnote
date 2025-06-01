@@ -14,6 +14,7 @@ import playnote.logger;
 import playnote.lib.debug;
 import playnote.dev.window;
 import playnote.dev.os;
+import playnote.threads.broadcaster;
 import playnote.threads.render;
 import playnote.threads.audio;
 import playnote.threads.input;
@@ -28,9 +29,10 @@ auto run() -> int
 
 	// Spawn all threads. Every thread is assumed to eventually finish
 	// once window.is_closing() is true
-	auto audio_thread_stub = jthread{threads::audio, ref(window)};
-	auto render_thread_stub = jthread{threads::render, ref(window)};
-	threads::input(glfw, window);
+	auto broadcaster = threads::Broadcaster{};
+	auto audio_thread_stub = jthread{threads::audio, ref(broadcaster), ref(window)};
+	auto render_thread_stub = jthread{threads::render, ref(broadcaster), ref(window)};
+	threads::input(broadcaster, glfw, window);
 
 	return EXIT_SUCCESS;
 }

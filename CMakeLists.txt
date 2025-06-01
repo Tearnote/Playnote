@@ -77,6 +77,7 @@ target_sources(Playnote PUBLIC
 	src/bms/parser.cppm
 	src/bms/chart.cppm
 	src/bms/ir.cppm
+	src/threads/broadcaster.cppm
 	src/threads/render.cppm
 	src/threads/audio.cppm
 	src/threads/input.cppm
@@ -88,6 +89,7 @@ target_include_directories(Playnote PRIVATE src) # All includes start from src a
 
 target_link_libraries(Playnote PRIVATE vk-bootstrap)
 target_link_libraries(Playnote PRIVATE TracyClient)
+target_link_libraries(Playnote PRIVATE msd_channel)
 target_link_libraries(Playnote PRIVATE PkgConfig::libswresample)
 target_link_libraries(Playnote PRIVATE PkgConfig::libavformat)
 target_link_libraries(Playnote PRIVATE PkgConfig::libavcodec)

@@ -10,6 +10,7 @@ module;
 #include <initializer_list>
 #include <functional>
 #include <stdexcept>
+#include <typeindex>
 #include <optional>
 #include <variant>
 #include <utility>
@@ -46,6 +47,7 @@ export using std::make_shared;
 export using std::static_pointer_cast;
 export using boost::scope::unique_resource;
 export using std::to_underlying;
+export using std::type_index;
 
 // Constructs a type with overloaded operator()s, for use as a std::variant visitor
 export template<typename... Ts>

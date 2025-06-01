@@ -85,3 +85,9 @@ FetchContent_Declare(tracy # CPU/GPU profiler
 )
 FetchContent_MakeAvailable(tracy)
 target_compile_definitions(TracyClient PUBLIC TRACY_VK_USE_SYMBOL_TABLE)
+
+FetchContent_Declare(cpp-channels # Threaded data sharing
+	GIT_REPOSITORY https://github.com/andreiavrammsd/cpp-channel
+	GIT_TAG v0.8.3
+)
+FetchContent_MakeAvailable(cpp-channels)

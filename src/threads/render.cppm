@@ -18,6 +18,7 @@ import playnote.dev.window;
 import playnote.dev.gpu;
 import playnote.dev.os;
 import playnote.gfx.renderer;
+import playnote.threads.broadcaster;
 
 namespace playnote::threads {
 
@@ -56,9 +57,11 @@ void enqueue_test_scene(gfx::Renderer::Queue& queue)
 	queue.enqueue_rect({{706,   0}, { 40, 539}, {0.035f, 0.035f, 0.035f, 1.000f}});
 }
 
-export void render(dev::Window& window)
+export void render(threads::Broadcaster& broadcaster, dev::Window& window)
 try {
 	dev::name_current_thread("render");
+	broadcaster.register_as_endpoint();
+	broadcaster.wait_for_others(3);
 	auto gpu = dev::GPU{window};
 	auto renderer = gfx::Renderer{gpu};
 

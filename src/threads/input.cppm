@@ -17,12 +17,15 @@ import playnote.preamble;
 import playnote.logger;
 import playnote.dev.window;
 import playnote.dev.os;
+import playnote.threads.broadcaster;
 
 namespace playnote::threads {
 
-export void input(dev::GLFW& glfw, dev::Window& window)
+export void input(threads::Broadcaster& broadcaster, dev::GLFW& glfw, dev::Window& window)
 try {
 	dev::name_current_thread("input");
+	broadcaster.register_as_endpoint();
+	broadcaster.wait_for_others(3);
 
 	while (!window.is_closing()) {
 		glfw.poll();

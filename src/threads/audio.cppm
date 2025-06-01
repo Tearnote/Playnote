@@ -19,6 +19,7 @@ import playnote.dev.audio;
 import playnote.dev.os;
 import playnote.bms.chart;
 import playnote.bms.ir;
+import playnote.threads.broadcaster;
 
 namespace playnote::threads {
 
@@ -31,9 +32,11 @@ auto load_bms(bms::IRCompiler& compiler, fs::path const& path) -> bms::IR
 	return ir;
 }
 
-export void audio(dev::Window& window)
+export void audio(threads::Broadcaster& broadcaster, dev::Window& window)
 try {
 	dev::name_current_thread("audio");
+	broadcaster.register_as_endpoint();
+	broadcaster.wait_for_others(3);
 
 	auto audio = dev::Audio{};
 	auto bms_compiler = bms::IRCompiler{};
