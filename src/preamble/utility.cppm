@@ -8,6 +8,7 @@ Imports and helpers for generic utilities.
 
 module;
 #include <initializer_list>
+#include <type_traits>
 #include <functional>
 #include <stdexcept>
 #include <typeindex>
@@ -48,6 +49,7 @@ export using std::static_pointer_cast;
 export using boost::scope::unique_resource;
 export using std::to_underlying;
 export using std::type_index;
+export using std::remove_cvref_t;
 
 // Constructs a type with overloaded operator()s, for use as a std::variant visitor
 export template<typename... Ts>

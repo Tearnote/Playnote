@@ -27,7 +27,7 @@ public:
 	Audio();
 	~Audio();
 
-	void play_chart(bms::Chart& chart);
+	void play_chart(shared_ptr<bms::Chart> const& chart);
 
 	Audio(Audio const&) = delete;
 	auto operator=(Audio const&) -> Audio& = delete;
@@ -45,7 +45,7 @@ private:
 	pw::Stream stream;
 
 	atomic<bool> chart_playback_started = false;
-	optional<reference_wrapper<bms::Chart>> chart;
+	shared_ptr<bms::Chart> chart;
 	nanoseconds chart_start_time;
 
 	static void on_process(void*) noexcept;
@@ -66,7 +66,7 @@ Audio::~Audio()
 	pw::destroy_thread_loop(loop);
 }
 
-void Audio::play_chart(bms::Chart& chart)
+void Audio::play_chart(shared_ptr<bms::Chart> const& chart)
 {
 	this->chart = chart;
 	chart_start_time = pw::get_stream_time(stream);
@@ -87,12 +87,12 @@ void Audio::on_process(void* userdata) noexcept
 	if (self.chart_playback_started) {
 		auto const current_time = pw::get_stream_time(stream);
 		auto const chart_time = current_time - self.chart_start_time;
-		self.chart->get().trigger_notes_until(chart_time);
+		self.chart->trigger_notes_until(chart_time);
 
 		for (auto& dest: buffer) {
 			dest = {};
 			ASSUME(dest.left == 0 && dest.right == 0);
-			self.chart->get().advance_slots([&](pw::Sample sample) {
+			self.chart->advance_slots([&](pw::Sample sample) {
 				dest.left += sample.left * Volume;
 				dest.right += sample.right * Volume;
 			});

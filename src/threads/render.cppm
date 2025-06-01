@@ -18,6 +18,7 @@ import playnote.dev.window;
 import playnote.dev.gpu;
 import playnote.dev.os;
 import playnote.gfx.renderer;
+import playnote.bms.chart;
 import playnote.threads.broadcaster;
 
 namespace playnote::threads {
@@ -57,17 +58,29 @@ void enqueue_test_scene(gfx::Renderer::Queue& queue)
 	queue.enqueue_rect({{706,   0}, { 40, 539}, {0.035f, 0.035f, 0.035f, 1.000f}});
 }
 
+void enqueue_chart_objects(gfx::Renderer::Queue& queue, bms::Chart const& chart)
+{
+	//todo
+}
+
 export void render(threads::Broadcaster& broadcaster, dev::Window& window)
 try {
 	dev::name_current_thread("render");
 	broadcaster.register_as_endpoint();
+	broadcaster.subscribe<shared_ptr<bms::Chart>>();
 	broadcaster.wait_for_others(3);
 	auto gpu = dev::GPU{window};
 	auto renderer = gfx::Renderer{gpu};
 
+	auto chart = shared_ptr<bms::Chart>{};
+
 	while (!window.is_closing()) {
-		renderer.frame([](gfx::Renderer::Queue& queue) {
+		broadcaster.receive_all<shared_ptr<bms::Chart>>([&](auto&& recv) {
+			chart = recv;
+		});
+		renderer.frame([&](gfx::Renderer::Queue& queue) {
 			enqueue_test_scene(queue);
+			if (chart) enqueue_chart_objects(queue, *chart);
 		});
 		FRAME_MARK();
 	}
