@@ -20,16 +20,24 @@ export class Broadcaster {
 public:
 	Broadcaster() = default;
 
+	// Declare that the current thread will send and/or receive messages.
 	void register_as_endpoint();
 
-	void wait_for_others(uint32 thread_count);
-
+	// Declare that current thread is interested in messages of type T.
 	template<typename T>
 	void subscribe();
 
+	// Blocks current thread until all other threads have called wait_for_others() as well.
+	// All threads need to pass the same value of thread_count which is equal to the number
+	// of threads that called this function. This can only be used once per thread.
+	void wait_for_others(uint32 thread_count);
+
+	// Send message to all other threads that declared interest in this type.
 	template<typename T>
 	void shout(T&& message);
 
+	// Call the provided function once for every pending message of type T. Must have previously
+	// subscribed to this type. Returns true if at least one message was processed.
 	template<typename T, callable<void(T&&)> Func>
 	auto receive_all(Func&& func) -> bool;
 
