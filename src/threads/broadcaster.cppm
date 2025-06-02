@@ -31,7 +31,7 @@ public:
 	void shout(T&& message);
 
 	template<typename T, callable<void(T&&)> Func>
-	void receive_all(Func&& func);
+	auto receive_all(Func&& func) -> bool;
 
 private:
 	inline static thread_local auto endpoint_id = -1zu;
@@ -76,16 +76,16 @@ void Broadcaster::shout(T&& message)
 }
 
 template<typename T, callable<void(T&&)> Func>
-void Broadcaster::receive_all(Func&& func)
+auto Broadcaster::receive_all(Func&& func) -> bool
 {
 	using Type = remove_cvref_t<T>;
 	ASSUME(endpoint_id != -1zu);
 	ASSUME(channels[endpoint_id].contains(typeid(Type)));
 	auto& out_channel = *static_pointer_cast<channel<Type>>(channels[endpoint_id][typeid(Type)]);
-	if (out_channel.empty()) return;
+	if (out_channel.empty()) return false;
 	for (auto message: out_channel) {
 		func(move(message));
-		if (out_channel.empty()) return;
+		if (out_channel.empty()) return true;
 	}
 }
 
