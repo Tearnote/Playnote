@@ -7,6 +7,7 @@ Entry point. Initializes basic facilities, spawns threads.
 */
 
 #include "macros/logger.hpp"
+#include "macros/assert.hpp"
 
 import playnote.preamble;
 import playnote.config;
@@ -21,7 +22,13 @@ import playnote.threads.input;
 
 using namespace playnote; // Can't namespace main()
 
-auto run() -> int
+auto parse_arguments(int argc, char** argv) -> fs::path
+{
+	ASSERT(argc == 2, "Expected one argument: song path");
+	return fs::path{argv[1]};
+}
+
+auto run(fs::path const& song_request) -> int
 {
 	auto const scheduler_period = dev::SchedulerPeriod{1ms};
 	auto glfw = dev::GLFW{};
@@ -32,18 +39,19 @@ auto run() -> int
 	auto broadcaster = threads::Broadcaster{};
 	auto audio_thread_stub = jthread{threads::audio, ref(broadcaster), ref(window)};
 	auto render_thread_stub = jthread{threads::render, ref(broadcaster), ref(window)};
-	threads::input(broadcaster, glfw, window);
+	threads::input(broadcaster, glfw, window, song_request);
 
 	return EXIT_SUCCESS;
 }
 
-auto main() -> int
+auto main(int argc, char** argv) -> int
 try {
 	lib::dbg::set_assert_handler();
 	if constexpr (BuildType == Build::Debug) lib::dbg::attach_console();
 	auto logger_stub = globals::logger.provide(LogfilePath, LogLevelGlobal);
+	auto song_request = parse_arguments(argc, argv);
 	INFO("{} {}.{}.{} starting up", AppTitle, AppVersion[0], AppVersion[1], AppVersion[2]);
-	return run();
+	return run(song_request);
 }
 catch (exception const& e) {
 	// Handle any exception that happened outside of threads::input()

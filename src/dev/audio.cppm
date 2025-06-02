@@ -80,7 +80,7 @@ void Audio::play_chart(shared_ptr<bms::Chart> const& chart)
 
 void Audio::on_process(void* userdata) noexcept
 {
-	static constexpr auto Volume = 1.0f / 4.0f;
+	static constexpr auto Volume = 1.0f / 2.0f;
 
 	auto& self = *static_cast<Audio*>(userdata);
 	auto& stream = self.stream;

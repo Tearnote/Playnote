@@ -21,11 +21,12 @@ import playnote.threads.broadcaster;
 
 namespace playnote::threads {
 
-export void input(threads::Broadcaster& broadcaster, dev::GLFW& glfw, dev::Window& window)
+export void input(Broadcaster& broadcaster, dev::GLFW& glfw, dev::Window& window, fs::path const& song_request)
 try {
 	dev::name_current_thread("input");
 	broadcaster.register_as_endpoint();
 	broadcaster.wait_for_others(3);
+	broadcaster.shout(song_request);
 
 	while (!window.is_closing()) {
 		glfw.poll();

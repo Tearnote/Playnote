@@ -21,6 +21,7 @@ import playnote.dev.os;
 import playnote.bms.chart;
 import playnote.bms.ir;
 import playnote.threads.render_events;
+import playnote.threads.input_events;
 import playnote.threads.broadcaster;
 
 namespace playnote::threads {
@@ -34,19 +35,21 @@ auto load_bms(bms::IRCompiler& compiler, fs::path const& path) -> bms::IR
 	return ir;
 }
 
-export void audio(threads::Broadcaster& broadcaster, dev::Window& window)
+export void audio(Broadcaster& broadcaster, dev::Window& window)
 try {
 	dev::name_current_thread("audio");
 	broadcaster.register_as_endpoint();
 	broadcaster.subscribe<PlayerControl>();
+	broadcaster.subscribe<ChartLoadRequest>();
 	broadcaster.wait_for_others(3);
 
 	auto audio = dev::Audio{};
+	auto chart_path = fs::path{};
+	while (!broadcaster.receive_all<ChartLoadRequest>([&](auto&& path) { chart_path = path; }))
+		yield();
+
 	auto bms_compiler = bms::IRCompiler{};
-	auto const bms_ir = load_bms(bms_compiler, "songs/Ling Child/12_dphyper.bme");
-//	auto const bms_jp = load_bms(bms_compiler, "songs/地球塔デヴォーション/DVTN_0708_SPH.bme");
-//	auto const bms_kr = load_bms(bms_compiler, "songs/kkotbat ui norae ~ song of flower bed/sofb_5h (2).bms");
-//	auto const bms_kr2 = load_bms(bms_compiler, "songs/Seoul Subway Song/sss_7h.bme");
+	auto const bms_ir = load_bms(bms_compiler, chart_path);
 	auto bms_chart = make_shared<bms::Chart>(bms::Chart::from_ir(bms_ir));
 	auto bulk_request = bms_chart->make_file_requests();
 	bulk_request.process();

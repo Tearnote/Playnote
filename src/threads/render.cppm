@@ -140,7 +140,7 @@ void enqueue_chart_objects(gfx::Renderer::Queue& queue, bms::Chart const& chart)
 	});
 }
 
-export void render(threads::Broadcaster& broadcaster, dev::Window& window)
+export void render(Broadcaster& broadcaster, dev::Window& window)
 try {
 	dev::name_current_thread("render");
 	broadcaster.register_as_endpoint();
