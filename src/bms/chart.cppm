@@ -32,8 +32,9 @@ public:
 		using Length = NotePosition;
 		Type type;
 		Position position;
-		Length length; // if LN
 		nanoseconds timestamp;
+		Length length; // if LN
+		nanoseconds length_ns;
 		usize slot;
 	};
 	struct Lane {
@@ -109,6 +110,7 @@ private:
 	[[nodiscard]] static auto ln_channel_to_lane(IR::ChannelEvent::Type) noexcept -> LaneType;
 
 	[[nodiscard]] static auto progress_to_ns(usize) noexcept -> nanoseconds;
+	[[nodiscard]] static auto calculate_timestamp(NotePosition, nanoseconds measure) noexcept -> nanoseconds;
 
 	void add_note(IR::ChannelEvent const&) noexcept;
 	void add_ln_end(vector<vector<Note>>&, IR::ChannelEvent const&) noexcept;
@@ -285,6 +287,15 @@ auto Chart::progress_to_ns(usize samples) noexcept -> nanoseconds
 	return 1s * whole_seconds + ns_per_sample * remainder;
 }
 
+auto Chart::calculate_timestamp(NotePosition position, nanoseconds measure) noexcept -> nanoseconds
+{
+	auto const measures = position.numerator() / position.denominator();
+	auto result = measures * measure;
+	auto const proper_numerator = position.numerator() % position.denominator();
+	result += (measure / position.denominator()) * proper_numerator;
+	return result;
+}
+
 void Chart::add_note(IR::ChannelEvent const& event) noexcept
 {
 	auto const lane_id = note_channel_to_lane(event.type);
@@ -371,10 +382,8 @@ void Chart::calculate_object_timestamps() noexcept
 	auto const measure_duration = beat_duration * 4;
 	for (auto& lane: lanes) {
 		for (auto& note: lane.notes) {
-			auto const measures = note.position.numerator() / note.position.denominator();
-			note.timestamp = measures * measure_duration;
-			auto const proper_numerator = note.position.numerator() % note.position.denominator();
-			note.timestamp += (measure_duration / note.position.denominator()) * proper_numerator;
+			note.timestamp = calculate_timestamp(note.position, measure_duration);
+			note.length_ns = calculate_timestamp(note.length, measure_duration);
 		}
 	}
 }
