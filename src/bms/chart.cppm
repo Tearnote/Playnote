@@ -22,15 +22,22 @@ import playnote.bms.ir;
 namespace playnote::bms {
 
 export class Chart {
-	struct Lane {
-		struct Note {
-			using Position = NotePosition;
-			Position position;
-			nanoseconds timestamp;
-			usize slot;
+public:
+	struct Note {
+		enum class Type {
+			Note,
+			LN,
 		};
+		using Position = NotePosition;
+		using Length = NotePosition;
+		Type type;
+		Position position;
+		Length length; // if LN
+		nanoseconds timestamp;
+		usize slot;
+	};
+	struct Lane {
 		enum class Type: usize {
-			BGM,
 			P1_Key1,
 			P1_Key2,
 			P1_Key3,
@@ -47,6 +54,7 @@ export class Chart {
 			P2_Key6,
 			P2_Key7,
 			P2_KeyS,
+			BGM,
 			Size,
 		};
 
@@ -54,9 +62,8 @@ export class Chart {
 		usize next_note;
 	};
 
-public:
-	using Note = Lane::Note;
-	using NoteType = Lane::Type;
+	using NoteType = Note::Type;
+	using LaneType = Lane::Type;
 
 	static auto from_ir(IR const&) noexcept -> Chart;
 
@@ -67,7 +74,7 @@ public:
 	template<callable<void(lib::pw::Sample)> Func>
 	void advance_one_sample(Func&& func) noexcept;
 
-	template<callable<void(Note const&, NoteType, nanoseconds)> Func>
+	template<callable<void(Note const&, LaneType, nanoseconds)> Func>
 	void upcoming_notes(nanoseconds max_distance, Func&& func) const noexcept;
 
 private:
@@ -97,9 +104,15 @@ private:
 	string artist;
 	float bpm = 130.0f; // BMS spec default
 
-	[[nodiscard]] static auto note_channel_to_lane(IR::ChannelEvent::Type) noexcept -> Lane::Type;
+	[[nodiscard]] static auto channel_to_note_type(IR::ChannelEvent::Type) noexcept -> NoteType;
+	[[nodiscard]] static auto note_channel_to_lane(IR::ChannelEvent::Type) noexcept -> LaneType;
+	[[nodiscard]] static auto ln_channel_to_lane(IR::ChannelEvent::Type) noexcept -> LaneType;
 
 	[[nodiscard]] static auto progress_to_ns(usize) noexcept -> nanoseconds;
+
+	void add_note(IR::ChannelEvent const&) noexcept;
+	void add_ln_end(vector<vector<Note>>&, IR::ChannelEvent const&) noexcept;
+	void ln_ends_to_lns(vector<vector<Note>>&) noexcept;
 
 	void process_ir_headers(IR const&) noexcept;
 	void process_ir_channels(IR const&) noexcept;
@@ -134,7 +147,7 @@ void Chart::advance_one_sample(Func&& func) noexcept
 	}
 }
 
-template<callable<void(Chart::Note const&, Chart::NoteType, nanoseconds)> Func>
+template<callable<void(Chart::Note const&, Chart::LaneType, nanoseconds)> Func>
 void Chart::upcoming_notes(nanoseconds max_distance, Func&& func) const noexcept
 {
 	for (auto& lane: span{
@@ -147,7 +160,7 @@ void Chart::upcoming_notes(nanoseconds max_distance, Func&& func) const noexcept
 		}) {
 			auto const distance = note.timestamp - progress_to_ns(progress);
 			if (distance > max_distance) break;
-			func(note, static_cast<NoteType>(&lane - &lanes.front()), distance);
+			func(note, static_cast<LaneType>(&lane - &lanes.front()), distance);
 		}
 	}
 }
@@ -205,6 +218,15 @@ auto Chart::make_file_requests() noexcept -> io::BulkRequest
 	return requests;
 }
 
+auto Chart::channel_to_note_type(IR::ChannelEvent::Type ch) noexcept -> NoteType
+{
+	using ChannelType = IR::ChannelEvent::Type;
+	auto const ch_val = to_underlying(ch);
+	if (ch >= ChannelType::BGM && ch <= ChannelType::Note_P2_KeyS) return NoteType::Note;
+	if (ch >= ChannelType::Note_P1_Key1_LN && ch <= ChannelType::Note_P2_KeyS_LN) return NoteType::LN;
+	PANIC();
+}
+
 auto Chart::note_channel_to_lane(IR::ChannelEvent::Type ch) noexcept -> Lane::Type
 {
 	switch (ch) {
@@ -229,6 +251,30 @@ auto Chart::note_channel_to_lane(IR::ChannelEvent::Type ch) noexcept -> Lane::Ty
 	}
 }
 
+auto Chart::ln_channel_to_lane(IR::ChannelEvent::Type ch) noexcept -> LaneType
+{
+	switch (ch) {
+	case IR::ChannelEvent::Type::BGM: return Lane::Type::BGM;
+	case IR::ChannelEvent::Type::Note_P1_Key1_LN: return Lane::Type::P1_Key1;
+	case IR::ChannelEvent::Type::Note_P1_Key2_LN: return Lane::Type::P1_Key2;
+	case IR::ChannelEvent::Type::Note_P1_Key3_LN: return Lane::Type::P1_Key3;
+	case IR::ChannelEvent::Type::Note_P1_Key4_LN: return Lane::Type::P1_Key4;
+	case IR::ChannelEvent::Type::Note_P1_Key5_LN: return Lane::Type::P1_Key5;
+	case IR::ChannelEvent::Type::Note_P1_Key6_LN: return Lane::Type::P1_Key6;
+	case IR::ChannelEvent::Type::Note_P1_Key7_LN: return Lane::Type::P1_Key7;
+	case IR::ChannelEvent::Type::Note_P1_KeyS_LN: return Lane::Type::P1_KeyS;
+	case IR::ChannelEvent::Type::Note_P2_Key1_LN: return Lane::Type::P2_Key1;
+	case IR::ChannelEvent::Type::Note_P2_Key2_LN: return Lane::Type::P2_Key2;
+	case IR::ChannelEvent::Type::Note_P2_Key3_LN: return Lane::Type::P2_Key3;
+	case IR::ChannelEvent::Type::Note_P2_Key4_LN: return Lane::Type::P2_Key4;
+	case IR::ChannelEvent::Type::Note_P2_Key5_LN: return Lane::Type::P2_Key5;
+	case IR::ChannelEvent::Type::Note_P2_Key6_LN: return Lane::Type::P2_Key6;
+	case IR::ChannelEvent::Type::Note_P2_Key7_LN: return Lane::Type::P2_Key7;
+	case IR::ChannelEvent::Type::Note_P2_KeyS_LN: return Lane::Type::P2_KeyS;
+	default: return Lane::Type::Size;
+	}
+}
+
 auto Chart::progress_to_ns(usize samples) noexcept -> nanoseconds
 {
 	auto const sampling_rate = io::AudioCodec::sampling_rate;
@@ -237,6 +283,47 @@ auto Chart::progress_to_ns(usize samples) noexcept -> nanoseconds
 	auto const whole_seconds = samples / sampling_rate;
 	auto const remainder = samples % sampling_rate;
 	return 1s * whole_seconds + ns_per_sample * remainder;
+}
+
+void Chart::add_note(IR::ChannelEvent const& event) noexcept
+{
+	auto const lane_id = note_channel_to_lane(event.type);
+	if (lane_id == Lane::Type::Size) return;
+	lanes[to_underlying(lane_id)].notes.emplace_back(Note{
+		.type = NoteType::Note,
+		.position = event.position,
+		.slot = event.slot,
+	});
+}
+
+void Chart::add_ln_end(vector<vector<Note>>& ln_ends, IR::ChannelEvent const& event) noexcept
+{
+	auto const lane_id = ln_channel_to_lane(event.type);
+	if (lane_id == Lane::Type::Size) return;
+	ln_ends[to_underlying(lane_id)].emplace_back(Note{
+		.type = NoteType::LN,
+		.position = event.position,
+		.slot = event.slot,
+	});
+}
+
+void Chart::ln_ends_to_lns(vector<vector<Note>>& ln_ends) noexcept
+{
+	for (auto [ln_lane, lane]: views::zip(ln_ends, lanes)) {
+		sort(ln_lane, [](auto const& a, auto const& b) noexcept {
+			return a.position < b.position;
+		});
+
+		for (auto const& pair: ln_lane | views::chunk(2)) {
+			if (pair.size() < 2) return;
+			lane.notes.emplace_back(Note{
+				.type = NoteType::LN,
+				.position = pair[0].position,
+				.length = pair[1].position - pair[0].position,
+				.slot = pair[0].slot,
+			});
+		}
+	}
 }
 
 void Chart::process_ir_headers(IR const& ir) noexcept
@@ -256,14 +343,17 @@ void Chart::process_ir_headers(IR const& ir) noexcept
 
 void Chart::process_ir_channels(IR const& ir) noexcept
 {
+	auto ln_ends = vector<vector<Note>>{};
+	ln_ends.resize(to_underlying(LaneType::Size) - 1);
+
 	ir.each_channel_event([&](IR::ChannelEvent const& event) noexcept {
-		auto const lane_id = note_channel_to_lane(event.type);
-		if (lane_id == Lane::Type::Size) return;
-		lanes[to_underlying(lane_id)].notes.emplace_back(Lane::Note{
-			.position = event.position,
-			.slot = event.slot,
-		});
+		auto note_type = channel_to_note_type(event.type);
+		if (note_type == NoteType::Note) add_note(event);
+		else if (note_type == NoteType::LN) add_ln_end(ln_ends, event);
+		else PANIC();
 	});
+
+	ln_ends_to_lns(ln_ends);
 }
 
 void Chart::sort_lanes() noexcept

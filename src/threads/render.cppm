@@ -65,49 +65,50 @@ void enqueue_test_scene(gfx::Renderer::Queue& queue)
 
 void enqueue_chart_objects(gfx::Renderer::Queue& queue, bms::Chart const& chart)
 {
+	using LaneType = bms::Chart::LaneType;
 	enum class NoteVisual { White, Blue, Red };
-	auto get_note_visual = [](bms::Chart::NoteType type) {
+	auto get_note_visual = [](LaneType type) {
 		switch (type) {
-		case bms::Chart::NoteType::P1_KeyS:
-		case bms::Chart::NoteType::P2_KeyS:
+		case LaneType::P1_KeyS:
+		case LaneType::P2_KeyS:
 			return NoteVisual::Red;
-		case bms::Chart::NoteType::P1_Key1:
-		case bms::Chart::NoteType::P1_Key3:
-		case bms::Chart::NoteType::P1_Key5:
-		case bms::Chart::NoteType::P1_Key7:
-		case bms::Chart::NoteType::P2_Key1:
-		case bms::Chart::NoteType::P2_Key3:
-		case bms::Chart::NoteType::P2_Key5:
-		case bms::Chart::NoteType::P2_Key7:
+		case LaneType::P1_Key1:
+		case LaneType::P1_Key3:
+		case LaneType::P1_Key5:
+		case LaneType::P1_Key7:
+		case LaneType::P2_Key1:
+		case LaneType::P2_Key3:
+		case LaneType::P2_Key5:
+		case LaneType::P2_Key7:
 			return NoteVisual::White;
-		case bms::Chart::NoteType::P1_Key2:
-		case bms::Chart::NoteType::P1_Key4:
-		case bms::Chart::NoteType::P1_Key6:
-		case bms::Chart::NoteType::P2_Key2:
-		case bms::Chart::NoteType::P2_Key4:
-		case bms::Chart::NoteType::P2_Key6:
+		case LaneType::P1_Key2:
+		case LaneType::P1_Key4:
+		case LaneType::P1_Key6:
+		case LaneType::P2_Key2:
+		case LaneType::P2_Key4:
+		case LaneType::P2_Key6:
 			return NoteVisual::Blue;
 		default: PANIC();
 		}
 	};
-	auto get_note_x = [](bms::Chart::NoteType type) {
+	auto get_note_x = [](LaneType type) {
 		switch (type) {
-		case bms::Chart::NoteType::P1_KeyS: return 44;
-		case bms::Chart::NoteType::P1_Key1: return 118;
-		case bms::Chart::NoteType::P1_Key2: return 160;
-		case bms::Chart::NoteType::P1_Key3: return 194;
-		case bms::Chart::NoteType::P1_Key4: return 236;
-		case bms::Chart::NoteType::P1_Key5: return 270;
-		case bms::Chart::NoteType::P1_Key6: return 312;
-		case bms::Chart::NoteType::P1_Key7: return 346;
-		case bms::Chart::NoteType::P2_Key1: return 478;
-		case bms::Chart::NoteType::P2_Key2: return 520;
-		case bms::Chart::NoteType::P2_Key3: return 554;
-		case bms::Chart::NoteType::P2_Key4: return 596;
-		case bms::Chart::NoteType::P2_Key5: return 630;
-		case bms::Chart::NoteType::P2_Key6: return 672;
-		case bms::Chart::NoteType::P2_Key7: return 706;
-		case bms::Chart::NoteType::P2_KeyS: return 748;
+		case LaneType::P1_KeyS: return 44;
+		case LaneType::P1_Key1: return 118;
+		case LaneType::P1_Key2: return 160;
+		case LaneType::P1_Key3: return 194;
+		case LaneType::P1_Key4: return 236;
+		case LaneType::P1_Key5: return 270;
+		case LaneType::P1_Key6: return 312;
+		case LaneType::P1_Key7: return 346;
+		case LaneType::P2_Key1: return 478;
+		case LaneType::P2_Key2: return 520;
+		case LaneType::P2_Key3: return 554;
+		case LaneType::P2_Key4: return 596;
+		case LaneType::P2_Key5: return 630;
+		case LaneType::P2_Key6: return 672;
+		case LaneType::P2_Key7: return 706;
+		case LaneType::P2_KeyS: return 748;
 		default: PANIC();
 		}
 	};
@@ -129,7 +130,7 @@ void enqueue_chart_objects(gfx::Renderer::Queue& queue, bms::Chart const& chart)
 	};
 
 	constexpr auto max_distance = duration_cast<nanoseconds>(1s);
-	chart.upcoming_notes(max_distance, [&](auto const& note, bms::Chart::NoteType type, nanoseconds distance) {
+	chart.upcoming_notes(max_distance, [&](auto const& note, LaneType type, nanoseconds distance) {
 		auto const visual = get_note_visual(type);
 		auto const x = get_note_x(type);
 		constexpr auto max_y = 539 + 6 - 13;

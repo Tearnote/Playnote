@@ -33,6 +33,7 @@ export using std::ranges::copy;
 export using std::ranges::transform;
 export using std::ranges::find_if;
 export using std::ranges::sort;
+export using std::ranges::views::__adaptor::operator|;
 
 export using std::function;
 export using std::invoke;
