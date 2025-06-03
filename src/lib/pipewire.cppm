@@ -11,10 +11,12 @@ module;
 #include <spa/param/latency-utils.h>
 #include <pipewire/pipewire.h>
 #include "macros/assert.hpp"
+#include "macros/logger.hpp"
 
 export module playnote.lib.pipewire;
 
 import playnote.preamble;
+import playnote.logger;
 
 namespace playnote::lib::pw {
 
@@ -59,7 +61,21 @@ export void lock_thread_loop(ThreadLoop loop) noexcept { pw_thread_loop_lock(loo
 export void unlock_thread_loop(ThreadLoop loop) noexcept { pw_thread_loop_unlock(loop); }
 
 export using Stream = pw_stream*;
+export using SPAPod = spa_pod const*;
 using ProcessCallback = void(*)(void*);
+using ParamChangedCallback = void(*)(void*, uint32_t, SPAPod);
+
+// Helper function to extract a new sampling rate that was set for the stream. If the event is about
+// something else, returns nullopt.
+export auto get_sampling_rate_from_param(uint32_t id, spa_pod const* param) -> optional<uint32>
+{
+	if (!param || id != SPA_PARAM_Format) return nullopt;
+	auto audio_info = spa_audio_info{};
+	ret_check(spa_format_parse(param, &audio_info.media_type, &audio_info.media_subtype) < 0);
+	if (audio_info.media_type != SPA_MEDIA_TYPE_audio || audio_info.media_subtype != SPA_MEDIA_SUBTYPE_raw) return nullopt;
+	spa_format_audio_raw_parse(param, &audio_info.info.raw);
+	return audio_info.info.raw.rate;
+}
 
 // Create a new audio stream with the specified parameters. Sampling rate is in samples per second,
 // latency is in samples. The stream will only begin processing once the loop is started.
@@ -68,30 +84,29 @@ using ProcessCallback = void(*)(void*);
 // 2 audio channels and 32-bit float sample format.
 // Throws system_error on failure.
 export template<typename T = void, typename = decltype([]{})> // Thumbprint ensures static data is unique per callsite
-[[nodiscard]] auto create_stream(ThreadLoop loop, string_view name, uint32 sampling_rate, uint32 latency, ProcessCallback on_process, T* user_ptr = nullptr) -> Stream
+[[nodiscard]] auto create_stream(ThreadLoop loop, string_view name, uint32 latency,
+	ProcessCallback on_process, ParamChangedCallback on_param_changed, T* user_ptr = nullptr) -> Stream
 {
 	static auto const StreamEvents = pw_stream_events{
 		.version = PW_VERSION_STREAM_EVENTS,
+		.param_changed = on_param_changed,
 		.process = on_process,
 	};
-	auto const latency_str = format("{}/{}", latency, sampling_rate);
-
 	auto stream = pw_stream_new_simple(
 		pw_thread_loop_get_loop(loop), string{name}.c_str(),
 		pw_properties_new(
 			PW_KEY_MEDIA_TYPE, "Audio",
 			PW_KEY_MEDIA_CATEGORY, "Playback",
 			PW_KEY_MEDIA_ROLE, "Game",
-			PW_KEY_NODE_LATENCY, latency_str.c_str(),
+			PW_KEY_NODE_FORCE_QUANTUM, format("{}", latency).c_str(),
 		nullptr),
 		&StreamEvents, user_ptr);
 
 	auto params = array<spa_pod const*, 1>{};
 	auto buffer = array<uint8, 1024>{};
 	auto builder = SPA_POD_BUILDER_INIT(buffer.data(), buffer.size());
-	auto const audio_info = spa_audio_info_raw{
+	constexpr auto audio_info = spa_audio_info_raw{
 		.format = SPA_AUDIO_FORMAT_F32,
-		.rate = sampling_rate,
 		.channels = 2,
 	};
 	params[0] = spa_format_audio_raw_build(&builder, SPA_PARAM_EnumFormat, &audio_info);

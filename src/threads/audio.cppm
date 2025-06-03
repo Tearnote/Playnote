@@ -14,6 +14,7 @@ export module playnote.threads.audio;
 
 import playnote.preamble;
 import playnote.logger;
+import playnote.io.audio_codec;
 import playnote.io.file;
 import playnote.dev.window;
 import playnote.dev.audio;
@@ -44,6 +45,7 @@ try {
 	broadcaster.wait_for_others(3);
 
 	auto audio = dev::Audio{};
+	io::AudioCodec::sampling_rate = audio.get_sampling_rate();
 	auto chart_path = fs::path{};
 	while (!broadcaster.receive_all<ChartLoadRequest>([&](auto&& path) { chart_path = path; }))
 		yield();

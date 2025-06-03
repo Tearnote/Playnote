@@ -6,6 +6,9 @@ io/audio_codec.cppm:
 The file codec to decode the audio format and convert sample rate.
 */
 
+module;
+#include "macros/assert.hpp"
+
 export module playnote.io.audio_codec;
 
 import playnote.preamble;
@@ -19,12 +22,15 @@ public:
 	using Sample = lib::pw::Sample;
 	using Output = vector<Sample>;
 
+	static inline uint32 sampling_rate = 0;
+
 	static auto process(span<byte const> raw) -> Output;
 };
 
 auto AudioCodec::process(span<byte const> raw) -> Output
 {
-	return lib::ffmpeg::decode_and_resample_file_buffer(raw, 48000);
+	ASSERT(sampling_rate != 0);
+	return lib::ffmpeg::decode_and_resample_file_buffer(raw, sampling_rate);
 }
 
 }

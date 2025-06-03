@@ -31,7 +31,7 @@ in bleeding-edge C++.
   - [x] Basic timeline visualization
 - [ ] `0.0.2`: Correctness, efficiency and UX improvements.
   - [ ] Universal timing system synchronizing wall clock and audio thread
-  - [ ] Always use native sampling rate
+  - [x] Always use native sampling rate
   - [ ] Long Note support
   - [ ] BPM change support
   - [ ] Precomputed acceleration structure for reachable slots

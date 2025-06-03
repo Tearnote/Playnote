@@ -8,6 +8,7 @@ A definite, playable rhythm game chart, constructed from an IR. Tracks playback 
 
 module;
 #include "macros/logger.hpp"
+#include "macros/assert.hpp"
 
 export module playnote.bms.chart;
 
@@ -257,11 +258,12 @@ auto Chart::channel_to_lane(IR::ChannelEvent::Type ch) noexcept -> Lane::Type
 
 auto Chart::progress_to_ns(usize samples) noexcept -> nanoseconds
 {
-	constexpr auto SamplingRate = 48000zu;
-	constexpr auto NsPerSample = duration_cast<nanoseconds>(duration<double>{1.0 / SamplingRate});
-	auto const whole_seconds = samples / SamplingRate;
-	auto const remainder = samples % SamplingRate;
-	return 1s * whole_seconds + NsPerSample * remainder;
+	auto const sampling_rate = io::AudioCodec::sampling_rate;
+	ASSERT(sampling_rate > 0);
+	auto const ns_per_sample = duration_cast<nanoseconds>(duration<double>{1.0 / sampling_rate});
+	auto const whole_seconds = samples / sampling_rate;
+	auto const remainder = samples % sampling_rate;
+	return 1s * whole_seconds + ns_per_sample * remainder;
 }
 
 }

@@ -24,8 +24,13 @@ namespace pw = lib::pw;
 
 export class Audio {
 public:
+	static constexpr auto ChannelCount = 2u;
+	static constexpr auto Latency = 256u;
+
 	Audio();
 	~Audio();
+
+	[[nodiscard]] auto get_sampling_rate() const noexcept -> uint32 { return sampling_rate; }
 
 	void play_chart(shared_ptr<bms::Chart> const& chart);
 
@@ -38,20 +43,19 @@ public:
 	auto operator=(Audio&&) -> Audio& = delete;
 
 private:
-	static constexpr auto ChannelCount = 2u;
-	static constexpr auto SamplingRate = 48000u;
-	static constexpr auto Latency = 256u;
-
 	InstanceLimit<Audio, 1> instance_limit;
 
 	pw::ThreadLoop loop;
 	pw::Stream stream;
+
+	atomic<uint32> sampling_rate = 0;
 
 	bool chart_playback_started = false;
 	shared_ptr<bms::Chart> chart;
 	atomic<bool> paused;
 
 	static void on_process(void*) noexcept;
+	static void on_param_changed(void*, uint32_t, pw::SPAPod) noexcept;
 };
 
 Audio::Audio() {
@@ -59,8 +63,9 @@ Audio::Audio() {
 	DEBUG("Using libpipewire {}", pw::get_version());
 
 	loop = pw::create_thread_loop();
-	stream = pw::create_stream(loop, AppTitle, SamplingRate, Latency, &on_process, this);
+	stream = pw::create_stream(loop, AppTitle, Latency, &on_process, &on_param_changed, this);
 	pw::start_thread_loop(loop);
+	while (sampling_rate == 0) yield();
 }
 
 Audio::~Audio()
@@ -106,6 +111,14 @@ void Audio::on_process(void* userdata) noexcept
 	}
 
 	pw::enqueue_buffer(stream, request);
+}
+
+void Audio::on_param_changed(void* userdata, uint32_t id, pw::SPAPod param) noexcept
+{
+	auto& self = *static_cast<Audio*>(userdata);
+	auto new_sampling_rate = pw::get_sampling_rate_from_param(id, param);
+	if (!new_sampling_rate) return;
+	self.sampling_rate = *new_sampling_rate;
 }
 
 }
