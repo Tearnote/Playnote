@@ -136,13 +136,10 @@ void enqueue_chart_objects(gfx::Renderer::Queue& queue, bms::Chart const& chart)
 		auto const visual = get_note_visual(type);
 		auto const x = get_note_x(type);
 		auto const y = static_cast<int>(max_y - static_cast<double>(distance.count()) / 1000000000.0 * max_y) - ln_height;
+		auto const y_overflow = max(y + ln_height - max_y, 0);
 		auto const width = get_note_width(visual);
-		auto color = get_note_color(visual);
-		if (note.type == bms::Chart::NoteType::LN) {
-//			color.g() = 0.6f;
-//			TRACE("LN length: {}, in ns ticks: {}, ln_height: {}", note.length, note.length_ns.count(), ln_height);
-		}
-		queue.enqueue_rect({{x, y}, {width, 13 + ln_height}, color});
+		auto const color = get_note_color(visual);
+		queue.enqueue_rect({{x, y}, {width, 13 + ln_height - y_overflow}, color});
 	});
 }
 

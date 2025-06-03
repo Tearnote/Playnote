@@ -32,7 +32,7 @@ in bleeding-edge C++.
 - [ ] `0.0.2`: Correctness, efficiency and UX improvements.
   - [ ] Universal timing system synchronizing wall clock and audio thread
   - [x] Always use native sampling rate
-  - [ ] Long Note support
+  - [x] Long Note support
   - [ ] BPM change support
   - [ ] Precomputed acceleration structure for reachable slots
   - [ ] Basic metadata display

@@ -61,6 +61,7 @@ public:
 
 		vector<Note> notes;
 		usize next_note;
+		bool ln_active;
 	};
 
 	using NoteType = Note::Type;
@@ -132,9 +133,18 @@ void Chart::advance_one_sample(Func&& func) noexcept
 		if (lane.next_note >= lane.notes.size()) continue;
 		auto const& note = lane.notes[lane.next_note];
 		if (progress_ns >= note.timestamp) {
-			lane.next_note += 1;
+			if (note.type == NoteType::Note || (note.type == NoteType::LN && progress_ns >= note.timestamp + note.length_ns)) {
+				lane.next_note += 1;
+				if (note.type == NoteType::LN) {
+					lane.ln_active = false;
+					continue;
+				}
+			}
 			if (!wav_slots[note.slot]) continue;
-			wav_slots[note.slot]->playback_pos = 0;
+			if (note.type == NoteType::Note || (note.type == NoteType::LN && !lane.ln_active)) {
+				wav_slots[note.slot]->playback_pos = 0;
+				if (note.type == NoteType::LN) lane.ln_active = true;
+			}
 		}
 	}
 
