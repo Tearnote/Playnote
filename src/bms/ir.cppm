@@ -128,6 +128,22 @@ public:
 			Note_P2_Key6,
 			Note_P2_Key7,
 			Note_P2_KeyS,
+			Note_P1_Key1_LN,
+			Note_P1_Key2_LN,
+			Note_P1_Key3_LN,
+			Note_P1_Key4_LN,
+			Note_P1_Key5_LN,
+			Note_P1_Key6_LN,
+			Note_P1_Key7_LN,
+			Note_P1_KeyS_LN,
+			Note_P2_Key1_LN,
+			Note_P2_Key2_LN,
+			Note_P2_Key3_LN,
+			Note_P2_Key4_LN,
+			Note_P2_Key5_LN,
+			Note_P2_Key6_LN,
+			Note_P2_Key7_LN,
+			Note_P2_KeyS_LN,
 		};
 		// Enum value to string, for debug output.
 		[[nodiscard]] static auto to_str(Type) noexcept -> string_view;
@@ -261,6 +277,7 @@ private:
 	// Audio channels
 	void parse_channel_bgm(IR&, SingleChannelCommand&&, SlotMappings&) noexcept;
 	void parse_channel_note(IR&, SingleChannelCommand&&, SlotMappings&);
+	void parse_channel_ln(IR&, SingleChannelCommand&&, SlotMappings&);
 };
 
 auto IR::ChannelEvent::to_str(Type type) noexcept -> string_view
@@ -426,6 +443,14 @@ void IRCompiler::register_channel_handlers() noexcept
 		channel_handlers.emplace(string{"2"} + static_cast<char>('0' + i), &IRCompiler::parse_channel_note);
 	for (auto const i: views::iota(0zu, 26zu)) // ^
 		channel_handlers.emplace(string{"2"} + static_cast<char>('A' + i), &IRCompiler::parse_channel_note);
+	for (auto const i: views::iota(1zu, 10zu)) // P1 long notes
+		channel_handlers.emplace(string{"5"} + static_cast<char>('0' + i), &IRCompiler::parse_channel_ln);
+	for (auto const i: views::iota(0zu, 26zu)) // ^
+		channel_handlers.emplace(string{"5"} + static_cast<char>('A' + i), &IRCompiler::parse_channel_ln);
+	for (auto const i: views::iota(1zu, 10zu)) // P2 long notes
+		channel_handlers.emplace(string{"6"} + static_cast<char>('0' + i), &IRCompiler::parse_channel_ln);
+	for (auto const i: views::iota(0zu, 26zu)) // ^
+		channel_handlers.emplace(string{"6"} + static_cast<char>('A' + i), &IRCompiler::parse_channel_ln);
 
 	// Unimplemented channels
 	channel_handlers.emplace("04" /* BGA base            */, &IRCompiler::parse_channel_unimplemented);
@@ -450,14 +475,6 @@ void IRCompiler::register_channel_handlers() noexcept
 		channel_handlers.emplace(string{"4"} + static_cast<char>('0' + i), &IRCompiler::parse_channel_unimplemented);
 	for (auto const i: views::iota(0zu, 26zu)) // ^
 		channel_handlers.emplace(string{"4"} + static_cast<char>('A' + i), &IRCompiler::parse_channel_unimplemented);
-	for (auto const i: views::iota(1zu, 10zu)) // P1 long notes
-		channel_handlers.emplace(string{"5"} + static_cast<char>('0' + i), &IRCompiler::parse_channel_unimplemented);
-	for (auto const i: views::iota(0zu, 26zu)) // ^
-		channel_handlers.emplace(string{"5"} + static_cast<char>('A' + i), &IRCompiler::parse_channel_unimplemented);
-	for (auto const i: views::iota(1zu, 10zu)) // P2 long notes
-		channel_handlers.emplace(string{"6"} + static_cast<char>('0' + i), &IRCompiler::parse_channel_unimplemented);
-	for (auto const i: views::iota(0zu, 26zu)) // ^
-		channel_handlers.emplace(string{"6"} + static_cast<char>('A' + i), &IRCompiler::parse_channel_unimplemented);
 	for (auto const i: views::iota(1zu, 10zu)) // P1 mines
 		channel_handlers.emplace(string{"D"} + static_cast<char>('0' + i), &IRCompiler::parse_channel_unimplemented);
 	for (auto const i: views::iota(1zu, 10zu)) // P2 mines
@@ -777,6 +794,33 @@ void IRCompiler::parse_channel_note(IR& ir, SingleChannelCommand&& cmd, SlotMapp
 	}();
 	auto const slot_id = maps.get_slot_id(maps.wav, cmd.value);
 	TRACE_AS(cat, "L{}: {} {}: {} -> #{}", cmd.line, to_str(cmd.position), IR::ChannelEvent::to_str(type), cmd.value, slot_id);
+	ir.add_channel_event({ .position = cmd.position, .type = type, .slot = slot_id });
+}
+
+void IRCompiler::parse_channel_ln(IR& ir, SingleChannelCommand&& cmd, SlotMappings& maps)
+{
+	if (cmd.value == "00") return; // Rest note
+	auto const type = [&]() {
+		if (cmd.channel == "51") return IR::ChannelEvent::Type::Note_P1_Key1_LN;
+		if (cmd.channel == "52") return IR::ChannelEvent::Type::Note_P1_Key2_LN;
+		if (cmd.channel == "53") return IR::ChannelEvent::Type::Note_P1_Key3_LN;
+		if (cmd.channel == "54") return IR::ChannelEvent::Type::Note_P1_Key4_LN;
+		if (cmd.channel == "55") return IR::ChannelEvent::Type::Note_P1_Key5_LN;
+		if (cmd.channel == "58") return IR::ChannelEvent::Type::Note_P1_Key6_LN;
+		if (cmd.channel == "59") return IR::ChannelEvent::Type::Note_P1_Key7_LN;
+		if (cmd.channel == "56") return IR::ChannelEvent::Type::Note_P1_KeyS_LN;
+		if (cmd.channel == "61") return IR::ChannelEvent::Type::Note_P2_Key1_LN;
+		if (cmd.channel == "62") return IR::ChannelEvent::Type::Note_P2_Key2_LN;
+		if (cmd.channel == "63") return IR::ChannelEvent::Type::Note_P2_Key3_LN;
+		if (cmd.channel == "64") return IR::ChannelEvent::Type::Note_P2_Key4_LN;
+		if (cmd.channel == "65") return IR::ChannelEvent::Type::Note_P2_Key5_LN;
+		if (cmd.channel == "68") return IR::ChannelEvent::Type::Note_P2_Key6_LN;
+		if (cmd.channel == "69") return IR::ChannelEvent::Type::Note_P2_Key7_LN;
+		if (cmd.channel == "66") return IR::ChannelEvent::Type::Note_P2_KeyS_LN;
+		PANIC();
+	}();
+	auto const slot_id = maps.get_slot_id(maps.wav, cmd.value);
+	TRACE_AS(cat, "L{}: {} {}: {} -> #{} (LN)", cmd.line, to_str(cmd.position), IR::ChannelEvent::to_str(type), cmd.value, slot_id);
 	ir.add_channel_event({ .position = cmd.position, .type = type, .slot = slot_id });
 }
 
