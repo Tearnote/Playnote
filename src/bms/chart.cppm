@@ -102,6 +102,7 @@ private:
 	[[nodiscard]] static auto progress_to_ns(usize) noexcept -> nanoseconds;
 
 	void process_ir_headers(IR const&) noexcept;
+	void process_ir_channels(IR const&) noexcept;
 	void sort_lanes() noexcept;
 	void calculate_object_timestamps() noexcept;
 
@@ -160,15 +161,7 @@ auto Chart::from_ir(IR const& ir) noexcept -> Chart
 	chart.file_references.wav.resize(ir.get_wav_slot_count());
 
 	chart.process_ir_headers(ir);
-
-	ir.each_channel_event([&](IR::ChannelEvent const& event) noexcept {
-		auto const lane_id = note_channel_to_lane(event.type);
-		if (lane_id == Lane::Type::Size) return;
-		chart.lanes[to_underlying(lane_id)].notes.emplace_back(Lane::Note{
-			.position = event.position,
-			.slot = event.slot,
-		});
-	});
+	chart.process_ir_channels(ir);
 
 	chart.sort_lanes();
 	chart.calculate_object_timestamps();
@@ -257,6 +250,18 @@ void Chart::process_ir_headers(IR const& ir) noexcept
 				file_references.wav[wav_params->slot] = wav_params->name;
 			},
 			[](auto&&) noexcept {}
+		});
+	});
+}
+
+void Chart::process_ir_channels(IR const& ir) noexcept
+{
+	ir.each_channel_event([&](IR::ChannelEvent const& event) noexcept {
+		auto const lane_id = note_channel_to_lane(event.type);
+		if (lane_id == Lane::Type::Size) return;
+		lanes[to_underlying(lane_id)].notes.emplace_back(Lane::Note{
+			.position = event.position,
+			.slot = event.slot,
 		});
 	});
 }
