@@ -97,9 +97,11 @@ private:
 	string artist;
 	float bpm = 130.0f; // BMS spec default
 
-	[[nodiscard]] static auto channel_to_lane(IR::ChannelEvent::Type) noexcept -> Lane::Type;
+	[[nodiscard]] static auto note_channel_to_lane(IR::ChannelEvent::Type) noexcept -> Lane::Type;
 
 	[[nodiscard]] static auto progress_to_ns(usize) noexcept -> nanoseconds;
+
+	void sort_lanes() noexcept;
 
 };
 
@@ -168,7 +170,7 @@ auto Chart::from_ir(IR const& ir) noexcept -> Chart
 	});
 
 	ir.each_channel_event([&](IR::ChannelEvent const& event) noexcept {
-		auto const lane_id = channel_to_lane(event.type);
+		auto const lane_id = note_channel_to_lane(event.type);
 		if (lane_id == Lane::Type::Size) return;
 		chart.lanes[to_underlying(lane_id)].notes.emplace_back(Lane::Note{
 			.position = event.position,
@@ -176,11 +178,7 @@ auto Chart::from_ir(IR const& ir) noexcept -> Chart
 		});
 	});
 
-	for (auto& lane: chart.lanes) {
-		sort(lane.notes, [](auto const& a, auto const& b) noexcept {
-			return a.position < b.position;
-		});
-	}
+	chart.sort_lanes();
 
 	auto const beat_duration = duration_cast<nanoseconds>(duration<double>{60.0 / chart.bpm});
 	auto const measure_duration = beat_duration * 4;
@@ -232,7 +230,7 @@ auto Chart::make_file_requests() noexcept -> io::BulkRequest
 	return requests;
 }
 
-auto Chart::channel_to_lane(IR::ChannelEvent::Type ch) noexcept -> Lane::Type
+auto Chart::note_channel_to_lane(IR::ChannelEvent::Type ch) noexcept -> Lane::Type
 {
 	switch (ch) {
 	case IR::ChannelEvent::Type::BGM: return Lane::Type::BGM;
@@ -264,6 +262,15 @@ auto Chart::progress_to_ns(usize samples) noexcept -> nanoseconds
 	auto const whole_seconds = samples / sampling_rate;
 	auto const remainder = samples % sampling_rate;
 	return 1s * whole_seconds + ns_per_sample * remainder;
+}
+
+void Chart::sort_lanes() noexcept
+{
+	for (auto& lane: lanes) {
+		sort(lane.notes, [](auto const& a, auto const& b) noexcept {
+			return a.position < b.position;
+		});
+	}
 }
 
 }
