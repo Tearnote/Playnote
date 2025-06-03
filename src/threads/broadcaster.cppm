@@ -67,6 +67,7 @@ void Broadcaster::subscribe()
 {
 	using Type = remove_cvref_t<T>;
 	ASSUME(endpoint_id != -1zu);
+	auto lock = lock_guard{register_lock};
 	ASSUME(!channels[endpoint_id].contains(typeid(Type)));
 	channels[endpoint_id][typeid(Type)] = make_shared<channel<Type>>();
 }
