@@ -101,6 +101,7 @@ private:
 
 	[[nodiscard]] static auto progress_to_ns(usize) noexcept -> nanoseconds;
 
+	void process_ir_headers(IR const&) noexcept;
 	void sort_lanes() noexcept;
 	void calculate_object_timestamps() noexcept;
 
@@ -158,17 +159,7 @@ auto Chart::from_ir(IR const& ir) noexcept -> Chart
 	chart.wav_slots.resize(ir.get_wav_slot_count());
 	chart.file_references.wav.resize(ir.get_wav_slot_count());
 
-	ir.each_header_event([&](IR::HeaderEvent const& event) noexcept {
-		event.params.visit(visitor {
-			[&](IR::HeaderEvent::Title* title_params) noexcept { chart.title = title_params->title; },
-			[&](IR::HeaderEvent::Artist* artist_params) noexcept { chart.artist = artist_params->artist; },
-			[&](IR::HeaderEvent::BPM* bpm_params) noexcept { chart.bpm = bpm_params->bpm; },
-			[&](IR::HeaderEvent::WAV* wav_params) noexcept {
-				chart.file_references.wav[wav_params->slot] = wav_params->name;
-			},
-			[](auto&&) noexcept {}
-		});
-	});
+	chart.process_ir_headers(ir);
 
 	ir.each_channel_event([&](IR::ChannelEvent const& event) noexcept {
 		auto const lane_id = note_channel_to_lane(event.type);
@@ -253,6 +244,21 @@ auto Chart::progress_to_ns(usize samples) noexcept -> nanoseconds
 	auto const whole_seconds = samples / sampling_rate;
 	auto const remainder = samples % sampling_rate;
 	return 1s * whole_seconds + ns_per_sample * remainder;
+}
+
+void Chart::process_ir_headers(IR const& ir) noexcept
+{
+	ir.each_header_event([&](IR::HeaderEvent const& event) noexcept {
+		event.params.visit(visitor {
+			[&](IR::HeaderEvent::Title* title_params) noexcept { title = title_params->title; },
+			[&](IR::HeaderEvent::Artist* artist_params) noexcept { artist = artist_params->artist; },
+			[&](IR::HeaderEvent::BPM* bpm_params) noexcept { bpm = bpm_params->bpm; },
+			[&](IR::HeaderEvent::WAV* wav_params) noexcept {
+				file_references.wav[wav_params->slot] = wav_params->name;
+			},
+			[](auto&&) noexcept {}
+		});
+	});
 }
 
 void Chart::sort_lanes() noexcept
