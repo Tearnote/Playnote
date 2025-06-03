@@ -102,6 +102,7 @@ private:
 	[[nodiscard]] static auto progress_to_ns(usize) noexcept -> nanoseconds;
 
 	void sort_lanes() noexcept;
+	void calculate_object_timestamps() noexcept;
 
 };
 
@@ -179,17 +180,7 @@ auto Chart::from_ir(IR const& ir) noexcept -> Chart
 	});
 
 	chart.sort_lanes();
-
-	auto const beat_duration = duration_cast<nanoseconds>(duration<double>{60.0 / chart.bpm});
-	auto const measure_duration = beat_duration * 4;
-	for (auto& lane: chart.lanes) {
-		for (auto& note: lane.notes) {
-			auto const measures = note.position.numerator() / note.position.denominator();
-			note.timestamp = measures * measure_duration;
-			auto const proper_numerator = note.position.numerator() % note.position.denominator();
-			note.timestamp += (measure_duration / note.position.denominator()) * proper_numerator;
-		}
-	}
+	chart.calculate_object_timestamps();
 
 	INFO("Built chart \"{}\"", chart.title);
 
@@ -270,6 +261,20 @@ void Chart::sort_lanes() noexcept
 		sort(lane.notes, [](auto const& a, auto const& b) noexcept {
 			return a.position < b.position;
 		});
+	}
+}
+
+void Chart::calculate_object_timestamps() noexcept
+{
+	auto const beat_duration = duration_cast<nanoseconds>(duration<double>{60.0 / bpm});
+	auto const measure_duration = beat_duration * 4;
+	for (auto& lane: lanes) {
+		for (auto& note: lane.notes) {
+			auto const measures = note.position.numerator() / note.position.denominator();
+			note.timestamp = measures * measure_duration;
+			auto const proper_numerator = note.position.numerator() % note.position.denominator();
+			note.timestamp += (measure_duration / note.position.denominator()) * proper_numerator;
+		}
 	}
 }
 
