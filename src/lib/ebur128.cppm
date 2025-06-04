@@ -14,7 +14,7 @@ export module playnote.lib.ebur128;
 import playnote.preamble;
 import playnote.lib.pipewire;
 
-namespace playnote::lib {
+namespace playnote::lib::ebur128 {
 
 // Library context for storing accumulated loudness information.
 export using Context = ebur128_state*;

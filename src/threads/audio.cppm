@@ -19,6 +19,7 @@ import playnote.io.file;
 import playnote.dev.window;
 import playnote.dev.audio;
 import playnote.dev.os;
+import playnote.bms.loudness;
 import playnote.bms.chart;
 import playnote.bms.ir;
 import playnote.threads.render_events;
@@ -55,6 +56,7 @@ try {
 	auto bms_chart = make_shared<bms::Chart>(bms::Chart::from_ir(bms_ir));
 	auto bulk_request = bms_chart->make_file_requests();
 	bulk_request.process();
+	TRACE("Loudness: {}", bms::measure_loudness(*bms_chart));
 	audio.play_chart(bms_chart);
 	broadcaster.shout(bms_chart);
 	while (!window.is_closing()) {
