@@ -95,6 +95,8 @@ private:
 	array<Lane, to_underlying(Lane::Type::Size)> lanes;
 
 	usize progress = 0zu;
+	usize note_count = 0zu;
+	usize notes_hit = 0zu;
 
 	vector<optional<WavSlot>> wav_slots;
 
@@ -128,7 +130,7 @@ private:
 template<callable<void(lib::pw::Sample)> Func>
 auto Chart::advance_one_sample(Func&& func) noexcept -> bool
 {
-	bool chart_ended = true;
+	auto chart_ended = (notes_hit >= note_count);
 	progress += 1;
 	auto const progress_ns = progress_to_ns(progress);
 	for (auto& lane: lanes) {
@@ -137,6 +139,7 @@ auto Chart::advance_one_sample(Func&& func) noexcept -> bool
 		if (progress_ns >= note.timestamp) {
 			if (note.type == NoteType::Note || (note.type == NoteType::LN && progress_ns >= note.timestamp + note.length_ns)) {
 				lane.next_note += 1;
+				if (static_cast<LaneType>(&lane - &lanes.front()) != LaneType::BGM) notes_hit += 1;
 				if (note.type == NoteType::LN) {
 					lane.ln_active = false;
 					continue;
@@ -208,6 +211,7 @@ void Chart::restart() noexcept
 		slot->playback_pos = WavSlot::Stopped;
 	}
 	progress = 0zu;
+	notes_hit = 0zu;
 	for (auto& lane: lanes) {
 		lane.next_note = 0;
 	}
@@ -320,6 +324,7 @@ void Chart::add_note(IR::ChannelEvent const& event) noexcept
 		.position = event.position,
 		.slot = event.slot,
 	});
+	if (lane_id != LaneType::BGM) note_count += 1;
 }
 
 void Chart::add_ln_end(vector<vector<Note>>& ln_ends, IR::ChannelEvent const& event) noexcept
@@ -348,6 +353,7 @@ void Chart::ln_ends_to_lns(vector<vector<Note>>& ln_ends) noexcept
 				.length = pair[1].position - pair[0].position,
 				.slot = pair[0].slot,
 			});
+			note_count += 1;
 		}
 	}
 }
