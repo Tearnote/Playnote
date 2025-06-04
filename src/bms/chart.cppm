@@ -341,7 +341,7 @@ void Chart::add_ln_end(vector<vector<Note>>& ln_ends, IR::ChannelEvent const& ev
 void Chart::ln_ends_to_lns(vector<vector<Note>>& ln_ends) noexcept
 {
 	for (auto [ln_lane, lane]: views::zip(ln_ends, lanes)) {
-		sort(ln_lane, [](auto const& a, auto const& b) noexcept {
+		stable_sort(ln_lane, [](auto const& a, auto const& b) noexcept {
 			return a.position < b.position;
 		});
 
@@ -391,7 +391,7 @@ void Chart::process_ir_channels(IR const& ir) noexcept
 void Chart::sort_lanes() noexcept
 {
 	for (auto& lane: lanes) {
-		sort(lane.notes, [](auto const& a, auto const& b) noexcept {
+		stable_sort(lane.notes, [](auto const& a, auto const& b) noexcept {
 			return a.position < b.position;
 		});
 	}
