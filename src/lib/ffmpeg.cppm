@@ -165,7 +165,7 @@ auto decode_file_buffer(span<byte const> file_contents) -> DecoderOutput
 			if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) break;
 			check_ret(ret);
 
-			auto const frame_bytes = frame.nb_samples * bytes_per_sample;
+			auto const frame_bytes = frame.nb_samples * bytes_per_sample * samples_per_frame;
 			if (cursor + frame_bytes > byte_size_estimate) {
 				WARN("Underestimated output size by {} bytes", cursor + frame_bytes - byte_size_estimate);
 				byte_size_estimate = cursor + frame_bytes;
@@ -186,7 +186,7 @@ auto decode_file_buffer(span<byte const> file_contents) -> DecoderOutput
 	for (auto& vec: result.data)
 		vec.resize(cursor);
 	ASSERT(cursor % bytes_per_sample == 0);
-	result.sample_count = cursor / bytes_per_sample;
+	result.sample_count = cursor / (bytes_per_sample * samples_per_frame);
 
 	return result;
 }
