@@ -56,8 +56,9 @@ try {
 	auto bms_chart = make_shared<bms::Chart>(bms::Chart::from_ir(bms_ir));
 	auto bulk_request = bms_chart->make_file_requests();
 	bulk_request.process();
-	TRACE("Amplitude ratio: {}", bms::lufs_to_gain(bms::measure_loudness(*bms_chart)));
-	audio.play_chart(bms_chart);
+	auto const bms_gain = bms::lufs_to_gain(bms::measure_loudness(*bms_chart));
+	INFO("Determined gain: {}", bms_gain);
+	audio.play_chart(bms_chart, bms_gain);
 	broadcaster.shout(bms_chart);
 	while (!window.is_closing()) {
 		broadcaster.receive_all<PlayerControl>([&](auto ev) {
@@ -70,7 +71,7 @@ try {
 				break;
 			case PlayerControl::Restart:
 				bms_chart->restart();
-				audio.play_chart(bms_chart);
+				audio.play_chart(bms_chart, bms_gain);
 				break;
 			default: PANIC();
 			}

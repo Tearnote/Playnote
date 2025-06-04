@@ -43,7 +43,7 @@ in bleeding-edge C++.
   - [ ] Optimized build flags and platform support checks
   - [ ] Multithreaded decoding and resampling
   - [ ] Loading feedback
-  - [ ] Normalize volume via ReplayGain
+  - [x] Normalize volume via ReplayGain
   - [ ] Protect from clipping with a limiter
 
 ## [Dependencies](./cmake/Dependencies.cmake)
