@@ -395,6 +395,7 @@ void Chart::sort_lanes() noexcept
 		stable_sort(lane.notes, [](auto const& a, auto const& b) noexcept {
 			return a.position < b.position;
 		});
+		if (&lane - &lanes.front() == to_underlying(LaneType::BGM)) continue;
 		auto removed = unique(lane.notes, [](auto const& a, auto const& b) noexcept {
 			return a.position == b.position;
 		});
