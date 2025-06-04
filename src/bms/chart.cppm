@@ -75,7 +75,7 @@ public:
 	[[nodiscard]] auto make_file_requests() noexcept -> io::BulkRequest;
 
 	template<callable<void(lib::pw::Sample)> Func>
-	void advance_one_sample(Func&& func) noexcept;
+	auto advance_one_sample(Func&& func) noexcept -> bool;
 
 	template<callable<void(Note const&, LaneType, nanoseconds)> Func>
 	void upcoming_notes(nanoseconds max_distance, Func&& func) const noexcept;
@@ -126,8 +126,9 @@ private:
 };
 
 template<callable<void(lib::pw::Sample)> Func>
-void Chart::advance_one_sample(Func&& func) noexcept
+auto Chart::advance_one_sample(Func&& func) noexcept -> bool
 {
+	bool chart_ended = true;
 	progress += 1;
 	auto const progress_ns = progress_to_ns(progress);
 	for (auto& lane: lanes) {
@@ -157,7 +158,10 @@ void Chart::advance_one_sample(Func&& func) noexcept
 		if (slot->playback_pos >= slot->audio.size())
 			slot->playback_pos = WavSlot::Stopped;
 		func(result);
+		chart_ended = false;
 	}
+
+	return chart_ended;
 }
 
 template<callable<void(Chart::Note const&, Chart::LaneType, nanoseconds)> Func>
