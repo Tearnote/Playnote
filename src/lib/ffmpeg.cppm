@@ -48,6 +48,7 @@ auto av_io_read(void* opaque, uint8_t* buf, int buf_size) -> int
 	auto& buffer = *static_cast<SeekBuffer*>(opaque);
 	auto* byte_buf = reinterpret_cast<byte*>(buf);
 	auto const bytes_available = buffer.buffer.size() - buffer.cursor;
+	if (!bytes_available) return AVERROR_EOF;
 	auto const bytes_to_read = buf_size < bytes_available ? buf_size : bytes_available;
 	copy(buffer.buffer.subspan(buffer.cursor, bytes_to_read), byte_buf);
 	buffer.cursor += bytes_to_read;
