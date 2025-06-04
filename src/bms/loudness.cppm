@@ -8,12 +8,10 @@ Measurer of a BMS song's loudness. This can be used to normalize songs by applyi
 
 module;
 #include "macros/assert.hpp"
-#include "macros/logger.hpp"
 
 export module playnote.bms.loudness;
 
 import playnote.preamble;
-import playnote.logger;
 import playnote.lib.pipewire;
 import playnote.lib.ebur128;
 import playnote.io.audio_codec;
@@ -24,7 +22,7 @@ namespace playnote::bms {
 namespace r128 = lib::ebur128;
 namespace pw = lib::pw;
 
-export auto measure_loudness(bms::Chart& chart) -> double
+export [[nodiscard]] auto measure_loudness(bms::Chart& chart) -> double
 {
 	constexpr auto BufferSize = 4096zu / sizeof(pw::Sample);
 	ASSERT(chart.at_start());
@@ -53,6 +51,14 @@ export auto measure_loudness(bms::Chart& chart) -> double
 	r128::cleanup(ctx);
 	chart.restart();
 	return result;
+}
+
+export [[nodiscard]] auto lufs_to_gain(double lufs) noexcept -> float
+{
+	constexpr auto LufsTarget = -14.0;
+	auto const db_from_target = LufsTarget - lufs;
+	auto const amplitude_ratio = pow(10.0, db_from_target / 20.0);
+	return static_cast<float>(amplitude_ratio);
 }
 
 }

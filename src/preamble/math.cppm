@@ -20,6 +20,7 @@ export using std::max;
 export using std::floor;
 export using std::ceil;
 export using std::abs;
+export using std::pow;
 export using boost::rational;
 export using boost::operator+;
 export using boost::operator-;

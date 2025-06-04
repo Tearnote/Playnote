@@ -56,7 +56,7 @@ try {
 	auto bms_chart = make_shared<bms::Chart>(bms::Chart::from_ir(bms_ir));
 	auto bulk_request = bms_chart->make_file_requests();
 	bulk_request.process();
-	TRACE("Loudness: {}", bms::measure_loudness(*bms_chart));
+	TRACE("Amplitude ratio: {}", bms::lufs_to_gain(bms::measure_loudness(*bms_chart)));
 	audio.play_chart(bms_chart);
 	broadcaster.shout(bms_chart);
 	while (!window.is_closing()) {
