@@ -33,6 +33,7 @@ in bleeding-edge C++.
   - [ ] Universal timing system synchronizing wall clock and audio thread
   - [x] Always use native sampling rate
   - [x] Long Note support
+  - [ ] Measure length change support
   - [ ] BPM change support
   - [ ] Precomputed acceleration structure for reachable slots
   - [ ] Basic metadata display
