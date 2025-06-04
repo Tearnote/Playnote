@@ -55,6 +55,7 @@ target_sources(Playnote PUBLIC
 	src/preamble/os.cppm
 	src/preamble.cppm
 	src/lib/pipewire.cppm
+	src/lib/ebur128.cppm
 	src/lib/openssl.cppm
 	src/lib/ffmpeg.cppm
 	src/lib/thread.cppm
