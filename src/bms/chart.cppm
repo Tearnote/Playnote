@@ -70,6 +70,7 @@ public:
 	static auto from_ir(IR const&) noexcept -> Chart;
 
 	void restart() noexcept;
+	[[nodiscard]] auto at_start() const noexcept -> bool { return progress == 0; }
 
 	[[nodiscard]] auto make_file_requests() noexcept -> io::BulkRequest;
 
