@@ -390,11 +390,18 @@ void Chart::process_ir_channels(IR const& ir) noexcept
 
 void Chart::sort_lanes() noexcept
 {
+	auto removed_count = 0zu;
 	for (auto& lane: lanes) {
 		stable_sort(lane.notes, [](auto const& a, auto const& b) noexcept {
 			return a.position < b.position;
 		});
+		auto removed = unique(lane.notes, [](auto const& a, auto const& b) noexcept {
+			return a.position == b.position;
+		});
+		lane.notes.erase(removed.begin(), removed.end());
+		removed_count += removed.size();
 	}
+	if (removed_count) INFO("Removed {} duplicate notes", removed_count);
 }
 
 void Chart::calculate_object_timestamps() noexcept
