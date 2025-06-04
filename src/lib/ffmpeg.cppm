@@ -142,6 +142,7 @@ auto decode_file_buffer(span<byte const> file_contents) -> DecoderOutput
 	auto const samples_per_frame = result.planar? 1u : result.channel_layout.nb_channels;
 	auto const sample_count_estimate = stream->duration;
 	auto byte_size_estimate = samples_per_frame * sample_count_estimate * bytes_per_sample;
+	byte_size_estimate += 4096; // Overallocate slightly to avoid realloc on underestimation
 	for (auto i: views::iota(0u, planes)) {
 		result.data.emplace_back();
 		result.data.back().resize(byte_size_estimate);
