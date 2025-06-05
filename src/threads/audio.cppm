@@ -53,8 +53,9 @@ try {
 
 	auto bms_compiler = bms::IRCompiler{};
 	auto const bms_ir = load_bms(bms_compiler, chart_path);
-	auto bms_chart = make_shared<bms::Chart>(bms::Chart::from_ir(bms_ir));
-	auto bulk_request = bms_chart->make_file_requests();
+	auto bms_builder = bms::ChartBuilder{};
+	auto bms_chart = make_shared<bms::Chart>(bms_builder.from_ir(bms_ir));
+	auto bulk_request = bms_builder.make_file_requests(*bms_chart);
 	bulk_request.process();
 	auto const bms_gain = bms::lufs_to_gain(bms::measure_loudness(*bms_chart));
 	INFO("Determined gain: {}", bms_gain);
