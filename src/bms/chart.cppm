@@ -21,6 +21,8 @@ import playnote.bms.ir;
 
 namespace playnote::bms {
 
+// A note of a chart with its timing information relative to BPM and measure length.
+// LNs are represented as unpaired ends.
 struct RelativeNote {
 	struct Simple {};
 	struct LNToggle {};
@@ -31,6 +33,7 @@ struct RelativeNote {
 	usize wav_slot;
 };
 
+// A note of a chart with a definite timestamp and vertical position, ready for playback.
 export struct Note {
 	struct Simple {};
 	struct LN {
@@ -50,18 +53,26 @@ enum class NoteType: usize {
 	LN = 1,
 };
 
+// A column of a chart, with all the notes that will appear on it. Tracks progress.
+// Notes are expected to be sorted by timestamp from earliest.
 struct Lane {
 	vector<Note> notes;
 	usize next_note;
 	bool ln_active;
+	usize next_note; // Index into notes
+	bool ln_active; // Is it currently in the middle of an LN?
 };
 
+// Factory that accumulates RelativeNotes, then converts them in bulk to a Lane suitable
+// for playback.
 class LaneBuilder {
 public:
 	LaneBuilder() = default;
 
+	// Enqueue a RelativeNote. Notes can be enqueued in any order.
 	void add_note(RelativeNote const& note) noexcept;
 
+	// Convert enqueued notes to a Lane and clear the queue.
 	auto build(float bpm, bool deduplicate = true) noexcept -> Lane;
 
 private:
