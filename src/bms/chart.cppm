@@ -245,6 +245,8 @@ void LaneBuilder::convert_simple(vector<RelativeNote> const& notes, vector<Note>
 	auto const measure_duration = beat_duration * 4;
 	transform(notes, back_inserter(result), [&](auto const& note) noexcept {
 		ASSERT(note.template type_is<RelativeNote::Simple>());
+	transform(notes, back_inserter(result), [&](RelativeNote const& note) noexcept {
+		ASSERT(note.type_is<RelativeNote::Simple>());
 		return Note{
 			.type = Note::Simple{},
 			.timestamp = calculate_timestamp(note.position, measure_duration),
