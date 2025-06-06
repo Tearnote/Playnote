@@ -57,12 +57,17 @@ enum class NoteType: usize {
 // Notes are expected to be sorted by timestamp from earliest.
 struct Lane {
 	vector<Note> notes;
-	usize next_note; // Index into notes
+	usize next_note_idx;
 	bool ln_active; // Is it currently in the middle of an LN?
 	bool playable; // Are the notes for the player to hit?
 
-	[[nodiscard]] auto finished() const -> bool { return next_note >= notes.size(); }
-	void restart() { next_note = 0; ln_active = false; }
+	// Convenience accessors
+	[[nodiscard]] auto finished() const -> bool { return next_note_idx >= notes.size(); }
+	void restart() { next_note_idx = 0; ln_active = false; }
+	[[nodiscard]] auto next_note() -> Note& { return notes[next_note_idx]; }
+	[[nodiscard]] auto next_note() const -> Note const& { return notes[next_note_idx]; }
+	[[nodiscard]] auto remaining_notes() -> span<Note> { return span{notes.begin() + next_note_idx, notes.end()}; }
+	[[nodiscard]] auto remaining_notes() const -> span<Note const> { return span{notes.begin() + next_note_idx, notes.end()}; }
 };
 
 // Factory that accumulates RelativeNotes, then converts them in bulk to a Lane suitable
@@ -274,10 +279,10 @@ auto Chart::advance_one_sample(Func&& func) noexcept -> bool
 	auto const progress_ns = progress_to_ns(progress);
 	for (auto& lane: lanes) {
 		if (lane.finished()) continue;
-		auto const& note = lane.notes[lane.next_note];
+		auto const& note = lane.next_note();
 		if (progress_ns >= note.timestamp) {
 			if (note.type.index() == +NoteType::Simple || (note.type.index() == +NoteType::LN && progress_ns >= note.timestamp + get<Note::LN>(note.type).length)) {
-				lane.next_note += 1;
+				lane.next_note_idx += 1;
 				if (lane.playable) notes_hit += 1;
 				if (note.type.index() == +NoteType::LN) {
 					lane.ln_active = false;
@@ -312,14 +317,8 @@ void Chart::upcoming_notes(float max_units, Func&& func) const noexcept
 	auto const beat_duration = duration_cast<nanoseconds>(duration<double>{60.0 / bpm});
 	auto const measure_duration = beat_duration * 4;
 	auto const current_y = duration_cast<duration<double>>(progress_to_ns(progress)) / measure_duration;
-	for (auto& lane: span{
-		lanes.begin() + +LaneType::P1_Key1,
-		lanes.begin() + +LaneType::P2_KeyS + 1
-	}) {
-		for (auto& note: span{
-			lane.notes.begin() + lane.next_note,
-			lane.notes.end()
-		}) {
+	for (auto& lane: lanes | views::filter([](auto& lane) { return lane.playable; })) {
+		for (auto& note: lane.remaining_notes()) {
 			auto const distance = note.y_pos - current_y;
 			if (distance > max_units) break;
 			func(note, static_cast<LaneType>(&lane - &lanes.front()), distance);

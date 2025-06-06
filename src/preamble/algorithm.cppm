@@ -22,6 +22,7 @@ namespace views {
 	export using std::ranges::views::zip;
 	export using std::ranges::views::split;
 	export using std::ranges::views::chunk;
+	export using std::ranges::views::filter;
 
 	// Helper view for converting a string subrange to a string_view
 	export inline auto to_sv = std::ranges::views::transform([](auto range) {
