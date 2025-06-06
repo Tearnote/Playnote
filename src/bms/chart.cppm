@@ -57,10 +57,9 @@ enum class NoteType: usize {
 // Notes are expected to be sorted by timestamp from earliest.
 struct Lane {
 	vector<Note> notes;
-	usize next_note;
-	bool ln_active;
 	usize next_note; // Index into notes
 	bool ln_active; // Is it currently in the middle of an LN?
+	bool playable; // Are the notes for the player to hit?
 };
 
 // Factory that accumulates RelativeNotes, then converts them in bulk to a Lane suitable
@@ -276,7 +275,7 @@ auto Chart::advance_one_sample(Func&& func) noexcept -> bool
 		if (progress_ns >= note.timestamp) {
 			if (note.type.index() == +NoteType::Simple || (note.type.index() == +NoteType::LN && progress_ns >= note.timestamp + get<Note::LN>(note.type).length)) {
 				lane.next_note += 1;
-				if (static_cast<LaneType>(&lane - &lanes.front()) != LaneType::BGM) notes_hit += 1;
+				if (lane.playable) notes_hit += 1;
 				if (note.type.index() == +NoteType::LN) {
 					lane.ln_active = false;
 					continue;
@@ -360,11 +359,14 @@ auto ChartBuilder::from_ir(IR const& ir) -> Chart
 	process_ir_headers(chart, ir);
 	process_ir_channels(chart, ir);
 
-	for (auto const i: views::iota(0u, +Chart::LaneType::Size))
-		chart.lanes[i] = move(lane_builders[i].build(chart.bpm, i != +Chart::LaneType::BGM));
+	for (auto const i: views::iota(0u, +Chart::LaneType::Size)) {
+		auto const is_bgm = i == +Chart::LaneType::BGM;
+		chart.lanes[i] = move(lane_builders[i].build(chart.bpm, !is_bgm));
+		if (!is_bgm) chart.lanes[i].playable = true;
+	}
 
-	chart.note_count = fold_left(span{chart.lanes.begin(), chart.lanes.begin() + +Chart::LaneType::BGM}, 0u, [](auto acc, auto const& lane) noexcept {
-		return acc + lane.notes.size();
+	chart.note_count = fold_left(chart.lanes, 0u, [](auto acc, auto const& lane) noexcept {
+		return acc + (lane.playable? lane.notes.size() : 0);
 	});
 
 	INFO("Built chart \"{}\"", chart.title);
@@ -405,7 +407,8 @@ auto ChartBuilder::channel_to_note_type(IR::ChannelEvent::Type ch) noexcept -> R
 auto ChartBuilder::channel_to_lane(IR::ChannelEvent::Type ch) noexcept -> Chart::LaneType
 {
 	switch (ch) {
-	case IR::ChannelEvent::Type::BGM: return Chart::LaneType::BGM;
+	case IR::ChannelEvent::Type::BGM:
+		return Chart::LaneType::BGM;
 	case IR::ChannelEvent::Type::Note_P1_Key1:
 	case IR::ChannelEvent::Type::Note_P1_Key1_LN:
 		return Chart::LaneType::P1_Key1;
