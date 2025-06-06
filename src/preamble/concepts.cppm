@@ -27,7 +27,7 @@ inline constexpr auto is_variant_alternative_v<T, variant<Ts...>> =
 
 // Constrain type T to one of a std::variant's available alternatives
 export template<class T, class Variant>
-concept is_variant_alternative = is_variant_alternative_v<T, Variant>;
+concept variant_alternative = is_variant_alternative_v<T, Variant>;
 
 // "applicable" concept
 // Analogous to std::invocable but accepts a tuple rather than argument pack

@@ -189,7 +189,7 @@ private:
 
 	// Add a header event, ensuring the IR allocator is used.
 	template<typename T>
-		requires is_variant_alternative<T*, HeaderEvent::ParamsType>
+		requires variant_alternative<T*, HeaderEvent::ParamsType>
 	void add_header_event(T&& event) noexcept
 	{
 		auto* event_ptr = static_cast<T*>(buffer_resource->allocate(sizeof(T), alignof(T)));

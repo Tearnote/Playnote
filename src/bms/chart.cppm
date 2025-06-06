@@ -31,6 +31,14 @@ struct RelativeNote {
 	Type type;
 	NotePosition position;
 	usize wav_slot;
+
+	template<variant_alternative<Type> T>
+	[[nodiscard]] auto type_is() const -> bool { return holds_alternative<T>(type); }
+
+	template<variant_alternative<Type> T>
+	[[nodiscard]] auto params() -> T& { return get<T>(type); }
+	template<variant_alternative<Type> T>
+	[[nodiscard]] auto params() const -> T const& { return get<T>(type); }
 };
 
 // A note of a chart with a definite timestamp and vertical position, ready for playback.
@@ -40,17 +48,23 @@ export struct Note {
 		nanoseconds length;
 		float height;
 	};
-	using Type = variant<Simple, LN>;
+	using Type = variant<
+		Simple, // 0
+		LN      // 1
+	>;
 
 	Type type;
 	nanoseconds timestamp;
 	double y_pos;
 	usize wav_slot;
-};
 
-enum class NoteType: usize {
-	Simple = 0,
-	LN = 1,
+	template<variant_alternative<Type> T>
+	[[nodiscard]] auto type_is() const -> bool { return holds_alternative<T>(type); }
+
+	template<variant_alternative<Type> T>
+	[[nodiscard]] auto params() -> T& { return get<T>(type); }
+	template<variant_alternative<Type> T>
+	[[nodiscard]] auto params() const -> T const& { return get<T>(type); }
 };
 
 // A column of a chart, with all the notes that will appear on it. Tracks progress.
@@ -181,9 +195,9 @@ private:
 
 void LaneBuilder::add_note(RelativeNote const& note) noexcept
 {
-	if (holds_alternative<RelativeNote::Simple>(note.type))
+	if (note.type_is<RelativeNote::Simple>())
 		notes.emplace_back(note);
-	else if (holds_alternative<RelativeNote::LNToggle>(note.type))
+	else if (note.type_is<RelativeNote::LNToggle>())
 		ln_ends.emplace_back(note);
 	else PANIC();
 }
@@ -216,7 +230,7 @@ void LaneBuilder::convert_simple(vector<RelativeNote> const& notes, vector<Note>
 	auto const beat_duration = duration_cast<nanoseconds>(duration<double>{60.0 / bpm});
 	auto const measure_duration = beat_duration * 4;
 	transform(notes, back_inserter(result), [&](auto const& note) noexcept {
-		ASSERT(holds_alternative<RelativeNote::Simple>(note.type));
+		ASSERT(note.template type_is<RelativeNote::Simple>());
 		return Note{
 			.type = Note::Simple{},
 			.timestamp = calculate_timestamp(note.position, measure_duration),
@@ -281,18 +295,18 @@ auto Chart::advance_one_sample(Func&& func) noexcept -> bool
 		if (lane.finished()) continue;
 		auto const& note = lane.next_note();
 		if (progress_ns >= note.timestamp) {
-			if (note.type.index() == +NoteType::Simple || (note.type.index() == +NoteType::LN && progress_ns >= note.timestamp + get<Note::LN>(note.type).length)) {
+			if (note.type_is<Note::Simple>() || (note.type_is<Note::LN>() && progress_ns >= note.timestamp + note.params<Note::LN>().length)) {
 				lane.next_note_idx += 1;
 				if (lane.playable) notes_hit += 1;
-				if (note.type.index() == +NoteType::LN) {
+				if (note.type_is<Note::LN>()) {
 					lane.ln_active = false;
 					continue;
 				}
 			}
 			if (!wav_slots[note.wav_slot]) continue;
-			if (note.type.index() == +NoteType::Simple || (note.type.index() == +NoteType::LN && !lane.ln_active)) {
+			if (note.type_is<Note::Simple>() || (note.type_is<Note::LN>() && !lane.ln_active)) {
 				wav_slots[note.wav_slot]->playback_pos = 0;
-				if (note.type.index() == +NoteType::LN) lane.ln_active = true;
+				if (note.type_is<Note::LN>()) lane.ln_active = true;
 			}
 		}
 	}
