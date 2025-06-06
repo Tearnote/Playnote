@@ -138,10 +138,10 @@ Window::Window(GLFW&, string_view title, uvec2 size)
 	glfw::set_window_user_pointer(window_handle.get(), this);
 
 	glfw::set_window_key_handler(window_handle.get(), [](glfw::Window window_ptr, int key, int, int action, int) {
-		if (action == to_underlying(KeyAction::Repeat)) return; // Only care about press and release
+		if (action == +KeyAction::Repeat) return; // Only care about press and release
 		auto& window = *glfw::get_window_user_pointer<Window>(window_ptr);
 		for (auto& func: window.key_callbacks)
-			func(KeyCode{key}, action == to_underlying(KeyAction::Press));
+			func(KeyCode{key}, action == +KeyAction::Press);
 	});
 
 	glfw::set_window_cursor_motion_handler(window_handle.get(), [](glfw::Window window_ptr, double x, double y) {
@@ -154,7 +154,7 @@ Window::Window(GLFW&, string_view title, uvec2 size)
 		[](glfw::Window window_ptr, int button, int action, int) {
 			auto& window = *glfw::get_window_user_pointer<Window>(window_ptr);
 			for (auto& func: window.mouse_button_callbacks)
-				func(MouseButton{button}, action == to_underlying(MouseButtonAction::Press));
+				func(MouseButton{button}, action == +MouseButtonAction::Press);
 		}
 	);
 

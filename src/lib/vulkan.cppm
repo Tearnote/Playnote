@@ -63,7 +63,7 @@ auto debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT severity_code,
 	else if (severity_code & VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT)
 		DEBUG_AS(logger, "{} {}", type, data->pMessage);
 	else
-		PANIC("Unknown Vulkan diagnostic message severity: #{}", to_underlying(severity_code));
+		PANIC("Unknown Vulkan diagnostic message severity: #{}", +severity_code);
 
 	return VK_FALSE;
 }

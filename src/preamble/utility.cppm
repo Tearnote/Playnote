@@ -47,7 +47,6 @@ export using std::shared_ptr;
 export using std::make_shared;
 export using std::static_pointer_cast;
 export using boost::scope::unique_resource;
-export using std::to_underlying;
 export using std::type_index;
 export using std::remove_cvref_t;
 
@@ -56,6 +55,12 @@ export template<typename... Ts>
 struct visitor: Ts... {
 	using Ts::operator()...;
 };
+
+export template<typename T>
+concept scoped_enum = std::is_scoped_enum_v<T>;
+
+// Convenient shorthand for getting the value of an enum class
+export constexpr auto operator+(scoped_enum auto val) noexcept { return std::to_underlying(val); }
 
 // Add as class member to limit the number of simultaneous instances.
 // Throws logic_error if the limit is reached.

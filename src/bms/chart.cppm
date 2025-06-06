@@ -118,7 +118,7 @@ private:
 		usize playback_pos;
 	};
 
-	array<Lane, to_underlying(LaneType::Size)> lanes;
+	array<Lane, +LaneType::Size> lanes;
 
 	usize progress = 0zu;
 	usize note_count = 0zu;
@@ -151,7 +151,7 @@ private:
 
 	static constexpr auto AudioExtensions = {"wav"sv, "ogg"sv, "mp3"sv, "flac"sv, "opus"sv};
 	fs::path domain;
-	array<LaneBuilder, to_underlying(Chart::LaneType::Size)> lane_builders;
+	array<LaneBuilder, +Chart::LaneType::Size> lane_builders;
 	FileReferences file_references;
 
 	[[nodiscard]] static auto channel_to_note_type(IR::ChannelEvent::Type) noexcept -> RelativeNote::Type;
@@ -263,18 +263,18 @@ auto Chart::advance_one_sample(Func&& func) noexcept -> bool
 		if (lane.next_note >= lane.notes.size()) continue;
 		auto const& note = lane.notes[lane.next_note];
 		if (progress_ns >= note.timestamp) {
-			if (note.type.index() == to_underlying(NoteType::Simple) || (note.type.index() == to_underlying(NoteType::LN) && progress_ns >= note.timestamp + get<Note::LN>(note.type).length)) {
+			if (note.type.index() == +NoteType::Simple || (note.type.index() == +NoteType::LN && progress_ns >= note.timestamp + get<Note::LN>(note.type).length)) {
 				lane.next_note += 1;
 				if (static_cast<LaneType>(&lane - &lanes.front()) != LaneType::BGM) notes_hit += 1;
-				if (note.type.index() == to_underlying(NoteType::LN)) {
+				if (note.type.index() == +NoteType::LN) {
 					lane.ln_active = false;
 					continue;
 				}
 			}
 			if (!wav_slots[note.wav_slot]) continue;
-			if (note.type.index() == to_underlying(NoteType::Simple) || (note.type.index() == to_underlying(NoteType::LN) && !lane.ln_active)) {
+			if (note.type.index() == +NoteType::Simple || (note.type.index() == +NoteType::LN && !lane.ln_active)) {
 				wav_slots[note.wav_slot]->playback_pos = 0;
-				if (note.type.index() == to_underlying(NoteType::LN)) lane.ln_active = true;
+				if (note.type.index() == +NoteType::LN) lane.ln_active = true;
 			}
 		}
 	}
@@ -300,8 +300,8 @@ void Chart::upcoming_notes(float max_units, Func&& func) const noexcept
 	auto const measure_duration = beat_duration * 4;
 	auto const current_y = duration_cast<duration<double>>(progress_to_ns(progress)) / measure_duration;
 	for (auto& lane: span{
-		lanes.begin() + to_underlying(LaneType::P1_Key1),
-		lanes.begin() + to_underlying(LaneType::P2_KeyS) + 1
+		lanes.begin() + +LaneType::P1_Key1,
+		lanes.begin() + +LaneType::P2_KeyS + 1
 	}) {
 		for (auto& note: span{
 			lane.notes.begin() + lane.next_note,
@@ -349,10 +349,10 @@ auto ChartBuilder::from_ir(IR const& ir) -> Chart
 	process_ir_headers(chart, ir);
 	process_ir_channels(chart, ir);
 
-	for (auto const i: views::iota(0u, to_underlying(Chart::LaneType::Size)))
-		chart.lanes[i] = move(lane_builders[i].build(chart.bpm, i != to_underlying(Chart::LaneType::BGM)));
+	for (auto const i: views::iota(0u, +Chart::LaneType::Size))
+		chart.lanes[i] = move(lane_builders[i].build(chart.bpm, i != +Chart::LaneType::BGM));
 
-	chart.note_count = fold_left(span{chart.lanes.begin(), chart.lanes.begin() + to_underlying(Chart::LaneType::BGM)}, 0u, [](auto acc, auto const& lane) noexcept {
+	chart.note_count = fold_left(span{chart.lanes.begin(), chart.lanes.begin() + +Chart::LaneType::BGM}, 0u, [](auto acc, auto const& lane) noexcept {
 		return acc + lane.notes.size();
 	});
 
@@ -467,7 +467,7 @@ void ChartBuilder::process_ir_channels(Chart& chart, IR const& ir)
 	ir.each_channel_event([&](IR::ChannelEvent const& event) noexcept {
 		auto const lane_id = channel_to_lane(event.type);
 		if (lane_id == Chart::LaneType::Size) return;
-		lane_builders[to_underlying(lane_id)].add_note(RelativeNote{
+		lane_builders[+lane_id].add_note(RelativeNote{
 			.type = channel_to_note_type(event.type),
 			.position = event.position,
 			.wav_slot = event.slot,
