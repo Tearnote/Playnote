@@ -10,6 +10,7 @@ module;
 #include <string_view>
 #include <functional>
 #include <algorithm>
+#include <vector>
 #include <ranges>
 
 export module playnote.preamble:algorithm;
@@ -35,6 +36,9 @@ export using std::ranges::find_if;
 export using std::ranges::sort;
 export using std::ranges::stable_sort;
 export using std::ranges::unique;
+export using std::ranges::reverse;
+export using std::ranges::remove_if;
+export using std::ranges::fold_left;
 export using std::ranges::views::__adaptor::operator|; // Non-portable, but can't do anything else without header units
 
 export using std::function;

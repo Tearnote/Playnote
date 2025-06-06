@@ -129,13 +129,15 @@ void enqueue_chart_objects(gfx::Renderer::Queue& queue, bms::Chart const& chart)
 		}
 	};
 
-	constexpr auto max_distance = duration_cast<nanoseconds>(1s);
-	chart.upcoming_notes(max_distance, [&](auto const& note, LaneType type, nanoseconds distance) {
+	constexpr auto max_distance = 1.0f;
+	chart.upcoming_notes(max_distance, [&](auto const& note, LaneType type, float distance) {
 		constexpr auto max_y = 539 + 6;
-		auto const ln_height = static_cast<int>(note.length_ns.count() / 1000000000.0 * max_y);
+		auto const ln_height = holds_alternative<bms::Note::LN>(note.type)?
+			static_cast<int>(get<bms::Note::LN>(note.type).height * max_y) :
+			0;
 		auto const visual = get_note_visual(type);
 		auto const x = get_note_x(type);
-		auto const y = static_cast<int>(max_y - static_cast<double>(distance.count()) / 1000000000.0 * max_y) - ln_height;
+		auto const y = static_cast<int>(max_y - distance * max_y) - ln_height;
 		auto const y_overflow = max(y + ln_height - max_y, 0);
 		auto const width = get_note_width(visual);
 		auto const color = get_note_color(visual);

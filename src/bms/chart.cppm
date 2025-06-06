@@ -21,53 +21,84 @@ import playnote.bms.ir;
 
 namespace playnote::bms {
 
+struct RelativeNote {
+	struct Simple {};
+	struct LNToggle {};
+	using Type = variant<Simple, LNToggle>;
+
+	Type type;
+	NotePosition position;
+	usize wav_slot;
+};
+
+export struct Note {
+	struct Simple {};
+	struct LN {
+		nanoseconds length;
+		float height;
+	};
+	using Type = variant<Simple, LN>;
+
+	Type type;
+	nanoseconds timestamp;
+	double y_pos;
+	usize wav_slot;
+};
+
+enum class NoteType: usize {
+	Simple = 0,
+	LN = 1,
+};
+
+struct Lane {
+	vector<Note> notes;
+	usize next_note;
+	bool ln_active;
+};
+
+class LaneBuilder {
+public:
+	LaneBuilder() = default;
+
+	void add_note(RelativeNote const& note) noexcept;
+
+	auto build(float bpm, bool deduplicate = true) noexcept -> Lane;
+
+private:
+	vector<RelativeNote> notes;
+	vector<RelativeNote> ln_ends;
+
+	[[nodiscard]] static auto calculate_timestamp(NotePosition, nanoseconds measure_length) noexcept -> nanoseconds;
+
+	static void convert_simple(vector<RelativeNote> const&, vector<Note>&, float bpm) noexcept;
+	static void convert_ln(vector<RelativeNote>&, vector<Note>&, float bpm) noexcept;
+	static void sort_and_deduplicate(vector<Note>&, bool deduplicate) noexcept;
+};
+
 export class ChartBuilder;
 
 export class Chart {
 public:
-	struct Note {
-		enum class Type {
-			Note,
-			LN,
-		};
-		using Position = NotePosition;
-		using Length = NotePosition;
-		Type type;
-		Position position;
-		nanoseconds timestamp;
-		Length length; // if LN
-		nanoseconds length_ns;
-		usize slot;
+	enum class LaneType: usize {
+		P1_Key1,
+		P1_Key2,
+		P1_Key3,
+		P1_Key4,
+		P1_Key5,
+		P1_Key6,
+		P1_Key7,
+		P1_KeyS,
+		P2_Key1,
+		P2_Key2,
+		P2_Key3,
+		P2_Key4,
+		P2_Key5,
+		P2_Key6,
+		P2_Key7,
+		P2_KeyS,
+		BGM,
+		Size,
 	};
-	struct Lane {
-		enum class Type: usize {
-			P1_Key1,
-			P1_Key2,
-			P1_Key3,
-			P1_Key4,
-			P1_Key5,
-			P1_Key6,
-			P1_Key7,
-			P1_KeyS,
-			P2_Key1,
-			P2_Key2,
-			P2_Key3,
-			P2_Key4,
-			P2_Key5,
-			P2_Key6,
-			P2_Key7,
-			P2_KeyS,
-			BGM,
-			Size,
-		};
-
-		vector<Note> notes;
-		usize next_note;
-		bool ln_active;
-	};
-
-	using NoteType = Note::Type;
-	using LaneType = Lane::Type;
 
 	void restart() noexcept;
 	[[nodiscard]] auto at_start() const noexcept -> bool { return progress == 0; }
@@ -75,8 +106,8 @@ public:
 	template<callable<void(lib::pw::Sample)> Func>
 	auto advance_one_sample(Func&& func) noexcept -> bool;
 
-	template<callable<void(Note const&, LaneType, nanoseconds)> Func>
-	void upcoming_notes(nanoseconds max_distance, Func&& func) const noexcept;
+	template<callable<void(Note const&, LaneType, float)> Func>
+	void upcoming_notes(float max_units, Func&& func) const noexcept;
 
 private:
 	friend class ChartBuilder;
@@ -87,7 +118,7 @@ private:
 		usize playback_pos;
 	};
 
-	array<Lane, to_underlying(Lane::Type::Size)> lanes;
+	array<Lane, to_underlying(LaneType::Size)> lanes;
 
 	usize progress = 0zu;
 	usize note_count = 0zu;
@@ -120,22 +151,107 @@ private:
 
 	static constexpr auto AudioExtensions = {"wav"sv, "ogg"sv, "mp3"sv, "flac"sv, "opus"sv};
 	fs::path domain;
+	array<LaneBuilder, to_underlying(Chart::LaneType::Size)> lane_builders;
 	FileReferences file_references;
 
-	[[nodiscard]] static auto channel_to_note_type(IR::ChannelEvent::Type) noexcept -> Chart::NoteType;
-	[[nodiscard]] static auto note_channel_to_lane(IR::ChannelEvent::Type) noexcept -> Chart::LaneType;
-	[[nodiscard]] static auto ln_channel_to_lane(IR::ChannelEvent::Type) noexcept -> Chart::LaneType;
-	[[nodiscard]] static auto calculate_timestamp(NotePosition, nanoseconds measure) noexcept -> nanoseconds;
-
-	void add_note(Chart&, IR::ChannelEvent const&) noexcept;
-	void add_ln_end(vector<vector<Chart::Note>>&, IR::ChannelEvent const&) noexcept;
-	void ln_ends_to_lns(Chart&, vector<vector<Chart::Note>>&) noexcept;
+	[[nodiscard]] static auto channel_to_note_type(IR::ChannelEvent::Type) noexcept -> RelativeNote::Type;
+	[[nodiscard]] static auto channel_to_lane(IR::ChannelEvent::Type) noexcept -> Chart::LaneType;
 
 	void process_ir_headers(Chart&, IR const&);
 	void process_ir_channels(Chart&, IR const&);
-	void sort_lanes(Chart&) noexcept;
-	void calculate_object_timestamps(Chart&) noexcept;
 };
+
+void LaneBuilder::add_note(RelativeNote const& note) noexcept
+{
+	if (holds_alternative<RelativeNote::Simple>(note.type))
+		notes.emplace_back(note);
+	else if (holds_alternative<RelativeNote::LNToggle>(note.type))
+		ln_ends.emplace_back(note);
+	else PANIC();
+}
+
+auto LaneBuilder::build(float bpm, bool deduplicate) noexcept -> Lane
+{
+	ASSERT(bpm != 0.0f);
+	auto result = Lane{};
+
+	convert_simple(notes, result.notes, bpm);
+	convert_ln(ln_ends, result.notes, bpm);
+	sort_and_deduplicate(result.notes, deduplicate);
+
+	notes.clear();
+	ln_ends.clear();
+	return result;
+}
+
+auto LaneBuilder::calculate_timestamp(NotePosition position, nanoseconds measure_length) noexcept -> nanoseconds
+{
+	auto const measures = position.numerator() / position.denominator();
+	auto result = measures * measure_length;
+	auto const proper_numerator = position.numerator() % position.denominator();
+	result += (measure_length / position.denominator()) * proper_numerator;
+	return result;
+}
+
+void LaneBuilder::convert_simple(vector<RelativeNote> const& notes, vector<Note>& result, float bpm) noexcept
+{
+	auto const beat_duration = duration_cast<nanoseconds>(duration<double>{60.0 / bpm});
+	auto const measure_duration = beat_duration * 4;
+	transform(notes, back_inserter(result), [&](auto const& note) noexcept {
+		ASSERT(holds_alternative<RelativeNote::Simple>(note.type));
+		return Note{
+			.type = Note::Simple{},
+			.timestamp = calculate_timestamp(note.position, measure_duration),
+			.y_pos = static_cast<double>(note.position.numerator()) / static_cast<double>(note.position.denominator()),
+			.wav_slot = note.wav_slot,
+		};
+	});
+}
+
+void LaneBuilder::convert_ln(vector<RelativeNote>& ln_ends, vector<Note>& result, float bpm) noexcept
+{
+	auto const beat_duration = duration_cast<nanoseconds>(duration<double>{60.0 / bpm});
+	auto const measure_duration = beat_duration * 4;
+	stable_sort(ln_ends, [](auto const& a, auto const& b) noexcept { return a.position < b.position; });
+	if (ln_ends.size() % 2 != 0) {
+		WARN("Unpaired LN end found; chart is most likely invalid");
+		ln_ends.pop_back();
+	}
+	transform(ln_ends | views::chunk(2), back_inserter(result), [&](auto ends) noexcept {
+		auto const ln_length = ends[1].position - ends[0].position;
+		return Note{
+			.type = Note::LN{
+				.length = calculate_timestamp(ln_length, measure_duration),
+				.height = static_cast<float>(ln_length.numerator()) / static_cast<float>(ln_length.denominator()),
+			},
+			.timestamp = calculate_timestamp(ends[0].position, measure_duration),
+			.y_pos = static_cast<double>(ends[0].position.numerator()) / static_cast<double>(ends[0].position.denominator()),
+			.wav_slot = ends[0].wav_slot,
+		};
+	});
+}
+
+void LaneBuilder::sort_and_deduplicate(vector<Note>& result, bool deduplicate) noexcept
+{
+	if (!deduplicate) {
+		stable_sort(result, [](auto const& a, auto const& b) noexcept {
+			return a.timestamp < b.timestamp;
+		});
+		return;
+	}
+	// std::unique keeps the first of the two duplicate elements while we want to keep the second,
+	// so the range is reversed first
+	stable_sort(result, [](auto const& a, auto const& b) noexcept {
+		return a.timestamp > b.timestamp; // Reverse sort
+	});
+	auto removed = unique(result, [](auto const& a, auto const& b) noexcept {
+		return a.timestamp == b.timestamp;
+	});
+	auto removed_count = removed.size();
+	result.erase(removed.begin(), removed.end());
+	if (removed_count) INFO("Removed {} duplicate notes", removed_count);
+	reverse(result); // Reverse back
+}
 
 template<callable<void(lib::pw::Sample)> Func>
 auto Chart::advance_one_sample(Func&& func) noexcept -> bool
@@ -147,18 +263,18 @@ auto Chart::advance_one_sample(Func&& func) noexcept -> bool
 		if (lane.next_note >= lane.notes.size()) continue;
 		auto const& note = lane.notes[lane.next_note];
 		if (progress_ns >= note.timestamp) {
-			if (note.type == NoteType::Note || (note.type == NoteType::LN && progress_ns >= note.timestamp + note.length_ns)) {
+			if (note.type.index() == to_underlying(NoteType::Simple) || (note.type.index() == to_underlying(NoteType::LN) && progress_ns >= note.timestamp + get<Note::LN>(note.type).length)) {
 				lane.next_note += 1;
 				if (static_cast<LaneType>(&lane - &lanes.front()) != LaneType::BGM) notes_hit += 1;
-				if (note.type == NoteType::LN) {
+				if (note.type.index() == to_underlying(NoteType::LN)) {
 					lane.ln_active = false;
 					continue;
 				}
 			}
-			if (!wav_slots[note.slot]) continue;
-			if (note.type == NoteType::Note || (note.type == NoteType::LN && !lane.ln_active)) {
-				wav_slots[note.slot]->playback_pos = 0;
-				if (note.type == NoteType::LN) lane.ln_active = true;
+			if (!wav_slots[note.wav_slot]) continue;
+			if (note.type.index() == to_underlying(NoteType::Simple) || (note.type.index() == to_underlying(NoteType::LN) && !lane.ln_active)) {
+				wav_slots[note.wav_slot]->playback_pos = 0;
+				if (note.type.index() == to_underlying(NoteType::LN)) lane.ln_active = true;
 			}
 		}
 	}
@@ -177,19 +293,22 @@ auto Chart::advance_one_sample(Func&& func) noexcept -> bool
 	return chart_ended;
 }
 
-template<callable<void(Chart::Note const&, Chart::LaneType, nanoseconds)> Func>
-void Chart::upcoming_notes(nanoseconds max_distance, Func&& func) const noexcept
+template<callable<void(Note const&, Chart::LaneType, float)> Func>
+void Chart::upcoming_notes(float max_units, Func&& func) const noexcept
 {
+	auto const beat_duration = duration_cast<nanoseconds>(duration<double>{60.0 / bpm});
+	auto const measure_duration = beat_duration * 4;
+	auto const current_y = duration_cast<duration<double>>(progress_to_ns(progress)) / measure_duration;
 	for (auto& lane: span{
-		lanes.begin() + to_underlying(Lane::Type::P1_Key1),
-		lanes.begin() + to_underlying(Lane::Type::P2_KeyS) + 1
+		lanes.begin() + to_underlying(LaneType::P1_Key1),
+		lanes.begin() + to_underlying(LaneType::P2_KeyS) + 1
 	}) {
 		for (auto& note: span{
 			lane.notes.begin() + lane.next_note,
 			lane.notes.end()
 		}) {
-			auto const distance = note.timestamp - progress_to_ns(progress);
-			if (distance > max_distance) break;
+			auto const distance = note.y_pos - current_y;
+			if (distance > max_units) break;
 			func(note, static_cast<LaneType>(&lane - &lanes.front()), distance);
 		}
 	}
@@ -230,8 +349,12 @@ auto ChartBuilder::from_ir(IR const& ir) -> Chart
 	process_ir_headers(chart, ir);
 	process_ir_channels(chart, ir);
 
-	sort_lanes(chart);
-	calculate_object_timestamps(chart);
+	for (auto const i: views::iota(0u, to_underlying(Chart::LaneType::Size)))
+		chart.lanes[i] = move(lane_builders[i].build(chart.bpm, i != to_underlying(Chart::LaneType::BGM)));
+
+	chart.note_count = fold_left(span{chart.lanes.begin(), chart.lanes.begin() + to_underlying(Chart::LaneType::BGM)}, 0u, [](auto acc, auto const& lane) noexcept {
+		return acc + lane.notes.size();
+	});
 
 	INFO("Built chart \"{}\"", chart.title);
 
@@ -246,7 +369,7 @@ auto ChartBuilder::make_file_requests(Chart& chart) noexcept -> io::BulkRequest
 	// Mark used slots
 	for (auto const& lane: chart.lanes) {
 		for (auto const& note: lane.notes) {
-			needed_slots[note.slot] = true;
+			needed_slots[note.wav_slot] = true;
 		}
 	}
 
@@ -260,111 +383,67 @@ auto ChartBuilder::make_file_requests(Chart& chart) noexcept -> io::BulkRequest
 	return requests;
 }
 
-auto ChartBuilder::channel_to_note_type(IR::ChannelEvent::Type ch) noexcept -> Chart::NoteType
+auto ChartBuilder::channel_to_note_type(IR::ChannelEvent::Type ch) noexcept -> RelativeNote::Type
 {
 	using ChannelType = IR::ChannelEvent::Type;
-	if (ch >= ChannelType::BGM && ch <= ChannelType::Note_P2_KeyS) return Chart::NoteType::Note;
-	if (ch >= ChannelType::Note_P1_Key1_LN && ch <= ChannelType::Note_P2_KeyS_LN) return Chart::NoteType::LN;
+	if (ch >= ChannelType::BGM && ch <= ChannelType::Note_P2_KeyS) return RelativeNote::Simple{};
+	if (ch >= ChannelType::Note_P1_Key1_LN && ch <= ChannelType::Note_P2_KeyS_LN) return RelativeNote::LNToggle{};
 	PANIC();
 }
 
-auto ChartBuilder::note_channel_to_lane(IR::ChannelEvent::Type ch) noexcept -> Chart::Lane::Type
+auto ChartBuilder::channel_to_lane(IR::ChannelEvent::Type ch) noexcept -> Chart::LaneType
 {
 	switch (ch) {
-	case IR::ChannelEvent::Type::BGM: return Chart::Lane::Type::BGM;
-	case IR::ChannelEvent::Type::Note_P1_Key1: return Chart::Lane::Type::P1_Key1;
-	case IR::ChannelEvent::Type::Note_P1_Key2: return Chart::Lane::Type::P1_Key2;
-	case IR::ChannelEvent::Type::Note_P1_Key3: return Chart::Lane::Type::P1_Key3;
-	case IR::ChannelEvent::Type::Note_P1_Key4: return Chart::Lane::Type::P1_Key4;
-	case IR::ChannelEvent::Type::Note_P1_Key5: return Chart::Lane::Type::P1_Key5;
-	case IR::ChannelEvent::Type::Note_P1_Key6: return Chart::Lane::Type::P1_Key6;
-	case IR::ChannelEvent::Type::Note_P1_Key7: return Chart::Lane::Type::P1_Key7;
-	case IR::ChannelEvent::Type::Note_P1_KeyS: return Chart::Lane::Type::P1_KeyS;
-	case IR::ChannelEvent::Type::Note_P2_Key1: return Chart::Lane::Type::P2_Key1;
-	case IR::ChannelEvent::Type::Note_P2_Key2: return Chart::Lane::Type::P2_Key2;
-	case IR::ChannelEvent::Type::Note_P2_Key3: return Chart::Lane::Type::P2_Key3;
-	case IR::ChannelEvent::Type::Note_P2_Key4: return Chart::Lane::Type::P2_Key4;
-	case IR::ChannelEvent::Type::Note_P2_Key5: return Chart::Lane::Type::P2_Key5;
-	case IR::ChannelEvent::Type::Note_P2_Key6: return Chart::Lane::Type::P2_Key6;
-	case IR::ChannelEvent::Type::Note_P2_Key7: return Chart::Lane::Type::P2_Key7;
-	case IR::ChannelEvent::Type::Note_P2_KeyS: return Chart::Lane::Type::P2_KeyS;
-	default: return Chart::Lane::Type::Size;
-	}
-}
-
-auto ChartBuilder::ln_channel_to_lane(IR::ChannelEvent::Type ch) noexcept -> Chart::LaneType
-{
-	switch (ch) {
-	case IR::ChannelEvent::Type::BGM: return Chart::Lane::Type::BGM;
-	case IR::ChannelEvent::Type::Note_P1_Key1_LN: return Chart::Lane::Type::P1_Key1;
-	case IR::ChannelEvent::Type::Note_P1_Key2_LN: return Chart::Lane::Type::P1_Key2;
-	case IR::ChannelEvent::Type::Note_P1_Key3_LN: return Chart::Lane::Type::P1_Key3;
-	case IR::ChannelEvent::Type::Note_P1_Key4_LN: return Chart::Lane::Type::P1_Key4;
-	case IR::ChannelEvent::Type::Note_P1_Key5_LN: return Chart::Lane::Type::P1_Key5;
-	case IR::ChannelEvent::Type::Note_P1_Key6_LN: return Chart::Lane::Type::P1_Key6;
-	case IR::ChannelEvent::Type::Note_P1_Key7_LN: return Chart::Lane::Type::P1_Key7;
-	case IR::ChannelEvent::Type::Note_P1_KeyS_LN: return Chart::Lane::Type::P1_KeyS;
-	case IR::ChannelEvent::Type::Note_P2_Key1_LN: return Chart::Lane::Type::P2_Key1;
-	case IR::ChannelEvent::Type::Note_P2_Key2_LN: return Chart::Lane::Type::P2_Key2;
-	case IR::ChannelEvent::Type::Note_P2_Key3_LN: return Chart::Lane::Type::P2_Key3;
-	case IR::ChannelEvent::Type::Note_P2_Key4_LN: return Chart::Lane::Type::P2_Key4;
-	case IR::ChannelEvent::Type::Note_P2_Key5_LN: return Chart::Lane::Type::P2_Key5;
-	case IR::ChannelEvent::Type::Note_P2_Key6_LN: return Chart::Lane::Type::P2_Key6;
-	case IR::ChannelEvent::Type::Note_P2_Key7_LN: return Chart::Lane::Type::P2_Key7;
-	case IR::ChannelEvent::Type::Note_P2_KeyS_LN: return Chart::Lane::Type::P2_KeyS;
-	default: return Chart::Lane::Type::Size;
-	}
-}
-
-auto ChartBuilder::calculate_timestamp(NotePosition position, nanoseconds measure) noexcept -> nanoseconds
-{
-	auto const measures = position.numerator() / position.denominator();
-	auto result = measures * measure;
-	auto const proper_numerator = position.numerator() % position.denominator();
-	result += (measure / position.denominator()) * proper_numerator;
-	return result;
-}
-
-void ChartBuilder::add_note(Chart& chart, IR::ChannelEvent const& event) noexcept
-{
-	auto const lane_id = note_channel_to_lane(event.type);
-	if (lane_id == Chart::Lane::Type::Size) return;
-	chart.lanes[to_underlying(lane_id)].notes.emplace_back(Chart::Note{
-		.type = Chart::NoteType::Note,
-		.position = event.position,
-		.slot = event.slot,
-	});
-	if (lane_id != Chart::LaneType::BGM) chart.note_count += 1;
-}
-
-void ChartBuilder::add_ln_end(vector<vector<Chart::Note>>& ln_ends, IR::ChannelEvent const& event) noexcept
-{
-	auto const lane_id = ln_channel_to_lane(event.type);
-	if (lane_id == Chart::Lane::Type::Size) return;
-	ln_ends[to_underlying(lane_id)].emplace_back(Chart::Note{
-		.type = Chart::NoteType::LN,
-		.position = event.position,
-		.slot = event.slot,
-	});
-}
-
-void ChartBuilder::ln_ends_to_lns(Chart& chart, vector<vector<Chart::Note>>& ln_ends) noexcept
-{
-	for (auto [ln_lane, lane]: views::zip(ln_ends, chart.lanes)) {
-		stable_sort(ln_lane, [](auto const& a, auto const& b) noexcept {
-			return a.position < b.position;
-		});
-
-		for (auto const& pair: ln_lane | views::chunk(2)) {
-			if (pair.size() < 2) return;
-			lane.notes.emplace_back(Chart::Note{
-				.type = Chart::NoteType::LN,
-				.position = pair[0].position,
-				.length = pair[1].position - pair[0].position,
-				.slot = pair[0].slot,
-			});
-			chart.note_count += 1;
-		}
+	case IR::ChannelEvent::Type::BGM: return Chart::LaneType::BGM;
+	case IR::ChannelEvent::Type::Note_P1_Key1:
+	case IR::ChannelEvent::Type::Note_P1_Key1_LN:
+		return Chart::LaneType::P1_Key1;
+	case IR::ChannelEvent::Type::Note_P1_Key2:
+	case IR::ChannelEvent::Type::Note_P1_Key2_LN:
+		return Chart::LaneType::P1_Key2;
+	case IR::ChannelEvent::Type::Note_P1_Key3:
+	case IR::ChannelEvent::Type::Note_P1_Key3_LN:
+		return Chart::LaneType::P1_Key3;
+	case IR::ChannelEvent::Type::Note_P1_Key4:
+	case IR::ChannelEvent::Type::Note_P1_Key4_LN:
+		return Chart::LaneType::P1_Key4;
+	case IR::ChannelEvent::Type::Note_P1_Key5:
+	case IR::ChannelEvent::Type::Note_P1_Key5_LN:
+		return Chart::LaneType::P1_Key5;
+	case IR::ChannelEvent::Type::Note_P1_Key6:
+	case IR::ChannelEvent::Type::Note_P1_Key6_LN:
+		return Chart::LaneType::P1_Key6;
+	case IR::ChannelEvent::Type::Note_P1_Key7:
+	case IR::ChannelEvent::Type::Note_P1_Key7_LN:
+		return Chart::LaneType::P1_Key7;
+	case IR::ChannelEvent::Type::Note_P1_KeyS:
+	case IR::ChannelEvent::Type::Note_P1_KeyS_LN:
+		return Chart::LaneType::P1_KeyS;
+	case IR::ChannelEvent::Type::Note_P2_Key1:
+	case IR::ChannelEvent::Type::Note_P2_Key1_LN:
+		return Chart::LaneType::P2_Key1;
+	case IR::ChannelEvent::Type::Note_P2_Key2:
+	case IR::ChannelEvent::Type::Note_P2_Key2_LN:
+		return Chart::LaneType::P2_Key2;
+	case IR::ChannelEvent::Type::Note_P2_Key3:
+	case IR::ChannelEvent::Type::Note_P2_Key3_LN:
+		return Chart::LaneType::P2_Key3;
+	case IR::ChannelEvent::Type::Note_P2_Key4:
+	case IR::ChannelEvent::Type::Note_P2_Key4_LN:
+		return Chart::LaneType::P2_Key4;
+	case IR::ChannelEvent::Type::Note_P2_Key5:
+	case IR::ChannelEvent::Type::Note_P2_Key5_LN:
+		return Chart::LaneType::P2_Key5;
+	case IR::ChannelEvent::Type::Note_P2_Key6:
+	case IR::ChannelEvent::Type::Note_P2_Key6_LN:
+		return Chart::LaneType::P2_Key6;
+	case IR::ChannelEvent::Type::Note_P2_Key7:
+	case IR::ChannelEvent::Type::Note_P2_Key7_LN:
+		return Chart::LaneType::P2_Key7;
+	case IR::ChannelEvent::Type::Note_P2_KeyS:
+	case IR::ChannelEvent::Type::Note_P2_KeyS_LN:
+		return Chart::LaneType::P2_KeyS;
+	default: return Chart::LaneType::Size;
 	}
 }
 
@@ -385,46 +464,15 @@ void ChartBuilder::process_ir_headers(Chart& chart, IR const& ir)
 
 void ChartBuilder::process_ir_channels(Chart& chart, IR const& ir)
 {
-	auto ln_ends = vector<vector<Chart::Note>>{};
-	ln_ends.resize(to_underlying(Chart::LaneType::Size) - 1);
-
 	ir.each_channel_event([&](IR::ChannelEvent const& event) noexcept {
-		auto const note_type = channel_to_note_type(event.type);
-		if (note_type == Chart::NoteType::Note) add_note(chart, event);
-		else if (note_type == Chart::NoteType::LN) add_ln_end(ln_ends, event);
-		else PANIC();
+		auto const lane_id = channel_to_lane(event.type);
+		if (lane_id == Chart::LaneType::Size) return;
+		lane_builders[to_underlying(lane_id)].add_note(RelativeNote{
+			.type = channel_to_note_type(event.type),
+			.position = event.position,
+			.wav_slot = event.slot,
+		});
 	});
-
-	ln_ends_to_lns(chart, ln_ends);
-}
-
-void ChartBuilder::sort_lanes(Chart& chart) noexcept
-{
-	auto removed_count = 0zu;
-	for (auto& lane: chart.lanes) {
-		stable_sort(lane.notes, [](auto const& a, auto const& b) noexcept {
-			return a.position < b.position;
-		});
-		if (&lane - &chart.lanes.front() == to_underlying(Chart::LaneType::BGM)) continue;
-		auto removed = unique(lane.notes, [](auto const& a, auto const& b) noexcept {
-			return a.position == b.position;
-		});
-		lane.notes.erase(removed.begin(), removed.end());
-		removed_count += removed.size();
-	}
-	if (removed_count) INFO("Removed {} duplicate notes", removed_count);
-}
-
-void ChartBuilder::calculate_object_timestamps(Chart& chart) noexcept
-{
-	auto const beat_duration = duration_cast<nanoseconds>(duration<double>{60.0 / chart.bpm});
-	auto const measure_duration = beat_duration * 4;
-	for (auto& lane: chart.lanes) {
-		for (auto& note: lane.notes) {
-			note.timestamp = calculate_timestamp(note.position, measure_duration);
-			note.length_ns = calculate_timestamp(note.length, measure_duration);
-		}
-	}
 }
 
 }
