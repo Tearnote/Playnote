@@ -3,3 +3,6 @@
 
 # Build artifacts
 build/**
+
+# Test data
+songs/**
