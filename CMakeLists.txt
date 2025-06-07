@@ -16,6 +16,15 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STANDARD 26)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Environment check
+
+if(NOT UNIX)
+	message(FATAL_ERROR "Unsupported platform; Playnote requires Linux")
+endif()
+if(NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+	message(FATAL_ERROR "Unsupported compiler; Playnote requires GCC/Clang")
+endif()
+	
 # Global build settings
 
 set(BUILD_SHARED_LIBS OFF)
