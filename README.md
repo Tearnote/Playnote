@@ -41,7 +41,7 @@ in bleeding-edge C++.
   - [ ] Catching BMS loading errors and communicating them to the user
   - [ ] Working Windows build
   - [ ] WASAPI audio backend
-  - [ ] Optimized build flags and platform support checks
+  - [~] Optimized build flags and platform support checks
   - [ ] Multithreaded decoding and resampling
   - [ ] Loading feedback
   - [x] Normalize volume via ReplayGain

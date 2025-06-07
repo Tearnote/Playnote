@@ -18,14 +18,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Global build settings
 
-set(BUILD_SHARED_LIBS OFF) # Only build static libs
-add_compile_options(-Wno-deprecated-literal-operator -Wno-unqualified-std-cast-call)
-#TODO Compiler and linker flags:
-#TODO - nonstandard speedups (fastmath etc)
-#TODO - enable exceptions and RTTI
-#TODO - safety checks for DEBUG
-#TODO - optimizations for RELEASE
-#TODO - enable LTO and dead code removal
+set(BUILD_SHARED_LIBS OFF)
+add_compile_options("-Wall;-Wextra;-Wno-deprecated-literal-operator;-Wno-unqualified-std-cast-call")
+add_compile_options("-march=x86-64-v3;-ffast-math;-fno-strict-float-cast-overflow;-fassume-nothrow-exception-dtor")
+add_compile_options("-fno-strict-aliasing;-fexceptions;-frtti")
+add_compile_options("$<$<NOT:$<CONFIG:Release>>:-g;-glldb>")
+add_compile_options("$<$<CONFIG:Release>:-g0>;$<$<NOT:$<CONFIG:Debug>>:-O3>")
+set(CMAKE_INTERPROCEDURAL_OPTIMIZATION "$<IF:$<CONFIG:Debug>,OFF,ON>")
 # Communicate build type to the project
 add_compile_definitions("BUILD_TYPE=$<$<CONFIG:Debug>:BUILD_DEBUG>$<$<CONFIG:RelWithDebInfo>:BUILD_RELDEB>$<$<CONFIG:Release>:BUILD_RELEASE>")
 
