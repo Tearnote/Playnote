@@ -111,6 +111,18 @@ export class ChartBuilder;
 
 export class Chart {
 public:
+	struct Metadata {
+		using Difficulty = IR::HeaderEvent::Difficulty::Level;
+		string title;
+		string subtitle;
+		string artist;
+		string subartist;
+		string genre;
+		string url;
+		string email;
+		Difficulty difficulty;
+	};
+	using Difficulty = Metadata::Difficulty;
 	enum class LaneType: usize {
 		P1_Key1,
 		P1_Key2,
@@ -135,6 +147,8 @@ public:
 	void restart() noexcept;
 	[[nodiscard]] auto at_start() const noexcept -> bool { return progress == 0; }
 
+	[[nodiscard]] auto get_metadata() const noexcept -> Metadata const& { return metadata; }
+
 	template<callable<void(lib::pw::Sample)> Func>
 	auto advance_one_sample(Func&& func) noexcept -> bool;
 
@@ -150,6 +164,8 @@ private:
 		usize playback_pos;
 	};
 
+	Metadata metadata;
+
 	array<Lane, +LaneType::Size> lanes;
 
 	usize progress = 0zu;
@@ -158,8 +174,6 @@ private:
 
 	vector<optional<WavSlot>> wav_slots;
 
-	string title;
-	string artist;
 	float bpm = 130.0f; // BMS spec default
 
 	Chart() = default;
@@ -383,7 +397,7 @@ auto ChartBuilder::from_ir(IR const& ir) -> Chart
 		return acc + (lane.playable? lane.notes.size() : 0);
 	});
 
-	INFO("Built chart \"{}\"", chart.title);
+	INFO("Built chart \"{}\"", chart.metadata.title);
 
 	return chart;
 }
@@ -479,12 +493,16 @@ void ChartBuilder::process_ir_headers(Chart& chart, IR const& ir)
 {
 	ir.each_header_event([&](IR::HeaderEvent const& event) noexcept {
 		event.params.visit(visitor {
-			[&](IR::HeaderEvent::Title* title_params) noexcept { chart.title = title_params->title; },
-			[&](IR::HeaderEvent::Artist* artist_params) noexcept { chart.artist = artist_params->artist; },
-			[&](IR::HeaderEvent::BPM* bpm_params) noexcept { chart.bpm = bpm_params->bpm; },
-			[&](IR::HeaderEvent::WAV* wav_params) noexcept {
-				file_references.wav[wav_params->slot] = wav_params->name;
-			},
+			[&](IR::HeaderEvent::Title* params) noexcept { chart.metadata.title = params->title; },
+			[&](IR::HeaderEvent::Subtitle* params) noexcept { chart.metadata.subtitle = params->subtitle; },
+			[&](IR::HeaderEvent::Artist* params) noexcept { chart.metadata.artist = params->artist; },
+			[&](IR::HeaderEvent::Subartist* params) noexcept { chart.metadata.subartist = params->subartist; },
+			[&](IR::HeaderEvent::Genre* params) noexcept { chart.metadata.genre = params->genre; },
+			[&](IR::HeaderEvent::URL* params) noexcept { chart.metadata.url = params->url; },
+			[&](IR::HeaderEvent::Email* params) noexcept { chart.metadata.email = params->email; },
+			[&](IR::HeaderEvent::Difficulty* params) noexcept { chart.metadata.difficulty = params->level; },
+			[&](IR::HeaderEvent::BPM* params) noexcept { chart.bpm = params->bpm; },
+			[&](IR::HeaderEvent::WAV* params) noexcept { file_references.wav[params->slot] = params->name; },
 			[](auto&&) noexcept {}
 		});
 	});
