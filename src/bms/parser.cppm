@@ -151,7 +151,7 @@ void parse(Logger::Category* cat, span<byte const> raw_file_contents, HFunc&& he
 	normalize_line_endings(file_contents);
 	auto line_index = 1zu;
 	for (auto line: file_contents | views::split('\n') | views::to_sv)
-		parse_line(line, line_index++).visit(visitor { header_func, channel_func, [](auto){} });
+		visit(visitor { header_func, channel_func, [](auto&&){} }, parse_line(line, line_index++));
 }
 
 }

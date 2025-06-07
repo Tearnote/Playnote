@@ -31,6 +31,7 @@ export using std::variant;
 export using std::monostate;
 export using std::holds_alternative;
 export using std::get;
+export using std::visit;
 export using std::move;
 export using std::forward;
 export using std::pair;

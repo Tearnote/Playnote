@@ -494,7 +494,7 @@ auto ChartBuilder::channel_to_lane(IR::ChannelEvent::Type ch) noexcept -> Chart:
 void ChartBuilder::process_ir_headers(Chart& chart, IR const& ir)
 {
 	ir.each_header_event([&](IR::HeaderEvent const& event) noexcept {
-		event.params.visit(visitor {
+		visit(visitor {
 			[&](IR::HeaderEvent::Title* params) noexcept { chart.metadata.title = params->title; },
 			[&](IR::HeaderEvent::Subtitle* params) noexcept { chart.metadata.subtitle = params->subtitle; },
 			[&](IR::HeaderEvent::Artist* params) noexcept { chart.metadata.artist = params->artist; },
@@ -506,7 +506,7 @@ void ChartBuilder::process_ir_headers(Chart& chart, IR const& ir)
 			[&](IR::HeaderEvent::BPM* params) noexcept { chart.bpm = params->bpm; },
 			[&](IR::HeaderEvent::WAV* params) noexcept { file_references.wav[params->slot] = params->name; },
 			[](auto&&) noexcept {}
-		});
+		}, event.params);
 	});
 }
 
