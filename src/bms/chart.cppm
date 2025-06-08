@@ -134,6 +134,9 @@ public:
 			}
 		}
 	};
+	struct Metrics {
+		uint32 note_count;
+	};
 	using Difficulty = Metadata::Difficulty;
 	enum class LaneType: usize {
 		P1_Key1,
@@ -160,6 +163,7 @@ public:
 	[[nodiscard]] auto is_started() const noexcept -> bool { return progress == 0; }
 
 	[[nodiscard]] auto get_metadata() const noexcept -> Metadata const& { return metadata; }
+	[[nodiscard]] auto get_metrics() const noexcept -> Metrics const& { return metrics; }
 
 	template<callable<void(lib::pw::Sample)> Func>
 	auto advance_one_sample(Func&& func) noexcept -> bool;
@@ -177,11 +181,11 @@ private:
 	};
 
 	Metadata metadata;
+	Metrics metrics;
 
 	array<Lane, +LaneType::Size> lanes;
 
 	usize progress = 0zu;
-	usize note_count = 0zu;
 	usize notes_hit = 0zu;
 
 	vector<optional<WavSlot>> wav_slots;
@@ -217,6 +221,8 @@ private:
 
 	void process_ir_headers(Chart&, IR const&);
 	void process_ir_channels(IR const&);
+	void build_lanes(Chart&) noexcept;
+	void calculate_metrics(Chart&) noexcept;
 };
 
 void LaneBuilder::add_note(RelativeNote const& note) noexcept
@@ -314,7 +320,7 @@ void LaneBuilder::sort_and_deduplicate(vector<Note>& result, bool deduplicate) n
 template<callable<void(lib::pw::Sample)> Func>
 auto Chart::advance_one_sample(Func&& func) noexcept -> bool
 {
-	auto chart_ended = (notes_hit >= note_count);
+	auto chart_ended = (notes_hit >= metrics.note_count);
 	progress += 1;
 	auto const progress_ns = progress_to_ns(progress);
 	for (auto& lane: lanes) {
@@ -398,16 +404,8 @@ auto ChartBuilder::from_ir(IR const& ir) -> Chart
 
 	process_ir_headers(chart, ir);
 	process_ir_channels(ir);
-
-	for (auto const i: views::iota(0u, +Chart::LaneType::Size)) {
-		auto const is_bgm = i == +Chart::LaneType::BGM;
-		chart.lanes[i] = lane_builders[i].build(chart.bpm, !is_bgm);
-		if (!is_bgm) chart.lanes[i].playable = true;
-	}
-
-	chart.note_count = fold_left(chart.lanes, 0u, [](auto acc, auto const& lane) noexcept {
-		return acc + (lane.playable? lane.notes.size() : 0);
-	});
+	build_lanes(chart);
+	calculate_metrics(chart);
 
 	INFO("Built chart \"{}\"", chart.metadata.title);
 
@@ -530,6 +528,22 @@ void ChartBuilder::process_ir_channels(IR const& ir)
 			.position = event.position,
 			.wav_slot = event.slot,
 		});
+	});
+}
+
+void ChartBuilder::build_lanes(Chart& chart) noexcept
+{
+	for (auto [idx, lane]: chart.lanes | views::enumerate) {
+		auto const is_bgm = idx == +Chart::LaneType::BGM;
+		lane = lane_builders[idx].build(chart.bpm, !is_bgm);
+		if (!is_bgm) lane.playable = true;
+	}
+}
+
+void ChartBuilder::calculate_metrics(Chart& chart) noexcept
+{
+	chart.metrics.note_count = fold_left(chart.lanes, 0u, [](auto acc, auto const& lane) noexcept {
+		return acc + (lane.playable? lane.notes.size() : 0);
 	});
 }
 
