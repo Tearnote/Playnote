@@ -131,9 +131,9 @@ GPU::Instance::~Instance() noexcept
 }
 
 GPU::Surface::Surface(Logger::Category* cat, dev::Window& window, Instance& instance):
+	surface{window.create_surface(instance.instance)},
 	cat{cat},
-	instance{instance},
-	surface{window.create_surface(instance.instance)} {}
+	instance{instance} {}
 
 GPU::Surface::~Surface() noexcept
 {
@@ -171,7 +171,7 @@ auto GPU::create_swapchain(vk::Allocator& allocator, Device& device, uvec2 size,
 		DEBUG_AS(cat, "Created swapchain, size {}", size);
 	else
 		DEBUG_AS(cat, "Recreated swapchain, size {}", size);
-	return move(swapchain);
+	return swapchain;
 }
 
 GPU::GPU(dev::Window& window):

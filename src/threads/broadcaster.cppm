@@ -96,6 +96,7 @@ auto Broadcaster::receive_all(Func&& func) -> bool
 		func(move(message));
 		if (out_channel.empty()) return true;
 	}
+	return false;
 }
 
 }

@@ -25,7 +25,7 @@ namespace pw = lib::pw;
 export [[nodiscard]] auto measure_loudness(bms::Chart& chart) -> double
 {
 	constexpr auto BufferSize = 4096zu / sizeof(pw::Sample);
-	ASSERT(chart.at_start());
+	ASSERT(chart.is_started());
 
 	auto ctx = r128::init(io::AudioCodec::sampling_rate);
 	auto buffer = vector<pw::Sample>{};
@@ -33,7 +33,7 @@ export [[nodiscard]] auto measure_loudness(bms::Chart& chart) -> double
 
 	auto processing = true;
 	while (processing) {
-		for (auto i: views::iota(0zu, BufferSize)) {
+		for (auto _: views::iota(0zu, BufferSize)) {
 			auto& sample = buffer.emplace_back();
 			processing = !chart.advance_one_sample([&](auto new_sample) {
 				sample.left += new_sample.left;

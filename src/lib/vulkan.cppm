@@ -366,7 +366,7 @@ export [[nodiscard]] auto create_swapchain(Allocator& allocator, Device& device,
 
 	swapchain.swapchain = vkbswapchain.swapchain;
 	swapchain.surface = device.surface;
-	return move(swapchain);
+	return swapchain;
 }
 
 // Shorthand for vuk's Tracy integration resources.

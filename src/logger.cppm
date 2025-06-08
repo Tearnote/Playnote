@@ -53,7 +53,7 @@ export class Logger {
 	class Stub {
 	public:
 		Stub(Logger& parent, string_view log_file_path, LogLevel global_level):
-			parent{parent}, logger{log_file_path, global_level}
+			logger{log_file_path, global_level}
 		{
 			parent.handle = &logger;
 		}
@@ -63,7 +63,6 @@ export class Logger {
 		auto operator=(Stub&&) -> Stub& = delete;
 
 	private:
-		Logger& parent;
 		Impl logger;
 	};
 

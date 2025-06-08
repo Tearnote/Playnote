@@ -145,7 +145,7 @@ public:
 	};
 
 	void restart() noexcept;
-	[[nodiscard]] auto at_start() const noexcept -> bool { return progress == 0; }
+	[[nodiscard]] auto is_started() const noexcept -> bool { return progress == 0; }
 
 	[[nodiscard]] auto get_metadata() const noexcept -> Metadata const& { return metadata; }
 
@@ -204,7 +204,7 @@ private:
 	[[nodiscard]] static auto channel_to_lane(IR::ChannelEvent::Type) noexcept -> Chart::LaneType;
 
 	void process_ir_headers(Chart&, IR const&);
-	void process_ir_channels(Chart&, IR const&);
+	void process_ir_channels(IR const&);
 };
 
 void LaneBuilder::add_note(RelativeNote const& note) noexcept
@@ -243,8 +243,6 @@ void LaneBuilder::convert_simple(vector<RelativeNote> const& notes, vector<Note>
 {
 	auto const beat_duration = duration_cast<nanoseconds>(duration<double>{60.0 / bpm});
 	auto const measure_duration = beat_duration * 4;
-	transform(notes, back_inserter(result), [&](auto const& note) noexcept {
-		ASSERT(note.template type_is<RelativeNote::Simple>());
 	transform(notes, back_inserter(result), [&](RelativeNote const& note) noexcept {
 		ASSERT(note.type_is<RelativeNote::Simple>());
 		return Note{
@@ -387,7 +385,7 @@ auto ChartBuilder::from_ir(IR const& ir) -> Chart
 	file_references.wav.resize(ir.get_wav_slot_count());
 
 	process_ir_headers(chart, ir);
-	process_ir_channels(chart, ir);
+	process_ir_channels(ir);
 
 	for (auto const i: views::iota(0u, +Chart::LaneType::Size)) {
 		auto const is_bgm = i == +Chart::LaneType::BGM;
@@ -510,7 +508,7 @@ void ChartBuilder::process_ir_headers(Chart& chart, IR const& ir)
 	});
 }
 
-void ChartBuilder::process_ir_channels(Chart& chart, IR const& ir)
+void ChartBuilder::process_ir_channels(IR const& ir)
 {
 	ir.each_channel_event([&](IR::ChannelEvent const& event) noexcept {
 		auto const lane_id = channel_to_lane(event.type);

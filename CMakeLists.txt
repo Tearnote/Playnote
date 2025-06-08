@@ -24,11 +24,11 @@ endif()
 if(NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
 	message(FATAL_ERROR "Unsupported compiler; Playnote requires GCC/Clang")
 endif()
-	
+
 # Global build settings
 
 set(BUILD_SHARED_LIBS OFF)
-add_compile_options("-Wall;-Wextra;-Wno-deprecated-literal-operator;-Wno-unqualified-std-cast-call")
+add_compile_options("-Wall;-Wextra;-Wno-deprecated-literal-operator;-Wno-unqualified-std-cast-call;-Wno-missing-field-initializers;-Wno-missing-designated-field-initializers")
 add_compile_options("-march=x86-64-v3;-ffast-math;-fno-strict-float-cast-overflow;-fassume-nothrow-exception-dtor")
 add_compile_options("-fno-strict-aliasing;-fexceptions;-frtti")
 add_compile_options("$<$<NOT:$<CONFIG:Release>>:-g;-glldb>")
