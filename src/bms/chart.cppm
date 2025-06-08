@@ -389,7 +389,7 @@ auto ChartBuilder::from_ir(IR const& ir) -> Chart
 
 	for (auto const i: views::iota(0u, +Chart::LaneType::Size)) {
 		auto const is_bgm = i == +Chart::LaneType::BGM;
-		chart.lanes[i] = move(lane_builders[i].build(chart.bpm, !is_bgm));
+		chart.lanes[i] = lane_builders[i].build(chart.bpm, !is_bgm);
 		if (!is_bgm) chart.lanes[i].playable = true;
 	}
 

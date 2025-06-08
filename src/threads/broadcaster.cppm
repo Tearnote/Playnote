@@ -77,8 +77,8 @@ void Broadcaster::shout(T&& message)
 {
 	using Type = remove_cvref_t<T>;
 	ASSUME(endpoint_id != -1zu);
-	for (auto& in_channel: channels) {
-		if (&in_channel - &channels.front() == endpoint_id) continue;
+	for (auto [idx, in_channel]: channels | views::enumerate) {
+		if (endpoint_id == idx) continue;
 		if (!in_channel.contains(typeid(Type))) continue;
 		(*static_pointer_cast<channel<Type>>(in_channel[typeid(Type)])) << message;
 	}

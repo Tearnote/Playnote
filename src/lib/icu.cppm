@@ -75,10 +75,6 @@ export auto detect_encoding(span<byte const> input, initializer_list<string_view
 // as a replacement character.
 export auto to_utf8(span<byte const> input, string_view input_charset) -> string
 {
-	using Converter = unique_ptr<UConverter, decltype([](auto* p) {
-		ucnv_close(p);
-	})>;
-
 	auto contents = string{};
 	auto contents_capacity = input.size() * 2; // Most pessimistic case of 100% DBCS
 	contents.resize(contents_capacity);
