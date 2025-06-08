@@ -230,9 +230,9 @@ export auto render(vk::Allocator& frame_allocator, vk::ManagedImage&& target, Co
 export void same_line() noexcept { ImGui::SameLine(); }
 
 // A clickable button. Returns true when clicked.
-export auto button(char const* text) noexcept -> bool
+export auto button(char const* str) noexcept -> bool
 {
-	return ImGui::Button(text);
+	return ImGui::Button(str);
 }
 
 // Static text.
@@ -243,6 +243,13 @@ export template<typename... Args>
 void text(fmtquill::format_string<Args...> fmt, Args&&... args) noexcept
 {
 	ImGui::Text("%s", format(fmt, forward<Args>(args)...).c_str());
+}
+
+// A control for a float variable, with +/- buttons and direct value input via keyboard.
+export void input_float(char const* str, float& value,
+	float step = 0.0f, float step_fast = 0.0f, char const* format = "%.3f")
+{
+	ImGui::InputFloat(str, &value, step, step_fast, format);
 }
 
 }

@@ -63,7 +63,7 @@ void enqueue_test_scene(gfx::Renderer::Queue& queue)
 	queue.enqueue_rect({{706,   0}, { 40, 539}, {0.035f, 0.035f, 0.035f, 1.000f}});
 }
 
-void enqueue_chart_objects(gfx::Renderer::Queue& queue, bms::Chart const& chart)
+void enqueue_chart_objects(gfx::Renderer::Queue& queue, bms::Chart const& chart, float scroll_speed)
 {
 	using LaneType = bms::Chart::LaneType;
 	enum class NoteVisual { White, Blue, Red };
@@ -129,15 +129,15 @@ void enqueue_chart_objects(gfx::Renderer::Queue& queue, bms::Chart const& chart)
 		}
 	};
 
-	constexpr auto max_distance = 1.0f;
+	auto const max_distance = 1.0f / scroll_speed;
 	chart.upcoming_notes(max_distance, [&](auto const& note, LaneType type, float distance) {
 		constexpr auto max_y = 539 + 6;
 		auto const ln_height = holds_alternative<bms::Note::LN>(note.type)?
-			static_cast<int>(get<bms::Note::LN>(note.type).height * max_y) :
+			static_cast<int>(get<bms::Note::LN>(note.type).height * max_y * scroll_speed) :
 			0;
 		auto const visual = get_note_visual(type);
 		auto const x = get_note_x(type);
-		auto const y = static_cast<int>(max_y - distance * max_y) - ln_height;
+		auto const y = static_cast<int>(max_y - distance * max_y * scroll_speed) - ln_height;
 		auto const y_overflow = max(y + ln_height - max_y, 0);
 		auto const width = get_note_width(visual);
 		auto const color = get_note_color(visual);
@@ -163,6 +163,22 @@ void show_metadata(bms::Chart::Metadata const& meta)
 	if (!meta.email.empty()) im::text(meta.email);
 }
 
+void show_playback_controls(Broadcaster& broadcaster)
+{
+	if (im::button("Play")) broadcaster.shout(PlayerControl::Play);
+	im::same_line();
+	if (im::button("Pause")) broadcaster.shout(PlayerControl::Pause);
+	im::same_line();
+	if (im::button("Restart")) broadcaster.shout(PlayerControl::Restart);
+}
+
+void show_scroll_speed_controls(float& scroll_speed)
+{
+	im::text("Scroll speed");
+	im::same_line();
+	im::input_float("##scroll_speed", scroll_speed, 0.25f, 1.0f, "%.2f");
+}
+
 export void render(Broadcaster& broadcaster, dev::Window& window)
 try {
 	dev::name_current_thread("render");
@@ -173,6 +189,7 @@ try {
 	auto renderer = gfx::Renderer{gpu};
 
 	auto chart = shared_ptr<bms::Chart>{};
+	auto scroll_speed = 1.0f;
 
 	while (!window.is_closing()) {
 		broadcaster.receive_all<shared_ptr<bms::Chart>>([&](auto&& recv) {
@@ -182,12 +199,11 @@ try {
 			enqueue_test_scene(queue);
 			if (chart) {
 				show_metadata(chart->get_metadata());
-				if (im::button("Play")) broadcaster.shout(PlayerControl::Play);
-				im::same_line();
-				if (im::button("Pause")) broadcaster.shout(PlayerControl::Pause);
-				im::same_line();
-				if (im::button("Restart")) broadcaster.shout(PlayerControl::Restart);
-				enqueue_chart_objects(queue, *chart);
+				im::text("");
+				show_playback_controls(broadcaster);
+				im::text("");
+				show_scroll_speed_controls(scroll_speed);
+				enqueue_chart_objects(queue, *chart, scroll_speed);
 			}
 		});
 		FRAME_MARK();
