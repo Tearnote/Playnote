@@ -145,6 +145,22 @@ void enqueue_chart_objects(gfx::Renderer::Queue& queue, bms::Chart const& chart)
 	});
 }
 
+void show_metadata(bms::Chart::Metadata const& meta)
+{
+	if (meta.subtitle.empty())
+		im::text("{}", meta.title);
+	else
+		im::text("{}\n{}", meta.title, meta.subtitle);
+	if (meta.subartist.empty())
+		im::text("{}", meta.artist);
+	else
+		im::text("{}\n{}", meta.artist, meta.subartist);
+	im::text("{}", meta.genre);
+	im::text("Difficulty: {}", bms::Chart::Metadata::to_str(meta.difficulty));
+	if (!meta.url.empty()) im::text("{}", meta.url);
+	if (!meta.email.empty()) im::text("{}", meta.email);
+}
+
 export void render(Broadcaster& broadcaster, dev::Window& window)
 try {
 	dev::name_current_thread("render");
@@ -163,6 +179,7 @@ try {
 		renderer.frame([&](gfx::Renderer::Queue& queue) {
 			enqueue_test_scene(queue);
 			if (chart) {
+				show_metadata(chart->get_metadata());
 				if (im::button("Play")) broadcaster.shout(PlayerControl::Play);
 				if (im::button("Pause")) broadcaster.shout(PlayerControl::Pause);
 				if (im::button("Restart")) broadcaster.shout(PlayerControl::Restart);

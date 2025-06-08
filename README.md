@@ -36,7 +36,7 @@ in bleeding-edge C++.
   - [ ] Measure length change support
   - [ ] BPM change support
   - [ ] Precomputed acceleration structure for reachable slots
-  - [ ] Basic metadata display
+  - [x] Basic metadata display
   - [x] Chart loading from command line argument
   - [ ] Catching BMS loading errors and communicating them to the user
   - [ ] Working Windows build

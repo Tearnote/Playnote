@@ -9,6 +9,7 @@ Parts are adapted from vuk's built-in Imgui integration; reproduced here under t
 
 module;
 #include "backends/imgui_impl_glfw.h"
+#include "quill/bundled/fmt/base.h"
 #include "vuk/runtime/vk/AllocatorHelpers.hpp"
 #include "vuk/runtime/vk/PipelineTypes.hpp"
 #include "vuk/runtime/vk/VkRuntime.hpp"
@@ -229,6 +230,13 @@ export auto render(vk::Allocator& frame_allocator, vk::ManagedImage&& target, Co
 export auto button(char const* text) noexcept -> bool
 {
 	return ImGui::Button(text);
+}
+
+// Static text.
+export template<typename... Args>
+void text(fmtquill::format_string<Args...> fmt, Args&&... args)
+{
+	ImGui::Text(format(fmt, forward<Args>(args)...).c_str());
 }
 
 }
