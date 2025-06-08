@@ -147,14 +147,16 @@ void enqueue_chart_objects(gfx::Renderer::Queue& queue, bms::Chart const& chart)
 
 void show_metadata(bms::Chart::Metadata const& meta)
 {
-	if (meta.subtitle.empty())
-		im::text("{}", meta.title);
-	else
-		im::text("{}\n{}", meta.title, meta.subtitle);
-	if (meta.subartist.empty())
-		im::text("{}", meta.artist);
-	else
-		im::text("{}\n{}", meta.artist, meta.subartist);
+	im::text("{}", meta.title);
+	if (!meta.subtitle.empty()) {
+		im::same_line();
+		im::text("{}", meta.subtitle);
+	}
+	im::text("{}", meta.artist);
+	if (!meta.subartist.empty()) {
+		im::same_line();
+		im::text("{}", meta.subartist);
+	}
 	im::text("{}", meta.genre);
 	im::text("Difficulty: {}", bms::Chart::Metadata::to_str(meta.difficulty));
 	if (!meta.url.empty()) im::text("{}", meta.url);
@@ -181,7 +183,9 @@ try {
 			if (chart) {
 				show_metadata(chart->get_metadata());
 				if (im::button("Play")) broadcaster.shout(PlayerControl::Play);
+				im::same_line();
 				if (im::button("Pause")) broadcaster.shout(PlayerControl::Pause);
+				im::same_line();
 				if (im::button("Restart")) broadcaster.shout(PlayerControl::Restart);
 				enqueue_chart_objects(queue, *chart);
 			}

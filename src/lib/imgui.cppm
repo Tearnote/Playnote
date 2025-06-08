@@ -226,6 +226,9 @@ export auto render(vk::Allocator& frame_allocator, vk::ManagedImage&& target, Co
 	return pass(target, move(sampled_images_array));
 }
 
+// Use before an element to keep it on the same line as the previous one.
+export void same_line() noexcept { ImGui::SameLine(); }
+
 // A clickable button. Returns true when clicked.
 export auto button(char const* text) noexcept -> bool
 {
@@ -234,7 +237,7 @@ export auto button(char const* text) noexcept -> bool
 
 // Static text.
 export template<typename... Args>
-void text(fmtquill::format_string<Args...> fmt, Args&&... args)
+void text(fmtquill::format_string<Args...> fmt, Args&&... args) noexcept
 {
 	ImGui::Text(format(fmt, forward<Args>(args)...).c_str());
 }
