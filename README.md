@@ -71,3 +71,4 @@ Retrieved via CMake [FetchContent](https://cmake.org/cmake/help/latest/module/Fe
 - [vuk](https://github.com/martty/vuk) ([MIT](https://github.com/martty/vuk?tab=MIT-1-ov-file#readme))
 - [tracy](https://github.com/wolfpld/tracy) ([BSD](https://github.com/wolfpld/tracy?tab=License-1-ov-file#readme))
 - [cpp-channel](https://blog.andreiavram.ro/cpp-channel-thread-safe-container-share-data-threads/) ([MIT](https://github.com/andreiavrammsd/cpp-channel?tab=MIT-1-ov-file))
+- [Dear ImGui](https://github.com/ocornut/imgui) ([MIT](https://github.com/ocornut/imgui?tab=MIT-1-ov-file#readme))

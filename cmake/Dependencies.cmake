@@ -67,7 +67,7 @@ FetchContent_MakeAvailable(vk-bootstrap)
 
 set(VUK_LINK_TO_LOADER OFF CACHE BOOL "" FORCE)
 set(VUK_USE_SHADERC OFF CACHE BOOL "" FORCE)
-set(VUK_EXTRA_IMGUI_PLATFORM_BACKEND "glfw" CACHE STRING "" FORCE)
+set(VUK_EXTRA_IMGUI OFF CACHE BOOL "" FORCE)
 set(VUK_EXTRA_INIT OFF CACHE BOOL "" FORCE)
 FetchContent_Declare(vuk # Vulkan rendergraph
 	GIT_REPOSITORY https://github.com/martty/vuk
@@ -100,3 +100,18 @@ FetchContent_Declare(ebur128 # Volume normalization
 FetchContent_MakeAvailable(ebur128)
 add_library(ebur128 ${ebur128_SOURCE_DIR}/ebur128/ebur128.c)
 target_include_directories(ebur128 PUBLIC ${ebur128_SOURCE_DIR}/ebur128)
+
+FetchContent_Declare(imgui # Debug controls
+	GIT_REPOSITORY https://github.com/ocornut/imgui
+	GIT_TAG v1.91.9b
+)
+FetchContent_MakeAvailable(imgui)
+add_library(imgui
+	${imgui_SOURCE_DIR}/imgui.cpp
+	${imgui_SOURCE_DIR}/imgui_draw.cpp
+	${imgui_SOURCE_DIR}/imgui_demo.cpp
+	${imgui_SOURCE_DIR}/imgui_widgets.cpp
+	${imgui_SOURCE_DIR}/imgui_tables.cpp
+	${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
+)
+target_include_directories(imgui PUBLIC "${imgui_SOURCE_DIR}")
