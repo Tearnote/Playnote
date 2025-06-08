@@ -147,20 +147,20 @@ void enqueue_chart_objects(gfx::Renderer::Queue& queue, bms::Chart const& chart)
 
 void show_metadata(bms::Chart::Metadata const& meta)
 {
-	im::text("{}", meta.title);
+	im::text(meta.title);
 	if (!meta.subtitle.empty()) {
 		im::same_line();
-		im::text("{}", meta.subtitle);
+		im::text(meta.subtitle);
 	}
-	im::text("{}", meta.artist);
+	im::text(meta.artist);
 	if (!meta.subartist.empty()) {
 		im::same_line();
-		im::text("{}", meta.subartist);
+		im::text(meta.subartist);
 	}
-	im::text("{}", meta.genre);
+	im::text(meta.genre);
 	im::text("Difficulty: {}", bms::Chart::Metadata::to_str(meta.difficulty));
-	if (!meta.url.empty()) im::text("{}", meta.url);
-	if (!meta.email.empty()) im::text("{}", meta.email);
+	if (!meta.url.empty()) im::text(meta.url);
+	if (!meta.email.empty()) im::text(meta.email);
 }
 
 export void render(Broadcaster& broadcaster, dev::Window& window)

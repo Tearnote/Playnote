@@ -236,10 +236,13 @@ export auto button(char const* text) noexcept -> bool
 }
 
 // Static text.
+export void text(string_view str) noexcept { ImGui::Text("%s", string{str}.c_str()); }
+
+// Static text, fmt overload.
 export template<typename... Args>
 void text(fmtquill::format_string<Args...> fmt, Args&&... args) noexcept
 {
-	ImGui::Text(format(fmt, forward<Args>(args)...).c_str());
+	ImGui::Text("%s", format(fmt, forward<Args>(args)...).c_str());
 }
 
 }
