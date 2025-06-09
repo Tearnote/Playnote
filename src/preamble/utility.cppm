@@ -47,6 +47,7 @@ export using std::make_unique;
 export using std::shared_ptr;
 export using std::make_shared;
 export using std::static_pointer_cast;
+export using std::enable_shared_from_this;
 export using boost::scope::unique_resource;
 export using std::type_index;
 export using std::remove_cvref_t;

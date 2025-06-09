@@ -55,13 +55,13 @@ try {
 	auto const bms_ir = load_bms(bms_compiler, chart_path);
 	auto bms_builder = bms::ChartBuilder{};
 	auto bms_chart = bms_builder.from_ir(bms_ir);
-	auto bulk_request = bms_builder.make_file_requests(bms_chart);
+	auto bulk_request = bms_builder.make_file_requests(*bms_chart);
 	bulk_request.process();
-	auto const bms_gain = bms::lufs_to_gain(bms::measure_loudness(bms_chart));
+	auto const bms_gain = bms::lufs_to_gain(bms::measure_loudness(*bms_chart));
 	INFO("Determined gain: {}", bms_gain);
-	auto bms_play = make_shared<bms::Cursor>(bms_chart.make_play());
-	audio.play_chart(bms_play, bms_gain);
-	broadcaster.shout(bms_play);
+	auto bms_cursor = make_shared<bms::Cursor>(bms_chart->make_play());
+	audio.play_chart(bms_cursor, bms_gain);
+	broadcaster.shout(bms_cursor);
 	while (!window.is_closing()) {
 		broadcaster.receive_all<PlayerControl>([&](auto ev) {
 			switch (ev) {
@@ -72,8 +72,8 @@ try {
 				audio.pause();
 				break;
 			case PlayerControl::Restart:
-				bms_play->restart();
-				audio.play_chart(bms_play, bms_gain);
+				bms_cursor->restart();
+				audio.play_chart(bms_cursor, bms_gain);
 				break;
 			default: PANIC();
 			}

@@ -131,7 +131,7 @@ export class Cursor;
 
 // An entire loaded chart, with all of its notes and meta information. Immutable; a chart is played
 // by creating and advancing a Play from it.
-export class Chart {
+export class Chart: public enable_shared_from_this<Chart> {
 public:
 	enum class LaneType: usize {
 		P1_Key1,
@@ -158,6 +158,8 @@ public:
 	[[nodiscard]] auto get_metrics() const noexcept -> Metrics const& { return metrics; }
 	[[nodiscard]] auto make_play() const noexcept -> Cursor ;
 
+	Chart() = default; // Do not use - only for make_shared
+
 private:
 	friend class ChartBuilder;
 	friend class Cursor;
@@ -170,14 +172,14 @@ private:
 
 	float bpm = 130.0f; // BMS spec default
 
-	Chart() = default;
+	[[nodiscard]] static auto make() -> shared_ptr<Chart> { return make_shared<Chart>(); }
 
 };
 
 // Representation of a moment in chart's progress.
 class Cursor {
 public:
-	[[nodiscard]] auto get_chart() const noexcept -> Chart const& { return chart; }
+	[[nodiscard]] auto get_chart() const noexcept -> Chart const& { return *chart; }
 
 	void restart() noexcept;
 
@@ -199,13 +201,13 @@ private:
 		static constexpr auto Stopped = -1zu; // Special value for stopped playback
 		usize playback_pos = Stopped; // Samples played so far
 	};
-	Chart const& chart;
+	shared_ptr<Chart const> chart;
 	usize sample_progress = 0zu;
 	usize notes_judged = 0zu;
 	array<LaneProgress, +Chart::LaneType::Size> lane_progress = {};
 	vector<WavSlotProgress> wav_slot_progress;
 
-	explicit Cursor(Chart const& chart) noexcept;
+	explicit Cursor(shared_ptr<Chart const> chart) noexcept;
 
 	[[nodiscard]] static auto samples_to_ns(usize) noexcept -> nanoseconds;
 };
@@ -214,7 +216,7 @@ class ChartBuilder {
 public:
 	ChartBuilder() = default;
 
-	auto from_ir(IR const&) -> Chart;
+	auto from_ir(IR const&) -> shared_ptr<Chart>;
 
 	[[nodiscard]] auto make_file_requests(Chart&) noexcept -> io::BulkRequest;
 
@@ -332,10 +334,10 @@ void LaneBuilder::sort_and_deduplicate(vector<Note>& result, bool deduplicate) n
 template<callable<void(lib::pw::Sample)> Func>
 auto Cursor::advance_one_sample(Func&& func) noexcept -> bool
 {
-	auto chart_ended = (notes_judged >= chart.metrics.note_count);
+	auto chart_ended = (notes_judged >= chart->metrics.note_count);
 	sample_progress += 1;
 	auto const progress_ns = samples_to_ns(sample_progress);
-	for (auto [lane, progress]: views::zip(chart.lanes, lane_progress)) {
+	for (auto [lane, progress]: views::zip(chart->lanes, lane_progress)) {
 		if (progress.next_note >= lane.notes.size()) continue;
 		auto const& note = lane.notes[progress.next_note];
 		if (progress_ns >= note.timestamp) {
@@ -347,7 +349,7 @@ auto Cursor::advance_one_sample(Func&& func) noexcept -> bool
 					continue;
 				}
 			}
-			if (chart.wav_slots[note.wav_slot].empty()) continue;
+			if (chart->wav_slots[note.wav_slot].empty()) continue;
 			if (note.type_is<Note::Simple>() || (note.type_is<Note::LN>() && !progress.ln_active)) {
 				wav_slot_progress[note.wav_slot].playback_pos = 0;
 				if (note.type_is<Note::LN>()) progress.ln_active = true;
@@ -355,7 +357,7 @@ auto Cursor::advance_one_sample(Func&& func) noexcept -> bool
 		}
 	}
 
-	for (auto [slot, progress]: views::zip(chart.wav_slots, wav_slot_progress)) {
+	for (auto [slot, progress]: views::zip(chart->wav_slots, wav_slot_progress)) {
 		if (progress.playback_pos == WavSlotProgress::Stopped) continue;
 		auto const result = slot[progress.playback_pos];
 		progress.playback_pos += 1;
@@ -371,10 +373,10 @@ auto Cursor::advance_one_sample(Func&& func) noexcept -> bool
 template<callable<void(Note const&, Chart::LaneType, float)> Func>
 void Cursor::upcoming_notes(float max_units, Func&& func) const noexcept
 {
-	auto const beat_duration = duration_cast<nanoseconds>(duration<double>{60.0 / chart.bpm});
+	auto const beat_duration = duration_cast<nanoseconds>(duration<double>{60.0 / chart->bpm});
 	auto const measure_duration = beat_duration * 4;
 	auto const current_y = duration_cast<duration<double>>(samples_to_ns(sample_progress)) / measure_duration;
-	for (auto [idx, lane, progress]: views::zip(views::iota(0zu), chart.lanes, lane_progress) | views::filter([](auto tuple) { return get<1>(tuple).playable; })) {
+	for (auto [idx, lane, progress]: views::zip(views::iota(0zu), chart->lanes, lane_progress) | views::filter([](auto tuple) { return get<1>(tuple).playable; })) {
 		for (auto const& note: span{lane.notes.begin() + progress.next_note, lane.notes.size() - progress.next_note}) {
 			auto const distance = note.y_pos - current_y;
 			if (distance > max_units) break;
@@ -383,7 +385,7 @@ void Cursor::upcoming_notes(float max_units, Func&& func) const noexcept
 	}
 }
 
-auto Chart::make_play() const noexcept -> Cursor { return Cursor{*this}; }
+auto Chart::make_play() const noexcept -> Cursor { return Cursor{shared_from_this()}; }
 
 void Cursor::restart() noexcept
 {
@@ -393,10 +395,10 @@ void Cursor::restart() noexcept
 	for (auto& slot: wav_slot_progress) slot.playback_pos = WavSlotProgress::Stopped;
 }
 
-Cursor::Cursor(Chart const& chart) noexcept:
+Cursor::Cursor(shared_ptr<Chart const> chart) noexcept:
 	chart{chart}
 {
-	wav_slot_progress.resize(chart.wav_slots.size());
+	wav_slot_progress.resize(chart->wav_slots.size());
 }
 
 auto Cursor::samples_to_ns(usize samples) noexcept -> nanoseconds
@@ -409,21 +411,21 @@ auto Cursor::samples_to_ns(usize samples) noexcept -> nanoseconds
 	return 1s * whole_seconds + ns_per_sample * remainder;
 }
 
-auto ChartBuilder::from_ir(IR const& ir) -> Chart
+auto ChartBuilder::from_ir(IR const& ir) -> shared_ptr<Chart>
 {
-	auto chart = Chart{};
+	auto chart = Chart::make();
 
 	domain = ir.get_path().parent_path();
-	chart.wav_slots.resize(ir.get_wav_slot_count());
+	chart->wav_slots.resize(ir.get_wav_slot_count());
 	file_references.wav.clear();
 	file_references.wav.resize(ir.get_wav_slot_count());
 
-	process_ir_headers(chart, ir);
+	process_ir_headers(*chart, ir);
 	process_ir_channels(ir);
-	build_lanes(chart);
-	calculate_metrics(chart);
+	build_lanes(*chart);
+	calculate_metrics(*chart);
 
-	INFO("Built chart \"{}\"", chart.metadata.title);
+	INFO("Built chart \"{}\"", chart->metadata.title);
 
 	return chart;
 }

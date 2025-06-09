@@ -51,7 +51,7 @@ private:
 	atomic<uint32> sampling_rate = 0;
 
 	bool chart_playback_started = false;
-	shared_ptr<bms::Cursor> play;
+	shared_ptr<bms::Cursor> cursor;
 	atomic<bool> paused;
 	float chart_gain;
 
@@ -75,11 +75,11 @@ Audio::~Audio()
 	pw::destroy_thread_loop(loop);
 }
 
-void Audio::play_chart(shared_ptr<bms::Cursor> const& play, float gain)
+void Audio::play_chart(shared_ptr<bms::Cursor> const& cursor, float gain)
 {
 	ASSERT(gain > 0);
 	pw::lock_thread_loop(loop);
-	this->play = play;
+	this->cursor = cursor;
 	chart_playback_started = true;
 	paused = false;
 	chart_gain = gain;
@@ -99,7 +99,7 @@ void Audio::on_process(void* userdata) noexcept
 		for (auto& dest: buffer) {
 			dest = {};
 			ASSUME(dest.left == 0 && dest.right == 0);
-			self.play->advance_one_sample([&](pw::Sample sample) {
+			self.cursor->advance_one_sample([&](pw::Sample sample) {
 				dest.left += sample.left * self.chart_gain;
 				dest.right += sample.right * self.chart_gain;
 			});
