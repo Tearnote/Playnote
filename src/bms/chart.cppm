@@ -107,36 +107,41 @@ private:
 	static void sort_and_deduplicate(vector<Note>&, bool deduplicate) noexcept;
 };
 
+// A list of all possible metadata about a chart.
+export struct Metadata {
+	using Difficulty = IR::HeaderEvent::Difficulty::Level;
+	string title;
+	string subtitle;
+	string artist;
+	string subartist;
+	string genre;
+	string url;
+	string email;
+	Difficulty difficulty = Difficulty::Unknown;
+
+	[[nodiscard]] static auto to_str(Difficulty diff) -> string_view
+	{
+		switch (diff) {
+		case Difficulty::Beginner: return "Beginner";
+		case Difficulty::Normal: return "Normal";
+		case Difficulty::Hyper: return "Hyper";
+		case Difficulty::Another: return "Another";
+		case Difficulty::Insane: return "Insane";
+		default: return "Unknown";
+		}
+	}
+};
+
+// Data about a chart calculated from its contents.
+export struct Metrics {
+	uint32 note_count;
+};
+
 export class ChartBuilder;
 
 export class Chart {
 public:
-	struct Metadata {
-		using Difficulty = IR::HeaderEvent::Difficulty::Level;
-		string title;
-		string subtitle;
-		string artist;
-		string subartist;
-		string genre;
-		string url;
-		string email;
-		Difficulty difficulty = Difficulty::Unknown;
 
-		[[nodiscard]] static auto to_str(Difficulty diff) -> string_view
-		{
-			switch (diff) {
-			case Difficulty::Beginner: return "Beginner";
-			case Difficulty::Normal: return "Normal";
-			case Difficulty::Hyper: return "Hyper";
-			case Difficulty::Another: return "Another";
-			case Difficulty::Insane: return "Insane";
-			default: return "Unknown";
-			}
-		}
-	};
-	struct Metrics {
-		uint32 note_count;
-	};
 	using Difficulty = Metadata::Difficulty;
 	enum class LaneType: usize {
 		P1_Key1,

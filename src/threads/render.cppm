@@ -145,7 +145,7 @@ void enqueue_chart_objects(gfx::Renderer::Queue& queue, bms::Chart const& chart,
 	});
 }
 
-void show_metadata(bms::Chart::Metadata const& meta)
+void show_metadata(bms::Metadata const& meta)
 {
 	im::text(meta.title);
 	if (!meta.subtitle.empty()) {
@@ -158,7 +158,7 @@ void show_metadata(bms::Chart::Metadata const& meta)
 		im::text(meta.subartist);
 	}
 	im::text(meta.genre);
-	im::text("Difficulty: {}", bms::Chart::Metadata::to_str(meta.difficulty));
+	im::text("Difficulty: {}", bms::Metadata::to_str(meta.difficulty));
 	if (!meta.url.empty()) im::text(meta.url);
 	if (!meta.email.empty()) im::text(meta.email);
 }
