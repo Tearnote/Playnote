@@ -156,7 +156,7 @@ public:
 
 	[[nodiscard]] auto get_metadata() const noexcept -> Metadata const& { return metadata; }
 	[[nodiscard]] auto get_metrics() const noexcept -> Metrics const& { return metrics; }
-	[[nodiscard]] auto make_play() const noexcept -> Cursor ;
+	[[nodiscard]] auto make_cursor() const noexcept -> Cursor ;
 
 	Chart() = default; // Do not use - only for make_shared
 
@@ -385,7 +385,7 @@ void Cursor::upcoming_notes(float max_units, Func&& func) const noexcept
 	}
 }
 
-auto Chart::make_play() const noexcept -> Cursor { return Cursor{shared_from_this()}; }
+auto Chart::make_cursor() const noexcept -> Cursor { return Cursor{shared_from_this()}; }
 
 void Cursor::restart() noexcept
 {
