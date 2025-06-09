@@ -32,7 +32,7 @@ public:
 
 	[[nodiscard]] auto get_sampling_rate() const noexcept -> uint32 { return sampling_rate; }
 
-	void play_chart(shared_ptr<bms::Chart> const& chart, float gain);
+	void play_chart(shared_ptr<bms::Cursor> const& play, float gain);
 
 	void pause() { paused = true; }
 	void resume() { paused = false; }
@@ -51,7 +51,7 @@ private:
 	atomic<uint32> sampling_rate = 0;
 
 	bool chart_playback_started = false;
-	shared_ptr<bms::Chart> chart;
+	shared_ptr<bms::Cursor> play;
 	atomic<bool> paused;
 	float chart_gain;
 
@@ -75,11 +75,11 @@ Audio::~Audio()
 	pw::destroy_thread_loop(loop);
 }
 
-void Audio::play_chart(shared_ptr<bms::Chart> const& chart, float gain)
+void Audio::play_chart(shared_ptr<bms::Cursor> const& play, float gain)
 {
 	ASSERT(gain > 0);
 	pw::lock_thread_loop(loop);
-	this->chart = chart;
+	this->play = play;
 	chart_playback_started = true;
 	paused = false;
 	chart_gain = gain;
@@ -99,7 +99,7 @@ void Audio::on_process(void* userdata) noexcept
 		for (auto& dest: buffer) {
 			dest = {};
 			ASSUME(dest.left == 0 && dest.right == 0);
-			self.chart->advance_one_sample([&](pw::Sample sample) {
+			self.play->advance_one_sample([&](pw::Sample sample) {
 				dest.left += sample.left * self.chart_gain;
 				dest.right += sample.right * self.chart_gain;
 			});

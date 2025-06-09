@@ -67,25 +67,14 @@ export struct Note {
 	[[nodiscard]] auto params() const -> T const& { return get<T>(type); }
 };
 
-// A column of a chart, with all the notes that will appear on it. Tracks progress.
+// A column of a chart, with all the notes that will appear on it from start to end.
 // Notes are expected to be sorted by timestamp from earliest.
 struct Lane {
 	vector<Note> notes;
-	usize next_note_idx;
-	bool ln_active; // Is it currently in the middle of an LN?
 	bool playable; // Are the notes for the player to hit?
-
-	// Convenience accessors
-	[[nodiscard]] auto finished() const -> bool { return next_note_idx >= notes.size(); }
-	void restart() { next_note_idx = 0; ln_active = false; }
-	[[nodiscard]] auto next_note() -> Note& { return notes[next_note_idx]; }
-	[[nodiscard]] auto next_note() const -> Note const& { return notes[next_note_idx]; }
-	[[nodiscard]] auto remaining_notes() -> span<Note> { return span{notes.begin() + next_note_idx, notes.end()}; }
-	[[nodiscard]] auto remaining_notes() const -> span<Note const> { return span{notes.begin() + next_note_idx, notes.end()}; }
 };
 
-// Factory that accumulates RelativeNotes, then converts them in bulk to a Lane suitable
-// for playback.
+// Factory that accumulates RelativeNotes, then converts them in bulk to a Lane.
 class LaneBuilder {
 public:
 	LaneBuilder() = default;
@@ -138,11 +127,12 @@ export struct Metrics {
 };
 
 export class ChartBuilder;
+export class Cursor;
 
+// An entire loaded chart, with all of its notes and meta information. Immutable; a chart is played
+// by creating and advancing a Play from it.
 export class Chart {
 public:
-
-	using Difficulty = Metadata::Difficulty;
 	enum class LaneType: usize {
 		P1_Key1,
 		P1_Key2,
@@ -164,43 +154,60 @@ public:
 		Size,
 	};
 
-	void restart() noexcept;
-	[[nodiscard]] auto is_started() const noexcept -> bool { return progress == 0; }
-
 	[[nodiscard]] auto get_metadata() const noexcept -> Metadata const& { return metadata; }
 	[[nodiscard]] auto get_metrics() const noexcept -> Metrics const& { return metrics; }
-
-	template<callable<void(lib::pw::Sample)> Func>
-	auto advance_one_sample(Func&& func) noexcept -> bool;
-
-	template<callable<void(Note const&, LaneType, float)> Func>
-	void upcoming_notes(float max_units, Func&& func) const noexcept;
+	[[nodiscard]] auto make_play() const noexcept -> Cursor ;
 
 private:
 	friend class ChartBuilder;
-
-	struct WavSlot {
-		static constexpr auto Stopped = -1zu;
-		io::AudioCodec::Output audio;
-		usize playback_pos;
-	};
+	friend class Cursor;
 
 	Metadata metadata;
 	Metrics metrics;
 
 	array<Lane, +LaneType::Size> lanes;
-
-	usize progress = 0zu;
-	usize notes_hit = 0zu;
-
-	vector<optional<WavSlot>> wav_slots;
+	vector<io::AudioCodec::Output> wav_slots;
 
 	float bpm = 130.0f; // BMS spec default
 
 	Chart() = default;
 
-	[[nodiscard]] static auto progress_to_ns(usize) noexcept -> nanoseconds;
+};
 
+// Representation of a moment in chart's progress.
+class Cursor {
+public:
+	[[nodiscard]] auto get_chart() const noexcept -> Chart const& { return chart; }
+
+	void restart() noexcept;
+
+	template<callable<void(lib::pw::Sample)> Func>
+	auto advance_one_sample(Func&& func) noexcept -> bool;
+
+	template<callable<void(Note const&, Chart::LaneType, float)> Func>
+	void upcoming_notes(float max_units, Func&& func) const noexcept;
+
+private:
+	friend class Chart;
+
+	struct LaneProgress {
+		usize next_note; // Index of the earliest note that hasn't been judged yet
+		bool ln_active; // Is it currently in the middle of an LN?
+		void restart() { next_note = 0; ln_active = false; }
+	};
+	struct WavSlotProgress {
+		static constexpr auto Stopped = -1zu; // Special value for stopped playback
+		usize playback_pos = Stopped; // Samples played so far
+	};
+	Chart const& chart;
+	usize sample_progress = 0zu;
+	usize notes_judged = 0zu;
+	array<LaneProgress, +Chart::LaneType::Size> lane_progress = {};
+	vector<WavSlotProgress> wav_slot_progress;
+
+	explicit Cursor(Chart const& chart) noexcept;
+
+	[[nodiscard]] static auto samples_to_ns(usize) noexcept -> nanoseconds;
 };
 
 class ChartBuilder {
@@ -323,38 +330,37 @@ void LaneBuilder::sort_and_deduplicate(vector<Note>& result, bool deduplicate) n
 }
 
 template<callable<void(lib::pw::Sample)> Func>
-auto Chart::advance_one_sample(Func&& func) noexcept -> bool
+auto Cursor::advance_one_sample(Func&& func) noexcept -> bool
 {
-	auto chart_ended = (notes_hit >= metrics.note_count);
-	progress += 1;
-	auto const progress_ns = progress_to_ns(progress);
-	for (auto& lane: lanes) {
-		if (lane.finished()) continue;
-		auto const& note = lane.next_note();
+	auto chart_ended = (notes_judged >= chart.metrics.note_count);
+	sample_progress += 1;
+	auto const progress_ns = samples_to_ns(sample_progress);
+	for (auto [lane, progress]: views::zip(chart.lanes, lane_progress)) {
+		if (progress.next_note >= lane.notes.size()) continue;
+		auto const& note = lane.notes[progress.next_note];
 		if (progress_ns >= note.timestamp) {
 			if (note.type_is<Note::Simple>() || (note.type_is<Note::LN>() && progress_ns >= note.timestamp + note.params<Note::LN>().length)) {
-				lane.next_note_idx += 1;
-				if (lane.playable) notes_hit += 1;
+				progress.next_note += 1;
+				if (lane.playable) notes_judged += 1;
 				if (note.type_is<Note::LN>()) {
-					lane.ln_active = false;
+					progress.ln_active = false;
 					continue;
 				}
 			}
-			if (!wav_slots[note.wav_slot]) continue;
-			if (note.type_is<Note::Simple>() || (note.type_is<Note::LN>() && !lane.ln_active)) {
-				wav_slots[note.wav_slot]->playback_pos = 0;
-				if (note.type_is<Note::LN>()) lane.ln_active = true;
+			if (chart.wav_slots[note.wav_slot].empty()) continue;
+			if (note.type_is<Note::Simple>() || (note.type_is<Note::LN>() && !progress.ln_active)) {
+				wav_slot_progress[note.wav_slot].playback_pos = 0;
+				if (note.type_is<Note::LN>()) progress.ln_active = true;
 			}
 		}
 	}
 
-	for (auto& slot: wav_slots) {
-		if (!slot) continue;
-		if (slot->playback_pos == WavSlot::Stopped) continue;
-		auto const result = slot->audio[slot->playback_pos];
-		slot->playback_pos += 1;
-		if (slot->playback_pos >= slot->audio.size())
-			slot->playback_pos = WavSlot::Stopped;
+	for (auto [slot, progress]: views::zip(chart.wav_slots, wav_slot_progress)) {
+		if (progress.playback_pos == WavSlotProgress::Stopped) continue;
+		auto const result = slot[progress.playback_pos];
+		progress.playback_pos += 1;
+		if (progress.playback_pos >= slot.size())
+			progress.playback_pos = WavSlotProgress::Stopped;
 		func(result);
 		chart_ended = false;
 	}
@@ -363,32 +369,37 @@ auto Chart::advance_one_sample(Func&& func) noexcept -> bool
 }
 
 template<callable<void(Note const&, Chart::LaneType, float)> Func>
-void Chart::upcoming_notes(float max_units, Func&& func) const noexcept
+void Cursor::upcoming_notes(float max_units, Func&& func) const noexcept
 {
-	auto const beat_duration = duration_cast<nanoseconds>(duration<double>{60.0 / bpm});
+	auto const beat_duration = duration_cast<nanoseconds>(duration<double>{60.0 / chart.bpm});
 	auto const measure_duration = beat_duration * 4;
-	auto const current_y = duration_cast<duration<double>>(progress_to_ns(progress)) / measure_duration;
-	for (auto& lane: lanes | views::filter([](auto& lane) { return lane.playable; })) {
-		for (auto& note: lane.remaining_notes()) {
+	auto const current_y = duration_cast<duration<double>>(samples_to_ns(sample_progress)) / measure_duration;
+	for (auto [idx, lane, progress]: views::zip(views::iota(0zu), chart.lanes, lane_progress) | views::filter([](auto tuple) { return get<1>(tuple).playable; })) {
+		for (auto const& note: span{lane.notes.begin() + progress.next_note, lane.notes.size() - progress.next_note}) {
 			auto const distance = note.y_pos - current_y;
 			if (distance > max_units) break;
-			func(note, static_cast<LaneType>(&lane - &lanes.front()), distance);
+			func(note, static_cast<Chart::LaneType>(idx), distance);
 		}
 	}
 }
 
-void Chart::restart() noexcept
+auto Chart::make_play() const noexcept -> Cursor { return Cursor{*this}; }
+
+void Cursor::restart() noexcept
 {
-	for (auto& slot: wav_slots) {
-		if (!slot) continue;
-		slot->playback_pos = WavSlot::Stopped;
-	}
-	progress = 0zu;
-	notes_hit = 0zu;
-	for (auto& lane: lanes) lane.restart();
+	sample_progress = 0zu;
+	notes_judged = 0zu;
+	for (auto& lane: lane_progress) lane.restart();
+	for (auto& slot: wav_slot_progress) slot.playback_pos = WavSlotProgress::Stopped;
 }
 
-auto Chart::progress_to_ns(usize samples) noexcept -> nanoseconds
+Cursor::Cursor(Chart const& chart) noexcept:
+	chart{chart}
+{
+	wav_slot_progress.resize(chart.wav_slots.size());
+}
+
+auto Cursor::samples_to_ns(usize samples) noexcept -> nanoseconds
 {
 	auto const sampling_rate = io::AudioCodec::sampling_rate;
 	ASSERT(sampling_rate > 0);
@@ -433,8 +444,7 @@ auto ChartBuilder::make_file_requests(Chart& chart) noexcept -> io::BulkRequest
 	auto requests = io::BulkRequest{domain};
 	for (auto const& [needed, request, wav_slot]: views::zip(needed_slots, file_references.wav, chart.wav_slots)) {
 		if (!needed || !request) continue;
-		wav_slot = Chart::WavSlot{ .playback_pos = Chart::WavSlot::Stopped };
-		requests.enqueue<io::AudioCodec>(wav_slot->audio, *request, AudioExtensions, false);
+		requests.enqueue<io::AudioCodec>(wav_slot, *request, AudioExtensions, false);
 	}
 	return requests;
 }

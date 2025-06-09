@@ -63,7 +63,7 @@ void enqueue_test_scene(gfx::Renderer::Queue& queue)
 	queue.enqueue_rect({{706,   0}, { 40, 539}, {0.035f, 0.035f, 0.035f, 1.000f}});
 }
 
-void enqueue_chart_objects(gfx::Renderer::Queue& queue, bms::Chart const& chart, float scroll_speed)
+void enqueue_chart_objects(gfx::Renderer::Queue& queue, bms::Cursor const& play, float scroll_speed)
 {
 	using LaneType = bms::Chart::LaneType;
 	enum class NoteVisual { White, Blue, Red };
@@ -130,7 +130,7 @@ void enqueue_chart_objects(gfx::Renderer::Queue& queue, bms::Chart const& chart,
 	};
 
 	auto const max_distance = 1.0f / scroll_speed;
-	chart.upcoming_notes(max_distance, [&](auto const& note, LaneType type, float distance) {
+	play.upcoming_notes(max_distance, [&](auto const& note, LaneType type, float distance) {
 		constexpr auto max_y = 539 + 6;
 		auto const ln_height = holds_alternative<bms::Note::LN>(note.type)?
 			static_cast<int>(get<bms::Note::LN>(note.type).height * max_y * scroll_speed) :
@@ -183,27 +183,25 @@ export void render(Broadcaster& broadcaster, dev::Window& window)
 try {
 	dev::name_current_thread("render");
 	broadcaster.register_as_endpoint();
-	broadcaster.subscribe<shared_ptr<bms::Chart>>();
+	broadcaster.subscribe<shared_ptr<bms::Cursor>>();
 	broadcaster.wait_for_others(3);
 	auto gpu = dev::GPU{window};
 	auto renderer = gfx::Renderer{gpu};
 
-	auto chart = shared_ptr<bms::Chart>{};
+	auto play = shared_ptr<bms::Cursor>{};
 	auto scroll_speed = 1.0f;
 
 	while (!window.is_closing()) {
-		broadcaster.receive_all<shared_ptr<bms::Chart>>([&](auto&& recv) {
-			chart = recv;
-		});
+		broadcaster.receive_all<shared_ptr<bms::Cursor>>([&](auto&& recv) { play = recv; });
 		renderer.frame([&](gfx::Renderer::Queue& queue) {
 			enqueue_test_scene(queue);
-			if (chart) {
-				show_metadata(chart->get_metadata());
+			if (play) {
+				show_metadata(play->get_chart().get_metadata());
 				im::text("");
 				show_playback_controls(broadcaster);
 				im::text("");
 				show_scroll_speed_controls(scroll_speed);
-				enqueue_chart_objects(queue, *chart, scroll_speed);
+				enqueue_chart_objects(queue, *play, scroll_speed);
 			}
 		});
 		FRAME_MARK();

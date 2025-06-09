@@ -22,11 +22,11 @@ namespace playnote::bms {
 namespace r128 = lib::ebur128;
 namespace pw = lib::pw;
 
-export [[nodiscard]] auto measure_loudness(bms::Chart& chart) -> double
+export [[nodiscard]] auto measure_loudness(bms::Chart const& chart) -> double
 {
 	constexpr auto BufferSize = 4096zu / sizeof(pw::Sample);
-	ASSERT(chart.is_started());
 
+	auto play = chart.make_play();
 	auto ctx = r128::init(io::AudioCodec::sampling_rate);
 	auto buffer = vector<pw::Sample>{};
 	buffer.reserve(BufferSize);
@@ -35,7 +35,7 @@ export [[nodiscard]] auto measure_loudness(bms::Chart& chart) -> double
 	while (processing) {
 		for (auto _: views::iota(0zu, BufferSize)) {
 			auto& sample = buffer.emplace_back();
-			processing = !chart.advance_one_sample([&](auto new_sample) {
+			processing = !play.advance_one_sample([&](auto new_sample) {
 				sample.left += new_sample.left;
 				sample.right += new_sample.right;
 			});
@@ -49,7 +49,6 @@ export [[nodiscard]] auto measure_loudness(bms::Chart& chart) -> double
 	auto const result = r128::get_loudness(ctx);
 
 	r128::cleanup(ctx);
-	chart.restart();
 	return result;
 }
 
