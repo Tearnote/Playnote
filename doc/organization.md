@@ -2,6 +2,7 @@
 
 The codebase is organized into directories as follows:
 
+- [`doc`](doc): Write-ups on the codebase and high-level strategies.
 - [`cmake`](cmake): CMake includes.
 - [`src/preamble`](src/preamble): A centralized module export of commonly used types and utilities, forming the project's standard vocabulary.
 - [`src/macros`](src/macros): Headers for utilities that absolutely have to be preprocessor macros. Header files are not allowed anywhere else in the project.
