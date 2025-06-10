@@ -86,7 +86,10 @@ void AudioPlayer::begin_buffer()
 
 auto AudioPlayer::next_sample() -> dev::Sample
 {
-	if (paused) return {};
+	if (paused) {
+		timer_slop += dev::Audio::samples_to_ns(1);
+		return {};
+	}
 	auto sample_mix = dev::Sample{};
 	cursor->advance_one_sample([&](dev::Sample sample) {
 		sample_mix.left += sample.left * gain;
