@@ -48,8 +48,9 @@ try {
 	auto audio = dev::Audio{};
 	io::AudioCodec::sampling_rate = audio.get_sampling_rate();
 	auto chart_path = fs::path{};
-	while (!broadcaster.receive_all<ChartLoadRequest>([&](auto&& path) { chart_path = path; }))
-		yield();
+	broadcaster.await<ChartLoadRequest>(
+		[&](auto&& path) { chart_path = path; },
+		[]() { yield(); });
 
 	auto bms_compiler = bms::IRCompiler{};
 	auto const bms_ir = load_bms(bms_compiler, chart_path);

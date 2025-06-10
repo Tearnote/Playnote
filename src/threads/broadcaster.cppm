@@ -41,6 +41,13 @@ public:
 	template<typename T, callable<void(T&&)> Func>
 	auto receive_all(Func&& func) -> bool;
 
+	// Block until a message of type T is received. The sleep callback is called repeatedly until
+	// the message arrives. Function might be called more than once if multiple messages were sent
+	// in rapid succession. Be careful, as there's no timeout. Must have previously subscribed
+	// to this type.
+	template<typename T, callable<void(T&&)> Func, callable<void()> SleepFunc>
+	void await(Func&& func, SleepFunc&& sleep);
+
 private:
 	inline static thread_local auto endpoint_id = -1zu;
 	optional<latch> startup_sync;
@@ -97,6 +104,12 @@ auto Broadcaster::receive_all(Func&& func) -> bool
 		if (out_channel.empty()) return true;
 	}
 	return false;
+}
+
+template<typename T, callable<void(T&&)> Func, callable<void()> SleepFunc>
+void Broadcaster::await(Func&& func, SleepFunc&& sleep)
+{
+	while (!receive_all<T>(forward<Func>(func))) sleep();
 }
 
 }
