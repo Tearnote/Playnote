@@ -30,7 +30,9 @@ public:
 	// Attach a cursor to the player. The cursor will be advanced automatically if unpaused.
 	void play(shared_ptr<Cursor> const& cursor, bool paused = false);
 
-
+	// Return the number of samples processed by the soundcard so far. This is a best guess
+	// estimate based on time elapsed since the last audio buffer.
+	[[nodiscard]] auto get_progress() const noexcept -> usize;
 
 	// Detach the cursor, stopping all playback.
 	void stop() { paused = true; cursor.reset(); }
@@ -71,6 +73,13 @@ void AudioPlayer::play(shared_ptr<Cursor> const& cursor, bool paused)
 	ASSERT(gain > 0);
 	timer_slop = glfw.get_time();
 	this->paused = paused;
+}
+
+auto AudioPlayer::get_progress() const noexcept -> usize
+{
+	auto const last_buffer_time = timer_slop + dev::Audio::samples_to_ns(cursor->get_progress());
+	auto const elapsed = glfw.get_time() - last_buffer_time;
+	return cursor->get_progress() + dev::Audio::ns_to_samples(elapsed);
 }
 
 void AudioPlayer::begin_buffer()

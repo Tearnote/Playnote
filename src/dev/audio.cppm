@@ -45,6 +45,9 @@ public:
 	// Convert a count of samples to their duration.
 	[[nodiscard]] static auto samples_to_ns(usize) noexcept -> nanoseconds;
 
+	// Convert a duration to a number of full audio samples.
+	[[nodiscard]] static auto ns_to_samples(nanoseconds) noexcept -> usize;
+
 	// Register an audio generator. A generator is any object that implements the member function
 	// auto next_sample() -> Sample.
 	template<Generator T>
@@ -143,6 +146,13 @@ auto Audio::samples_to_ns(usize samples) noexcept -> nanoseconds
 	auto const whole_seconds = samples / sampling_rate;
 	auto const remainder = samples % sampling_rate;
 	return 1s * whole_seconds + ns_per_sample * remainder;
+}
+
+auto Audio::ns_to_samples(nanoseconds ns) noexcept -> usize
+{
+	ASSERT(sampling_rate > 0);
+	auto const ns_per_sample = duration_cast<nanoseconds>(duration<double>{1.0 / sampling_rate});
+	return ns / ns_per_sample;
 }
 
 }
