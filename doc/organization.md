@@ -1,3 +1,5 @@
+# Organization
+
 The codebase is organized into directories as follows:
 
 - [`cmake`](cmake): CMake includes.
