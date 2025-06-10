@@ -55,7 +55,7 @@ try {
 	auto const bms_ir = load_bms(bms_compiler, chart_path);
 	auto bms_chart = chart_from_ir(bms_ir, [](auto& requests) { requests.process(); });
 	auto bms_cursor = make_shared<bms::Cursor>(*bms_chart);
-	auto bms_player = bms::AudioPlayer{audio};
+	auto bms_player = bms::AudioPlayer{window.get_glfw(), audio};
 	bms_player.play(bms_cursor);
 	broadcaster.shout(bms_cursor);
 	while (!window.is_closing()) {

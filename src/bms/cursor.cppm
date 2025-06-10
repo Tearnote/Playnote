@@ -27,6 +27,9 @@ public:
 	// Return the chart the cursor is attached to.
 	[[nodiscard]] auto get_chart() const noexcept -> Chart const& { return *chart; }
 
+	// Return the current position of the cursor in samples.
+	[[nodiscard]] auto get_progress() const noexcept -> usize { return sample_progress; }
+
 	// Seek the cursor to the beginning of the chart.
 	void restart() noexcept;
 
@@ -54,8 +57,6 @@ private:
 	usize notes_judged = 0zu;
 	array<LaneProgress, +Chart::LaneType::Size> lane_progress = {};
 	vector<WavSlotProgress> wav_slot_progress;
-
-	[[nodiscard]] static auto samples_to_ns(usize) noexcept -> nanoseconds;
 };
 
 Cursor::Cursor(Chart const& chart) noexcept:
@@ -77,7 +78,7 @@ auto Cursor::advance_one_sample(Func&& func) noexcept -> bool
 {
 	auto chart_ended = (notes_judged >= chart->metrics.note_count);
 	sample_progress += 1;
-	auto const progress_ns = samples_to_ns(sample_progress);
+	auto const progress_ns = dev::Audio::samples_to_ns(sample_progress);
 	for (auto [lane, progress]: views::zip(chart->lanes, lane_progress)) {
 		if (progress.next_note >= lane.notes.size()) continue;
 		auto const& note = lane.notes[progress.next_note];
@@ -116,7 +117,7 @@ void Cursor::upcoming_notes(float max_units, Func&& func) const noexcept
 {
 	auto const beat_duration = duration_cast<nanoseconds>(duration<double>{60.0 / chart->bpm});
 	auto const measure_duration = beat_duration * 4;
-	auto const current_y = duration_cast<duration<double>>(samples_to_ns(sample_progress)) / measure_duration;
+	auto const current_y = duration_cast<duration<double>>(dev::Audio::samples_to_ns(sample_progress)) / measure_duration;
 	for (auto [idx, lane, progress]: views::zip(views::iota(0zu), chart->lanes, lane_progress) | views::filter([](auto tuple) { return get<1>(tuple).playable; })) {
 		for (auto const& note: span{lane.notes.begin() + progress.next_note, lane.notes.size() - progress.next_note}) {
 			auto const distance = note.y_pos - current_y;
@@ -124,16 +125,6 @@ void Cursor::upcoming_notes(float max_units, Func&& func) const noexcept
 			func(note, static_cast<Chart::LaneType>(idx), distance);
 		}
 	}
-}
-
-auto Cursor::samples_to_ns(usize samples) noexcept -> nanoseconds
-{
-	auto const sampling_rate = dev::Audio::get_sampling_rate();
-	ASSERT(sampling_rate > 0);
-	auto const ns_per_sample = duration_cast<nanoseconds>(duration<double>{1.0 / sampling_rate});
-	auto const whole_seconds = samples / sampling_rate;
-	auto const remainder = samples % sampling_rate;
-	return 1s * whole_seconds + ns_per_sample * remainder;
 }
 
 }

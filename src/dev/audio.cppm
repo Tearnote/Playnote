@@ -26,7 +26,10 @@ export using Sample = pw::Sample;
 
 // A type that can serve as an audio generator.
 template<typename T>
-concept Generator = requires(T& t) { same_as<decltype(t.next_sample()), Sample>; };
+concept Generator = requires (T& t) {
+	{ t.next_sample() } -> same_as<Sample>;
+	{ t.begin_buffer() } -> same_as<void>;
+};
 
 export class Audio {
 public:
@@ -39,10 +42,18 @@ public:
 	// Return current sampling rate. The value is only valid while an Audio instance exists.
 	[[nodiscard]] static auto get_sampling_rate() -> uint32 { return ASSERT_VAL(sampling_rate); }
 
+	// Convert a count of samples to their duration.
+	[[nodiscard]] static auto samples_to_ns(usize) noexcept -> nanoseconds;
+
 	// Register an audio generator. A generator is any object that implements the member function
 	// auto next_sample() -> Sample.
 	template<Generator T>
-	void add_generator(T& generator) { generators.emplace(&generator, [&]() { return generator.next_sample(); }); }
+	void add_generator(T& generator) {
+		generators.emplace(&generator, Generator{
+			[&]() { generator.begin_buffer(); },
+			[&]() { return generator.next_sample(); },
+		});
+	}
 
 	// Unregister an audio generator. Make sure to unregister a generator before destroying it.
 	template<Generator T>
@@ -54,6 +65,11 @@ public:
 	auto operator=(Audio&&) -> Audio& = delete;
 
 private:
+	struct Generator {
+		function<void()> begin_buffer;
+		function<Sample()> next_sample;
+	};
+
 	InstanceLimit<Audio, 1> instance_limit;
 
 	static inline atomic<uint32> sampling_rate = 0;
@@ -61,7 +77,7 @@ private:
 	pw::ThreadLoop loop;
 	pw::Stream stream;
 
-	unordered_map<void*, function<Sample()>> generators;
+	unordered_map<void*, Generator> generators;
 
 	static void on_process(void*) noexcept;
 	static void on_param_changed(void*, uint32_t, pw::SPAPod) noexcept;
@@ -93,10 +109,13 @@ void Audio::on_process(void* userdata) noexcept
 	if (!buffer_opt) return;
 	auto& [buffer, request] = buffer_opt.value();
 
+	for (auto const& generator: self.generators | views::values)
+		generator.begin_buffer();
+
 	for (auto& dest: buffer) {
 		dest = {};
 		for (auto const& generator: self.generators | views::values) {
-			auto const sample = generator();
+			auto const sample = generator.next_sample();
 			dest.left += sample.left;
 			dest.right += sample.right;
 		}
@@ -115,6 +134,15 @@ void Audio::on_param_changed(void*, uint32_t id, pw::SPAPod param) noexcept
 	auto const new_sampling_rate = pw::get_sampling_rate_from_param(id, param);
 	if (!new_sampling_rate) return;
 	sampling_rate = *new_sampling_rate;
+}
+
+auto Audio::samples_to_ns(usize samples) noexcept -> nanoseconds
+{
+	ASSERT(sampling_rate > 0);
+	auto const ns_per_sample = duration_cast<nanoseconds>(duration<double>{1.0 / sampling_rate});
+	auto const whole_seconds = samples / sampling_rate;
+	auto const remainder = samples % sampling_rate;
+	return 1s * whole_seconds + ns_per_sample * remainder;
 }
 
 }

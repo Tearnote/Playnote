@@ -54,6 +54,8 @@ public:
 
 	Window(GLFW&, string_view title, uvec2 size);  // GLFW parameter is a semantic dependency
 
+	[[nodiscard]] auto get_glfw() -> GLFW& { return glfw; }
+
 	// true if application close was requested (the X was pressed, or triggered manually from code
 	// to mark a user-requested quit event).
 	[[nodiscard]] auto is_closing() const noexcept -> bool
@@ -106,6 +108,7 @@ private:
 		INFO("Window \"{}\" closed", title);
 	})>;
 
+	GLFW& glfw;
 	WindowHandle window_handle{};
 
 	vector<function<void(KeyCode, bool)>> key_callbacks;
@@ -128,7 +131,8 @@ GLFW::~GLFW() noexcept
 	INFO("GLFW cleaned up");
 }
 
-Window::Window(GLFW&, string_view title, uvec2 size)
+Window::Window(GLFW& glfw, string_view title, uvec2 size):
+	glfw{glfw}
 {
 	ASSERT(size.x() > 0 && size.y() > 0);
 
