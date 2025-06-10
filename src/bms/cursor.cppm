@@ -3,7 +3,7 @@ This software is dual-licensed. For more details, please consult LICENSE.txt.
 Copyright (c) 2025 Tearnote (Hubert Maraszek)
 
 bms/cursor.cppm:
-Representation of a moment in chart's playback. Advances one sample a time while producing audio.
+Representation of a moment in chart's playback.
 */
 
 module;
@@ -17,17 +17,25 @@ import playnote.bms.chart;
 
 namespace playnote::bms {
 
+// A cursor allows for playing back an immutable Chart, tracking all state related to note progress
+// and audio playback progress.
 export class Cursor {
 public:
+	// Create a cursor for the given chart. The chart's lifetime will be extended by the cursor's.
 	explicit Cursor(Chart const& chart) noexcept;
 
+	// Return the chart the cursor is attached to.
 	[[nodiscard]] auto get_chart() const noexcept -> Chart const& { return *chart; }
 
+	// Seek the cursor to the beginning of the chart.
 	void restart() noexcept;
 
+	// Progress by one audio sample, calling the provided function once for every active
+	// sound playback.
 	template<callable<void(dev::Sample)> Func>
-	auto advance_one_sample(Func&& func) noexcept -> bool;
+	auto advance_one_sample(Func&& func = [](dev::Sample){}) noexcept -> bool;
 
+	// Call the provided function for every note less than max_units away from current position.
 	template<callable<void(Note const&, Chart::LaneType, float)> Func>
 	void upcoming_notes(float max_units, Func&& func) const noexcept;
 
