@@ -64,7 +64,7 @@ void enqueue_test_scene(gfx::Renderer::Queue& queue)
 	queue.enqueue_rect({{706,   0}, { 40, 539}, {0.035f, 0.035f, 0.035f, 1.000f}});
 }
 
-void enqueue_chart_objects(gfx::Renderer::Queue& queue, bms::Cursor const& play, float scroll_speed)
+void enqueue_chart_objects(gfx::Renderer::Queue& queue, bms::Cursor const& cursor, float scroll_speed)
 {
 	using LaneType = bms::Chart::LaneType;
 	enum class NoteVisual { White, Blue, Red };
@@ -131,7 +131,7 @@ void enqueue_chart_objects(gfx::Renderer::Queue& queue, bms::Cursor const& play,
 	};
 
 	auto const max_distance = 1.0f / scroll_speed;
-	play.upcoming_notes(max_distance, [&](auto const& note, LaneType type, float distance) {
+	cursor.upcoming_notes(max_distance, [&](auto const& note, LaneType type, float distance) {
 		constexpr auto max_y = 539 + 6;
 		auto const ln_height = holds_alternative<bms::Note::LN>(note.type)?
 			static_cast<int>(get<bms::Note::LN>(note.type).height * max_y * scroll_speed) :
