@@ -33,3 +33,7 @@ A chart is built by parsing the IR streams. ~~Random variables are determined, a
 A cursor can be created for a chart, which tracks overall progress, each lane's state and remaining notes, each audio slot's playback progress ~~and player performance~~. Cursors generate audio while progressing a chart's state one sample at a time ~~and interpreting player inputs~~.
 
 Many cursors to a chart can exist at the same time, for example to implement background tasks like preview rendering. ~~Cursors can be serialized to implement replays, instant seeking or online play.~~
+
+## 7. Audio player
+
+An audio player registers to the audio device as a sound generator, and can be used to drive a cursor at realtime speed. It advances the cursor as the audio device asks for audio samples, ~~and interpolates chart progress to estimate the exact sample coming out of the speakers right now~~. ~~It's also responsible for receiving player input events and forwarding them to the cursor.~~
