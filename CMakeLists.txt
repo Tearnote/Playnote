@@ -86,6 +86,7 @@ target_sources(Playnote PUBLIC
 	src/bms/loudness.cppm
 	src/bms/parser.cppm
 	src/bms/chart.cppm
+	src/bms/build.cppm
 	src/bms/ir.cppm
 	src/threads/broadcaster.cppm
 	src/threads/render_events.cppm

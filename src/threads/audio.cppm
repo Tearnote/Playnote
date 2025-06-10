@@ -21,6 +21,7 @@ import playnote.dev.audio;
 import playnote.dev.os;
 import playnote.bms.loudness;
 import playnote.bms.chart;
+import playnote.bms.build;
 import playnote.bms.ir;
 import playnote.threads.render_events;
 import playnote.threads.input_events;
@@ -53,7 +54,7 @@ try {
 
 	auto bms_compiler = bms::IRCompiler{};
 	auto const bms_ir = load_bms(bms_compiler, chart_path);
-	auto [bms_chart, bulk_request] = from_ir(bms_ir);
+	auto [bms_chart, bulk_request] = chart_from_ir(bms_ir);
 	bulk_request.process();
 	auto const bms_gain = bms::lufs_to_gain(bms::measure_loudness(*bms_chart));
 	INFO("Determined gain: {}", bms_gain);
