@@ -68,8 +68,9 @@ private:
 	static void sort_and_deduplicate(vector<Note>&, bool deduplicate) noexcept;
 };
 
+//
 struct FileReferences {
-	vector<optional<string>> wav;
+	vector<string> wav;
 };
 
 using LaneBuilders = array<LaneBuilder, +Chart::LaneType::Size>;
@@ -350,8 +351,8 @@ auto chart_from_ir(IR const& ir, Func file_loader) -> shared_ptr<Chart const>
 	// Enqueue file requests for used slots
 	auto requests = io::BulkRequest{domain};
 	for (auto const& [needed, request, wav_slot]: views::zip(needed_slots, file_references.wav, chart->wav_slots)) {
-		if (!needed || !request) continue;
-		requests.enqueue<io::AudioCodec>(wav_slot, *request, AudioExtensions, false);
+		if (!needed || request.empty()) continue;
+		requests.enqueue<io::AudioCodec>(wav_slot, request, AudioExtensions, false);
 	}
 	file_loader(requests);
 
