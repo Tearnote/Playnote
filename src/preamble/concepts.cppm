@@ -18,6 +18,9 @@ namespace playnote {
 
 export using std::same_as;
 
+export template<typename T, typename Base>
+concept implements = std::derived_from<T, Base>;
+
 template<class T, class Variant>
 inline constexpr auto is_variant_alternative_v = false;
 

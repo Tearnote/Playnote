@@ -24,11 +24,11 @@ namespace pw = lib::pw;
 // A single audio sample.
 export using Sample = pw::Sample;
 
-// A type that can serve as an audio generator.
-template<typename T>
-concept Generator = requires (T& t) {
-	{ t.next_sample() } -> same_as<Sample>;
-	{ t.begin_buffer() } -> same_as<void>;
+// A trait for a type that can serve as an audio generator.
+export class Generator {
+public:
+	auto next_sample() -> Sample = delete;
+	void begin_buffer() = delete;
 };
 
 export class Audio {
@@ -50,16 +50,16 @@ public:
 
 	// Register an audio generator. A generator is any object that implements the member function
 	// auto next_sample() -> Sample.
-	template<Generator T>
+	template<implements<Generator> T>
 	void add_generator(T& generator) {
-		generators.emplace(&generator, Generator{
+		generators.emplace(&generator, GeneratorOps{
 			[&]() { generator.begin_buffer(); },
 			[&]() { return generator.next_sample(); },
 		});
 	}
 
 	// Unregister an audio generator. Make sure to unregister a generator before destroying it.
-	template<Generator T>
+	template<implements<Generator> T>
 	void remove_generator(T& generator) { generators.erase(&generator); }
 
 	Audio(Audio const&) = delete;
@@ -68,7 +68,7 @@ public:
 	auto operator=(Audio&&) -> Audio& = delete;
 
 private:
-	struct Generator {
+	struct GeneratorOps {
 		function<void()> begin_buffer;
 		function<Sample()> next_sample;
 	};
@@ -80,7 +80,7 @@ private:
 	pw::ThreadLoop loop;
 	pw::Stream stream;
 
-	unordered_map<void*, Generator> generators;
+	unordered_map<void*, GeneratorOps> generators;
 
 	static void on_process(void*) noexcept;
 	static void on_param_changed(void*, uint32_t, pw::SPAPod) noexcept;

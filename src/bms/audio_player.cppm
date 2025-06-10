@@ -21,7 +21,7 @@ import playnote.bms.chart;
 
 namespace playnote::bms {
 
-export class AudioPlayer {
+export class AudioPlayer: public dev::Generator {
 public:
 	// Create the audio player with no cursor attached. Will begin to immediately generate blank
 	// samples.
