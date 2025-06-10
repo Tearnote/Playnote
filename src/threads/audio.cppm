@@ -19,7 +19,6 @@ import playnote.dev.window;
 import playnote.dev.audio;
 import playnote.dev.os;
 import playnote.bms.audio_player;
-import playnote.bms.cursor;
 import playnote.bms.build;
 import playnote.bms.ir;
 import playnote.threads.render_events;
@@ -53,23 +52,21 @@ try {
 
 	auto bms_compiler = bms::IRCompiler{};
 	auto const bms_ir = load_bms(bms_compiler, chart_path);
-	auto bms_chart = chart_from_ir(bms_ir, [](auto& requests) { requests.process(); });
-	auto bms_cursor = make_shared<bms::Cursor>(*bms_chart);
-	auto bms_player = bms::AudioPlayer{window.get_glfw(), audio};
-	bms_player.play(bms_cursor);
-	broadcaster.shout(bms_cursor);
+	auto const bms_chart = chart_from_ir(bms_ir, [](auto& requests) { requests.process(); });
+	auto bms_player = make_shared<bms::AudioPlayer>(window.get_glfw(), audio);
+	bms_player->play(*bms_chart);
+	broadcaster.shout<shared_ptr<bms::AudioPlayer const>>(bms_player);
 	while (!window.is_closing()) {
 		broadcaster.receive_all<PlayerControl>([&](auto ev) {
 			switch (ev) {
 			case PlayerControl::Play:
-				bms_player.resume();
+				bms_player->resume();
 				break;
 			case PlayerControl::Pause:
-				bms_player.pause();
+				bms_player->pause();
 				break;
 			case PlayerControl::Restart:
-				bms_cursor->restart();
-				bms_player.play(bms_cursor);
+				bms_player->play(*bms_chart);
 				break;
 			default: PANIC();
 			}

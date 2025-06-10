@@ -20,7 +20,7 @@ import playnote.dev.window;
 import playnote.dev.gpu;
 import playnote.dev.os;
 import playnote.gfx.renderer;
-import playnote.bms.cursor;
+import playnote.bms.audio_player;
 import playnote.bms.chart;
 import playnote.threads.render_events;
 import playnote.threads.broadcaster;
@@ -64,7 +64,7 @@ void enqueue_test_scene(gfx::Renderer::Queue& queue)
 	queue.enqueue_rect({{706,   0}, { 40, 539}, {0.035f, 0.035f, 0.035f, 1.000f}});
 }
 
-void enqueue_chart_objects(gfx::Renderer::Queue& queue, bms::Cursor const& cursor, float scroll_speed)
+void enqueue_chart_objects(gfx::Renderer::Queue& queue, bms::AudioPlayer const& player, float scroll_speed)
 {
 	using LaneType = bms::Chart::LaneType;
 	enum class NoteVisual { White, Blue, Red };
@@ -131,6 +131,7 @@ void enqueue_chart_objects(gfx::Renderer::Queue& queue, bms::Cursor const& curso
 	};
 
 	auto const max_distance = 1.0f / scroll_speed;
+	auto const cursor = player.get_audio_cursor();
 	cursor.upcoming_notes(max_distance, [&](auto const& note, LaneType type, float distance) {
 		constexpr auto max_y = 539 + 6;
 		auto const ln_height = holds_alternative<bms::Note::LN>(note.type)?
@@ -184,25 +185,25 @@ export void render(Broadcaster& broadcaster, dev::Window& window)
 try {
 	dev::name_current_thread("render");
 	broadcaster.register_as_endpoint();
-	broadcaster.subscribe<shared_ptr<bms::Cursor>>();
+	broadcaster.subscribe<shared_ptr<bms::AudioPlayer const>>();
 	broadcaster.wait_for_others(3);
 	auto gpu = dev::GPU{window};
 	auto renderer = gfx::Renderer{gpu};
 
-	auto play = shared_ptr<bms::Cursor>{};
+	auto player = shared_ptr<bms::AudioPlayer const>{};
 	auto scroll_speed = 1.0f;
 
 	while (!window.is_closing()) {
-		broadcaster.receive_all<shared_ptr<bms::Cursor>>([&](auto&& recv) { play = recv; });
+		broadcaster.receive_all<shared_ptr<bms::AudioPlayer const>>([&](auto&& recv) { player = recv; });
 		renderer.frame([&](gfx::Renderer::Queue& queue) {
 			enqueue_test_scene(queue);
-			if (play) {
-				show_metadata(play->get_chart().metadata);
+			if (player) {
+				show_metadata(player->get_chart().metadata);
 				im::text("");
 				show_playback_controls(broadcaster);
 				im::text("");
 				show_scroll_speed_controls(scroll_speed);
-				enqueue_chart_objects(queue, *play, scroll_speed);
+				enqueue_chart_objects(queue, *player, scroll_speed);
 			}
 		});
 		FRAME_MARK();

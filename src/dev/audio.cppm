@@ -33,8 +33,8 @@ concept Generator = requires (T& t) {
 
 export class Audio {
 public:
-	static constexpr auto ChannelCount = 2u;
-	static constexpr auto Latency = 256u;
+	static constexpr auto ChannelCount = 2zu;
+	static constexpr auto Latency = 128zu;
 
 	Audio();
 	~Audio();
@@ -43,10 +43,10 @@ public:
 	[[nodiscard]] static auto get_sampling_rate() -> uint32 { return ASSERT_VAL(sampling_rate); }
 
 	// Convert a count of samples to their duration.
-	[[nodiscard]] static auto samples_to_ns(usize) noexcept -> nanoseconds;
+	[[nodiscard]] static auto samples_to_ns(isize) noexcept -> nanoseconds;
 
 	// Convert a duration to a number of full audio samples.
-	[[nodiscard]] static auto ns_to_samples(nanoseconds) noexcept -> usize;
+	[[nodiscard]] static auto ns_to_samples(nanoseconds) noexcept -> isize;
 
 	// Register an audio generator. A generator is any object that implements the member function
 	// auto next_sample() -> Sample.
@@ -98,7 +98,6 @@ Audio::Audio() {
 
 Audio::~Audio()
 {
-	sampling_rate = 0;
 	pw::destroy_stream(loop, stream);
 	pw::destroy_thread_loop(loop);
 }
@@ -139,7 +138,7 @@ void Audio::on_param_changed(void*, uint32_t id, pw::SPAPod param) noexcept
 	sampling_rate = *new_sampling_rate;
 }
 
-auto Audio::samples_to_ns(usize samples) noexcept -> nanoseconds
+auto Audio::samples_to_ns(isize samples) noexcept -> nanoseconds
 {
 	ASSERT(sampling_rate > 0);
 	auto const ns_per_sample = duration_cast<nanoseconds>(duration<double>{1.0 / sampling_rate});
@@ -148,7 +147,7 @@ auto Audio::samples_to_ns(usize samples) noexcept -> nanoseconds
 	return 1s * whole_seconds + ns_per_sample * remainder;
 }
 
-auto Audio::ns_to_samples(nanoseconds ns) noexcept -> usize
+auto Audio::ns_to_samples(nanoseconds ns) noexcept -> isize
 {
 	ASSERT(sampling_rate > 0);
 	auto const ns_per_sample = duration_cast<nanoseconds>(duration<double>{1.0 / sampling_rate});

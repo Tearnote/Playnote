@@ -30,7 +30,7 @@ in bleeding-edge C++.
   - [x] Basic Imgui playback controls
   - [x] Basic timeline visualization
 - [ ] `0.0.2`: Correctness, efficiency and UX improvements.
-  - [ ] Universal timing system synchronizing wall clock and audio thread
+  - [x] Universal timing system synchronizing wall clock and audio thread
   - [x] Always use native sampling rate
   - [x] Long Note support
   - [ ] Measure length change support

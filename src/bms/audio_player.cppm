@@ -17,6 +17,7 @@ import playnote.logger;
 import playnote.dev.window;
 import playnote.dev.audio;
 import playnote.bms.cursor;
+import playnote.bms.chart;
 
 namespace playnote::bms {
 
@@ -27,12 +28,15 @@ public:
 	explicit AudioPlayer(dev::GLFW const& glfw, dev::Audio& audio): glfw{glfw}, audio{audio} { audio.add_generator(*this); }
 	~AudioPlayer() { audio.remove_generator(*this); }
 
-	// Attach a cursor to the player. The cursor will be advanced automatically if unpaused.
-	void play(shared_ptr<Cursor> const& cursor, bool paused = false);
+	// Attach a chart to the player. A new cursor will be created for it.
+	void play(Chart const&, bool paused = false);
 
-	// Return the number of samples processed by the soundcard so far. This is a best guess
-	// estimate based on time elapsed since the last audio buffer.
-	[[nodiscard]] auto get_progress() const noexcept -> usize;
+	// Return the currently playing chart. Requires that a chart is attached.
+	[[nodiscard]] auto get_chart() const -> Chart const& { return cursor->get_chart(); }
+
+	// Return a cursor that's at the same position as the sample playing from the speakers
+	// right now. This is a best guess estimate based on time elapsed since the last audio buffer.
+	[[nodiscard]] auto get_audio_cursor() const noexcept -> Cursor;
 
 	// Detach the cursor, stopping all playback.
 	void stop() { paused = true; cursor.reset(); }
@@ -59,27 +63,33 @@ public:
 private:
 	dev::GLFW const& glfw;
 	dev::Audio& audio;
-	shared_ptr<Cursor> cursor;
+	optional<Cursor> cursor;
 	atomic<bool> paused = true;
 	float gain;
 	nanoseconds timer_slop;
 };
 
-void AudioPlayer::play(shared_ptr<Cursor> const& cursor, bool paused)
+void AudioPlayer::play(Chart const& chart, bool paused)
 {
-	ASSERT(cursor->get_progress() == 0);
-	this->cursor = cursor;
-	gain = cursor->get_chart().metrics.gain;
+	cursor.emplace(chart);
+	gain = chart.metrics.gain;
 	ASSERT(gain > 0);
 	timer_slop = glfw.get_time();
 	this->paused = paused;
 }
 
-auto AudioPlayer::get_progress() const noexcept -> usize
+auto AudioPlayer::get_audio_cursor() const noexcept -> Cursor
 {
-	auto const last_buffer_time = timer_slop + dev::Audio::samples_to_ns(cursor->get_progress());
-	auto const elapsed = glfw.get_time() - last_buffer_time;
-	return cursor->get_progress() + dev::Audio::ns_to_samples(elapsed);
+	auto const buffer_start_progress =
+		cursor->get_progress() > dev::Audio::Latency?
+		cursor->get_progress() - dev::Audio::Latency :
+		0zu;
+	auto const last_buffer_start = timer_slop + dev::Audio::samples_to_ns(buffer_start_progress);
+	auto const elapsed = glfw.get_time() - last_buffer_start;
+	auto const elapsed_samples = dev::Audio::ns_to_samples(elapsed);
+	auto result = Cursor{*cursor};
+	result.fast_forward(clamp(elapsed_samples, 0z, static_cast<isize>(dev::Audio::Latency)));
+	return result;
 }
 
 void AudioPlayer::begin_buffer()
@@ -89,8 +99,8 @@ void AudioPlayer::begin_buffer()
 	auto const now = glfw.get_time();
 	auto const difference = now - estimated;
 	timer_slop += difference;
-	if (difference > 1ms) WARN("Audio timer was late by {}ms", difference / 1ms);
-	if (difference < -1ms) WARN("Audio timer was early by {}ms", -difference / 1ms);
+	if (difference > 5ms) WARN("Audio timer was late by {}ms", difference / 1ms);
+	if (difference < -5ms) WARN("Audio timer was early by {}ms", -difference / 1ms);
 }
 
 auto AudioPlayer::next_sample() -> dev::Sample

@@ -38,6 +38,9 @@ public:
 	template<callable<void(dev::Sample)> Func>
 	auto advance_one_sample(Func&& func = [](dev::Sample){}) noexcept -> bool;
 
+	// Progress by the given number of samples, without generating any audio.
+	void fast_forward(usize samples) noexcept;
+
 	// Call the provided function for every note less than max_units away from current position.
 	template<callable<void(Note const&, Chart::LaneType, float)> Func>
 	void upcoming_notes(float max_units, Func&& func) const noexcept;
@@ -71,6 +74,11 @@ void Cursor::restart() noexcept
 	notes_judged = 0zu;
 	for (auto& lane: lane_progress) lane.restart();
 	for (auto& slot: wav_slot_progress) slot.playback_pos = WavSlotProgress::Stopped;
+}
+
+void Cursor::fast_forward(usize samples) noexcept
+{
+	for (auto const i: views::iota(0zu, samples)) advance_one_sample([](dev::Sample){});
 }
 
 template<callable<void(dev::Sample)> Func>
