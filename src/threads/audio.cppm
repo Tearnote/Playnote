@@ -19,7 +19,7 @@ import playnote.io.file;
 import playnote.dev.window;
 import playnote.dev.audio;
 import playnote.dev.os;
-import playnote.bms.chart;
+import playnote.bms.cursor;
 import playnote.bms.build;
 import playnote.bms.ir;
 import playnote.threads.render_events;

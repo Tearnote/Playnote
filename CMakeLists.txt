@@ -83,6 +83,7 @@ target_sources(Playnote PUBLIC
 	src/dev/os.cppm
 	src/gfx/renderer.cppm
 	src/gfx/imgui.cppm
+	src/bms/cursor.cppm
 	src/bms/parser.cppm
 	src/bms/chart.cppm
 	src/bms/build.cppm

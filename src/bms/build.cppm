@@ -18,6 +18,7 @@ import playnote.lib.pipewire;
 import playnote.lib.ebur128;
 import playnote.io.bulk_request;
 import playnote.io.audio_codec;
+import playnote.bms.cursor;
 import playnote.bms.chart;
 import playnote.bms.ir;
 

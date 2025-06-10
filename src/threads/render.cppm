@@ -20,6 +20,7 @@ import playnote.dev.window;
 import playnote.dev.gpu;
 import playnote.dev.os;
 import playnote.gfx.renderer;
+import playnote.bms.cursor;
 import playnote.bms.chart;
 import playnote.threads.render_events;
 import playnote.threads.broadcaster;

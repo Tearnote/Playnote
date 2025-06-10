@@ -16,7 +16,7 @@ import playnote.preamble;
 import playnote.config;
 import playnote.logger;
 import playnote.lib.pipewire;
-import playnote.bms.chart;
+import playnote.bms.cursor;
 
 namespace playnote::dev {
 
@@ -32,7 +32,7 @@ public:
 
 	[[nodiscard]] auto get_sampling_rate() const noexcept -> uint32 { return sampling_rate; }
 
-	void play_chart(shared_ptr<bms::Cursor> const& play);
+	void play_chart(shared_ptr<bms::Cursor> const& cursor);
 
 	void pause() { paused = true; }
 	void resume() { paused = false; }
