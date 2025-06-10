@@ -22,11 +22,11 @@ namespace playnote::bms {
 namespace r128 = lib::ebur128;
 namespace pw = lib::pw;
 
-export [[nodiscard]] auto measure_loudness(bms::Chart const& chart) -> double
+export [[nodiscard]] auto measure_loudness(shared_ptr<Chart const> const& chart) -> double
 {
 	constexpr auto BufferSize = 4096zu / sizeof(pw::Sample);
 
-	auto cursor = chart.make_cursor();
+	auto cursor = Cursor{chart};
 	auto ctx = r128::init(io::AudioCodec::sampling_rate);
 	auto buffer = vector<pw::Sample>{};
 	buffer.reserve(BufferSize);

@@ -196,7 +196,7 @@ try {
 		renderer.frame([&](gfx::Renderer::Queue& queue) {
 			enqueue_test_scene(queue);
 			if (play) {
-				show_metadata(play->get_chart().get_metadata());
+				show_metadata(play->get_chart().metadata);
 				im::text("");
 				show_playback_controls(broadcaster);
 				im::text("");

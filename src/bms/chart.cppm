@@ -126,13 +126,9 @@ export struct Metrics {
 	uint32 note_count;
 };
 
-export class ChartBuilder;
-export class Cursor;
-
 // An entire loaded chart, with all of its notes and meta information. Immutable; a chart is played
 // by creating and advancing a Play from it.
-export class Chart: public enable_shared_from_this<Chart> {
-public:
+export struct Chart {
 	enum class LaneType: usize {
 		P1_Key1,
 		P1_Key2,
@@ -154,31 +150,18 @@ public:
 		Size,
 	};
 
-	[[nodiscard]] auto get_metadata() const noexcept -> Metadata const& { return metadata; }
-	[[nodiscard]] auto get_metrics() const noexcept -> Metrics const& { return metrics; }
-	[[nodiscard]] auto make_cursor() const noexcept -> Cursor ;
-
-	Chart() = default; // Do not use - only for make_shared
-
-private:
-	friend class ChartBuilder;
-	friend class Cursor;
-
 	Metadata metadata;
 	Metrics metrics;
-
 	array<Lane, +LaneType::Size> lanes;
 	vector<io::AudioCodec::Output> wav_slots;
-
 	float bpm = 130.0f; // BMS spec default
-
-	[[nodiscard]] static auto make() -> shared_ptr<Chart> { return make_shared<Chart>(); }
-
 };
 
 // Representation of a moment in chart's progress.
-class Cursor {
+export class Cursor {
 public:
+	explicit Cursor(shared_ptr<Chart const> const& chart) noexcept;
+
 	[[nodiscard]] auto get_chart() const noexcept -> Chart const& { return *chart; }
 
 	void restart() noexcept;
@@ -190,8 +173,6 @@ public:
 	void upcoming_notes(float max_units, Func&& func) const noexcept;
 
 private:
-	friend class Chart;
-
 	struct LaneProgress {
 		usize next_note; // Index of the earliest note that hasn't been judged yet
 		bool ln_active; // Is it currently in the middle of an LN?
@@ -207,36 +188,7 @@ private:
 	array<LaneProgress, +Chart::LaneType::Size> lane_progress = {};
 	vector<WavSlotProgress> wav_slot_progress;
 
-	explicit Cursor(shared_ptr<Chart const> chart) noexcept;
-
 	[[nodiscard]] static auto samples_to_ns(usize) noexcept -> nanoseconds;
-};
-
-class ChartBuilder {
-public:
-	ChartBuilder() = default;
-
-	auto from_ir(IR const&) -> shared_ptr<Chart>;
-
-	[[nodiscard]] auto make_file_requests(Chart&) noexcept -> io::BulkRequest;
-
-private:
-	struct FileReferences {
-		vector<optional<string>> wav;
-	};
-
-	static constexpr auto AudioExtensions = {"wav"sv, "ogg"sv, "mp3"sv, "flac"sv, "opus"sv};
-	fs::path domain;
-	array<LaneBuilder, +Chart::LaneType::Size> lane_builders;
-	FileReferences file_references;
-
-	[[nodiscard]] static auto channel_to_note_type(IR::ChannelEvent::Type) noexcept -> RelativeNote::Type;
-	[[nodiscard]] static auto channel_to_lane(IR::ChannelEvent::Type) noexcept -> Chart::LaneType;
-
-	void process_ir_headers(Chart&, IR const&);
-	void process_ir_channels(IR const&);
-	void build_lanes(Chart&) noexcept;
-	void calculate_metrics(Chart&) noexcept;
 };
 
 void LaneBuilder::add_note(RelativeNote const& note) noexcept
@@ -385,8 +337,6 @@ void Cursor::upcoming_notes(float max_units, Func&& func) const noexcept
 	}
 }
 
-auto Chart::make_cursor() const noexcept -> Cursor { return Cursor{shared_from_this()}; }
-
 void Cursor::restart() noexcept
 {
 	sample_progress = 0zu;
@@ -395,7 +345,7 @@ void Cursor::restart() noexcept
 	for (auto& slot: wav_slot_progress) slot.playback_pos = WavSlotProgress::Stopped;
 }
 
-Cursor::Cursor(shared_ptr<Chart const> chart) noexcept:
+Cursor::Cursor(shared_ptr<Chart const> const& chart) noexcept:
 	chart{chart}
 {
 	wav_slot_progress.resize(chart->wav_slots.size());
@@ -411,47 +361,13 @@ auto Cursor::samples_to_ns(usize samples) noexcept -> nanoseconds
 	return 1s * whole_seconds + ns_per_sample * remainder;
 }
 
-auto ChartBuilder::from_ir(IR const& ir) -> shared_ptr<Chart>
-{
-	auto chart = Chart::make();
+struct FileReferences {
+	vector<optional<string>> wav;
+};
 
-	domain = ir.get_path().parent_path();
-	chart->wav_slots.resize(ir.get_wav_slot_count());
-	file_references.wav.clear();
-	file_references.wav.resize(ir.get_wav_slot_count());
+using LaneBuilders = array<LaneBuilder, +Chart::LaneType::Size>;
 
-	process_ir_headers(*chart, ir);
-	process_ir_channels(ir);
-	build_lanes(*chart);
-	calculate_metrics(*chart);
-
-	INFO("Built chart \"{}\"", chart->metadata.title);
-
-	return chart;
-}
-
-auto ChartBuilder::make_file_requests(Chart& chart) noexcept -> io::BulkRequest
-{
-	auto needed_slots = vector<bool>{};
-	needed_slots.resize(chart.wav_slots.size(), false);
-
-	// Mark used slots
-	for (auto const& lane: chart.lanes) {
-		for (auto const& note: lane.notes) {
-			needed_slots[note.wav_slot] = true;
-		}
-	}
-
-	// Enqueue file requests for used slots
-	auto requests = io::BulkRequest{domain};
-	for (auto const& [needed, request, wav_slot]: views::zip(needed_slots, file_references.wav, chart.wav_slots)) {
-		if (!needed || !request) continue;
-		requests.enqueue<io::AudioCodec>(wav_slot, *request, AudioExtensions, false);
-	}
-	return requests;
-}
-
-auto ChartBuilder::channel_to_note_type(IR::ChannelEvent::Type ch) noexcept -> RelativeNote::Type
+auto channel_to_note_type(IR::ChannelEvent::Type ch) noexcept -> RelativeNote::Type
 {
 	using ChannelType = IR::ChannelEvent::Type;
 	if (ch >= ChannelType::BGM && ch <= ChannelType::Note_P2_KeyS) return RelativeNote::Simple{};
@@ -459,7 +375,7 @@ auto ChartBuilder::channel_to_note_type(IR::ChannelEvent::Type ch) noexcept -> R
 	PANIC();
 }
 
-auto ChartBuilder::channel_to_lane(IR::ChannelEvent::Type ch) noexcept -> Chart::LaneType
+auto channel_to_lane(IR::ChannelEvent::Type ch) noexcept -> Chart::LaneType
 {
 	switch (ch) {
 	case IR::ChannelEvent::Type::BGM:
@@ -516,7 +432,7 @@ auto ChartBuilder::channel_to_lane(IR::ChannelEvent::Type ch) noexcept -> Chart:
 	}
 }
 
-void ChartBuilder::process_ir_headers(Chart& chart, IR const& ir)
+void process_ir_headers(Chart& chart, IR const& ir, FileReferences& file_references)
 {
 	ir.each_header_event([&](IR::HeaderEvent const& event) noexcept {
 		visit(visitor {
@@ -535,7 +451,7 @@ void ChartBuilder::process_ir_headers(Chart& chart, IR const& ir)
 	});
 }
 
-void ChartBuilder::process_ir_channels(IR const& ir)
+void process_ir_channels(IR const& ir, LaneBuilders& lane_builders)
 {
 	ir.each_channel_event([&](IR::ChannelEvent const& event) noexcept {
 		auto const lane_id = channel_to_lane(event.type);
@@ -548,7 +464,7 @@ void ChartBuilder::process_ir_channels(IR const& ir)
 	});
 }
 
-void ChartBuilder::build_lanes(Chart& chart) noexcept
+void build_lanes(Chart& chart, LaneBuilders& lane_builders) noexcept
 {
 	for (auto [idx, lane]: chart.lanes | views::enumerate) {
 		auto const is_bgm = idx == +Chart::LaneType::BGM;
@@ -557,11 +473,51 @@ void ChartBuilder::build_lanes(Chart& chart) noexcept
 	}
 }
 
-void ChartBuilder::calculate_metrics(Chart& chart) noexcept
+void calculate_metrics(Chart& chart) noexcept
 {
 	chart.metrics.note_count = fold_left(chart.lanes, 0u, [](auto acc, auto const& lane) noexcept {
 		return acc + (lane.playable? lane.notes.size() : 0);
 	});
+}
+
+export auto from_ir(IR const& ir) -> pair<shared_ptr<Chart const>, io::BulkRequest>
+{
+	static constexpr auto AudioExtensions = {"wav"sv, "ogg"sv, "mp3"sv, "flac"sv, "opus"sv};
+
+	auto chart = make_shared<Chart>();
+	LaneBuilders lane_builders;
+	FileReferences file_references;
+
+	auto const domain = ir.get_path().parent_path();
+	chart->wav_slots.resize(ir.get_wav_slot_count());
+	file_references.wav.clear();
+	file_references.wav.resize(ir.get_wav_slot_count());
+
+	process_ir_headers(*chart, ir, file_references);
+	process_ir_channels(ir, lane_builders);
+	build_lanes(*chart, lane_builders);
+	calculate_metrics(*chart);
+
+	auto needed_slots = vector<bool>{};
+	needed_slots.resize(chart->wav_slots.size(), false);
+
+	// Mark used slots
+	for (auto const& lane: chart->lanes) {
+		for (auto const& note: lane.notes) {
+			needed_slots[note.wav_slot] = true;
+		}
+	}
+
+	// Enqueue file requests for used slots
+	auto requests = io::BulkRequest{domain};
+	for (auto const& [needed, request, wav_slot]: views::zip(needed_slots, file_references.wav, chart->wav_slots)) {
+		if (!needed || !request) continue;
+		requests.enqueue<io::AudioCodec>(wav_slot, *request, AudioExtensions, false);
+	}
+
+	INFO("Built chart \"{}\"", chart->metadata.title);
+
+	return {chart, requests};
 }
 
 }
