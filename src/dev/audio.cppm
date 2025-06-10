@@ -3,7 +3,7 @@ This software is dual-licensed. For more details, please consult LICENSE.txt.
 Copyright (c) 2025 Tearnote (Hubert Maraszek)
 
 dev/audio.cppm:
-Initializes audio and submits buffers for playback.
+Initializes audio and submits buffers for playback, filled with audio from registered generators.
 */
 
 module;
@@ -20,7 +20,13 @@ import playnote.lib.pipewire;
 namespace playnote::dev {
 
 namespace pw = lib::pw;
+
+// A single audio sample.
 export using Sample = pw::Sample;
+
+// A type that can serve as an audio generator.
+template<typename T>
+concept Generator = requires(T& t) { same_as<decltype(t.next_sample()), Sample>; };
 
 export class Audio {
 public:
@@ -30,12 +36,16 @@ public:
 	Audio();
 	~Audio();
 
-	[[nodiscard]] static auto get_sampling_rate() noexcept -> uint32 { return ASSERT_VAL(sampling_rate); }
+	// Return current sampling rate. The value is only valid while an Audio instance exists.
+	[[nodiscard]] static auto get_sampling_rate() -> uint32 { return ASSERT_VAL(sampling_rate); }
 
-	template<typename T>
+	// Register an audio generator. A generator is any object that implements the member function
+	// auto next_sample() -> Sample.
+	template<Generator T>
 	void add_generator(T& generator) { generators.emplace(&generator, [&]() { return generator.next_sample(); }); }
 
-	template<typename T>
+	// Unregister an audio generator. Make sure to unregister a generator before destroying it.
+	template<Generator T>
 	void remove_generator(T& generator) { generators.erase(&generator); }
 
 	Audio(Audio const&) = delete;
@@ -69,6 +79,7 @@ Audio::Audio() {
 
 Audio::~Audio()
 {
+	sampling_rate = 0;
 	pw::destroy_stream(loop, stream);
 	pw::destroy_thread_loop(loop);
 }
