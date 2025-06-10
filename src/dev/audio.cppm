@@ -32,7 +32,7 @@ public:
 
 	[[nodiscard]] auto get_sampling_rate() const noexcept -> uint32 { return sampling_rate; }
 
-	void play_chart(shared_ptr<bms::Cursor> const& play, float gain);
+	void play_chart(shared_ptr<bms::Cursor> const& play);
 
 	void pause() { paused = true; }
 	void resume() { paused = false; }
@@ -75,14 +75,14 @@ Audio::~Audio()
 	pw::destroy_thread_loop(loop);
 }
 
-void Audio::play_chart(shared_ptr<bms::Cursor> const& cursor, float gain)
+void Audio::play_chart(shared_ptr<bms::Cursor> const& cursor)
 {
-	ASSERT(gain > 0);
 	pw::lock_thread_loop(loop);
 	this->cursor = cursor;
 	chart_playback_started = true;
 	paused = false;
-	chart_gain = gain;
+	chart_gain = cursor->get_chart().metrics.gain;
+	ASSERT(chart_gain > 0);
 	pw::unlock_thread_loop(loop);
 }
 

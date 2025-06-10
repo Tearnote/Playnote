@@ -14,12 +14,17 @@ export module playnote.bms.build;
 
 import playnote.preamble;
 import playnote.logger;
+import playnote.lib.pipewire;
+import playnote.lib.ebur128;
 import playnote.io.bulk_request;
 import playnote.io.audio_codec;
 import playnote.bms.chart;
 import playnote.bms.ir;
 
 namespace playnote::bms {
+
+namespace r128 = lib::ebur128;
+namespace pw = lib::pw;
 
 // A note of a chart with its timing information relative to BPM and measure length.
 // LNs are represented as unpaired ends.
@@ -267,14 +272,55 @@ void build_lanes(Chart& chart, LaneBuilders& lane_builders) noexcept
 	}
 }
 
+[[nodiscard]] auto measure_loudness(Chart const& chart) -> double
+{
+	constexpr auto BufferSize = 4096zu / sizeof(pw::Sample);
+
+	auto cursor = Cursor{chart};
+	auto ctx = r128::init(io::AudioCodec::sampling_rate);
+	auto buffer = vector<pw::Sample>{};
+	buffer.reserve(BufferSize);
+
+	auto processing = true;
+	while (processing) {
+		for (auto _: views::iota(0zu, BufferSize)) {
+			auto& sample = buffer.emplace_back();
+			processing = !cursor.advance_one_sample([&](auto new_sample) {
+				sample.left += new_sample.left;
+				sample.right += new_sample.right;
+			});
+			if (!processing) break;
+		}
+
+		r128::add_frames(ctx, buffer);
+		buffer.clear();
+	}
+
+	auto const result = r128::get_loudness(ctx);
+
+	r128::cleanup(ctx);
+	return result;
+}
+
+[[nodiscard]] auto lufs_to_gain(double lufs) noexcept -> float
+{
+	constexpr auto LufsTarget = -14.0;
+	auto const db_from_target = LufsTarget - lufs;
+	auto const amplitude_ratio = pow(10.0, db_from_target / 20.0);
+	return static_cast<float>(amplitude_ratio);
+}
+
 void calculate_metrics(Chart& chart) noexcept
 {
 	chart.metrics.note_count = fold_left(chart.lanes, 0u, [](auto acc, auto const& lane) noexcept {
 		return acc + (lane.playable? lane.notes.size() : 0);
 	});
+	chart.metrics.loudness = measure_loudness(chart);
+	chart.metrics.gain = lufs_to_gain(chart.metrics.loudness);
 }
 
-export auto chart_from_ir(IR const& ir) -> pair<shared_ptr<Chart const>, io::BulkRequest>
+export template<callable<void(io::BulkRequest&)> Func>
+auto chart_from_ir(IR const& ir, Func file_loader) -> shared_ptr<Chart const>
 {
 	static constexpr auto AudioExtensions = {"wav"sv, "ogg"sv, "mp3"sv, "flac"sv, "opus"sv};
 
@@ -290,7 +336,6 @@ export auto chart_from_ir(IR const& ir) -> pair<shared_ptr<Chart const>, io::Bul
 	process_ir_headers(*chart, ir, file_references);
 	process_ir_channels(ir, lane_builders);
 	build_lanes(*chart, lane_builders);
-	calculate_metrics(*chart);
 
 	auto needed_slots = vector<bool>{};
 	needed_slots.resize(chart->wav_slots.size(), false);
@@ -308,10 +353,14 @@ export auto chart_from_ir(IR const& ir) -> pair<shared_ptr<Chart const>, io::Bul
 		if (!needed || !request) continue;
 		requests.enqueue<io::AudioCodec>(wav_slot, *request, AudioExtensions, false);
 	}
+	file_loader(requests);
+
+	// Metrics require a fully loaded chart
+	calculate_metrics(*chart);
 
 	INFO("Built chart \"{}\"", chart->metadata.title);
 
-	return {chart, requests};
+	return chart;
 }
 
 }

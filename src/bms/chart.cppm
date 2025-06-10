@@ -69,11 +69,11 @@ export struct Metadata {
 	{
 		switch (diff) {
 		case Difficulty::Beginner: return "Beginner";
-		case Difficulty::Normal: return "Normal";
-		case Difficulty::Hyper: return "Hyper";
-		case Difficulty::Another: return "Another";
-		case Difficulty::Insane: return "Insane";
-		default: return "Unknown";
+		case Difficulty::Normal:   return "Normal";
+		case Difficulty::Hyper:    return "Hyper";
+		case Difficulty::Another:  return "Another";
+		case Difficulty::Insane:   return "Insane";
+		default:                   return "Unknown";
 		}
 	}
 };
@@ -81,6 +81,8 @@ export struct Metadata {
 // Data about a chart calculated from its contents.
 export struct Metrics {
 	uint32 note_count;
+	double loudness; // in LUFS
+	float gain; // Amplitude ratio to normalize loudness to -14 LUFS reference
 };
 
 // An entire loaded chart, with all of its notes and meta information. Immutable; a chart is played
