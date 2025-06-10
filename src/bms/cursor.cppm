@@ -12,8 +12,7 @@ module;
 export module playnote.bms.cursor;
 
 import playnote.preamble;
-import playnote.lib.pipewire;
-import playnote.io.audio_codec;
+import playnote.dev.audio;
 import playnote.bms.chart;
 
 namespace playnote::bms {
@@ -26,7 +25,7 @@ public:
 
 	void restart() noexcept;
 
-	template<callable<void(lib::pw::Sample)> Func>
+	template<callable<void(dev::Sample)> Func>
 	auto advance_one_sample(Func&& func) noexcept -> bool;
 
 	template<callable<void(Note const&, Chart::LaneType, float)> Func>
@@ -65,7 +64,7 @@ void Cursor::restart() noexcept
 	for (auto& slot: wav_slot_progress) slot.playback_pos = WavSlotProgress::Stopped;
 }
 
-template<callable<void(lib::pw::Sample)> Func>
+template<callable<void(dev::Sample)> Func>
 auto Cursor::advance_one_sample(Func&& func) noexcept -> bool
 {
 	auto chart_ended = (notes_judged >= chart->metrics.note_count);
@@ -121,7 +120,7 @@ void Cursor::upcoming_notes(float max_units, Func&& func) const noexcept
 
 auto Cursor::samples_to_ns(usize samples) noexcept -> nanoseconds
 {
-	auto const sampling_rate = io::AudioCodec::sampling_rate;
+	auto const sampling_rate = dev::Audio::get_sampling_rate();
 	ASSERT(sampling_rate > 0);
 	auto const ns_per_sample = duration_cast<nanoseconds>(duration<double>{1.0 / sampling_rate});
 	auto const whole_seconds = samples / sampling_rate;

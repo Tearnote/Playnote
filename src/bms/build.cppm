@@ -14,8 +14,8 @@ export module playnote.bms.build;
 
 import playnote.preamble;
 import playnote.logger;
-import playnote.lib.pipewire;
 import playnote.lib.ebur128;
+import playnote.dev.audio;
 import playnote.io.bulk_request;
 import playnote.io.audio_codec;
 import playnote.bms.cursor;
@@ -25,7 +25,6 @@ import playnote.bms.ir;
 namespace playnote::bms {
 
 namespace r128 = lib::ebur128;
-namespace pw = lib::pw;
 
 // A note of a chart with its timing information relative to BPM and measure length.
 // LNs are represented as unpaired ends.
@@ -275,11 +274,11 @@ void build_lanes(Chart& chart, LaneBuilders& lane_builders) noexcept
 
 [[nodiscard]] auto measure_loudness(Chart const& chart) -> double
 {
-	constexpr auto BufferSize = 4096zu / sizeof(pw::Sample);
+	constexpr auto BufferSize = 4096zu / sizeof(dev::Sample);
 
 	auto cursor = Cursor{chart};
-	auto ctx = r128::init(io::AudioCodec::sampling_rate);
-	auto buffer = vector<pw::Sample>{};
+	auto ctx = r128::init(dev::Audio::get_sampling_rate());
+	auto buffer = vector<dev::Sample>{};
 	buffer.reserve(BufferSize);
 
 	auto processing = true;

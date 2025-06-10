@@ -7,15 +7,13 @@ A definite, playable rhythm game chart optimized for playback.
 */
 
 module;
-#include "macros/logger.hpp"
 #include "macros/assert.hpp"
 
 export module playnote.bms.chart;
 
 import playnote.preamble;
 import playnote.logger;
-import playnote.lib.pipewire;
-import playnote.io.audio_codec;
+import playnote.dev.audio;
 import playnote.bms.ir;
 
 namespace playnote::bms {
@@ -112,7 +110,7 @@ export struct Chart: enable_shared_from_this<Chart> {
 	Metadata metadata;
 	Metrics metrics;
 	array<Lane, +LaneType::Size> lanes;
-	vector<io::AudioCodec::Output> wav_slots;
+	vector<vector<dev::Sample>> wav_slots;
 	float bpm = 130.0f; // BMS spec default
 };
 

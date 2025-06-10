@@ -24,6 +24,7 @@ namespace views {
 	export using std::ranges::views::chunk;
 	export using std::ranges::views::filter;
 	export using std::ranges::views::enumerate;
+	export using std::ranges::views::values;
 
 	// Helper view for converting a string subrange to a string_view
 	export inline auto to_sv = std::ranges::views::transform([](auto range) {

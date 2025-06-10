@@ -12,23 +12,21 @@ module;
 export module playnote.io.audio_codec;
 
 import playnote.preamble;
-import playnote.lib.pipewire;
 import playnote.lib.ffmpeg;
+import playnote.dev.audio;
 
 namespace playnote::io {
 
 export class AudioCodec {
 public:
-	using Sample = lib::pw::Sample;
-	using Output = vector<Sample>;
-
-	static inline uint32 sampling_rate = 0;
+	using Output = vector<dev::Sample>;
 
 	static auto process(span<byte const> raw) -> Output;
 };
 
 auto AudioCodec::process(span<byte const> raw) -> Output
 {
+	auto const sampling_rate = dev::Audio::get_sampling_rate();
 	ASSERT(sampling_rate != 0);
 	return lib::ffmpeg::decode_and_resample_file_buffer(raw, sampling_rate);
 }

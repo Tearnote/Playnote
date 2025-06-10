@@ -16,11 +16,11 @@ import playnote.preamble;
 import playnote.config;
 import playnote.logger;
 import playnote.lib.pipewire;
-import playnote.bms.cursor;
 
 namespace playnote::dev {
 
 namespace pw = lib::pw;
+export using Sample = pw::Sample;
 
 export class Audio {
 public:
@@ -30,12 +30,13 @@ public:
 	Audio();
 	~Audio();
 
-	[[nodiscard]] auto get_sampling_rate() const noexcept -> uint32 { return sampling_rate; }
+	[[nodiscard]] static auto get_sampling_rate() noexcept -> uint32 { return sampling_rate; }
 
-	void play_chart(shared_ptr<bms::Cursor> const& cursor);
+	template<typename T>
+	void add_generator(T& generator) { generators.emplace(&generator, [&]() { return generator.next_sample(); }); }
 
-	void pause() { paused = true; }
-	void resume() { paused = false; }
+	template<typename T>
+	void remove_generator(T& generator) { generators.erase(&generator); }
 
 	Audio(Audio const&) = delete;
 	auto operator=(Audio const&) -> Audio& = delete;
@@ -45,15 +46,12 @@ public:
 private:
 	InstanceLimit<Audio, 1> instance_limit;
 
+	static inline atomic<uint32> sampling_rate = 0;
+
 	pw::ThreadLoop loop;
 	pw::Stream stream;
 
-	atomic<uint32> sampling_rate = 0;
-
-	bool chart_playback_started = false;
-	shared_ptr<bms::Cursor> cursor;
-	atomic<bool> paused;
-	float chart_gain;
+	unordered_map<void*, function<Sample()>> generators;
 
 	static void on_process(void*) noexcept;
 	static void on_param_changed(void*, uint32_t, pw::SPAPod) noexcept;
@@ -75,17 +73,6 @@ Audio::~Audio()
 	pw::destroy_thread_loop(loop);
 }
 
-void Audio::play_chart(shared_ptr<bms::Cursor> const& cursor)
-{
-	pw::lock_thread_loop(loop);
-	this->cursor = cursor;
-	chart_playback_started = true;
-	paused = false;
-	chart_gain = cursor->get_chart().metrics.gain;
-	ASSERT(chart_gain > 0);
-	pw::unlock_thread_loop(loop);
-}
-
 void Audio::on_process(void* userdata) noexcept
 {
 	auto& self = *static_cast<Audio*>(userdata);
@@ -95,31 +82,28 @@ void Audio::on_process(void* userdata) noexcept
 	if (!buffer_opt) return;
 	auto& [buffer, request] = buffer_opt.value();
 
-	if (self.chart_playback_started && !self.paused) {
-		for (auto& dest: buffer) {
-			dest = {};
-			ASSUME(dest.left == 0 && dest.right == 0);
-			self.cursor->advance_one_sample([&](pw::Sample sample) {
-				dest.left += sample.left * self.chart_gain;
-				dest.right += sample.right * self.chart_gain;
-			});
-			if (abs(dest.left) > 1.0f || abs(dest.right) > 1.0f) {
-				WARN("Sample overflow detected, clipping");
-				dest.left = clamp(dest.left, -1.0f, 1.0f);
-				dest.right = clamp(dest.right, -1.0f, 1.0f);
-			}
+	for (auto& dest: buffer) {
+		dest = {};
+		for (auto const& generator: self.generators | views::values) {
+			auto const sample = generator();
+			dest.left += sample.left;
+			dest.right += sample.right;
+		}
+		if (abs(dest.left) > 1.0f || abs(dest.right) > 1.0f) {
+			WARN("Sample overflow detected, clipping");
+			dest.left = clamp(dest.left, -1.0f, 1.0f);
+			dest.right = clamp(dest.right, -1.0f, 1.0f);
 		}
 	}
 
 	pw::enqueue_buffer(stream, request);
 }
 
-void Audio::on_param_changed(void* userdata, uint32_t id, pw::SPAPod param) noexcept
+void Audio::on_param_changed(void*, uint32_t id, pw::SPAPod param) noexcept
 {
-	auto& self = *static_cast<Audio*>(userdata);
-	auto new_sampling_rate = pw::get_sampling_rate_from_param(id, param);
+	auto const new_sampling_rate = pw::get_sampling_rate_from_param(id, param);
 	if (!new_sampling_rate) return;
-	self.sampling_rate = *new_sampling_rate;
+	sampling_rate = *new_sampling_rate;
 }
 
 }
