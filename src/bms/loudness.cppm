@@ -22,7 +22,7 @@ namespace playnote::bms {
 namespace r128 = lib::ebur128;
 namespace pw = lib::pw;
 
-export [[nodiscard]] auto measure_loudness(shared_ptr<Chart const> const& chart) -> double
+export [[nodiscard]] auto measure_loudness(Chart const& chart) -> double
 {
 	constexpr auto BufferSize = 4096zu / sizeof(pw::Sample);
 

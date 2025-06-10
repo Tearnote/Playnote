@@ -128,7 +128,7 @@ export struct Metrics {
 
 // An entire loaded chart, with all of its notes and meta information. Immutable; a chart is played
 // by creating and advancing a Play from it.
-export struct Chart {
+export struct Chart: enable_shared_from_this<Chart> {
 	enum class LaneType: usize {
 		P1_Key1,
 		P1_Key2,
@@ -160,7 +160,7 @@ export struct Chart {
 // Representation of a moment in chart's progress.
 export class Cursor {
 public:
-	explicit Cursor(shared_ptr<Chart const> const& chart) noexcept;
+	explicit Cursor(Chart const& chart) noexcept;
 
 	[[nodiscard]] auto get_chart() const noexcept -> Chart const& { return *chart; }
 
@@ -345,10 +345,10 @@ void Cursor::restart() noexcept
 	for (auto& slot: wav_slot_progress) slot.playback_pos = WavSlotProgress::Stopped;
 }
 
-Cursor::Cursor(shared_ptr<Chart const> const& chart) noexcept:
-	chart{chart}
+Cursor::Cursor(Chart const& chart) noexcept:
+	chart{chart.shared_from_this()}
 {
-	wav_slot_progress.resize(chart->wav_slots.size());
+	wav_slot_progress.resize(chart.wav_slots.size());
 }
 
 auto Cursor::samples_to_ns(usize samples) noexcept -> nanoseconds

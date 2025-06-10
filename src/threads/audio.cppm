@@ -55,9 +55,9 @@ try {
 	auto const bms_ir = load_bms(bms_compiler, chart_path);
 	auto [bms_chart, bulk_request] = from_ir(bms_ir);
 	bulk_request.process();
-	auto const bms_gain = bms::lufs_to_gain(bms::measure_loudness(bms_chart));
+	auto const bms_gain = bms::lufs_to_gain(bms::measure_loudness(*bms_chart));
 	INFO("Determined gain: {}", bms_gain);
-	auto bms_cursor = make_shared<bms::Cursor>(bms_chart);
+	auto bms_cursor = make_shared<bms::Cursor>(*bms_chart);
 	audio.play_chart(bms_cursor, bms_gain);
 	broadcaster.shout(bms_cursor);
 	while (!window.is_closing()) {
