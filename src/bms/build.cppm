@@ -68,7 +68,8 @@ private:
 	static void sort_and_deduplicate(vector<Note>&, bool deduplicate) noexcept;
 };
 
-//
+// Mappings from slots to external resources. A calue might be empty if the chart didn't define
+// a mapping.
 struct FileReferences {
 	vector<string> wav;
 };
@@ -320,6 +321,8 @@ void calculate_metrics(Chart& chart) noexcept
 	chart.metrics.gain = lufs_to_gain(chart.metrics.loudness);
 }
 
+// Generate a Chart from an IR. Requires a function to handle the loading of a bulk request.
+// The provided function must block until the bulk request is complete.
 export template<callable<void(io::BulkRequest&)> Func>
 auto chart_from_ir(IR const& ir, Func file_loader) -> shared_ptr<Chart const>
 {
@@ -348,7 +351,7 @@ auto chart_from_ir(IR const& ir, Func file_loader) -> shared_ptr<Chart const>
 		}
 	}
 
-	// Enqueue file requests for used slots
+	// Enqueue and execute file requests for used slots
 	auto requests = io::BulkRequest{domain};
 	for (auto const& [needed, request, wav_slot]: views::zip(needed_slots, file_references.wav, chart->wav_slots)) {
 		if (!needed || request.empty()) continue;
