@@ -30,7 +30,7 @@ public:
 	Audio();
 	~Audio();
 
-	[[nodiscard]] static auto get_sampling_rate() noexcept -> uint32 { return sampling_rate; }
+	[[nodiscard]] static auto get_sampling_rate() noexcept -> uint32 { return ASSERT_VAL(sampling_rate); }
 
 	template<typename T>
 	void add_generator(T& generator) { generators.emplace(&generator, [&]() { return generator.next_sample(); }); }
