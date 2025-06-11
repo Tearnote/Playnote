@@ -51,16 +51,11 @@ public:
 	// Register an audio generator. A generator is any object that implements the member function
 	// auto next_sample() -> Sample.
 	template<implements<Generator> T>
-	void add_generator(T& generator) {
-		generators.emplace(&generator, GeneratorOps{
-			[&]() { generator.begin_buffer(); },
-			[&]() { return generator.next_sample(); },
-		});
-	}
+	void add_generator(T& generator);
 
 	// Unregister an audio generator. Make sure to unregister a generator before destroying it.
 	template<implements<Generator> T>
-	void remove_generator(T& generator) { generators.erase(&generator); }
+	void remove_generator(T& generator);
 
 	Audio(Audio const&) = delete;
 	auto operator=(Audio const&) -> Audio& = delete;
@@ -81,10 +76,27 @@ private:
 	pw::Stream stream;
 
 	unordered_map<void*, GeneratorOps> generators;
+	mutex generator_lock;
 
 	static void on_process(void*) noexcept;
 	static void on_param_changed(void*, uint32_t, pw::SPAPod) noexcept;
 };
+
+template<implements<Generator> T>
+void Audio::add_generator(T& generator) {
+	auto lock = lock_guard{generator_lock};
+	generators.emplace(&generator, GeneratorOps{
+		[&]() { generator.begin_buffer(); },
+		[&]() { return generator.next_sample(); },
+	});
+}
+
+template<implements<Generator> T>
+void Audio::remove_generator(T& generator)
+{
+	auto lock = lock_guard{generator_lock};
+	generators.erase(&generator);
+}
 
 Audio::Audio() {
 	pw::init();
@@ -106,6 +118,9 @@ void Audio::on_process(void* userdata) noexcept
 {
 	auto& self = *static_cast<Audio*>(userdata);
 	auto& stream = self.stream;
+	// Mutexes are bad in realtime context, but this should only block during startup/shutdown
+	// and loadings.
+	auto lock = lock_guard{self.generator_lock};
 
 	auto buffer_opt = pw::dequeue_buffer(stream);
 	if (!buffer_opt) return;
