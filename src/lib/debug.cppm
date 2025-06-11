@@ -30,7 +30,7 @@ import playnote.preamble;
 namespace playnote::lib::dbg {
 
 // Register a handler to make all assert failures throw.
-export void set_assert_handler() noexcept
+export void set_assert_handler()
 {
 	libassert::set_failure_handler([](auto const& info) {
 		throw runtime_error{info.to_string()};
@@ -38,9 +38,9 @@ export void set_assert_handler() noexcept
 	libassert::set_color_scheme(libassert::color_scheme::blank);
 }
 
-// Open the console window and attach standard outputs to it. Errors are ignored.
+// Open the console window and attach standard outputs to it.
 // https://github.com/ocaml/ocaml/issues/9252#issuecomment-576383814
-export void attach_console() noexcept
+export void attach_console()
 {
 #ifdef _WIN32
 	AllocConsole();

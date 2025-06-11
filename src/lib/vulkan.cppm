@@ -189,7 +189,7 @@ export auto select_physical_device(Instance const& instance, Surface surface) ->
 }
 
 // Return the driver version triple in use by a specific GPU.
-export auto get_driver_version(PhysicalDevice const& physical_device) noexcept -> array<uint32, 3>
+export auto get_driver_version(PhysicalDevice const& physical_device) -> array<uint32, 3>
 {
 	return to_array({
 		VK_API_VERSION_MAJOR(physical_device.properties.driverVersion),
@@ -231,7 +231,7 @@ export struct QueueSet {
 };
 
 // Fill in a QueueSet from a Vulkan device.
-export auto retrieve_device_queues(Device const& device) noexcept -> QueueSet
+export auto retrieve_device_queues(Device const& device) -> QueueSet
 {
 	auto result = QueueSet{};
 

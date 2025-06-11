@@ -60,7 +60,7 @@ auto av_io_write(void* opaque, uint8_t const* buf, int buf_size) -> int
 	PANIC("ffmpeg attempted to write to a read-only file");
 }
 
-auto av_io_seek(void* opaque, int64_t offset, int whence) noexcept -> int64_t
+auto av_io_seek(void* opaque, int64_t offset, int whence) -> int64_t
 {
 	auto& buffer = *static_cast<SeekBuffer*>(opaque);
 	auto new_cursor = 0zu;

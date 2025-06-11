@@ -29,7 +29,7 @@ export using bms::HeaderCommand;
 export using NotePosition = rational<int32>;
 
 // Print a note position for debug output.
-export auto to_str(NotePosition pos) noexcept -> string
+export auto to_str(NotePosition pos) -> string
 {
 	return format("{} {}/{}",
 		pos.numerator() / pos.denominator(),
@@ -147,7 +147,7 @@ public:
 			MeasureLength,
 		};
 		// Enum value to string, for debug output.
-		[[nodiscard]] static auto to_str(Type) noexcept -> string_view;
+		[[nodiscard]] static auto to_str(Type) -> string_view;
 
 		NotePosition position;
 		Type type;
@@ -165,10 +165,10 @@ public:
 	void each_channel_event(Func&& func) const { for (auto const& event: channel_events) func(event); }
 
 	// Return the full path of the BMS file that the IR was generated from.
-	[[nodiscard]] auto get_path() const noexcept -> fs::path const& { return path; }
+	[[nodiscard]] auto get_path() const -> fs::path const& { return path; }
 
 	// Get the total number of WAV slots referenced by the headers and channels.
-	[[nodiscard]] auto get_wav_slot_count() const noexcept -> usize { return wav_slot_count; }
+	[[nodiscard]] auto get_wav_slot_count() const -> usize { return wav_slot_count; }
 
 private:
 	friend IRCompiler;
@@ -191,7 +191,7 @@ private:
 	// Add a header event, ensuring the IR allocator is used.
 	template<typename T>
 		requires variant_alternative<T*, HeaderEvent::ParamsType>
-	void add_header_event(T&& event) noexcept
+	void add_header_event(T&& event)
 	{
 		auto* event_ptr = static_cast<T*>(buffer_resource->allocate(sizeof(T), alignof(T)));
 		allocator.construct(event_ptr, forward<T>(event));
@@ -201,7 +201,7 @@ private:
 	}
 
 	// Add a channel event.
-	void add_channel_event(ChannelEvent&& event) noexcept
+	void add_channel_event(ChannelEvent&& event)
 	{
 		channel_events.emplace_back(move(event));
 	}
@@ -211,7 +211,7 @@ private:
 export class IRCompiler {
 public:
 	// Initializes internal mappings. Reuse the instance to compile multiple BMS files, if possible.
-	IRCompiler() noexcept;
+	IRCompiler();
 
 	// Generate IR from an unmodified BMS file. The path is not accessed; it is later used
 	// at runtime as a base location of dependent assets.
@@ -234,7 +234,7 @@ private:
 		Mapping wav;
 
 		// Retrieve the slot's index, or register a new one
-		auto get_slot_id(Mapping& map, string_view key) noexcept -> usize;
+		auto get_slot_id(Mapping& map, string_view key) -> usize;
 	};
 
 	Logger::Category* cat;
@@ -245,44 +245,44 @@ private:
 	using ChannelHandlerFunc = void(IRCompiler::*)(IR&, SingleChannelCommand&&, SlotMappings&);
 	unordered_map<string, ChannelHandlerFunc, string_hash> channel_handlers;
 
-	void register_header_handlers() noexcept;
-	void register_channel_handlers() noexcept;
+	void register_header_handlers();
+	void register_channel_handlers();
 	void handle_header(IR&, HeaderCommand&&, SlotMappings&);
 	void handle_channel(IR&, ChannelCommand&&, SlotMappings&);
 
 	// Generic handlers
-	void parse_header_ignored(IR&, HeaderCommand&&, SlotMappings&) noexcept {}
-	void parse_header_ignored_log(IR&, HeaderCommand&&, SlotMappings&) noexcept;
-	void parse_header_unimplemented(IR&, HeaderCommand&&, SlotMappings&) noexcept;
+	void parse_header_ignored(IR&, HeaderCommand&&, SlotMappings&) {}
+	void parse_header_ignored_log(IR&, HeaderCommand&&, SlotMappings&);
+	void parse_header_unimplemented(IR&, HeaderCommand&&, SlotMappings&);
 	void parse_header_unimplemented_critical(IR&, HeaderCommand&&, SlotMappings&);
-	void parse_channel_ignored(IR&, SingleChannelCommand&&, SlotMappings&) noexcept {}
-	void parse_channel_ignored_log(IR&, SingleChannelCommand&&, SlotMappings&) noexcept;
-	void parse_channel_unimplemented(IR&, SingleChannelCommand&&, SlotMappings&) noexcept;
+	void parse_channel_ignored(IR&, SingleChannelCommand&&, SlotMappings&) {}
+	void parse_channel_ignored_log(IR&, SingleChannelCommand&&, SlotMappings&);
+	void parse_channel_unimplemented(IR&, SingleChannelCommand&&, SlotMappings&);
 	void parse_channel_unimplemented_critical(IR&, SingleChannelCommand&&, SlotMappings&);
 
 	// Metadata handlers
-	void parse_header_title(IR&, HeaderCommand&&, SlotMappings&) noexcept;
-	void parse_header_subtitle(IR&, HeaderCommand&&, SlotMappings&) noexcept;
-	void parse_header_artist(IR&, HeaderCommand&&, SlotMappings&) noexcept;
-	void parse_header_subartist(IR&, HeaderCommand&&, SlotMappings&) noexcept;
-	void parse_header_genre(IR&, HeaderCommand&&, SlotMappings&) noexcept;
-	void parse_header_url(IR&, HeaderCommand&&, SlotMappings&) noexcept;
-	void parse_header_email(IR&, HeaderCommand&&, SlotMappings&) noexcept;
-	void parse_header_player(IR&, HeaderCommand&&, SlotMappings&) noexcept;
-	void parse_header_bpm(IR&, HeaderCommand&&, SlotMappings&) noexcept;
-	void parse_header_difficulty(IR&, HeaderCommand&&, SlotMappings&) noexcept;
+	void parse_header_title(IR&, HeaderCommand&&, SlotMappings&);
+	void parse_header_subtitle(IR&, HeaderCommand&&, SlotMappings&);
+	void parse_header_artist(IR&, HeaderCommand&&, SlotMappings&);
+	void parse_header_subartist(IR&, HeaderCommand&&, SlotMappings&);
+	void parse_header_genre(IR&, HeaderCommand&&, SlotMappings&);
+	void parse_header_url(IR&, HeaderCommand&&, SlotMappings&);
+	void parse_header_email(IR&, HeaderCommand&&, SlotMappings&);
+	void parse_header_player(IR&, HeaderCommand&&, SlotMappings&);
+	void parse_header_bpm(IR&, HeaderCommand&&, SlotMappings&);
+	void parse_header_difficulty(IR&, HeaderCommand&&, SlotMappings&);
 
 	// File reference handlers
-	void parse_header_wav(IR&, HeaderCommand&&, SlotMappings&) noexcept;
+	void parse_header_wav(IR&, HeaderCommand&&, SlotMappings&);
 
 	// Audio channels
-	void parse_channel_bgm(IR&, SingleChannelCommand&&, SlotMappings&) noexcept;
+	void parse_channel_bgm(IR&, SingleChannelCommand&&, SlotMappings&);
 	void parse_channel_note(IR&, SingleChannelCommand&&, SlotMappings&);
 	void parse_channel_ln(IR&, SingleChannelCommand&&, SlotMappings&);
 	void parse_channel_measure_length(IR&, SingleChannelCommand&&, SlotMappings&);
 };
 
-auto IR::ChannelEvent::to_str(Type type) noexcept -> string_view
+auto IR::ChannelEvent::to_str(Type type) -> string_view
 {
 	switch (type) {
 	case Type::BGM:          return "BGM";
@@ -312,7 +312,7 @@ IR::IR():
 	header_events{allocator},
 	channel_events{allocator} {}
 
-IRCompiler::IRCompiler() noexcept
+IRCompiler::IRCompiler()
 {
 	cat = globals::logger->register_category("BMS parse", LogLevelBMSBuild);
 	register_header_handlers();
@@ -343,14 +343,14 @@ auto IRCompiler::compile(fs::path const& path, span<byte const> bms_file_content
 	return ir;
 }
 
-auto IRCompiler::SlotMappings::get_slot_id(Mapping& map, string_view key) noexcept -> usize
+auto IRCompiler::SlotMappings::get_slot_id(Mapping& map, string_view key) -> usize
 {
 	return map.contains(key)?
 		map.at(key) :
 		map.emplace(key, map.size()).first->second;
 }
 
-void IRCompiler::register_header_handlers() noexcept
+void IRCompiler::register_header_handlers()
 {
 	// Implemented headers
 	header_handlers.emplace("TITLE",        &IRCompiler::parse_header_title);
@@ -433,7 +433,7 @@ void IRCompiler::register_header_handlers() noexcept
 	header_handlers.emplace("CHANGEOPTION", &IRCompiler::parse_header_ignored_log); // ^
 }
 
-void IRCompiler::register_channel_handlers() noexcept
+void IRCompiler::register_channel_handlers()
 {
 	// Implemented channels
 	channel_handlers.emplace("01" /* BGM                 */, &IRCompiler::parse_channel_bgm);
@@ -567,12 +567,12 @@ void IRCompiler::handle_channel(IR& ir, ChannelCommand&& cmd, SlotMappings& maps
 	}
 }
 
-void IRCompiler::parse_header_ignored_log(IR&, HeaderCommand&& cmd, SlotMappings&) noexcept
+void IRCompiler::parse_header_ignored_log(IR&, HeaderCommand&& cmd, SlotMappings&)
 {
 	INFO_AS(cat, "L{}: Ignored header: {}", cmd.line, cmd.header);
 }
 
-void IRCompiler::parse_header_unimplemented(IR&, HeaderCommand&& cmd, SlotMappings&) noexcept
+void IRCompiler::parse_header_unimplemented(IR&, HeaderCommand&& cmd, SlotMappings&)
 {
 	WARN_AS(cat, "L{}: Unimplemented header: {}", cmd.line, cmd.header);
 }
@@ -582,12 +582,12 @@ void IRCompiler::parse_header_unimplemented_critical(IR&, HeaderCommand&& cmd, S
 	throw runtime_error_fmt("L{}: Critical unimplemented header: {}", cmd.line, cmd.header);
 }
 
-void IRCompiler::parse_channel_ignored_log(IR&, SingleChannelCommand&& cmd, SlotMappings&) noexcept
+void IRCompiler::parse_channel_ignored_log(IR&, SingleChannelCommand&& cmd, SlotMappings&)
 {
 	INFO_AS(cat, "L{}: Ignored channel: {}", cmd.line, cmd.channel);
 }
 
-void IRCompiler::parse_channel_unimplemented(IR&, SingleChannelCommand&& cmd, SlotMappings&) noexcept
+void IRCompiler::parse_channel_unimplemented(IR&, SingleChannelCommand&& cmd, SlotMappings&)
 {
 	WARN_AS(cat, "L{}: Unimplemented channel: {}", cmd.line, cmd.channel);
 }
@@ -597,7 +597,7 @@ void IRCompiler::parse_channel_unimplemented_critical(IR&, SingleChannelCommand&
 	throw runtime_error_fmt("L{}: Critical unimplemented channel: {}", cmd.line, cmd.channel);
 }
 
-void IRCompiler::parse_header_title(IR& ir, HeaderCommand&& cmd, SlotMappings&) noexcept
+void IRCompiler::parse_header_title(IR& ir, HeaderCommand&& cmd, SlotMappings&)
 {
 	if (cmd.value.empty()) {
 		WARN_AS(cat, "L{}: Title header has no value", cmd.line);
@@ -608,7 +608,7 @@ void IRCompiler::parse_header_title(IR& ir, HeaderCommand&& cmd, SlotMappings&) 
 	ir.add_header_event(IR::HeaderEvent::Title{ .title = move(cmd.value) });
 }
 
-void IRCompiler::parse_header_subtitle(IR& ir, HeaderCommand&& cmd, SlotMappings&) noexcept
+void IRCompiler::parse_header_subtitle(IR& ir, HeaderCommand&& cmd, SlotMappings&)
 {
 	if (cmd.value.empty()) {
 		WARN_AS(cat, "L{}: Subtitle header has no value", cmd.line);
@@ -619,7 +619,7 @@ void IRCompiler::parse_header_subtitle(IR& ir, HeaderCommand&& cmd, SlotMappings
 	ir.add_header_event(IR::HeaderEvent::Subtitle{ .subtitle = move(cmd.value) });
 }
 
-void IRCompiler::parse_header_artist(IR& ir, HeaderCommand&& cmd, SlotMappings&) noexcept
+void IRCompiler::parse_header_artist(IR& ir, HeaderCommand&& cmd, SlotMappings&)
 {
 	if (cmd.value.empty()) {
 		WARN_AS(cat, "L{}: Artist header has no value", cmd.line);
@@ -630,7 +630,7 @@ void IRCompiler::parse_header_artist(IR& ir, HeaderCommand&& cmd, SlotMappings&)
 	ir.add_header_event(IR::HeaderEvent::Artist{ .artist = move(cmd.value) });
 }
 
-void IRCompiler::parse_header_subartist(IR& ir, HeaderCommand&& cmd, SlotMappings&) noexcept
+void IRCompiler::parse_header_subartist(IR& ir, HeaderCommand&& cmd, SlotMappings&)
 {
 	if (cmd.value.empty()) {
 		WARN_AS(cat, "L{}: Subartist header has no value", cmd.line);
@@ -641,7 +641,7 @@ void IRCompiler::parse_header_subartist(IR& ir, HeaderCommand&& cmd, SlotMapping
 	ir.add_header_event(IR::HeaderEvent::Subartist{ .subartist = move(cmd.value) });
 }
 
-void IRCompiler::parse_header_genre(IR& ir, HeaderCommand&& cmd, SlotMappings&) noexcept
+void IRCompiler::parse_header_genre(IR& ir, HeaderCommand&& cmd, SlotMappings&)
 {
 	if (cmd.value.empty()) {
 		WARN_AS(cat, "L{}: Genre header has no value", cmd.line);
@@ -652,7 +652,7 @@ void IRCompiler::parse_header_genre(IR& ir, HeaderCommand&& cmd, SlotMappings&) 
 	ir.add_header_event(IR::HeaderEvent::Genre{ .genre = move(cmd.value) });
 }
 
-void IRCompiler::parse_header_url(IR& ir, HeaderCommand&& cmd, SlotMappings&) noexcept
+void IRCompiler::parse_header_url(IR& ir, HeaderCommand&& cmd, SlotMappings&)
 {
 	if (cmd.value.empty()) {
 		WARN_AS(cat, "L{}: URL header has no value", cmd.line);
@@ -663,7 +663,7 @@ void IRCompiler::parse_header_url(IR& ir, HeaderCommand&& cmd, SlotMappings&) no
 	ir.add_header_event(IR::HeaderEvent::URL{ .url = move(cmd.value) });
 }
 
-void IRCompiler::parse_header_email(IR& ir, HeaderCommand&& cmd, SlotMappings&) noexcept
+void IRCompiler::parse_header_email(IR& ir, HeaderCommand&& cmd, SlotMappings&)
 {
 	if (cmd.value.empty()) {
 		WARN_AS(cat, "L{}: mail header has no value", cmd.line);
@@ -674,7 +674,7 @@ void IRCompiler::parse_header_email(IR& ir, HeaderCommand&& cmd, SlotMappings&) 
 	ir.add_header_event(IR::HeaderEvent::Email{ .email = move(cmd.value) });
 }
 
-void IRCompiler::parse_header_player(IR& ir, HeaderCommand&& cmd, SlotMappings&) noexcept try
+void IRCompiler::parse_header_player(IR& ir, HeaderCommand&& cmd, SlotMappings&) try
 {
 	if (cmd.value.empty()) {
 		WARN_AS(cat, "L{}: Player header has no value", cmd.line);
@@ -693,7 +693,7 @@ catch (exception const&) {
 	WARN_AS(cat, "L{}: Player header has an invalid value: {}", cmd.line, cmd.value);
 }
 
-void IRCompiler::parse_header_bpm(IR& ir, HeaderCommand&& cmd, SlotMappings&) noexcept try
+void IRCompiler::parse_header_bpm(IR& ir, HeaderCommand&& cmd, SlotMappings&) try
 {
 	if (!cmd.slot.empty()) {
 		WARN_AS(cat, "L{}: Unimplemented header: BPMxx", cmd.line);
@@ -712,7 +712,7 @@ catch (exception const&) {
 	WARN_AS(cat, "L{}: BPM header has an invalid value: {}", cmd.line, cmd.value);
 }
 
-void IRCompiler::parse_header_difficulty(IR& ir, HeaderCommand&& cmd, SlotMappings&) noexcept try
+void IRCompiler::parse_header_difficulty(IR& ir, HeaderCommand&& cmd, SlotMappings&) try
 {
 	if (cmd.value.empty()) {
 		WARN_AS(cat, "L{}: Difficulty header has no value", cmd.line);
@@ -733,7 +733,7 @@ catch (exception const&) {
 	WARN_AS(cat, "L{}: Difficulty header has an invalid value: {}", cmd.line, cmd.value);
 }
 
-void IRCompiler::parse_header_wav(IR& ir, HeaderCommand&& cmd, SlotMappings& maps) noexcept
+void IRCompiler::parse_header_wav(IR& ir, HeaderCommand&& cmd, SlotMappings& maps)
 {
 	if (cmd.slot.empty()) {
 		WARN_AS(cat, "L{}: WAV header has no slot", cmd.line);
@@ -760,7 +760,7 @@ void IRCompiler::parse_header_wav(IR& ir, HeaderCommand&& cmd, SlotMappings& map
 	ir.add_header_event(IR::HeaderEvent::WAV{ .slot = slot_id, .name = move(cmd.value) });
 }
 
-void IRCompiler::parse_channel_bgm(IR& ir, SingleChannelCommand&& cmd, SlotMappings& maps) noexcept
+void IRCompiler::parse_channel_bgm(IR& ir, SingleChannelCommand&& cmd, SlotMappings& maps)
 {
 	if (cmd.value == "00") return; // Rest note
 	auto const slot_id = maps.get_slot_id(maps.wav, cmd.value);

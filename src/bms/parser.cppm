@@ -54,7 +54,7 @@ auto raw_to_utf8(Logger::Category* cat, span<byte const> raw_file_contents) -> s
 }
 
 // Ensure all line endings are '\n' (UNIX style).
-void normalize_line_endings(string& text) noexcept
+void normalize_line_endings(string& text)
 {
 	replace_all(text, "\r\n", "\n");
 	replace_all(text, "\r", "\n");
@@ -62,7 +62,7 @@ void normalize_line_endings(string& text) noexcept
 
 // Parse a known "header" type command into its individual components.
 // If the command is malformed, measure will be set to -1 which is otherwise an invalid value.
-auto parse_channel(string_view command, usize line_index) noexcept -> ChannelCommand
+auto parse_channel(string_view command, usize line_index) -> ChannelCommand
 {
 	if (command.size() < 4) return { .measure = -1 }; // Not enough space for even the measure number
 	auto const measure = lexical_cast<int32>(command.substr(1, 3)); // We checked that at least the first character is a digit, so this won't throw
@@ -84,7 +84,7 @@ auto parse_channel(string_view command, usize line_index) noexcept -> ChannelCom
 // Parse a known "header" type command into its individual components. Some fields might be returned
 // empty if the command is malformed. Command is expected to be trimmed, start with '#' and have
 // at least 1 more character.
-auto parse_header(string_view command, usize line_index) noexcept -> HeaderCommand
+auto parse_header(string_view command, usize line_index) -> HeaderCommand
 {
 	ASSUME(!command.empty());
 	ASSUME(command[0] == '#');
@@ -127,7 +127,7 @@ auto parse_header(string_view command, usize line_index) noexcept -> HeaderComma
 
 // Parse a line into the appropriate command.
 // If the line doesn't contain a valid command, std::monostate is returned.
-auto parse_line(string_view line, usize line_index) noexcept -> variant<monostate, HeaderCommand, ChannelCommand>
+auto parse_line(string_view line, usize line_index) -> variant<monostate, HeaderCommand, ChannelCommand>
 {
 	line = trim_copy(line); // BMS occasionally uses leading whitespace
 	if (line.empty()) return {};

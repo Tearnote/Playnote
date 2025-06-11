@@ -96,14 +96,14 @@ export auto init(glfw::Window window, vk::Allocator& global_allocator) -> Contex
 }
 
 // Mark the start of a new frame for Imgui. All Imgui commands must come after this is called.
-export void begin() noexcept
+export void begin()
 {
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
 }
 
 // Finalize Imgui commands and prepare buffers for rendering. Imgui commands cannot be used anymore.
-export void end() noexcept { ImGui::Render(); }
+export void end() { ImGui::Render(); }
 
 // Draw queued Imgui commands onto the provided image.
 // Throws if vuk throws.
@@ -227,20 +227,20 @@ export auto render(vk::Allocator& frame_allocator, vk::ManagedImage&& target, Co
 }
 
 // Use before an element to keep it on the same line as the previous one.
-export void same_line() noexcept { ImGui::SameLine(); }
+export void same_line() { ImGui::SameLine(); }
 
 // A clickable button. Returns true when clicked.
-export auto button(char const* str) noexcept -> bool
+export auto button(char const* str) -> bool
 {
 	return ImGui::Button(str);
 }
 
 // Static text.
-export void text(string_view str) noexcept { ImGui::Text("%s", string{str}.c_str()); }
+export void text(string_view str) { ImGui::Text("%s", string{str}.c_str()); }
 
 // Static text, fmt overload.
 export template<typename... Args>
-void text(fmtquill::format_string<Args...> fmt, Args&&... args) noexcept
+void text(fmtquill::format_string<Args...> fmt, Args&&... args)
 {
 	ImGui::Text("%s", format(fmt, forward<Args>(args)...).c_str());
 }

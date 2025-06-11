@@ -23,7 +23,7 @@ namespace playnote::lib::glfw {
 export using Window = GLFWwindow*;
 
 // Make GLFW throw on any error. Can be called anytime.
-export void register_error_handler() noexcept
+export void register_error_handler()
 {
 	glfwSetErrorCallback([](int code, char const* str) {
 		throw runtime_error_fmt("[GLFW] Error #{}: {}", code, str);
@@ -40,7 +40,7 @@ export void cleanup() noexcept try { glfwTerminate(); }
 catch (runtime_error const&) {}
 
 // Return the me passed since the call to init_glfw(). If GLFW is not initialized, returns 0.
-export [[nodiscard]] auto time_since_init() noexcept -> nanoseconds try
+export [[nodiscard]] auto time_since_init() -> nanoseconds try
 {
 	auto const time = duration<double>{glfwGetTime()};
 	return duration_cast<nanoseconds>(time);
@@ -55,7 +55,7 @@ export void process_events() { glfwPollEvents(); }
 
 // Return the current value of the window's "closing" flag. This flag is set automatically
 // if the user presses the "X" in the corner, or programmatically via set_window_closing_flag.
-export [[nodiscard]] auto get_window_closing_flag(Window window) noexcept -> bool
+export [[nodiscard]] auto get_window_closing_flag(Window window) -> bool
 {
 	ASSERT(window);
 	auto const result = glfwWindowShouldClose(window);
@@ -64,14 +64,14 @@ export [[nodiscard]] auto get_window_closing_flag(Window window) noexcept -> boo
 }
 
 // Set the current value of the window's "closing" flag.
-export void set_window_closing_flag(Window window, bool flag_value) noexcept
+export void set_window_closing_flag(Window window, bool flag_value)
 {
 	ASSERT(window);
 	glfwSetWindowShouldClose(window, flag_value);
 }
 
 // Set window creation hints to the expected values.
-export void set_window_creation_hints() noexcept try
+export void set_window_creation_hints() try
 {
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
@@ -98,14 +98,14 @@ catch (runtime_error const&) {}
 
 // Set the custom pointer value that gets passed to event handlers.
 export template<typename T>
-void set_window_user_pointer(Window window, T* ptr) noexcept
+void set_window_user_pointer(Window window, T* ptr)
 {
 	ASSERT(window);
 	glfwSetWindowUserPointer(window, ptr);
 }
 
 export template<typename T>
-[[nodiscard]] auto get_window_user_pointer(Window window) noexcept -> T*
+[[nodiscard]] auto get_window_user_pointer(Window window) -> T*
 {
 	ASSERT(window);
 	return static_cast<T*>(glfwGetWindowUserPointer(window));
@@ -113,7 +113,7 @@ export template<typename T>
 
 // Return the Window's title. String is valid until it's changed by another call, or the window
 // is destroyed.
-export [[nodiscard]] auto get_window_title(Window window) noexcept -> string_view
+export [[nodiscard]] auto get_window_title(Window window) -> string_view
 {
 	ASSERT(window);
 	return glfwGetWindowTitle(window);
@@ -130,7 +130,7 @@ export enum class KeyAction: int {
 // Set the handler for keyboard inputs.
 // Param 2 is KeyCode, param 4 is KeyAction
 export template<callable<void(Window, int, int, int, int)> Func>
-void set_window_key_handler(Window window, Func&& func) noexcept
+void set_window_key_handler(Window window, Func&& func)
 {
 	ASSERT(window);
 	glfwSetKeyCallback(window, func);
@@ -139,7 +139,7 @@ void set_window_key_handler(Window window, Func&& func) noexcept
 // Set the handler for mouse cursor movement.
 // Param 2 is x coordinate (in pixels), param 3 is y coordinate (in pixels)
 export template<callable<void(Window, double, double)> Func>
-void set_window_cursor_motion_handler(Window window, Func&& func) noexcept
+void set_window_cursor_motion_handler(Window window, Func&& func)
 {
 	ASSERT(window);
 	glfwSetCursorPosCallback(window, func);
@@ -159,7 +159,7 @@ export enum class MouseButtonAction: int {
 // Set the handler for mouse button inputs.
 // Param 2 is MouseButton, param 3 is MouseButtonAction
 export template<callable<void(Window, int, int, int)> Func>
-void set_window_mouse_button_handler(Window window, Func&& func) noexcept
+void set_window_mouse_button_handler(Window window, Func&& func)
 {
 	ASSERT(window);
 	glfwSetMouseButtonCallback(window, func);

@@ -29,7 +29,7 @@ public:
 	~GLFW() noexcept;
 
 	// Retrieve time since application start.
-	[[nodiscard]] auto get_time() const noexcept -> nanoseconds { return glfw::time_since_init(); }
+	[[nodiscard]] auto get_time() const -> nanoseconds { return glfw::time_since_init(); }
 
 	// Pump the message queue.
 	// Run this as often as possible to receive accurate event timestamps.
@@ -58,39 +58,39 @@ public:
 
 	// true if application close was requested (the X was pressed, or triggered manually from code
 	// to mark a user-requested quit event).
-	[[nodiscard]] auto is_closing() const noexcept -> bool
+	[[nodiscard]] auto is_closing() const -> bool
 	{
 		return glfw::get_window_closing_flag(window_handle.get());
 	}
 
 	// Signal the application to cleanly close as soon as possible.
-	void request_close() noexcept { glfw::set_window_closing_flag(window_handle.get(), true); }
+	void request_close() { glfw::set_window_closing_flag(window_handle.get(), true); }
 
 	// Size of the window's framebuffer.
 	[[nodiscard]] auto size() const -> uvec2;
 
 	// Run the provided function on any keyboard key press/release.
 	// Function is provided with the keycode and key state (true for press, false for release).
-	void register_key_callback(function<void(KeyCode, bool)>&& func) noexcept
+	void register_key_callback(function<void(KeyCode, bool)>&& func)
 	{
 		key_callbacks.emplace_back(move(func));
 	}
 
 	// Run the provided function on any cursor move.
 	// Function is provided with the new cursor position.
-	void register_cursor_motion_callback(function<void(vec2)>&& func) noexcept
+	void register_cursor_motion_callback(function<void(vec2)>&& func)
 	{
 		cursor_motion_callbacks.emplace_back(move(func));
 	}
 
 	// Run the provided function on any mouse button press/release.
 	// Function is provided with the button index and state (true for press, false for release).
-	void register_mouse_button_callback(function<void(MouseButton, bool)>&& func) noexcept
+	void register_mouse_button_callback(function<void(MouseButton, bool)>&& func)
 	{
 		mouse_button_callbacks.emplace_back(move(func));
 	}
 
-	auto handle() noexcept -> glfw::Window { return window_handle.get(); }
+	auto handle() -> glfw::Window { return window_handle.get(); }
 
 	// Create a Vulkan surface for the window's framebuffer.
 	// Destruction needs to be handled manually by the caller.

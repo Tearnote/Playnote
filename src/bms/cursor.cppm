@@ -22,28 +22,28 @@ namespace playnote::bms {
 export class Cursor {
 public:
 	// Create a cursor for the given chart. The chart's lifetime will be extended by the cursor's.
-	explicit Cursor(Chart const& chart) noexcept;
+	explicit Cursor(Chart const& chart);
 
 	// Return the chart the cursor is attached to.
-	[[nodiscard]] auto get_chart() const noexcept -> Chart const& { return *chart; }
+	[[nodiscard]] auto get_chart() const -> Chart const& { return *chart; }
 
 	// Return the current position of the cursor in samples.
-	[[nodiscard]] auto get_progress() const noexcept -> usize { return sample_progress; }
+	[[nodiscard]] auto get_progress() const -> usize { return sample_progress; }
 
 	// Seek the cursor to the beginning of the chart.
-	void restart() noexcept;
+	void restart();
 
 	// Progress by one audio sample, calling the provided function once for every active
 	// sound playback.
 	template<callable<void(dev::Sample)> Func>
-	auto advance_one_sample(Func&& func = [](dev::Sample){}) noexcept -> bool;
+	auto advance_one_sample(Func&& func = [](dev::Sample){}) -> bool;
 
 	// Progress by the given number of samples, without generating any audio.
-	void fast_forward(usize samples) noexcept;
+	void fast_forward(usize samples);
 
 	// Call the provided function for every note less than max_units away from current position.
 	template<callable<void(Note const&, Chart::LaneType, float)> Func>
-	void upcoming_notes(float max_units, Func&& func) const noexcept;
+	void upcoming_notes(float max_units, Func&& func) const;
 
 private:
 	struct LaneProgress {
@@ -62,13 +62,13 @@ private:
 	vector<WavSlotProgress> wav_slot_progress;
 };
 
-Cursor::Cursor(Chart const& chart) noexcept:
+Cursor::Cursor(Chart const& chart):
 	chart{chart.shared_from_this()}
 {
 	wav_slot_progress.resize(chart.wav_slots.size());
 }
 
-void Cursor::restart() noexcept
+void Cursor::restart()
 {
 	sample_progress = 0zu;
 	notes_judged = 0zu;
@@ -76,13 +76,13 @@ void Cursor::restart() noexcept
 	for (auto& slot: wav_slot_progress) slot.playback_pos = WavSlotProgress::Stopped;
 }
 
-void Cursor::fast_forward(usize samples) noexcept
+void Cursor::fast_forward(usize samples)
 {
 	for (auto const i: views::iota(0zu, samples)) advance_one_sample([](dev::Sample){});
 }
 
 template<callable<void(dev::Sample)> Func>
-auto Cursor::advance_one_sample(Func&& func) noexcept -> bool
+auto Cursor::advance_one_sample(Func&& func) -> bool
 {
 	auto chart_ended = (notes_judged >= chart->metrics.note_count);
 	sample_progress += 1;
@@ -121,7 +121,7 @@ auto Cursor::advance_one_sample(Func&& func) noexcept -> bool
 }
 
 template<callable<void(Note const&, Chart::LaneType, float)> Func>
-void Cursor::upcoming_notes(float max_units, Func&& func) const noexcept
+void Cursor::upcoming_notes(float max_units, Func&& func) const
 {
 	auto const beat_duration = duration<double>{60.0 / chart->bpm};
 	auto const current_y = duration_cast<duration<double>>(dev::Audio::samples_to_ns(sample_progress)) / beat_duration;

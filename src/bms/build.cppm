@@ -79,18 +79,18 @@ public:
 	LaneBuilder() = default;
 
 	// Enqueue an AbsNote. Notes can be enqueued in any order.
-	void add_note(AbsNote const& note) noexcept;
+	void add_note(AbsNote const& note);
 
 	// Convert enqueued notes to a Lane and clear the queue.
-	auto build(bool deduplicate = true) noexcept -> Lane;
+	auto build(bool deduplicate = true) -> Lane;
 
 private:
 	vector<AbsNote> notes;
 	vector<AbsNote> ln_ends;
 
-	static void convert_simple(vector<AbsNote> const&, vector<Note>&) noexcept;
-	static void convert_ln(vector<AbsNote>&, vector<Note>&) noexcept;
-	static void sort_and_deduplicate(vector<Note>&, bool deduplicate) noexcept;
+	static void convert_simple(vector<AbsNote> const&, vector<Note>&);
+	static void convert_ln(vector<AbsNote>&, vector<Note>&);
+	static void sort_and_deduplicate(vector<Note>&, bool deduplicate);
 };
 
 // Mappings from slots to external resources. A calue might be empty if the chart didn't define
@@ -99,7 +99,7 @@ struct FileReferences {
 	vector<string> wav;
 };
 
-void LaneBuilder::add_note(AbsNote const& note) noexcept
+void LaneBuilder::add_note(AbsNote const& note)
 {
 	if (note.type_is<Simple>())
 		notes.emplace_back(note);
@@ -108,7 +108,7 @@ void LaneBuilder::add_note(AbsNote const& note) noexcept
 	else PANIC();
 }
 
-auto LaneBuilder::build(bool deduplicate) noexcept -> Lane
+auto LaneBuilder::build(bool deduplicate) -> Lane
 {
 	auto result = Lane{};
 
@@ -121,9 +121,9 @@ auto LaneBuilder::build(bool deduplicate) noexcept -> Lane
 	return result;
 }
 
-void LaneBuilder::convert_simple(vector<AbsNote> const& notes, vector<Note>& result) noexcept
+void LaneBuilder::convert_simple(vector<AbsNote> const& notes, vector<Note>& result)
 {
-	transform(notes, back_inserter(result), [&](AbsNote const& note) noexcept {
+	transform(notes, back_inserter(result), [&](AbsNote const& note) {
 		ASSERT(note.type_is<Simple>());
 		return Note{
 			.type = Note::Simple{},
@@ -134,14 +134,14 @@ void LaneBuilder::convert_simple(vector<AbsNote> const& notes, vector<Note>& res
 	});
 }
 
-void LaneBuilder::convert_ln(vector<AbsNote>& ln_ends, vector<Note>& result) noexcept
+void LaneBuilder::convert_ln(vector<AbsNote>& ln_ends, vector<Note>& result)
 {
-	stable_sort(ln_ends, [](auto const& a, auto const& b) noexcept { return a.position.timestamp < b.position.timestamp; });
+	stable_sort(ln_ends, [](auto const& a, auto const& b) { return a.position.timestamp < b.position.timestamp; });
 	if (ln_ends.size() % 2 != 0) {
 		WARN("Unpaired LN end found; chart is most likely invalid");
 		ln_ends.pop_back();
 	}
-	transform(ln_ends | views::chunk(2), back_inserter(result), [&](auto ends) noexcept {
+	transform(ln_ends | views::chunk(2), back_inserter(result), [&](auto ends) {
 		auto const ln_length = ends[1].position.timestamp - ends[0].position.timestamp;
 		auto const ln_height = ends[1].position.y_pos - ends[0].position.y_pos;
 		return Note{
@@ -156,20 +156,20 @@ void LaneBuilder::convert_ln(vector<AbsNote>& ln_ends, vector<Note>& result) noe
 	});
 }
 
-void LaneBuilder::sort_and_deduplicate(vector<Note>& result, bool deduplicate) noexcept
+void LaneBuilder::sort_and_deduplicate(vector<Note>& result, bool deduplicate)
 {
 	if (!deduplicate) {
-		stable_sort(result, [](auto const& a, auto const& b) noexcept {
+		stable_sort(result, [](auto const& a, auto const& b) {
 			return a.timestamp < b.timestamp;
 		});
 		return;
 	}
 	// std::unique keeps the first of the two duplicate elements while we want to keep the second,
 	// so the range is reversed first
-	stable_sort(result, [](auto const& a, auto const& b) noexcept {
+	stable_sort(result, [](auto const& a, auto const& b) {
 		return a.timestamp > b.timestamp; // Reverse sort
 	});
-	auto removed = unique(result, [](auto const& a, auto const& b) noexcept {
+	auto removed = unique(result, [](auto const& a, auto const& b) {
 		return a.timestamp == b.timestamp;
 	});
 	auto removed_count = removed.size();
@@ -178,7 +178,7 @@ void LaneBuilder::sort_and_deduplicate(vector<Note>& result, bool deduplicate) n
 	reverse(result); // Reverse back
 }
 
-auto channel_to_note_type(IR::ChannelEvent::Type ch) noexcept -> RelativeNoteType
+auto channel_to_note_type(IR::ChannelEvent::Type ch) -> RelativeNoteType
 {
 	using ChannelType = IR::ChannelEvent::Type;
 	if (ch >= ChannelType::BGM && ch <= ChannelType::Note_P2_KeyS) return Simple{};
@@ -186,7 +186,7 @@ auto channel_to_note_type(IR::ChannelEvent::Type ch) noexcept -> RelativeNoteTyp
 	PANIC();
 }
 
-auto channel_to_lane(IR::ChannelEvent::Type ch) noexcept -> Chart::LaneType
+auto channel_to_lane(IR::ChannelEvent::Type ch) -> Chart::LaneType
 {
 	switch (ch) {
 	case IR::ChannelEvent::Type::BGM:
@@ -258,26 +258,26 @@ void set_measure_length(vector<double>& measure_lengths, usize measure, double l
 
 void process_ir_headers(Chart& chart, IR const& ir, FileReferences& file_references)
 {
-	ir.each_header_event([&](IR::HeaderEvent const& event) noexcept {
+	ir.each_header_event([&](IR::HeaderEvent const& event) {
 		visit(visitor {
-			[&](IR::HeaderEvent::Title* params) noexcept { chart.metadata.title = params->title; },
-			[&](IR::HeaderEvent::Subtitle* params) noexcept { chart.metadata.subtitle = params->subtitle; },
-			[&](IR::HeaderEvent::Artist* params) noexcept { chart.metadata.artist = params->artist; },
-			[&](IR::HeaderEvent::Subartist* params) noexcept { chart.metadata.subartist = params->subartist; },
-			[&](IR::HeaderEvent::Genre* params) noexcept { chart.metadata.genre = params->genre; },
-			[&](IR::HeaderEvent::URL* params) noexcept { chart.metadata.url = params->url; },
-			[&](IR::HeaderEvent::Email* params) noexcept { chart.metadata.email = params->email; },
-			[&](IR::HeaderEvent::Difficulty* params) noexcept { chart.metadata.difficulty = params->level; },
-			[&](IR::HeaderEvent::BPM* params) noexcept { chart.bpm = params->bpm; },
-			[&](IR::HeaderEvent::WAV* params) noexcept { file_references.wav[params->slot] = params->name; },
-			[](auto&&) noexcept {}
+			[&](IR::HeaderEvent::Title* params) { chart.metadata.title = params->title; },
+			[&](IR::HeaderEvent::Subtitle* params) { chart.metadata.subtitle = params->subtitle; },
+			[&](IR::HeaderEvent::Artist* params) { chart.metadata.artist = params->artist; },
+			[&](IR::HeaderEvent::Subartist* params) { chart.metadata.subartist = params->subartist; },
+			[&](IR::HeaderEvent::Genre* params) { chart.metadata.genre = params->genre; },
+			[&](IR::HeaderEvent::URL* params) { chart.metadata.url = params->url; },
+			[&](IR::HeaderEvent::Email* params) { chart.metadata.email = params->email; },
+			[&](IR::HeaderEvent::Difficulty* params) { chart.metadata.difficulty = params->level; },
+			[&](IR::HeaderEvent::BPM* params) { chart.bpm = params->bpm; },
+			[&](IR::HeaderEvent::WAV* params) { file_references.wav[params->slot] = params->name; },
+			[](auto&&) {}
 		}, event.params);
 	});
 }
 
 void process_ir_channels(IR const& ir, vector<MeasureRelNote>& notes, vector<double>& measure_lengths)
 {
-	ir.each_channel_event([&](IR::ChannelEvent const& event) noexcept {
+	ir.each_channel_event([&](IR::ChannelEvent const& event) {
 		if (event.type == IR::ChannelEvent::Type::MeasureLength) {
 			set_measure_length(measure_lengths, event.position.numerator() / event.position.denominator(), bit_cast<double>(event.slot));
 			return;
@@ -300,7 +300,7 @@ auto build_bpm_relative_measures(span<double const> measure_lengths) -> vector<B
 	result.reserve(measure_lengths.size());
 
 	auto cursor = 0.0;
-	transform(measure_lengths, back_inserter(result), [&](auto length) noexcept {
+	transform(measure_lengths, back_inserter(result), [&](auto length) {
 		auto const measure = BeatRelMeasure{
 			.start = cursor,
 			.length = length * 4.0,
@@ -315,7 +315,7 @@ auto measure_rel_notes_to_bpm_rel(span<MeasureRelNote const> notes, span<BeatRel
 {
 	auto result = vector<BeatRelNote>{};
 	result.reserve(notes.size());
-	transform(notes, back_inserter(result), [&](MeasureRelNote const& note) noexcept {
+	transform(notes, back_inserter(result), [&](MeasureRelNote const& note) {
 		auto const& measure = measures[note.position.numerator() / note.position.denominator()];
 		auto const position = measure.start + measure.length * rational_cast<double>(NotePosition{note.position.numerator() % note.position.denominator(), note.position.denominator()});
 		return BeatRelNote{
@@ -332,7 +332,7 @@ auto beat_rel_notes_to_abs(span<BeatRelNote const> notes, float bpm) -> vector<A
 {
 	auto result = vector<AbsNote>{};
 	result.reserve(notes.size());
-	transform(notes, back_inserter(result), [&](BeatRelNote const& note) noexcept {
+	transform(notes, back_inserter(result), [&](BeatRelNote const& note) {
 		auto const beat_duration = duration<double>{60.0 / bpm};
 		auto const timestamp = duration_cast<nanoseconds>(note.position * beat_duration);
 		return AbsNote{
@@ -348,7 +348,7 @@ auto beat_rel_notes_to_abs(span<BeatRelNote const> notes, float bpm) -> vector<A
 	return result;
 }
 
-void build_lanes(Chart& chart, span<AbsNote const> notes) noexcept
+void build_lanes(Chart& chart, span<AbsNote const> notes)
 {
 	auto lane_builders = array<LaneBuilder, +Chart::LaneType::Size>{};
 
@@ -392,7 +392,7 @@ void build_lanes(Chart& chart, span<AbsNote const> notes) noexcept
 	return result;
 }
 
-[[nodiscard]] auto lufs_to_gain(double lufs) noexcept -> float
+[[nodiscard]] auto lufs_to_gain(double lufs) -> float
 {
 	constexpr auto LufsTarget = -14.0;
 	auto const db_from_target = LufsTarget - lufs;
@@ -400,9 +400,9 @@ void build_lanes(Chart& chart, span<AbsNote const> notes) noexcept
 	return static_cast<float>(amplitude_ratio);
 }
 
-void calculate_metrics(Chart& chart) noexcept
+void calculate_metrics(Chart& chart)
 {
-	chart.metrics.note_count = fold_left(chart.lanes, 0u, [](auto acc, auto const& lane) noexcept {
+	chart.metrics.note_count = fold_left(chart.lanes, 0u, [](auto acc, auto const& lane) {
 		return acc + (lane.playable? lane.notes.size() : 0);
 	});
 	chart.metrics.loudness = measure_loudness(chart);

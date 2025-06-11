@@ -36,7 +36,7 @@ public:
 
 	// Return a cursor that's at the same position as the sample playing from the speakers
 	// right now. This is a best guess estimate based on time elapsed since the last audio buffer.
-	[[nodiscard]] auto get_audio_cursor() const noexcept -> Cursor;
+	[[nodiscard]] auto get_audio_cursor() const -> Cursor;
 
 	// Detach the cursor, stopping all playback.
 	void stop() { paused = true; cursor.reset(); }
@@ -78,7 +78,7 @@ void AudioPlayer::play(Chart const& chart, bool paused)
 	this->paused = paused;
 }
 
-auto AudioPlayer::get_audio_cursor() const noexcept -> Cursor
+auto AudioPlayer::get_audio_cursor() const -> Cursor
 {
 	auto const buffer_start_progress =
 		cursor->get_progress() > dev::Audio::Latency?

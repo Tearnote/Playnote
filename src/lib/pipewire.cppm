@@ -34,10 +34,10 @@ void ret_check(int ret, string_view message = "libpipewire error")
 }
 
 // Initialize PipeWire.
-export void init() noexcept { pw_init(nullptr, nullptr); }
+export void init() { pw_init(nullptr, nullptr); }
 
 // Return the runtime version of PipeWire.
-export [[nodiscard]] auto get_version() noexcept -> string_view { return ASSERT_VAL(pw_get_library_version()); }
+export [[nodiscard]] auto get_version() -> string_view { return ASSERT_VAL(pw_get_library_version()); }
 
 export using ThreadLoop = pw_thread_loop*;
 
@@ -52,13 +52,13 @@ export [[nodiscard]] auto create_thread_loop() -> ThreadLoop
 export void destroy_thread_loop(ThreadLoop loop) noexcept { pw_thread_loop_destroy(loop); }
 
 // Start the thread loop. It will begin to process events on its own thread.
-export void start_thread_loop(ThreadLoop loop) noexcept { pw_thread_loop_start(loop); }
+export void start_thread_loop(ThreadLoop loop) { pw_thread_loop_start(loop); }
 
 // Lock the thread loop. This ensures that succeeding code won't run concurrently with the callback.
-export void lock_thread_loop(ThreadLoop loop) noexcept { pw_thread_loop_lock(loop); }
+export void lock_thread_loop(ThreadLoop loop) { pw_thread_loop_lock(loop); }
 
 // Unlock the thread loop, allowing the callbacks to run again.
-export void unlock_thread_loop(ThreadLoop loop) noexcept { pw_thread_loop_unlock(loop); }
+export void unlock_thread_loop(ThreadLoop loop) { pw_thread_loop_unlock(loop); }
 
 export using Stream = pw_stream*;
 export using SPAPod = spa_pod const*;
@@ -125,7 +125,7 @@ export void destroy_stream(ThreadLoop loop, Stream stream) noexcept
 	pw_thread_loop_unlock(loop);
 }
 
-export auto get_stream_time(Stream stream) noexcept -> nanoseconds
+export auto get_stream_time(Stream stream) -> nanoseconds
 {
 	return nanoseconds{pw_stream_get_nsec(stream)};
 }
@@ -141,7 +141,7 @@ export using BufferRequest = pw_buffer*;
 // Retrieve a buffer request from the queue. If return value is nullopt, a buffer is unavailable,
 // and there is nothing to do. Otherwise, return value is the buffer which needs to be filled
 // to its full size, and the request object to submit back when finished.
-export [[nodiscard]] auto dequeue_buffer(Stream stream) noexcept -> optional<pair<span<Sample>, BufferRequest>>
+export [[nodiscard]] auto dequeue_buffer(Stream stream) -> optional<pair<span<Sample>, BufferRequest>>
 {
 	auto* buffer_outer = pw_stream_dequeue_buffer(stream);
 	if (!buffer_outer) return nullopt;
@@ -162,7 +162,7 @@ export [[nodiscard]] auto dequeue_buffer(Stream stream) noexcept -> optional<pai
 }
 
 // Submit a fulfilled buffer request.
-export void enqueue_buffer(Stream stream, BufferRequest request) noexcept
+export void enqueue_buffer(Stream stream, BufferRequest request)
 {
 	pw_stream_queue_buffer(stream, request);
 }

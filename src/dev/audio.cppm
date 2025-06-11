@@ -43,10 +43,10 @@ public:
 	[[nodiscard]] static auto get_sampling_rate() -> uint32 { return ASSERT_VAL(sampling_rate); }
 
 	// Convert a count of samples to their duration.
-	[[nodiscard]] static auto samples_to_ns(isize) noexcept -> nanoseconds;
+	[[nodiscard]] static auto samples_to_ns(isize) -> nanoseconds;
 
 	// Convert a duration to a number of full audio samples.
-	[[nodiscard]] static auto ns_to_samples(nanoseconds) noexcept -> isize;
+	[[nodiscard]] static auto ns_to_samples(nanoseconds) -> isize;
 
 	// Register an audio generator. A generator is any object that implements the member function
 	// auto next_sample() -> Sample.
@@ -78,8 +78,8 @@ private:
 	unordered_map<void*, GeneratorOps> generators;
 	mutex generator_lock;
 
-	static void on_process(void*) noexcept;
-	static void on_param_changed(void*, uint32_t, pw::SPAPod) noexcept;
+	static void on_process(void*);
+	static void on_param_changed(void*, uint32_t, pw::SPAPod);
 };
 
 template<implements<Generator> T>
@@ -114,7 +114,7 @@ Audio::~Audio()
 	pw::destroy_thread_loop(loop);
 }
 
-void Audio::on_process(void* userdata) noexcept
+void Audio::on_process(void* userdata)
 {
 	auto& self = *static_cast<Audio*>(userdata);
 	auto& stream = self.stream;
@@ -146,14 +146,14 @@ void Audio::on_process(void* userdata) noexcept
 	pw::enqueue_buffer(stream, request);
 }
 
-void Audio::on_param_changed(void*, uint32_t id, pw::SPAPod param) noexcept
+void Audio::on_param_changed(void*, uint32_t id, pw::SPAPod param)
 {
 	auto const new_sampling_rate = pw::get_sampling_rate_from_param(id, param);
 	if (!new_sampling_rate) return;
 	sampling_rate = *new_sampling_rate;
 }
 
-auto Audio::samples_to_ns(isize samples) noexcept -> nanoseconds
+auto Audio::samples_to_ns(isize samples) -> nanoseconds
 {
 	ASSERT(sampling_rate > 0);
 	auto const ns_per_sample = duration_cast<nanoseconds>(duration<double>{1.0 / sampling_rate});
@@ -162,7 +162,7 @@ auto Audio::samples_to_ns(isize samples) noexcept -> nanoseconds
 	return 1s * whole_seconds + ns_per_sample * remainder;
 }
 
-auto Audio::ns_to_samples(nanoseconds ns) noexcept -> isize
+auto Audio::ns_to_samples(nanoseconds ns) -> isize
 {
 	ASSERT(sampling_rate > 0);
 	auto const ns_per_sample = duration_cast<nanoseconds>(duration<double>{1.0 / sampling_rate});
