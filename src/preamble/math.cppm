@@ -19,6 +19,7 @@ export using std::min;
 export using std::max;
 export using std::floor;
 export using std::ceil;
+export using std::trunc;
 export using std::abs;
 export using std::pow;
 export using boost::rational;
@@ -33,5 +34,13 @@ export using boost::operator<;
 export using boost::operator>;
 export using boost::operator<=;
 export using boost::operator>=;
+
+// Return the integer part of a rational number.
+export template<typename T>
+constexpr auto trunc(rational<T> const& r) -> T { return static_cast<T>(trunc(rational_cast<double>(r))); }
+
+// Return the fractional part of a rational number.
+export template<typename T>
+constexpr auto fract(rational<T> const& r) -> rational<T> { return {r.numerator() % r.denominator(), r.denominator()}; }
 
 }

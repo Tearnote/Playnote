@@ -820,7 +820,7 @@ void IRCompiler::parse_channel_ln(IR& ir, SingleChannelCommand&& cmd, SlotMappin
 void IRCompiler::parse_channel_measure_length(IR& ir, SingleChannelCommand&& cmd, SlotMappings&)
 {
 	auto const length = lexical_cast<double>(cmd.value);
-	TRACE_AS(cat, "L{}: Measure {} length: {}", cmd.line, cmd.position.numerator() / cmd.position.denominator(), length);
+	TRACE_AS(cat, "L{}: Measure {} length: {}", cmd.line, trunc(cmd.position), length);
 
 	// 02 is the only channel with a float value... I hate breaking type safety, but for this one
 	// case let's just pack the value into the usize slot field

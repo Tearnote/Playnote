@@ -279,7 +279,7 @@ void process_ir_channels(IR const& ir, vector<MeasureRelNote>& notes, vector<dou
 {
 	ir.each_channel_event([&](IR::ChannelEvent const& event) {
 		if (event.type == IR::ChannelEvent::Type::MeasureLength) {
-			set_measure_length(measure_lengths, event.position.numerator() / event.position.denominator(), bit_cast<double>(event.slot));
+			set_measure_length(measure_lengths, trunc(event.position), bit_cast<double>(event.slot));
 			return;
 		}
 		auto const lane_id = channel_to_lane(event.type);
@@ -290,7 +290,7 @@ void process_ir_channels(IR const& ir, vector<MeasureRelNote>& notes, vector<dou
 			.position = event.position,
 			.wav_slot = event.slot,
 		});
-		extend_measure_lengths(measure_lengths, event.position.numerator() / event.position.denominator());
+		extend_measure_lengths(measure_lengths, trunc(event.position));
 	});
 }
 
@@ -316,8 +316,8 @@ auto measure_rel_notes_to_bpm_rel(span<MeasureRelNote const> notes, span<BeatRel
 	auto result = vector<BeatRelNote>{};
 	result.reserve(notes.size());
 	transform(notes, back_inserter(result), [&](MeasureRelNote const& note) {
-		auto const& measure = measures[note.position.numerator() / note.position.denominator()];
-		auto const position = measure.start + measure.length * rational_cast<double>(NotePosition{note.position.numerator() % note.position.denominator(), note.position.denominator()});
+		auto const& measure = measures[trunc(note.position)];
+		auto const position = measure.start + measure.length * rational_cast<double>(fract(note.position));
 		return BeatRelNote{
 			.type = note.type,
 			.lane = note.lane,

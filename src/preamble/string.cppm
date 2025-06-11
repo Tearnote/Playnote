@@ -24,6 +24,7 @@ export module playnote.preamble:string;
 import :algorithm;
 import :math_ext;
 import :concepts;
+import :math;
 import :os;
 
 namespace playnote {
@@ -103,9 +104,10 @@ export template<typename T>
 struct fmtquill::formatter<boost::rational<T>>: formatter<int> {
 	auto format(boost::rational<T> const& r, format_context& ctx) const -> format_context::iterator
 	{
-		format_to(formatter<T>{}.format(r.numerator() / r.denominator(), ctx), " ");
-		format_to(formatter<T>{}.format(r.numerator() % r.denominator(), ctx), "/");
-		return format_to(formatter<T>{}.format(r.denominator(), ctx), "");
+		auto const fractional_part = playnote::fract(r);
+		format_to(formatter<T>{}.format(playnote::trunc(r), ctx), " ");
+		format_to(formatter<T>{}.format(fractional_part.numerator(), ctx), "/");
+		return format_to(formatter<T>{}.format(fractional_part.denominator(), ctx), "");
 	}
 };
 export template<typename T>
