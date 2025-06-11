@@ -123,9 +123,8 @@ auto Cursor::advance_one_sample(Func&& func) noexcept -> bool
 template<callable<void(Note const&, Chart::LaneType, float)> Func>
 void Cursor::upcoming_notes(float max_units, Func&& func) const noexcept
 {
-	auto const beat_duration = duration_cast<nanoseconds>(duration<double>{60.0 / chart->bpm});
-	auto const measure_duration = beat_duration * 4;
-	auto const current_y = duration_cast<duration<double>>(dev::Audio::samples_to_ns(sample_progress)) / measure_duration;
+	auto const beat_duration = duration<double>{60.0 / chart->bpm};
+	auto const current_y = duration_cast<duration<double>>(dev::Audio::samples_to_ns(sample_progress)) / beat_duration;
 	for (auto [idx, lane, progress]: views::zip(views::iota(0zu), chart->lanes, lane_progress) | views::filter([](auto tuple) { return get<1>(tuple).playable; })) {
 		for (auto const& note: span{lane.notes.begin() + progress.next_note, lane.notes.size() - progress.next_note}) {
 			auto const distance = note.y_pos - current_y;

@@ -130,6 +130,7 @@ void enqueue_chart_objects(gfx::Renderer::Queue& queue, bms::AudioPlayer const& 
 		}
 	};
 
+	scroll_speed /= 4; // beat -> standard measure
 	auto const max_distance = 1.0f / scroll_speed;
 	auto const cursor = player.get_audio_cursor();
 	cursor.upcoming_notes(max_distance, [&](auto const& note, LaneType type, float distance) {
