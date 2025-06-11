@@ -40,8 +40,8 @@ export void cleanup() noexcept try { glfwTerminate(); }
 catch (runtime_error const&) {}
 
 // Return the me passed since the call to init_glfw(). If GLFW is not initialized, returns 0.
-export [[nodiscard]] auto time_since_init() -> nanoseconds try
-{
+export [[nodiscard]] auto time_since_init() -> nanoseconds
+try {
 	auto const time = duration<double>{glfwGetTime()};
 	return duration_cast<nanoseconds>(time);
 }
@@ -71,8 +71,8 @@ export void set_window_closing_flag(Window window, bool flag_value)
 }
 
 // Set window creation hints to the expected values.
-export void set_window_creation_hints() try
-{
+export void set_window_creation_hints()
+try {
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 }
@@ -89,8 +89,8 @@ export auto create_window(uvec2 size, string_view title) -> Window
 
 // Destroy a previously opened window.
 // Errors are ignored.
-export void destroy_window(Window window) noexcept try
-{
+export void destroy_window(Window window) noexcept
+try {
 	if (!window) return;
 	glfwDestroyWindow(window);
 }

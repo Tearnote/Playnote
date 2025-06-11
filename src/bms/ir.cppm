@@ -674,8 +674,8 @@ void IRCompiler::parse_header_email(IR& ir, HeaderCommand&& cmd, SlotMappings&)
 	ir.add_header_event(IR::HeaderEvent::Email{ .email = move(cmd.value) });
 }
 
-void IRCompiler::parse_header_player(IR& ir, HeaderCommand&& cmd, SlotMappings&) try
-{
+void IRCompiler::parse_header_player(IR& ir, HeaderCommand&& cmd, SlotMappings&)
+try {
 	if (cmd.value.empty()) {
 		WARN_AS(cat, "L{}: Player header has no value", cmd.line);
 		return;
@@ -693,8 +693,8 @@ catch (exception const&) {
 	WARN_AS(cat, "L{}: Player header has an invalid value: {}", cmd.line, cmd.value);
 }
 
-void IRCompiler::parse_header_bpm(IR& ir, HeaderCommand&& cmd, SlotMappings&) try
-{
+void IRCompiler::parse_header_bpm(IR& ir, HeaderCommand&& cmd, SlotMappings&)
+try {
 	if (!cmd.slot.empty()) {
 		WARN_AS(cat, "L{}: Unimplemented header: BPMxx", cmd.line);
 		return;
@@ -712,8 +712,8 @@ catch (exception const&) {
 	WARN_AS(cat, "L{}: BPM header has an invalid value: {}", cmd.line, cmd.value);
 }
 
-void IRCompiler::parse_header_difficulty(IR& ir, HeaderCommand&& cmd, SlotMappings&) try
-{
+void IRCompiler::parse_header_difficulty(IR& ir, HeaderCommand&& cmd, SlotMappings&)
+try {
 	if (cmd.value.empty()) {
 		WARN_AS(cat, "L{}: Difficulty header has no value", cmd.line);
 		return;
