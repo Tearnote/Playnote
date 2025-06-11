@@ -28,15 +28,6 @@ export using bms::HeaderCommand;
 // Whole part - measure, fractional part - position within measure.
 export using NotePosition = rational<int32>;
 
-// Print a note position for debug output.
-export auto to_str(NotePosition pos) -> string
-{
-	return format("{} {}/{}",
-		pos.numerator() / pos.denominator(),
-		pos.numerator() % pos.denominator(),
-		pos.denominator());
-}
-
 export class IRCompiler;
 
 // The BMS IR is a list of validated header events and channel events, stored contiguously
@@ -764,7 +755,7 @@ void IRCompiler::parse_channel_bgm(IR& ir, SingleChannelCommand&& cmd, SlotMappi
 {
 	if (cmd.value == "00") return; // Rest note
 	auto const slot_id = maps.get_slot_id(maps.wav, cmd.value);
-	TRACE_AS(cat, "L{}: {} BGM: {} -> #{}", cmd.line, to_str(cmd.position), cmd.value, slot_id);
+	TRACE_AS(cat, "L{}: {} BGM: {} -> #{}", cmd.line, cmd.position, cmd.value, slot_id);
 	ir.add_channel_event({
 		.position = cmd.position,
 		.type = IR::ChannelEvent::Type::BGM,
@@ -795,7 +786,7 @@ void IRCompiler::parse_channel_note(IR& ir, SingleChannelCommand&& cmd, SlotMapp
 		PANIC();
 	}();
 	auto const slot_id = maps.get_slot_id(maps.wav, cmd.value);
-	TRACE_AS(cat, "L{}: {} {}: {} -> #{}", cmd.line, to_str(cmd.position), IR::ChannelEvent::to_str(type), cmd.value, slot_id);
+	TRACE_AS(cat, "L{}: {} {}: {} -> #{}", cmd.line, cmd.position, IR::ChannelEvent::to_str(type), cmd.value, slot_id);
 	ir.add_channel_event({ .position = cmd.position, .type = type, .slot = slot_id });
 }
 
@@ -822,7 +813,7 @@ void IRCompiler::parse_channel_ln(IR& ir, SingleChannelCommand&& cmd, SlotMappin
 		PANIC();
 	}();
 	auto const slot_id = maps.get_slot_id(maps.wav, cmd.value);
-	TRACE_AS(cat, "L{}: {} {}: {} -> #{} (LN)", cmd.line, to_str(cmd.position), IR::ChannelEvent::to_str(type), cmd.value, slot_id);
+	TRACE_AS(cat, "L{}: {} {}: {} -> #{} (LN)", cmd.line, cmd.position, IR::ChannelEvent::to_str(type), cmd.value, slot_id);
 	ir.add_channel_event({ .position = cmd.position, .type = type, .slot = slot_id });
 }
 
