@@ -1,15 +1,24 @@
 # Playnote
 
-A stable, modern and intuitive [BMS](https://en.wikipedia.org/wiki/Be-Music_Source) player for Windows and Linux, written
-in bleeding-edge C++.
+A [BMS](https://en.wikipedia.org/wiki/Be-Music_Source) player for Windows and Linux, with a focus on correctness and user experience.
 
-## Goals
+## Why another BMS player from scratch?
 
-- A well documented, maintainable codebase following best practices
-- Careful use of STL and external libraries whenever suitable
-- High performance of all tasks and rock solid stability
-- Threaded design to minimize latencies and eliminate framedrops and loadings
-- Aggressive song optimization and caching
+Because our community is long overdue for an upgrade. The players we use right now are undoubtedly impressive and valued, but there are several important improvements that can be made, some of which would require a fundamental redesign. These include:
+
+- Loading charts directly from archives,
+- Chart volume normalization,
+- Ultra-low audio latency by default,
+- A frictionless newbie experience,
+- Advanced practice modes,
+- Framerate-independent input processing,
+- Stable performance and memory usage,
+- Charset detection,
+- Background processing of tasks like preview generation and library refresh.
+
+## Can I contribute?
+
+Playnote is a personal passion project, written in bleeding-edge C++ that is rather different from most code out there. Issue reports are appreciated, but any non-trivial pull request I would most likely refactor of rewrite before merging to maintain style and vision. If you are okay with that, please go ahead.
 
 ## Milestones
 
