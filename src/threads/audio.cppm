@@ -36,15 +36,8 @@ auto load_bms(bms::IRCompiler& compiler, fs::path const& path) -> bms::IR
 	return ir;
 }
 
-export void audio(Broadcaster& broadcaster, Barriers<3>& barriers, dev::Window& window)
-try {
-	dev::name_current_thread("audio");
-	broadcaster.register_as_endpoint();
-	broadcaster.subscribe<PlayerControl>();
-	broadcaster.subscribe<ChartLoadRequest>();
-	barriers.startup.arrive_and_wait();
-
-	auto audio = dev::Audio{};
+void run(Broadcaster& broadcaster, dev::Window& window, dev::Audio& audio)
+{
 	auto chart_path = fs::path{};
 	broadcaster.await<ChartLoadRequest>(
 		[&](auto&& path) { chart_path = path; },
@@ -73,7 +66,17 @@ try {
 		});
 		yield();
 	}
+}
 
+export void audio(Broadcaster& broadcaster, Barriers<3>& barriers, dev::Window& window)
+try {
+	dev::name_current_thread("audio");
+	broadcaster.register_as_endpoint();
+	broadcaster.subscribe<PlayerControl>();
+	broadcaster.subscribe<ChartLoadRequest>();
+	barriers.startup.arrive_and_wait();
+	auto audio = dev::Audio{};
+	run(broadcaster, window, audio);
 	barriers.shutdown.arrive_and_wait();
 }
 catch (exception const& e) {

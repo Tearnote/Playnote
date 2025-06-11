@@ -182,15 +182,8 @@ void show_scroll_speed_controls(float& scroll_speed)
 	im::input_float("##scroll_speed", scroll_speed, 0.25f, 1.0f, "%.2f");
 }
 
-export void render(Broadcaster& broadcaster, Barriers<3>& barriers, dev::Window& window)
-try {
-	dev::name_current_thread("render");
-	broadcaster.register_as_endpoint();
-	broadcaster.subscribe<shared_ptr<bms::AudioPlayer const>>();
-	barriers.startup.arrive_and_wait();
-	auto gpu = dev::GPU{window};
-	auto renderer = gfx::Renderer{gpu};
-
+void run(Broadcaster& broadcaster, dev::Window const& window, gfx::Renderer& renderer)
+{
 	auto player = shared_ptr<bms::AudioPlayer const>{};
 	auto scroll_speed = 1.0f;
 
@@ -209,7 +202,17 @@ try {
 		});
 		FRAME_MARK();
 	}
+}
 
+export void render(Broadcaster& broadcaster, Barriers<3>& barriers, dev::Window& window)
+try {
+	dev::name_current_thread("render");
+	broadcaster.register_as_endpoint();
+	broadcaster.subscribe<shared_ptr<bms::AudioPlayer const>>();
+	barriers.startup.arrive_and_wait();
+	auto gpu = dev::GPU{window};
+	auto renderer = gfx::Renderer{gpu};
+	run(broadcaster, window, renderer);
 	barriers.shutdown.arrive_and_wait();
 }
 catch (exception const& e) {
