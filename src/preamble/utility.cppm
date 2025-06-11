@@ -17,6 +17,7 @@ module;
 #include <utility>
 #include <memory>
 #include <tuple>
+#include <bit>
 #include <boost/scope/unique_resource.hpp>
 
 export module playnote.preamble:utility;
@@ -51,6 +52,7 @@ export using std::enable_shared_from_this;
 export using boost::scope::unique_resource;
 export using std::type_index;
 export using std::remove_cvref_t;
+export using std::bit_cast;
 
 // Constructs a type with overloaded operator()s, for use as a std::variant visitor
 export template<typename... Ts>

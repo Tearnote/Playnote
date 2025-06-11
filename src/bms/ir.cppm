@@ -144,6 +144,7 @@ public:
 			Note_P2_Key6_LN,
 			Note_P2_Key7_LN,
 			Note_P2_KeyS_LN,
+			MeasureLength,
 		};
 		// Enum value to string, for debug output.
 		[[nodiscard]] static auto to_str(Type) noexcept -> string_view;
@@ -278,6 +279,7 @@ private:
 	void parse_channel_bgm(IR&, SingleChannelCommand&&, SlotMappings&) noexcept;
 	void parse_channel_note(IR&, SingleChannelCommand&&, SlotMappings&);
 	void parse_channel_ln(IR&, SingleChannelCommand&&, SlotMappings&);
+	void parse_channel_measure_length(IR&, SingleChannelCommand&&, SlotMappings&);
 };
 
 auto IR::ChannelEvent::to_str(Type type) noexcept -> string_view
@@ -435,6 +437,7 @@ void IRCompiler::register_channel_handlers() noexcept
 {
 	// Implemented channels
 	channel_handlers.emplace("01" /* BGM                 */, &IRCompiler::parse_channel_bgm);
+	channel_handlers.emplace("02" /* Measure length      */, &IRCompiler::parse_channel_measure_length);
 	for (auto const i: views::iota(1zu, 10zu)) // P1 notes
 		channel_handlers.emplace(string{"1"} + static_cast<char>('0' + i), &IRCompiler::parse_channel_note);
 	for (auto const i: views::iota(0zu, 26zu)) // ^
@@ -482,7 +485,6 @@ void IRCompiler::register_channel_handlers() noexcept
 
 	// Critical unimplemented channels
 	// (if a file uses one of these, there is no chance for the BMS to play even remotely correctly)
-	channel_handlers.emplace("02" /* Meter               */, &IRCompiler::parse_channel_unimplemented_critical);
 	channel_handlers.emplace("03" /* BPM                 */, &IRCompiler::parse_channel_unimplemented_critical);
 	channel_handlers.emplace("08" /* BPMxx               */, &IRCompiler::parse_channel_unimplemented_critical);
 	channel_handlers.emplace("09" /* Stop                */, &IRCompiler::parse_channel_unimplemented_critical);
@@ -822,6 +824,21 @@ void IRCompiler::parse_channel_ln(IR& ir, SingleChannelCommand&& cmd, SlotMappin
 	auto const slot_id = maps.get_slot_id(maps.wav, cmd.value);
 	TRACE_AS(cat, "L{}: {} {}: {} -> #{} (LN)", cmd.line, to_str(cmd.position), IR::ChannelEvent::to_str(type), cmd.value, slot_id);
 	ir.add_channel_event({ .position = cmd.position, .type = type, .slot = slot_id });
+}
+
+void IRCompiler::parse_channel_measure_length(IR& ir, SingleChannelCommand&& cmd, SlotMappings&)
+{
+	auto const length = lexical_cast<double>(cmd.value);
+	TRACE_AS(cat, "L{}: Measure {} length: {}", cmd.line, cmd.position.numerator() / cmd.position.denominator(), length);
+
+	// 02 is the only channel with a float value... I hate breaking type safety, but for this one
+	// case let's just pack the value into the usize slot field
+	static_assert(sizeof(double) == sizeof(usize));
+	ir.add_channel_event({
+		.position = cmd.position,
+		.type = IR::ChannelEvent::Type::MeasureLength,
+		.slot = bit_cast<usize>(length),
+	});
 }
 
 }
