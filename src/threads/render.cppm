@@ -188,7 +188,7 @@ void run(Broadcaster& broadcaster, dev::Window const& window, gfx::Renderer& ren
 	auto scroll_speed = 1.0f;
 
 	while (!window.is_closing()) {
-		broadcaster.receive_all<shared_ptr<bms::AudioPlayer const>>([&](auto&& recv) { player = recv; });
+		broadcaster.receive_all<weak_ptr<bms::AudioPlayer const>>([&](auto&& recv) { player = recv.lock(); });
 		renderer.frame([&](gfx::Renderer::Queue& queue) {
 			enqueue_test_scene(queue);
 			if (player) {
@@ -208,7 +208,7 @@ export void render(Broadcaster& broadcaster, Barriers<3>& barriers, dev::Window&
 try {
 	dev::name_current_thread("render");
 	broadcaster.register_as_endpoint();
-	broadcaster.subscribe<shared_ptr<bms::AudioPlayer const>>();
+	broadcaster.subscribe<weak_ptr<bms::AudioPlayer const>>();
 	barriers.startup.arrive_and_wait();
 	auto gpu = dev::GPU{window};
 	auto renderer = gfx::Renderer{gpu};

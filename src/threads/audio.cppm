@@ -48,7 +48,7 @@ void run(Broadcaster& broadcaster, dev::Window& window, dev::Audio& audio)
 	auto const bms_chart = chart_from_ir(bms_ir, [](auto& requests) { requests.process(); });
 	auto bms_player = make_shared<bms::AudioPlayer>(window.get_glfw(), audio);
 	bms_player->play(*bms_chart);
-	broadcaster.shout<shared_ptr<bms::AudioPlayer const>>(bms_player);
+	broadcaster.shout<weak_ptr<bms::AudioPlayer const>>(bms_player);
 	while (!window.is_closing()) {
 		broadcaster.receive_all<PlayerControl>([&](auto ev) {
 			switch (ev) {
