@@ -22,6 +22,7 @@ export using std::ceil;
 export using std::abs;
 export using std::pow;
 export using boost::rational;
+export using boost::rational_cast;
 export using boost::operator+;
 export using boost::operator-;
 export using boost::operator*;

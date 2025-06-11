@@ -46,6 +46,13 @@ struct RelativeNote {
 	[[nodiscard]] auto params() const -> T const& { return get<T>(type); }
 };
 
+// An absolute position of a measure in a chart.
+struct Measure {
+	nanoseconds start;
+	double y_start;
+	double beats; // Relative to BPM, which can still change within a measure
+};
+
 // Factory that accumulates RelativeNotes, then converts them in bulk to a Lane.
 class LaneBuilder {
 public:
@@ -55,16 +62,17 @@ public:
 	void add_note(RelativeNote const& note) noexcept;
 
 	// Convert enqueued notes to a Lane and clear the queue.
-	auto build(float bpm, bool deduplicate = true) noexcept -> Lane;
+	auto build(float bpm, span<Measure const>, bool deduplicate = true) noexcept -> Lane;
 
 private:
 	vector<RelativeNote> notes;
 	vector<RelativeNote> ln_ends;
 
-	[[nodiscard]] static auto calculate_timestamp(NotePosition, nanoseconds measure_length) noexcept -> nanoseconds;
+	[[nodiscard]] static auto calculate_timestamp(NotePosition, nanoseconds measure_start, nanoseconds measure_length) noexcept -> nanoseconds;
+	[[nodiscard]] static auto calculate_y_position(NotePosition, double measure_y_start, double measure_beats) noexcept -> double;
 
-	static void convert_simple(vector<RelativeNote> const&, vector<Note>&, float bpm) noexcept;
-	static void convert_ln(vector<RelativeNote>&, vector<Note>&, float bpm) noexcept;
+	static void convert_simple(vector<RelativeNote> const&, vector<Note>&, span<Measure const>, float bpm) noexcept;
+	static void convert_ln(vector<RelativeNote>&, vector<Note>&, span<Measure const>, float bpm) noexcept;
 	static void sort_and_deduplicate(vector<Note>&, bool deduplicate) noexcept;
 };
 
@@ -85,13 +93,13 @@ void LaneBuilder::add_note(RelativeNote const& note) noexcept
 	else PANIC();
 }
 
-auto LaneBuilder::build(float bpm, bool deduplicate) noexcept -> Lane
+auto LaneBuilder::build(float bpm, span<Measure const> measures, bool deduplicate) noexcept -> Lane
 {
 	ASSERT(bpm != 0.0f);
 	auto result = Lane{};
 
-	convert_simple(notes, result.notes, bpm);
-	convert_ln(ln_ends, result.notes, bpm);
+	convert_simple(notes, result.notes, measures, bpm);
+	convert_ln(ln_ends, result.notes, measures, bpm);
 	sort_and_deduplicate(result.notes, deduplicate);
 
 	notes.clear();
@@ -99,48 +107,57 @@ auto LaneBuilder::build(float bpm, bool deduplicate) noexcept -> Lane
 	return result;
 }
 
-auto LaneBuilder::calculate_timestamp(NotePosition position, nanoseconds measure_length) noexcept -> nanoseconds
+auto LaneBuilder::calculate_timestamp(NotePosition position, nanoseconds measure_start, nanoseconds measure_length) noexcept -> nanoseconds
 {
-	auto const measures = position.numerator() / position.denominator();
-	auto result = measures * measure_length;
 	auto const proper_numerator = position.numerator() % position.denominator();
-	result += (measure_length / position.denominator()) * proper_numerator;
-	return result;
+	return measure_start + (measure_length / position.denominator()) * proper_numerator;
 }
 
-void LaneBuilder::convert_simple(vector<RelativeNote> const& notes, vector<Note>& result, float bpm) noexcept
+auto LaneBuilder::calculate_y_position(NotePosition position, double measure_y_start, double measure_beats) noexcept -> double
 {
-	auto const beat_duration = duration_cast<nanoseconds>(duration<double>{60.0 / bpm});
-	auto const measure_duration = beat_duration * 4;
+	auto const fractional_part = rational_cast<double>(NotePosition{position.numerator() % position.denominator(), position.denominator()});
+	TRACE("Position: {}", position);
+	TRACE("Measure starts at {}", measure_y_start);
+	TRACE("Measure has {} beats", measure_beats);
+	TRACE("Final y position: {}", measure_y_start + fractional_part * (measure_beats / 4.0));
+	return measure_y_start + fractional_part * (measure_beats / 4.0);
+}
+
+void LaneBuilder::convert_simple(vector<RelativeNote> const& notes, vector<Note>& result, span<Measure const> measures, float bpm) noexcept
+{
+	auto const beat_duration = duration<double>{60.0 / bpm};
 	transform(notes, back_inserter(result), [&](RelativeNote const& note) noexcept {
 		ASSERT(note.type_is<RelativeNote::Simple>());
+		auto const& measure = measures[note.position.numerator() / note.position.denominator()];
+		auto const measure_duration = duration_cast<nanoseconds>(measure.beats * beat_duration);
 		return Note{
 			.type = Note::Simple{},
-			.timestamp = calculate_timestamp(note.position, measure_duration),
-			.y_pos = static_cast<double>(note.position.numerator()) / static_cast<double>(note.position.denominator()),
+			.timestamp = calculate_timestamp(note.position, measure.start, measure_duration),
+			.y_pos = calculate_y_position(note.position, measure.y_start, measure.beats),
 			.wav_slot = note.wav_slot,
 		};
 	});
 }
 
-void LaneBuilder::convert_ln(vector<RelativeNote>& ln_ends, vector<Note>& result, float bpm) noexcept
+void LaneBuilder::convert_ln(vector<RelativeNote>& ln_ends, vector<Note>& result, span<Measure const> measures, float bpm) noexcept
 {
-	auto const beat_duration = duration_cast<nanoseconds>(duration<double>{60.0 / bpm});
-	auto const measure_duration = beat_duration * 4;
+	auto const beat_duration = duration<double>{60.0 / bpm};
 	stable_sort(ln_ends, [](auto const& a, auto const& b) noexcept { return a.position < b.position; });
 	if (ln_ends.size() % 2 != 0) {
 		WARN("Unpaired LN end found; chart is most likely invalid");
 		ln_ends.pop_back();
 	}
 	transform(ln_ends | views::chunk(2), back_inserter(result), [&](auto ends) noexcept {
+		auto const& measure = measures[ends[0].position.numerator() / ends[0].position.denominator()];
+		auto const measure_duration = duration_cast<nanoseconds>(measure.beats * beat_duration);
 		auto const ln_length = ends[1].position - ends[0].position;
 		return Note{
 			.type = Note::LN{
-				.length = calculate_timestamp(ln_length, measure_duration),
+				.length = calculate_timestamp(ln_length, measure.start, measure_duration),
 				.height = static_cast<float>(ln_length.numerator()) / static_cast<float>(ln_length.denominator()),
 			},
-			.timestamp = calculate_timestamp(ends[0].position, measure_duration),
-			.y_pos = static_cast<double>(ends[0].position.numerator()) / static_cast<double>(ends[0].position.denominator()),
+			.timestamp = calculate_timestamp(ends[0].position, measure.start, measure_duration),
+			.y_pos = calculate_y_position(ends[0].position, measure.y_start, measure.beats),
 			.wav_slot = ends[0].wav_slot,
 		};
 	});
@@ -233,6 +250,19 @@ auto channel_to_lane(IR::ChannelEvent::Type ch) noexcept -> Chart::LaneType
 	}
 }
 
+void extend_measure_lengths(vector<double>& measure_lengths, usize max_measure)
+{
+	auto const min_length = max_measure + 1;
+	if (measure_lengths.size() >= min_length) return;
+	measure_lengths.resize(min_length, 1.0);
+}
+
+void set_measure_length(vector<double>& measure_lengths, usize measure, double length)
+{
+	extend_measure_lengths(measure_lengths, measure);
+	measure_lengths[measure] = length;
+}
+
 void process_ir_headers(Chart& chart, IR const& ir, FileReferences& file_references)
 {
 	ir.each_header_event([&](IR::HeaderEvent const& event) noexcept {
@@ -252,9 +282,13 @@ void process_ir_headers(Chart& chart, IR const& ir, FileReferences& file_referen
 	});
 }
 
-void process_ir_channels(IR const& ir, LaneBuilders& lane_builders)
+void process_ir_channels(IR const& ir, LaneBuilders& lane_builders, vector<double>& measure_lengths)
 {
 	ir.each_channel_event([&](IR::ChannelEvent const& event) noexcept {
+		if (event.type == IR::ChannelEvent::Type::MeasureLength) {
+			set_measure_length(measure_lengths, event.position.numerator() / event.position.denominator(), bit_cast<double>(event.slot));
+			return;
+		}
 		auto const lane_id = channel_to_lane(event.type);
 		if (lane_id == Chart::LaneType::Size) return;
 		lane_builders[+lane_id].add_note(RelativeNote{
@@ -262,14 +296,37 @@ void process_ir_channels(IR const& ir, LaneBuilders& lane_builders)
 			.position = event.position,
 			.wav_slot = event.slot,
 		});
+		extend_measure_lengths(measure_lengths, event.position.numerator() / event.position.denominator());
 	});
 }
 
-void build_lanes(Chart& chart, LaneBuilders& lane_builders) noexcept
+auto build_measures(float bpm, span<double const> measure_lengths) -> vector<Measure>
+{
+	auto result = vector<Measure>{};
+	result.reserve(measure_lengths.size());
+
+	auto cursor = nanoseconds{0};
+	auto y_cursor = 0.0;
+	transform(measure_lengths, back_inserter(result), [&](auto length) noexcept {
+		auto const measure = Measure{
+			.start = cursor,
+			.y_start = y_cursor,
+			.beats = length * 4.0,
+		};
+		auto const beat_duration = duration<double>{60.0 / bpm};
+		auto const measure_duration = duration_cast<nanoseconds>(beat_duration * measure.beats);
+		cursor += measure_duration;
+		y_cursor += measure.beats / 4.0;
+		return measure;
+	});
+	return result;
+}
+
+void build_lanes(Chart& chart, LaneBuilders& lane_builders, span<Measure const> measures) noexcept
 {
 	for (auto [idx, lane]: chart.lanes | views::enumerate) {
 		auto const is_bgm = idx == +Chart::LaneType::BGM;
-		lane = lane_builders[idx].build(chart.bpm, !is_bgm);
+		lane = lane_builders[idx].build(chart.bpm, measures, !is_bgm);
 		if (!is_bgm) lane.playable = true;
 	}
 }
@@ -329,17 +386,20 @@ auto chart_from_ir(IR const& ir, Func file_loader) -> shared_ptr<Chart const>
 	static constexpr auto AudioExtensions = {"wav"sv, "ogg"sv, "mp3"sv, "flac"sv, "opus"sv};
 
 	auto chart = make_shared<Chart>();
-	LaneBuilders lane_builders;
-	FileReferences file_references;
+	auto lane_builders = LaneBuilders{};
+	auto measure_lengths = vector<double>{};
+	auto file_references = FileReferences{};
 
 	auto const domain = ir.get_path().parent_path();
+	measure_lengths.reserve(256); // Arbitrary; enough for most charts
 	chart->wav_slots.resize(ir.get_wav_slot_count());
 	file_references.wav.clear();
 	file_references.wav.resize(ir.get_wav_slot_count());
 
 	process_ir_headers(*chart, ir, file_references);
-	process_ir_channels(ir, lane_builders);
-	build_lanes(*chart, lane_builders);
+	process_ir_channels(ir, lane_builders, measure_lengths);
+	auto const measures = build_measures(chart->bpm, measure_lengths);
+	build_lanes(*chart, lane_builders, measures);
 
 	auto needed_slots = vector<bool>{};
 	needed_slots.resize(chart->wav_slots.size(), false);
