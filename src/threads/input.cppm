@@ -38,11 +38,13 @@ try {
 	broadcaster.register_as_endpoint();
 	barriers.startup.arrive_and_wait();
 	run(broadcaster, window, song_request);
+	broadcaster.clear();
 	barriers.shutdown.arrive_and_wait();
 }
 catch (exception const& e) {
 	CRIT("Uncaught exception: {}", e.what());
 	window.request_close();
+	broadcaster.clear();
 	barriers.shutdown.arrive_and_wait();
 }
 
