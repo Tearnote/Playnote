@@ -37,9 +37,10 @@ auto run(fs::path const& song_request) -> int
 	// Spawn all threads. Every thread is assumed to eventually finish
 	// once window.is_closing() is true
 	auto broadcaster = threads::Broadcaster{};
-	auto audio_thread_stub = jthread{threads::audio, ref(broadcaster), ref(window)};
-	auto render_thread_stub = jthread{threads::render, ref(broadcaster), ref(window)};
-	threads::input(broadcaster, glfw, window, song_request);
+	auto barriers = threads::Barriers<3>{};
+	auto audio_thread_stub = jthread{threads::audio, ref(broadcaster), ref(barriers), ref(window)};
+	auto render_thread_stub = jthread{threads::render, ref(broadcaster), ref(barriers), ref(window)};
+	threads::input(broadcaster, barriers, window, song_request);
 
 	return EXIT_SUCCESS;
 }

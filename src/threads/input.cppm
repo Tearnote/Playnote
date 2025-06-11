@@ -21,11 +21,12 @@ import playnote.threads.broadcaster;
 
 namespace playnote::threads {
 
-export void input(Broadcaster& broadcaster, dev::GLFW& glfw, dev::Window& window, fs::path const& song_request)
+export void input(Broadcaster& broadcaster, Barriers<3>& barriers, dev::Window& window, fs::path const& song_request)
 try {
 	dev::name_current_thread("input");
+	auto& glfw = window.get_glfw();
 	broadcaster.register_as_endpoint();
-	broadcaster.wait_for_others(3);
+	barriers.startup.arrive_and_wait();
 	broadcaster.shout(song_request);
 
 	while (!window.is_closing()) {
@@ -33,10 +34,13 @@ try {
 		FRAME_MARK_NAMED("input");
 		yield();
 	}
+
+	barriers.shutdown.arrive_and_wait();
 }
 catch (exception const& e) {
 	CRIT("Uncaught exception: {}", e.what());
 	window.request_close();
+	barriers.shutdown.arrive_and_wait();
 }
 
 }

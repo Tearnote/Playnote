@@ -36,13 +36,13 @@ auto load_bms(bms::IRCompiler& compiler, fs::path const& path) -> bms::IR
 	return ir;
 }
 
-export void audio(Broadcaster& broadcaster, dev::Window& window)
+export void audio(Broadcaster& broadcaster, Barriers<3>& barriers, dev::Window& window)
 try {
 	dev::name_current_thread("audio");
 	broadcaster.register_as_endpoint();
 	broadcaster.subscribe<PlayerControl>();
 	broadcaster.subscribe<ChartLoadRequest>();
-	broadcaster.wait_for_others(3);
+	barriers.startup.arrive_and_wait();
 
 	auto audio = dev::Audio{};
 	auto chart_path = fs::path{};
@@ -73,10 +73,13 @@ try {
 		});
 		yield();
 	}
+
+	barriers.shutdown.arrive_and_wait();
 }
 catch (exception const& e) {
 	CRIT("Uncaught exception: {}", e.what());
 	window.request_close();
+	barriers.shutdown.arrive_and_wait();
 }
 
 }

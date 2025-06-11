@@ -16,6 +16,13 @@ import playnote.preamble;
 
 namespace playnote::threads {
 
+// Simple shared struct for controlling thread lifetime.
+export template<usize N>
+struct Barriers {
+	latch startup{N}; // Threads wait on this after registering with the broadcaster
+	latch shutdown{N}; // Threads wait on this before exiting
+};
+
 export class Broadcaster {
 public:
 	Broadcaster() = default;
@@ -26,11 +33,6 @@ public:
 	// Declare that current thread is interested in messages of type T.
 	template<typename T>
 	void subscribe();
-
-	// Blocks current thread until all other threads have called wait_for_others() as well.
-	// All threads need to pass the same value of thread_count which is equal to the number
-	// of threads that called this function. This can only be used once per thread.
-	void wait_for_others(uint32 thread_count);
 
 	// Send message to all other threads that declared interest in this type.
 	template<typename T>
@@ -50,7 +52,6 @@ public:
 
 private:
 	inline static thread_local auto endpoint_id = -1zu;
-	optional<latch> startup_sync;
 	mutex register_lock;
 	vector<unordered_map<type_index, shared_ptr<void>>> channels;
 };
@@ -61,12 +62,6 @@ void Broadcaster::register_as_endpoint()
 	auto lock = lock_guard{register_lock};
 	endpoint_id = channels.size();
 	channels.emplace_back();
-}
-
-void Broadcaster::wait_for_others(uint32 thread_count)
-{
-	if (!startup_sync) startup_sync.emplace(thread_count);
-	startup_sync->arrive_and_wait();
 }
 
 template<typename T>

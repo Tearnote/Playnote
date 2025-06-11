@@ -182,12 +182,12 @@ void show_scroll_speed_controls(float& scroll_speed)
 	im::input_float("##scroll_speed", scroll_speed, 0.25f, 1.0f, "%.2f");
 }
 
-export void render(Broadcaster& broadcaster, dev::Window& window)
+export void render(Broadcaster& broadcaster, Barriers<3>& barriers, dev::Window& window)
 try {
 	dev::name_current_thread("render");
 	broadcaster.register_as_endpoint();
 	broadcaster.subscribe<shared_ptr<bms::AudioPlayer const>>();
-	broadcaster.wait_for_others(3);
+	barriers.startup.arrive_and_wait();
 	auto gpu = dev::GPU{window};
 	auto renderer = gfx::Renderer{gpu};
 
@@ -209,10 +209,13 @@ try {
 		});
 		FRAME_MARK();
 	}
+
+	barriers.shutdown.arrive_and_wait();
 }
 catch (exception const& e) {
 	CRIT("Uncaught exception: {}", e.what());
 	window.request_close();
+	barriers.shutdown.arrive_and_wait();
 }
 
 }
