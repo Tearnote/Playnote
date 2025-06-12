@@ -136,6 +136,7 @@ public:
 			Note_P2_Key7_LN,
 			Note_P2_KeyS_LN,
 			MeasureLength,
+			BPM,
 		};
 		// Enum value to string, for debug output.
 		[[nodiscard]] static auto to_str(Type) -> string_view;
@@ -236,6 +237,8 @@ private:
 	using ChannelHandlerFunc = void(IRCompiler::*)(IR&, SingleChannelCommand&&, SlotMappings&);
 	unordered_map<string, ChannelHandlerFunc, string_hash> channel_handlers;
 
+	[[nodiscard]] static auto slot_hex_to_int(string_view hex) -> usize;
+
 	void register_header_handlers();
 	void register_channel_handlers();
 	void handle_header(IR&, HeaderCommand&&, SlotMappings&);
@@ -270,7 +273,10 @@ private:
 	void parse_channel_bgm(IR&, SingleChannelCommand&&, SlotMappings&);
 	void parse_channel_note(IR&, SingleChannelCommand&&, SlotMappings&);
 	void parse_channel_ln(IR&, SingleChannelCommand&&, SlotMappings&);
+
+	// Timeline control channels
 	void parse_channel_measure_length(IR&, SingleChannelCommand&&, SlotMappings&);
+	void parse_channel_bpm(IR&, SingleChannelCommand&&, SlotMappings&);
 };
 
 auto IR::ChannelEvent::to_str(Type type) -> string_view
@@ -339,6 +345,18 @@ auto IRCompiler::SlotMappings::get_slot_id(Mapping& map, string_view key) -> usi
 	return map.contains(key)?
 		map.at(key) :
 		map.emplace(key, map.size()).first->second;
+}
+
+auto IRCompiler::slot_hex_to_int(string_view hex) -> usize
+{
+	auto result = 0zu;
+	for (auto const c: hex) {
+		if (c >= '0' && c <= '9')
+			result = result * 16 + (c - '0');
+		else if (c >= 'A' && c <= 'F')
+			result = result * 16 + (c - 'A' + 10);
+	}
+	return result;
 }
 
 void IRCompiler::register_header_handlers()
@@ -429,6 +447,7 @@ void IRCompiler::register_channel_handlers()
 	// Implemented channels
 	channel_handlers.emplace("01" /* BGM                 */, &IRCompiler::parse_channel_bgm);
 	channel_handlers.emplace("02" /* Measure length      */, &IRCompiler::parse_channel_measure_length);
+	channel_handlers.emplace("03" /* BPM                 */, &IRCompiler::parse_channel_bpm);
 	for (auto const i: views::iota(1zu, 10zu)) // P1 notes
 		channel_handlers.emplace(string{"1"} + static_cast<char>('0' + i), &IRCompiler::parse_channel_note);
 	for (auto const i: views::iota(0zu, 26zu)) // ^
@@ -476,7 +495,6 @@ void IRCompiler::register_channel_handlers()
 
 	// Critical unimplemented channels
 	// (if a file uses one of these, there is no chance for the BMS to play even remotely correctly)
-	channel_handlers.emplace("03" /* BPM                 */, &IRCompiler::parse_channel_unimplemented_critical);
 	channel_handlers.emplace("08" /* BPMxx               */, &IRCompiler::parse_channel_unimplemented_critical);
 	channel_handlers.emplace("09" /* Stop                */, &IRCompiler::parse_channel_unimplemented_critical);
 	channel_handlers.emplace("97" /* BGM volume          */, &IRCompiler::parse_channel_unimplemented_critical);
@@ -829,6 +847,15 @@ void IRCompiler::parse_channel_measure_length(IR& ir, SingleChannelCommand&& cmd
 		.position = cmd.position,
 		.type = IR::ChannelEvent::Type::MeasureLength,
 		.slot = bit_cast<usize>(length),
+	});
+}
+
+void IRCompiler::parse_channel_bpm(IR& ir, SingleChannelCommand&& cmd, SlotMappings&)
+{
+	ir.add_channel_event({
+		.position = cmd.position,
+		.type = IR::ChannelEvent::Type::BPM,
+		.slot = slot_hex_to_int(cmd.value),
 	});
 }
 
