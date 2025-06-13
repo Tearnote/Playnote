@@ -852,6 +852,7 @@ void IRCompiler::parse_channel_measure_length(IR& ir, SingleChannelCommand&& cmd
 
 void IRCompiler::parse_channel_bpm(IR& ir, SingleChannelCommand&& cmd, SlotMappings&)
 {
+	if (cmd.value == "00") return; // Rhythm padding
 	ir.add_channel_event({
 		.position = cmd.position,
 		.type = IR::ChannelEvent::Type::BPM,
