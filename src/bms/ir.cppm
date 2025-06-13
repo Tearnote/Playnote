@@ -69,6 +69,10 @@ public:
 			usize slot;
 			string name;
 		};
+		struct BPMxx {
+			usize slot;
+			float bpm;
+		};
 		struct Difficulty {
 			enum class Level {
 				Unknown = 0,
@@ -93,7 +97,8 @@ public:
 			Player*,     //  8
 			BPM*,        //  9
 			Difficulty*, // 10
-			WAV*         // 11
+			WAV*,        // 11
+			BPMxx*       // 12
 		>;
 
 		ParamsType params;
@@ -137,6 +142,7 @@ public:
 			Note_P2_KeyS_LN,
 			MeasureLength,
 			BPM,
+			BPMxx,
 		};
 		// Enum value to string, for debug output.
 		[[nodiscard]] static auto to_str(Type) -> string_view;
@@ -224,6 +230,7 @@ private:
 	struct SlotMappings {
 		using Mapping = unordered_map<string, usize, string_hash>;
 		Mapping wav;
+		Mapping bpm;
 
 		// Retrieve the slot's index, or register a new one
 		auto get_slot_id(Mapping& map, string_view key) -> usize;
@@ -266,8 +273,9 @@ private:
 	void parse_header_bpm(IR&, HeaderCommand&&, SlotMappings&);
 	void parse_header_difficulty(IR&, HeaderCommand&&, SlotMappings&);
 
-	// File reference handlers
+	// Slot reference handlers
 	void parse_header_wav(IR&, HeaderCommand&&, SlotMappings&);
+	void parse_header_bpmxx(IR&, HeaderCommand&&, SlotMappings&);
 
 	// Audio channels
 	void parse_channel_bgm(IR&, SingleChannelCommand&&, SlotMappings&);
@@ -277,6 +285,7 @@ private:
 	// Timeline control channels
 	void parse_channel_measure_length(IR&, SingleChannelCommand&&, SlotMappings&);
 	void parse_channel_bpm(IR&, SingleChannelCommand&&, SlotMappings&);
+	void parse_channel_bpmxx(IR&, SingleChannelCommand&&, SlotMappings&);
 };
 
 auto IR::ChannelEvent::to_str(Type type) -> string_view
@@ -448,6 +457,7 @@ void IRCompiler::register_channel_handlers()
 	channel_handlers.emplace("01" /* BGM                 */, &IRCompiler::parse_channel_bgm);
 	channel_handlers.emplace("02" /* Measure length      */, &IRCompiler::parse_channel_measure_length);
 	channel_handlers.emplace("03" /* BPM                 */, &IRCompiler::parse_channel_bpm);
+	channel_handlers.emplace("08" /* BPMxx               */, &IRCompiler::parse_channel_bpmxx);
 	for (auto const i: views::iota(1zu, 10zu)) // P1 notes
 		channel_handlers.emplace(string{"1"} + static_cast<char>('0' + i), &IRCompiler::parse_channel_note);
 	for (auto const i: views::iota(0zu, 26zu)) // ^
@@ -495,7 +505,6 @@ void IRCompiler::register_channel_handlers()
 
 	// Critical unimplemented channels
 	// (if a file uses one of these, there is no chance for the BMS to play even remotely correctly)
-	channel_handlers.emplace("08" /* BPMxx               */, &IRCompiler::parse_channel_unimplemented_critical);
 	channel_handlers.emplace("09" /* Stop                */, &IRCompiler::parse_channel_unimplemented_critical);
 	channel_handlers.emplace("97" /* BGM volume          */, &IRCompiler::parse_channel_unimplemented_critical);
 	channel_handlers.emplace("98" /* Key volume          */, &IRCompiler::parse_channel_unimplemented_critical);
@@ -702,10 +711,10 @@ catch (exception const&) {
 	WARN_AS(cat, "L{}: Player header has an invalid value: {}", cmd.line, cmd.value);
 }
 
-void IRCompiler::parse_header_bpm(IR& ir, HeaderCommand&& cmd, SlotMappings&)
+void IRCompiler::parse_header_bpm(IR& ir, HeaderCommand&& cmd, SlotMappings& maps)
 try {
 	if (!cmd.slot.empty()) {
-		WARN_AS(cat, "L{}: Unimplemented header: BPMxx", cmd.line);
+		parse_header_bpmxx(ir, move(cmd), maps);
 		return;
 	}
 	if (cmd.value.empty()) {
@@ -767,6 +776,23 @@ void IRCompiler::parse_header_wav(IR& ir, HeaderCommand&& cmd, SlotMappings& map
 	auto const slot_id = maps.get_slot_id(maps.wav, cmd.slot);
 	TRACE_AS(cat, "L{}: WAV: {} -> #{}, {}", cmd.line, cmd.slot, slot_id, cmd.value);
 	ir.add_header_event(IR::HeaderEvent::WAV{ .slot = slot_id, .name = move(cmd.value) });
+}
+
+void IRCompiler::parse_header_bpmxx(IR& ir, HeaderCommand&& cmd, SlotMappings& maps)
+{
+	if (cmd.slot.empty()) {
+		WARN_AS(cat, "L{}: BPMxx header has no slot", cmd.line);
+		return;
+	}
+	if (cmd.value.empty()) {
+		WARN_AS(cat, "L{}: BPMxx header has no value", cmd.line);
+		return;
+	}
+
+	auto const slot_id = maps.get_slot_id(maps.bpm, cmd.slot);
+	auto const bpm = lexical_cast<float>(cmd.value);
+	TRACE_AS(cat, "L{}: BPMxx: {} -> #{}, {}", cmd.line, cmd.slot, slot_id, cmd.value);
+	ir.add_header_event(IR::HeaderEvent::BPMxx{ .slot = slot_id, .bpm = bpm });
 }
 
 void IRCompiler::parse_channel_bgm(IR& ir, SingleChannelCommand&& cmd, SlotMappings& maps)
@@ -853,10 +879,24 @@ void IRCompiler::parse_channel_measure_length(IR& ir, SingleChannelCommand&& cmd
 void IRCompiler::parse_channel_bpm(IR& ir, SingleChannelCommand&& cmd, SlotMappings&)
 {
 	if (cmd.value == "00") return; // Rhythm padding
+	auto const value = slot_hex_to_int(cmd.value);
+	TRACE_AS(cat, "L{}: {} BPM: {}", cmd.line, cmd.position, value);
 	ir.add_channel_event({
 		.position = cmd.position,
 		.type = IR::ChannelEvent::Type::BPM,
-		.slot = slot_hex_to_int(cmd.value),
+		.slot = value,
+	});
+}
+
+void IRCompiler::parse_channel_bpmxx(IR& ir, SingleChannelCommand&& cmd, SlotMappings& maps)
+{
+	if (cmd.value == "00") return; // Rhythm padding
+	auto const slot_id = maps.get_slot_id(maps.bpm, cmd.value);
+	TRACE_AS(cat, "L{}: {} BPM: {} -> #{}", cmd.line, cmd.position, cmd.value, slot_id);
+	ir.add_channel_event({
+		.position = cmd.position,
+		.type = IR::ChannelEvent::Type::BPMxx,
+		.slot = slot_id,
 	});
 }
 
