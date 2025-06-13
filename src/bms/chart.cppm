@@ -51,6 +51,12 @@ export struct Lane {
 	bool playable; // Are the notes for the player to hit?
 };
 
+// A point in the chart at which the BPM changes.
+export struct BPMChange {
+	nanoseconds position;
+	float bpm;
+};
+
 // A list of all possible metadata about a chart.
 export struct Metadata {
 	using Difficulty = IR::HeaderEvent::Difficulty::Level;
@@ -110,6 +116,7 @@ export struct Chart: enable_shared_from_this<Chart> {
 	Metadata metadata;
 	Metrics metrics;
 	array<Lane, +LaneType::Size> lanes;
+	vector<BPMChange> bpm_changes; // Sorted from earliest
 	vector<vector<dev::Sample>> wav_slots;
 	float bpm = 130.0f; // BMS spec default
 };

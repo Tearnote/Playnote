@@ -73,6 +73,18 @@ struct BeatRelMeasure {
 	double length;
 };
 
+// A BPM change event, measure-relative.
+struct MeasureRelBPM {
+	NotePosition position;
+	float bpm;
+};
+
+// A BPM change event, beat-relative.
+struct BeatRelBPM {
+	double position;
+	float bpm;
+};
+
 // Factory that accumulates AbsNotes, then converts them in bulk to a Lane.
 class LaneBuilder {
 public:
@@ -275,11 +287,18 @@ void process_ir_headers(Chart& chart, IR const& ir, FileReferences& file_referen
 	});
 }
 
-void process_ir_channels(IR const& ir, vector<MeasureRelNote>& notes, vector<double>& measure_lengths)
+void process_ir_channels(IR const& ir, vector<MeasureRelNote>& notes, vector<MeasureRelBPM>& bpms, vector<double>& measure_lengths)
 {
 	ir.each_channel_event([&](IR::ChannelEvent const& event) {
 		if (event.type == IR::ChannelEvent::Type::MeasureLength) {
 			set_measure_length(measure_lengths, trunc(event.position), bit_cast<double>(event.slot));
+			return;
+		}
+		if (event.type == IR::ChannelEvent::Type::BPM) {
+			bpms.emplace_back(MeasureRelBPM{
+				.position = event.position,
+				.bpm = static_cast<float>(event.slot),
+			});
 			return;
 		}
 		auto const lane_id = channel_to_lane(event.type);
@@ -311,7 +330,7 @@ auto build_bpm_relative_measures(span<double const> measure_lengths) -> vector<B
 	return result;
 }
 
-auto measure_rel_notes_to_bpm_rel(span<MeasureRelNote const> notes, span<BeatRelMeasure const> measures) -> vector<BeatRelNote>
+auto measure_rel_notes_to_beat_rel(span<MeasureRelNote const> notes, span<BeatRelMeasure const> measures) -> vector<BeatRelNote>
 {
 	auto result = vector<BeatRelNote>{};
 	result.reserve(notes.size());
@@ -323,6 +342,21 @@ auto measure_rel_notes_to_bpm_rel(span<MeasureRelNote const> notes, span<BeatRel
 			.lane = note.lane,
 			.position = position,
 			.wav_slot = note.wav_slot,
+		};
+	});
+	return result;
+}
+
+auto measure_rel_bpms_to_beat_rel(span<MeasureRelBPM const> bpms, span<BeatRelMeasure const> measures) -> vector<BeatRelBPM>
+{
+	auto result = vector<BeatRelBPM>{};
+	result.reserve(bpms.size());
+	transform(bpms, back_inserter(result), [&](MeasureRelBPM const& bpm) {
+		auto const& measure = measures[trunc(bpm.position)];
+		auto const position = measure.start + measure.length * rational_cast<double>(fract(bpm.position));
+		return BeatRelBPM{
+			.position = position,
+			.bpm = bpm.bpm,
 		};
 	});
 	return result;
@@ -345,6 +379,36 @@ auto beat_rel_notes_to_abs(span<BeatRelNote const> notes, float bpm) -> vector<A
 			.wav_slot = note.wav_slot,
 		};
 	});
+	return result;
+}
+
+auto build_bpm_changes(span<BeatRelBPM> bpms) -> vector<BPMChange>
+{
+	stable_sort(bpms, [](auto const& a, auto const& b) { return a.position < b.position; });
+	auto result = vector<BPMChange>{};
+	result.reserve(bpms.size());
+
+	// To establish the timestamp of a BPM change, we need to know the BPM of the previous one,
+	// and the number of beats since then. So, the first one needs to be handled manually.
+	ASSERT(!bpms.empty());
+	result.emplace_back(BPMChange{
+		.position = 0ns,
+		.bpm = bpms[0].bpm,
+	});
+
+	auto cursor = 0ns;
+	transform(bpms | views::pairwise, back_inserter(result), [&](auto const& bpm_pair) {
+		auto [prev_bpm, bpm] = bpm_pair;
+		auto const beats_elapsed = bpm.position - prev_bpm.position;
+		auto const time_elapsed = duration_cast<nanoseconds>(beats_elapsed * duration<double>{60.0 / prev_bpm.bpm});
+		cursor += time_elapsed;
+		auto const bpm_change = BPMChange{
+			.position = cursor,
+			.bpm = bpm.bpm,
+		};
+		return bpm_change;
+	});
+
 	return result;
 }
 
@@ -418,6 +482,7 @@ auto chart_from_ir(IR const& ir, Func file_loader) -> shared_ptr<Chart const>
 
 	auto chart = make_shared<Chart>();
 	auto measure_rel_notes = vector<MeasureRelNote>{};
+	auto measure_rel_bpms = vector<MeasureRelBPM>{};
 	auto measure_lengths = vector<double>{};
 	auto file_references = FileReferences{};
 
@@ -428,11 +493,14 @@ auto chart_from_ir(IR const& ir, Func file_loader) -> shared_ptr<Chart const>
 	file_references.wav.resize(ir.get_wav_slot_count());
 
 	process_ir_headers(*chart, ir, file_references);
-	process_ir_channels(ir, measure_rel_notes, measure_lengths);
+	measure_rel_bpms.emplace_back(NotePosition{0}, chart->bpm); // Add initial BPM as the first BPM change
+	process_ir_channels(ir, measure_rel_notes, measure_rel_bpms, measure_lengths);
 
 	auto const measures = build_bpm_relative_measures(measure_lengths);
-	auto const beat_rel_notes = measure_rel_notes_to_bpm_rel(measure_rel_notes, measures);
+	auto const beat_rel_notes = measure_rel_notes_to_beat_rel(measure_rel_notes, measures);
+	auto beat_rel_bpms = measure_rel_bpms_to_beat_rel(measure_rel_bpms, measures);
 	auto const abs_notes = beat_rel_notes_to_abs(beat_rel_notes, chart->bpm);
+	chart->bpm_changes = build_bpm_changes(beat_rel_bpms);
 	build_lanes(*chart, abs_notes);
 
 	auto needed_slots = vector<bool>{};
