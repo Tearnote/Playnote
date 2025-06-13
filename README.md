@@ -43,7 +43,7 @@ Playnote is a personal passion project, written in bleeding-edge C++ that is rat
   - [x] Always use native sampling rate
   - [x] Long Note support
   - [x] Measure length change support
-  - [ ] BPM change support
+  - [x] BPM change support
   - [ ] Precomputed acceleration structure for reachable slots
   - [x] Basic metadata display
   - [x] Chart loading from command line argument

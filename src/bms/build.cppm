@@ -319,9 +319,11 @@ void process_ir_channels(IR const& ir, SlotValues const& slot_values, vector<Mea
 			return;
 		}
 		if (event.type == IR::ChannelEvent::Type::BPM) {
+			auto const bpm = static_cast<float>(event.slot);
+			if (bpm <= 0.0) return;
 			bpms.emplace_back(MeasureRelBPM{
 				.position = event.position,
-				.bpm = static_cast<float>(event.slot),
+				.bpm = bpm,
 				.scroll_speed = 1.0f,
 			});
 			return;

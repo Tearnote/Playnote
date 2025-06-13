@@ -24,7 +24,7 @@ The command stream is consumed by the IR generator, which interprets each indivi
 
 ## 5. Chart building
 
-A chart is built by parsing the IR streams. ~~Random variables are determined, and used to filter out control-flow-dependent events.~~ Header events are used to establish definite metadata, and channel events produce notes ~~and measure timing information~~. Notes are separated into lanes, their vertical positions and timestamps established, and then sorted from earliest. The list of slots actually used by events is enumerated, and a list of requests is built containing all audio, ~~image and video~~ files used by the chart. Finally, metrics are calculated from the finished chart to establish runtime details like note count, loudness, ~~length, BMS feature usage, note density, most common BPM~~. The output is an immutable chart structure, containing metadata, metrics, lanes ~~and scroll speed timeline~~.
+A chart is built by parsing the IR streams. ~~Random variables are determined, and used to filter out control-flow-dependent events.~~ Header events are used to establish definite metadata, and channel events produce notes and measure timing information. Notes are separated into lanes, their vertical positions and timestamps established, and then sorted from earliest. The list of slots actually used by events is enumerated, and a list of requests is built containing all audio, ~~image and video~~ files used by the chart. Finally, metrics are calculated from the finished chart to establish runtime details like note count, loudness, ~~length, BMS feature usage, note density, most common BPM~~. The output is an immutable chart structure, containing metadata, metrics, lanes ~~and scroll speed timeline~~.
 
 ~~If the chart doesn't use control flow, then metadata and metrics can be cached to speed up future loading.~~
 
@@ -36,4 +36,4 @@ Many cursors to a chart can exist at the same time, for example to implement bac
 
 ## 7. Audio player
 
-An audio player registers to the audio device as a sound generator, and can be used to drive a cursor at realtime speed. It advances the cursor as the audio device asks for audio samples, ~~and interpolates chart progress to estimate the exact sample coming out of the speakers right now~~. ~~It's also responsible for receiving player input events and forwarding them to the cursor.~~
+An audio player registers to the audio device as a sound generator, and can be used to drive a cursor at realtime speed. It advances the cursor as the audio device asks for audio samples, and interpolates chart progress to estimate the exact sample coming out of the speakers right now. ~~It's also responsible for receiving player input events and forwarding them to the cursor.~~
