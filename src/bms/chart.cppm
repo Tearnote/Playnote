@@ -49,6 +49,8 @@ export struct Note {
 export struct Lane {
 	vector<Note> notes;
 	bool playable; // Are the notes for the player to hit?
+	bool visible; // Are the notes shown on the screen in some way?
+	bool audible; // Do the notes trigger audio?
 };
 
 // A point in the chart at which the BPM changes.
@@ -112,6 +114,7 @@ export struct Chart: enable_shared_from_this<Chart> {
 		P2_Key7,
 		P2_KeyS,
 		BGM,
+		MeasureLine,
 		Size,
 	};
 

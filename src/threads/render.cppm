@@ -67,7 +67,7 @@ void enqueue_frame(gfx::Renderer::Queue& queue)
 void enqueue_chart_objects(gfx::Renderer::Queue& queue, bms::AudioPlayer const& player, float scroll_speed)
 {
 	using LaneType = bms::Chart::LaneType;
-	enum class NoteVisual { White, Blue, Red };
+	enum class NoteVisual { White, Blue, Red, Measure };
 	auto get_note_visual = [](LaneType type) {
 		switch (type) {
 		case LaneType::P1_KeyS:
@@ -89,6 +89,8 @@ void enqueue_chart_objects(gfx::Renderer::Queue& queue, bms::AudioPlayer const& 
 		case LaneType::P2_Key4:
 		case LaneType::P2_Key6:
 			return NoteVisual::Blue;
+		case LaneType::MeasureLine:
+			return NoteVisual::Measure;
 		default: PANIC();
 		}
 	};
@@ -115,9 +117,10 @@ void enqueue_chart_objects(gfx::Renderer::Queue& queue, bms::AudioPlayer const& 
 	};
 	auto get_note_color = [](NoteVisual visual) {
 		switch (visual) {
-		case NoteVisual::White: return vec4{0.800f, 0.800f, 0.800f, 1.000f};
-		case NoteVisual::Blue:  return vec4{0.200f, 0.600f, 0.800f, 1.000f};
-		case NoteVisual::Red:   return vec4{0.800f, 0.200f, 0.200f, 1.000f};
+		case NoteVisual::White:   return vec4{0.800f, 0.800f, 0.800f, 1.000f};
+		case NoteVisual::Blue:    return vec4{0.200f, 0.600f, 0.800f, 1.000f};
+		case NoteVisual::Red:     return vec4{0.800f, 0.200f, 0.200f, 1.000f};
+		case NoteVisual::Measure: return vec4{0.267f, 0.267f, 0.267f, 1.000f};
 		default: PANIC();
 		}
 	};
@@ -135,15 +138,21 @@ void enqueue_chart_objects(gfx::Renderer::Queue& queue, bms::AudioPlayer const& 
 	auto const cursor = player.get_audio_cursor();
 	cursor.upcoming_notes(max_distance, [&](auto const& note, LaneType type, float distance) {
 		constexpr auto max_y = 539 + 6;
+		auto const visual = get_note_visual(type);
+		auto const color = get_note_color(visual);
+		if (type == LaneType::MeasureLine) {
+			auto const y = static_cast<int>(max_y - distance * max_y * scroll_speed) - 1;
+			queue.enqueue_rect("measure"_id, {{44, y}, {342, 1}, color});
+			queue.enqueue_rect("measure"_id, {{478, y}, {342, 1}, color});
+			return;
+		}
 		auto const ln_height = holds_alternative<bms::Note::LN>(note.type)?
 			static_cast<int>(get<bms::Note::LN>(note.type).height * max_y * scroll_speed) :
 			0;
-		auto const visual = get_note_visual(type);
 		auto const x = get_note_x(type);
 		auto const y = static_cast<int>(max_y - distance * max_y * scroll_speed) - ln_height;
 		auto const y_overflow = max(y + ln_height - max_y, 0);
 		auto const width = get_note_width(visual);
-		auto const color = get_note_color(visual);
 		queue.enqueue_rect("notes"_id, {{x, y - 13}, {width, 13 + ln_height - y_overflow}, color});
 	});
 }
@@ -189,7 +198,7 @@ void run(Broadcaster& broadcaster, dev::Window const& window, gfx::Renderer& ren
 
 	while (!window.is_closing()) {
 		broadcaster.receive_all<weak_ptr<bms::AudioPlayer const>>([&](auto&& recv) { player = recv.lock(); });
-		renderer.frame({"frame"_id, "notes"_id}, [&](gfx::Renderer::Queue& queue) {
+		renderer.frame({"frame"_id, "measure"_id, "notes"_id}, [&](gfx::Renderer::Queue& queue) {
 			enqueue_frame(queue);
 			if (player) {
 				show_metadata(player->get_chart().metadata);

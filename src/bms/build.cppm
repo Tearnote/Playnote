@@ -384,6 +384,17 @@ auto measure_rel_notes_to_beat_rel(span<MeasureRelNote const> notes, span<BeatRe
 	return result;
 }
 
+void generate_measure_lines(vector<BeatRelNote>& notes, span<BeatRelMeasure const> measures)
+{
+	transform(measures, back_inserter(notes), [](auto const& measure) {
+		return BeatRelNote{
+			.type = Simple{},
+			.lane = Chart::LaneType::MeasureLine,
+			.position = measure.start,
+		};
+	});
+}
+
 auto measure_rel_bpms_to_beat_rel(span<MeasureRelBPM const> bpms, span<BeatRelMeasure const> measures) -> vector<BeatRelBPM>
 {
 	auto result = vector<BeatRelBPM>{};
@@ -477,8 +488,11 @@ void build_lanes(Chart& chart, span<AbsNote const> notes)
 
 	for (auto [idx, lane]: chart.lanes | views::enumerate) {
 		auto const is_bgm = idx == +Chart::LaneType::BGM;
+		auto const is_measure_line = idx == +Chart::LaneType::MeasureLine;
 		lane = lane_builders[idx].build(!is_bgm);
-		if (!is_bgm) lane.playable = true;
+		if (!is_bgm && !is_measure_line) lane.playable = true;
+		if (!is_bgm) lane.visible = true;
+		if (!is_measure_line) lane.audible = true;
 	}
 }
 
@@ -554,7 +568,8 @@ auto chart_from_ir(IR const& ir, Func file_loader) -> shared_ptr<Chart const>
 	stable_sort(measure_rel_bpms, [](auto const& a, auto const& b) { return a.position < b.position; });
 
 	auto const measures = build_bpm_relative_measures(measure_lengths);
-	auto const beat_rel_notes = measure_rel_notes_to_beat_rel(measure_rel_notes, measures);
+	auto beat_rel_notes = measure_rel_notes_to_beat_rel(measure_rel_notes, measures);
+	generate_measure_lines(beat_rel_notes, measures);
 	auto const beat_rel_bpms = measure_rel_bpms_to_beat_rel(measure_rel_bpms, measures);
 	chart->bpm_changes = build_bpm_changes(beat_rel_bpms);
 	auto const abs_notes = beat_rel_notes_to_abs(beat_rel_notes, beat_rel_bpms, chart->bpm_changes);

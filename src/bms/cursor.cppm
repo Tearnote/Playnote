@@ -109,6 +109,7 @@ auto Cursor::advance_one_sample(Func&& func) -> bool
 					continue;
 				}
 			}
+			if (!lane.audible) continue; // We still mark the note triggered, but that's it
 			if (chart->wav_slots[note.wav_slot].empty()) continue;
 			if (note.type_is<Note::Simple>() || (note.type_is<Note::LN>() && !progress.ln_active)) {
 				wav_slot_progress[note.wav_slot].playback_pos = 0;
@@ -139,7 +140,7 @@ void Cursor::upcoming_notes(float max_units, Func&& func) const
 	auto const beat_duration = duration<double>{60.0 / chart->bpm};
 	auto const bpm_ratio = bpm_section.bpm / chart->bpm_changes[0].bpm;
 	auto const current_y = bpm_section.y_pos + section_progress / beat_duration * bpm_ratio * bpm_section.scroll_speed;
-	for (auto [idx, lane, progress]: views::zip(views::iota(0zu), chart->lanes, lane_progress) | views::filter([](auto const& tuple) { return get<1>(tuple).playable; })) {
+	for (auto [idx, lane, progress]: views::zip(views::iota(0zu), chart->lanes, lane_progress) | views::filter([](auto const& tuple) { return get<1>(tuple).visible; })) {
 		for (auto const& note: span{lane.notes.begin() + progress.next_note, lane.notes.size() - progress.next_note}) {
 			auto const distance = note.y_pos - current_y;
 			if (distance > max_units) break;
