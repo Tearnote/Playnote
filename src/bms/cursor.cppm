@@ -62,6 +62,16 @@ private:
 	vector<WavSlotProgress> wav_slot_progress;
 };
 
+[[nodiscard]] auto get_bpm_section(nanoseconds timestamp, span<BPMChange const> bpm_changes) -> BPMChange const&
+{
+	auto bpm_section = bpm_changes | views::reverse | views::filter([&](auto const& bc) {
+		if (timestamp >= bc.position) return true;
+		return false;
+	}) | views::take(1);
+	ASSERT(!bpm_section.empty());
+	return *bpm_section.begin();
+}
+
 Cursor::Cursor(Chart const& chart):
 	chart{chart.shared_from_this()}
 {
@@ -123,9 +133,13 @@ auto Cursor::advance_one_sample(Func&& func) -> bool
 template<callable<void(Note const&, Chart::LaneType, float)> Func>
 void Cursor::upcoming_notes(float max_units, Func&& func) const
 {
+	auto const progress_timestamp = dev::Audio::samples_to_ns(sample_progress);
+	auto const& bpm_section = get_bpm_section(progress_timestamp, chart->bpm_changes);
+	auto const section_progress = progress_timestamp - bpm_section.position;
 	auto const beat_duration = duration<double>{60.0 / chart->bpm};
-	auto const current_y = duration_cast<duration<double>>(dev::Audio::samples_to_ns(sample_progress)) / beat_duration;
-	for (auto [idx, lane, progress]: views::zip(views::iota(0zu), chart->lanes, lane_progress) | views::filter([](auto tuple) { return get<1>(tuple).playable; })) {
+	auto const bpm_ratio = bpm_section.bpm / chart->bpm_changes[0].bpm;
+	auto const current_y = bpm_section.y_pos + section_progress / beat_duration * bpm_ratio * bpm_section.scroll_speed;
+	for (auto [idx, lane, progress]: views::zip(views::iota(0zu), chart->lanes, lane_progress) | views::filter([](auto const& tuple) { return get<1>(tuple).playable; })) {
 		for (auto const& note: span{lane.notes.begin() + progress.next_note, lane.notes.size() - progress.next_note}) {
 			auto const distance = note.y_pos - current_y;
 			if (distance > max_units) break;

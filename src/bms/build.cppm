@@ -77,12 +77,14 @@ struct BeatRelMeasure {
 struct MeasureRelBPM {
 	NotePosition position;
 	float bpm;
+	float scroll_speed;
 };
 
 // A BPM change event, beat-relative.
 struct BeatRelBPM {
 	double position;
 	float bpm;
+	float scroll_speed;
 };
 
 // Factory that accumulates AbsNotes, then converts them in bulk to a Lane.
@@ -298,6 +300,7 @@ void process_ir_channels(IR const& ir, vector<MeasureRelNote>& notes, vector<Mea
 			bpms.emplace_back(MeasureRelBPM{
 				.position = event.position,
 				.bpm = static_cast<float>(event.slot),
+				.scroll_speed = 1.0f,
 			});
 			return;
 		}
@@ -357,6 +360,7 @@ auto measure_rel_bpms_to_beat_rel(span<MeasureRelBPM const> bpms, span<BeatRelMe
 		return BeatRelBPM{
 			.position = position,
 			.bpm = bpm.bpm,
+			.scroll_speed = bpm.scroll_speed,
 		};
 	});
 	return result;
@@ -381,12 +385,13 @@ auto beat_rel_notes_to_abs(span<BeatRelNote const> notes, span<BeatRelBPM const>
 		auto const beats_since_bpm = note.position - beat_rel_bpm.position;
 		auto const time_since_bpm = beats_since_bpm * duration<double>{60.0 / bpm.bpm};
 		auto const timestamp = bpm.position + duration_cast<nanoseconds>(time_since_bpm);
+		auto const y_pos = bpm.y_pos + beats_since_bpm * bpm.scroll_speed;
 		return AbsNote{
 			.type = note.type,
 			.lane = note.lane,
 			.position = AbsPosition{
 				.timestamp = timestamp,
-				.y_pos = note.position,
+				.y_pos = y_pos,
 			},
 			.wav_slot = note.wav_slot,
 		};
@@ -405,17 +410,23 @@ auto build_bpm_changes(span<BeatRelBPM const> bpms) -> vector<BPMChange>
 	result.emplace_back(BPMChange{
 		.position = 0ns,
 		.bpm = bpms[0].bpm,
+		.y_pos = 0.0,
+		.scroll_speed = 1.0f,
 	});
 
 	auto cursor = 0ns;
+	auto y_cursor = 0.0;
 	transform(bpms | views::pairwise, back_inserter(result), [&](auto const& bpm_pair) {
 		auto [prev_bpm, bpm] = bpm_pair;
 		auto const beats_elapsed = bpm.position - prev_bpm.position;
 		auto const time_elapsed = duration_cast<nanoseconds>(beats_elapsed * duration<double>{60.0 / prev_bpm.bpm});
 		cursor += time_elapsed;
+		y_cursor += beats_elapsed * prev_bpm.scroll_speed;
 		auto const bpm_change = BPMChange{
 			.position = cursor,
 			.bpm = bpm.bpm,
+			.y_pos = y_cursor,
+			.scroll_speed = bpm.scroll_speed,
 		};
 		return bpm_change;
 	});

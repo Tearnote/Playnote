@@ -55,6 +55,8 @@ export struct Lane {
 export struct BPMChange {
 	nanoseconds position;
 	float bpm;
+	double y_pos;
+	float scroll_speed; // Relative to 1.0 as the BPM's natural scroll speed
 };
 
 // A list of all possible metadata about a chart.

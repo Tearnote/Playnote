@@ -185,7 +185,7 @@ void show_scroll_speed_controls(float& scroll_speed)
 void run(Broadcaster& broadcaster, dev::Window const& window, gfx::Renderer& renderer)
 {
 	auto player = shared_ptr<bms::AudioPlayer const>{};
-	auto scroll_speed = 1.0f;
+	auto scroll_speed = 2.0f;
 
 	while (!window.is_closing()) {
 		broadcaster.receive_all<weak_ptr<bms::AudioPlayer const>>([&](auto&& recv) { player = recv.lock(); });
