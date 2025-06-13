@@ -547,7 +547,7 @@ auto chart_from_ir(IR const& ir, Func file_loader) -> shared_ptr<Chart const>
 	file_references.wav.resize(ir.get_wav_slot_count());
 
 	auto const slot_values = process_ir_headers(*chart, ir, file_references);
-	measure_rel_bpms.emplace_back(NotePosition{0}, chart->bpm); // Add initial BPM as the first BPM change
+	measure_rel_bpms.emplace_back(NotePosition{0}, chart->bpm, 1.0f); // Add initial BPM as the first BPM change
 	process_ir_channels(ir, slot_values, measure_rel_notes, measure_rel_bpms, measure_lengths);
 	stable_sort(measure_rel_bpms, [](auto const& a, auto const& b) { return a.position < b.position; });
 
