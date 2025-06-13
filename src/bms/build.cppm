@@ -362,13 +362,25 @@ auto measure_rel_bpms_to_beat_rel(span<MeasureRelBPM const> bpms, span<BeatRelMe
 	return result;
 }
 
-auto beat_rel_notes_to_abs(span<BeatRelNote const> notes, float bpm) -> vector<AbsNote>
+auto beat_rel_notes_to_abs(span<BeatRelNote const> notes, span<BeatRelBPM const> beat_rel_bpms, span<BPMChange const> bpm_changes) -> vector<AbsNote>
 {
 	auto result = vector<AbsNote>{};
 	result.reserve(notes.size());
 	transform(notes, back_inserter(result), [&](BeatRelNote const& note) {
-		auto const beat_duration = duration<double>{60.0 / bpm};
-		auto const timestamp = duration_cast<nanoseconds>(note.position * beat_duration);
+		auto bpm_section =
+			views::zip(beat_rel_bpms, bpm_changes) |
+			views::reverse |
+			views::filter([&](auto const& view) {
+				if (note.position >= get<0>(view).position) return true;
+				return false;
+			}) |
+			views::take(1);
+		ASSERT(!bpm_section.empty());
+		auto [beat_rel_bpm, bpm] = *bpm_section.begin();
+
+		auto const beats_since_bpm = note.position - beat_rel_bpm.position;
+		auto const time_since_bpm = beats_since_bpm * duration<double>{60.0 / bpm.bpm};
+		auto const timestamp = bpm.position + duration_cast<nanoseconds>(time_since_bpm);
 		return AbsNote{
 			.type = note.type,
 			.lane = note.lane,
@@ -382,9 +394,8 @@ auto beat_rel_notes_to_abs(span<BeatRelNote const> notes, float bpm) -> vector<A
 	return result;
 }
 
-auto build_bpm_changes(span<BeatRelBPM> bpms) -> vector<BPMChange>
+auto build_bpm_changes(span<BeatRelBPM const> bpms) -> vector<BPMChange>
 {
-	stable_sort(bpms, [](auto const& a, auto const& b) { return a.position < b.position; });
 	auto result = vector<BPMChange>{};
 	result.reserve(bpms.size());
 
@@ -495,12 +506,13 @@ auto chart_from_ir(IR const& ir, Func file_loader) -> shared_ptr<Chart const>
 	process_ir_headers(*chart, ir, file_references);
 	measure_rel_bpms.emplace_back(NotePosition{0}, chart->bpm); // Add initial BPM as the first BPM change
 	process_ir_channels(ir, measure_rel_notes, measure_rel_bpms, measure_lengths);
+	stable_sort(measure_rel_bpms, [](auto const& a, auto const& b) { return a.position < b.position; });
 
 	auto const measures = build_bpm_relative_measures(measure_lengths);
 	auto const beat_rel_notes = measure_rel_notes_to_beat_rel(measure_rel_notes, measures);
-	auto beat_rel_bpms = measure_rel_bpms_to_beat_rel(measure_rel_bpms, measures);
-	auto const abs_notes = beat_rel_notes_to_abs(beat_rel_notes, chart->bpm);
+	auto const beat_rel_bpms = measure_rel_bpms_to_beat_rel(measure_rel_bpms, measures);
 	chart->bpm_changes = build_bpm_changes(beat_rel_bpms);
+	auto const abs_notes = beat_rel_notes_to_abs(beat_rel_notes, beat_rel_bpms, chart->bpm_changes);
 	build_lanes(*chart, abs_notes);
 
 	auto needed_slots = vector<bool>{};
