@@ -60,6 +60,7 @@ target_sources(Playnote PUBLIC
 	src/preamble/types.cppm
 	src/preamble/math.cppm
 	src/preamble/time.cppm
+	src/preamble/id.cppm
 	src/preamble/os.cppm
 	src/preamble.cppm
 	src/lib/pipewire.cppm

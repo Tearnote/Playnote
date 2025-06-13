@@ -28,6 +28,7 @@ namespace views {
 	export using std::ranges::views::pairwise;
 	export using std::ranges::views::take;
 	export using std::ranges::views::reverse;
+	export using std::ranges::views::transform;
 
 	// Helper view for converting a string subrange to a string_view
 	export inline auto to_sv = std::ranges::views::transform([](auto range) {

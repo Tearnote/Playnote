@@ -29,39 +29,39 @@ namespace playnote::threads {
 
 namespace im = lib::imgui;
 
-void enqueue_test_scene(gfx::Renderer::Queue& queue)
+void enqueue_frame(gfx::Renderer::Queue& queue)
 {
-	queue.enqueue_rect({{ 44, 539}, {342,   6}, {1.000f, 0.200f, 0.200f, 1.000f}});
-	queue.enqueue_rect({{ 42,   0}, {  2, 547}, {0.596f, 0.596f, 0.596f, 1.000f}});
-	queue.enqueue_rect({{ 42, 545}, {346,   2}, {0.596f, 0.596f, 0.596f, 1.000f}});
-	queue.enqueue_rect({{386,   0}, {  2, 547}, {0.596f, 0.596f, 0.596f, 1.000f}});
-	queue.enqueue_rect({{116,   0}, {  2, 539}, {0.165f, 0.165f, 0.165f, 1.000f}});
-	queue.enqueue_rect({{158,   0}, {  2, 539}, {0.165f, 0.165f, 0.165f, 1.000f}});
-	queue.enqueue_rect({{192,   0}, {  2, 539}, {0.165f, 0.165f, 0.165f, 1.000f}});
-	queue.enqueue_rect({{234,   0}, {  2, 539}, {0.165f, 0.165f, 0.165f, 1.000f}});
-	queue.enqueue_rect({{268,   0}, {  2, 539}, {0.165f, 0.165f, 0.165f, 1.000f}});
-	queue.enqueue_rect({{310,   0}, {  2, 539}, {0.165f, 0.165f, 0.165f, 1.000f}});
-	queue.enqueue_rect({{344,   0}, {  2, 539}, {0.165f, 0.165f, 0.165f, 1.000f}});
-	queue.enqueue_rect({{118,   0}, { 40, 539}, {0.035f, 0.035f, 0.035f, 1.000f}});
-	queue.enqueue_rect({{194,   0}, { 40, 539}, {0.035f, 0.035f, 0.035f, 1.000f}});
-	queue.enqueue_rect({{270,   0}, { 40, 539}, {0.035f, 0.035f, 0.035f, 1.000f}});
-	queue.enqueue_rect({{346,   0}, { 40, 539}, {0.035f, 0.035f, 0.035f, 1.000f}});
+	queue.enqueue_rect("frame"_id, {{ 44, 539}, {342,   6}, {1.000f, 0.200f, 0.200f, 1.000f}});
+	queue.enqueue_rect("frame"_id, {{ 42,   0}, {  2, 547}, {0.596f, 0.596f, 0.596f, 1.000f}});
+	queue.enqueue_rect("frame"_id, {{ 42, 545}, {346,   2}, {0.596f, 0.596f, 0.596f, 1.000f}});
+	queue.enqueue_rect("frame"_id, {{386,   0}, {  2, 547}, {0.596f, 0.596f, 0.596f, 1.000f}});
+	queue.enqueue_rect("frame"_id, {{116,   0}, {  2, 539}, {0.165f, 0.165f, 0.165f, 1.000f}});
+	queue.enqueue_rect("frame"_id, {{158,   0}, {  2, 539}, {0.165f, 0.165f, 0.165f, 1.000f}});
+	queue.enqueue_rect("frame"_id, {{192,   0}, {  2, 539}, {0.165f, 0.165f, 0.165f, 1.000f}});
+	queue.enqueue_rect("frame"_id, {{234,   0}, {  2, 539}, {0.165f, 0.165f, 0.165f, 1.000f}});
+	queue.enqueue_rect("frame"_id, {{268,   0}, {  2, 539}, {0.165f, 0.165f, 0.165f, 1.000f}});
+	queue.enqueue_rect("frame"_id, {{310,   0}, {  2, 539}, {0.165f, 0.165f, 0.165f, 1.000f}});
+	queue.enqueue_rect("frame"_id, {{344,   0}, {  2, 539}, {0.165f, 0.165f, 0.165f, 1.000f}});
+	queue.enqueue_rect("frame"_id, {{118,   0}, { 40, 539}, {0.035f, 0.035f, 0.035f, 1.000f}});
+	queue.enqueue_rect("frame"_id, {{194,   0}, { 40, 539}, {0.035f, 0.035f, 0.035f, 1.000f}});
+	queue.enqueue_rect("frame"_id, {{270,   0}, { 40, 539}, {0.035f, 0.035f, 0.035f, 1.000f}});
+	queue.enqueue_rect("frame"_id, {{346,   0}, { 40, 539}, {0.035f, 0.035f, 0.035f, 1.000f}});
 
-	queue.enqueue_rect({{478, 539}, {342,   6}, {1.000f, 0.200f, 0.200f, 1.000f}});
-	queue.enqueue_rect({{476,   0}, {  2, 547}, {0.596f, 0.596f, 0.596f, 1.000f}});
-	queue.enqueue_rect({{476, 545}, {346,   2}, {0.596f, 0.596f, 0.596f, 1.000f}});
-	queue.enqueue_rect({{820,   0}, {  2, 547}, {0.596f, 0.596f, 0.596f, 1.000f}});
-	queue.enqueue_rect({{518,   0}, {  2, 539}, {0.165f, 0.165f, 0.165f, 1.000f}});
-	queue.enqueue_rect({{552,   0}, {  2, 539}, {0.165f, 0.165f, 0.165f, 1.000f}});
-	queue.enqueue_rect({{594,   0}, {  2, 539}, {0.165f, 0.165f, 0.165f, 1.000f}});
-	queue.enqueue_rect({{628,   0}, {  2, 539}, {0.165f, 0.165f, 0.165f, 1.000f}});
-	queue.enqueue_rect({{670,   0}, {  2, 539}, {0.165f, 0.165f, 0.165f, 1.000f}});
-	queue.enqueue_rect({{704,   0}, {  2, 539}, {0.165f, 0.165f, 0.165f, 1.000f}});
-	queue.enqueue_rect({{746,   0}, {  2, 539}, {0.165f, 0.165f, 0.165f, 1.000f}});
-	queue.enqueue_rect({{478,   0}, { 40, 539}, {0.035f, 0.035f, 0.035f, 1.000f}});
-	queue.enqueue_rect({{554,   0}, { 40, 539}, {0.035f, 0.035f, 0.035f, 1.000f}});
-	queue.enqueue_rect({{630,   0}, { 40, 539}, {0.035f, 0.035f, 0.035f, 1.000f}});
-	queue.enqueue_rect({{706,   0}, { 40, 539}, {0.035f, 0.035f, 0.035f, 1.000f}});
+	queue.enqueue_rect("frame"_id, {{478, 539}, {342,   6}, {1.000f, 0.200f, 0.200f, 1.000f}});
+	queue.enqueue_rect("frame"_id, {{476,   0}, {  2, 547}, {0.596f, 0.596f, 0.596f, 1.000f}});
+	queue.enqueue_rect("frame"_id, {{476, 545}, {346,   2}, {0.596f, 0.596f, 0.596f, 1.000f}});
+	queue.enqueue_rect("frame"_id, {{820,   0}, {  2, 547}, {0.596f, 0.596f, 0.596f, 1.000f}});
+	queue.enqueue_rect("frame"_id, {{518,   0}, {  2, 539}, {0.165f, 0.165f, 0.165f, 1.000f}});
+	queue.enqueue_rect("frame"_id, {{552,   0}, {  2, 539}, {0.165f, 0.165f, 0.165f, 1.000f}});
+	queue.enqueue_rect("frame"_id, {{594,   0}, {  2, 539}, {0.165f, 0.165f, 0.165f, 1.000f}});
+	queue.enqueue_rect("frame"_id, {{628,   0}, {  2, 539}, {0.165f, 0.165f, 0.165f, 1.000f}});
+	queue.enqueue_rect("frame"_id, {{670,   0}, {  2, 539}, {0.165f, 0.165f, 0.165f, 1.000f}});
+	queue.enqueue_rect("frame"_id, {{704,   0}, {  2, 539}, {0.165f, 0.165f, 0.165f, 1.000f}});
+	queue.enqueue_rect("frame"_id, {{746,   0}, {  2, 539}, {0.165f, 0.165f, 0.165f, 1.000f}});
+	queue.enqueue_rect("frame"_id, {{478,   0}, { 40, 539}, {0.035f, 0.035f, 0.035f, 1.000f}});
+	queue.enqueue_rect("frame"_id, {{554,   0}, { 40, 539}, {0.035f, 0.035f, 0.035f, 1.000f}});
+	queue.enqueue_rect("frame"_id, {{630,   0}, { 40, 539}, {0.035f, 0.035f, 0.035f, 1.000f}});
+	queue.enqueue_rect("frame"_id, {{706,   0}, { 40, 539}, {0.035f, 0.035f, 0.035f, 1.000f}});
 }
 
 void enqueue_chart_objects(gfx::Renderer::Queue& queue, bms::AudioPlayer const& player, float scroll_speed)
@@ -144,7 +144,7 @@ void enqueue_chart_objects(gfx::Renderer::Queue& queue, bms::AudioPlayer const& 
 		auto const y_overflow = max(y + ln_height - max_y, 0);
 		auto const width = get_note_width(visual);
 		auto const color = get_note_color(visual);
-		queue.enqueue_rect({{x, y - 13}, {width, 13 + ln_height - y_overflow}, color});
+		queue.enqueue_rect("notes"_id, {{x, y - 13}, {width, 13 + ln_height - y_overflow}, color});
 	});
 }
 
@@ -189,8 +189,8 @@ void run(Broadcaster& broadcaster, dev::Window const& window, gfx::Renderer& ren
 
 	while (!window.is_closing()) {
 		broadcaster.receive_all<weak_ptr<bms::AudioPlayer const>>([&](auto&& recv) { player = recv.lock(); });
-		renderer.frame([&](gfx::Renderer::Queue& queue) {
-			enqueue_test_scene(queue);
+		renderer.frame({"frame"_id, "notes"_id}, [&](gfx::Renderer::Queue& queue) {
+			enqueue_frame(queue);
 			if (player) {
 				show_metadata(player->get_chart().metadata);
 				im::text("");

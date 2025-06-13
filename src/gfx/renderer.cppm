@@ -33,11 +33,15 @@ public:
 	class Queue {
 	public:
 		// Add a solid color rectangle to the draw queue.
-		void enqueue_rect(Rect rect) { rects.emplace_back(rect); }
+		void enqueue_rect(id layer, Rect rect) { layers[layer].rects.emplace_back(rect); }
 
 	private:
+		struct Layer {
+			vector<Rect> rects;
+		};
+
 		friend Renderer;
-		vector<Rect> rects{};
+		unordered_map<id, Layer> layers;
 	};
 
 	explicit Renderer(dev::GPU& gpu);
@@ -46,11 +50,13 @@ public:
 	// Each call will wait block until the next frame begins.
 	// imgui:: calls are only allowed within the function argument.
 	template<callable<void(Queue&)> Func>
-	void frame(Func&&);
+	void frame(initializer_list<id> layer_order, Func&&);
 
 private:
 	dev::GPU& gpu;
-	gfx::Imgui imgui;
+	Imgui imgui;
+
+	[[nodiscard]] auto draw_rects(vk::Allocator&, vk::ManagedImage&&, span<Rect const>) -> vk::ManagedImage;
 };
 
 Renderer::Renderer(dev::GPU& gpu):
@@ -68,28 +74,38 @@ Renderer::Renderer(dev::GPU& gpu):
 }
 
 template<callable<void(Renderer::Queue&)> Func>
-void Renderer::frame(Func&& func)
+void Renderer::frame(initializer_list<id> layer_order, Func&& func)
 {
 	auto queue = Queue{};
 	imgui.enqueue([&]() { func(queue); });
 
-	gpu.frame([this, &queue](auto& allocator, auto&& target) -> vk::ManagedImage {
-		auto cleared = vk::clear_image(move(target), {0.0f, 0.0f, 0.0f, 1.0f});
-		auto rects = vk::create_scratch_buffer(allocator, span(queue.rects));
+	gpu.frame([&, this](auto& allocator, auto&& target) -> vk::ManagedImage {
+		auto next = vk::clear_image(move(target), {0.0f, 0.0f, 0.0f, 1.0f});
 
-		auto pass = vk::make_pass("rects",
-			[window_size = gpu.get_window().size(), rects, rects_count = queue.rects.size()]
-			(vk::CommandBuffer& cmd, VUK_IA(vk::Access::eColorWrite) target) {
-			vk::set_cmd_defaults(cmd)
-				.bind_graphics_pipeline("rects")
-				.bind_buffer(0, 0, rects)
-				.specialize_constants(0, window_size.x()).specialize_constants(1, window_size.y())
-				.draw(6 * rects_count, 1, 0, 0);
-			return target;
-		});
-		auto rects_drawn =  pass(move(cleared));
-		return imgui.draw(allocator, move(rects_drawn));
+		for (auto const& layer: layer_order |
+			views::filter([&](auto id) { return queue.layers.contains(id); }) |
+			views::transform([&](auto id) -> Queue::Layer const& { return queue.layers.at(id); })) {
+			auto result = draw_rects(allocator, move(next), layer.rects);
+			next = move(result);
+		}
+		return imgui.draw(allocator, move(next));
 	});
+}
+
+auto Renderer::draw_rects(vk::Allocator& allocator, vk::ManagedImage&& dest, span<Rect const> rects) -> vk::ManagedImage
+{
+	auto rects_buf = vk::create_scratch_buffer(allocator, span{rects});
+	auto pass = vk::make_pass("rects",
+		[window_size = gpu.get_window().size(), rects_buf, rects_count = rects.size()]
+		(vk::CommandBuffer& cmd, VUK_IA(vk::Access::eColorWrite) target) {
+		vk::set_cmd_defaults(cmd)
+			.bind_graphics_pipeline("rects")
+			.bind_buffer(0, 0, rects_buf)
+			.specialize_constants(0, window_size.x()).specialize_constants(1, window_size.y())
+			.draw(6 * rects_count, 1, 0, 0);
+		return target;
+	});
+	return pass(move(dest));
 }
 
 }
