@@ -44,7 +44,7 @@ Playnote is a personal passion project, written in bleeding-edge C++ that is rat
   - [x] Long Note support
   - [x] Measure length change support
   - [x] BPM change support
-  - [ ] Measure lines
+  - [x] Measure lines
   - [ ] Precomputed acceleration structure for reachable slots
   - [x] Basic metadata display
   - [x] Chart loading from command line argument
