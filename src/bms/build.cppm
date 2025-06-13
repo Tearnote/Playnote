@@ -87,6 +87,25 @@ struct BeatRelBPM {
 	float scroll_speed;
 };
 
+// Temporary storage for slot values that don't need to be known during playback.
+struct SlotValues {
+	vector<float> bpmxx;
+
+	template<typename T>
+	static void store(vector<T>& slots, usize slot_id, T value)
+	{
+		if (slot_id >= slots.size()) slots.resize(slot_id + 1);
+		slots[slot_id] = value;
+	}
+
+	template<typename T>
+	static auto fetch(vector<T> const& slots, usize slot_id) -> T
+	{
+		if (slot_id >= slots.size()) return T{};
+		return slots[slot_id];
+	}
+};
+
 // Factory that accumulates AbsNotes, then converts them in bulk to a Lane.
 class LaneBuilder {
 public:
@@ -270,8 +289,9 @@ void set_measure_length(vector<double>& measure_lengths, usize measure, double l
 	measure_lengths[measure] = length;
 }
 
-void process_ir_headers(Chart& chart, IR const& ir, FileReferences& file_references)
+auto process_ir_headers(Chart& chart, IR const& ir, FileReferences& file_references) -> SlotValues
 {
+	auto slot_values = SlotValues{};
 	ir.each_header_event([&](IR::HeaderEvent const& event) {
 		visit(visitor {
 			[&](IR::HeaderEvent::Title* params) { chart.metadata.title = params->title; },
@@ -284,12 +304,14 @@ void process_ir_headers(Chart& chart, IR const& ir, FileReferences& file_referen
 			[&](IR::HeaderEvent::Difficulty* params) { chart.metadata.difficulty = params->level; },
 			[&](IR::HeaderEvent::BPM* params) { chart.bpm = params->bpm; },
 			[&](IR::HeaderEvent::WAV* params) { file_references.wav[params->slot] = params->name; },
+			[&](IR::HeaderEvent::BPMxx* params) { slot_values.store(slot_values.bpmxx, params->slot, params->bpm); },
 			[](auto&&) {}
 		}, event.params);
 	});
+	return slot_values;
 }
 
-void process_ir_channels(IR const& ir, vector<MeasureRelNote>& notes, vector<MeasureRelBPM>& bpms, vector<double>& measure_lengths)
+void process_ir_channels(IR const& ir, SlotValues const& slot_values, vector<MeasureRelNote>& notes, vector<MeasureRelBPM>& bpms, vector<double>& measure_lengths)
 {
 	ir.each_channel_event([&](IR::ChannelEvent const& event) {
 		if (event.type == IR::ChannelEvent::Type::MeasureLength) {
@@ -300,6 +322,16 @@ void process_ir_channels(IR const& ir, vector<MeasureRelNote>& notes, vector<Mea
 			bpms.emplace_back(MeasureRelBPM{
 				.position = event.position,
 				.bpm = static_cast<float>(event.slot),
+				.scroll_speed = 1.0f,
+			});
+			return;
+		}
+		if (event.type == IR::ChannelEvent::Type::BPMxx) {
+			auto const bpm = slot_values.fetch(slot_values.bpmxx, event.slot);
+			if (bpm <= 0.0) return;
+			bpms.emplace_back(MeasureRelBPM{
+				.position = event.position,
+				.bpm = bpm,
 				.scroll_speed = 1.0f,
 			});
 			return;
@@ -514,9 +546,9 @@ auto chart_from_ir(IR const& ir, Func file_loader) -> shared_ptr<Chart const>
 	file_references.wav.clear();
 	file_references.wav.resize(ir.get_wav_slot_count());
 
-	process_ir_headers(*chart, ir, file_references);
+	auto const slot_values = process_ir_headers(*chart, ir, file_references);
 	measure_rel_bpms.emplace_back(NotePosition{0}, chart->bpm); // Add initial BPM as the first BPM change
-	process_ir_channels(ir, measure_rel_notes, measure_rel_bpms, measure_lengths);
+	process_ir_channels(ir, slot_values, measure_rel_notes, measure_rel_bpms, measure_lengths);
 	stable_sort(measure_rel_bpms, [](auto const& a, auto const& b) { return a.position < b.position; });
 
 	auto const measures = build_bpm_relative_measures(measure_lengths);
