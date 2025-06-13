@@ -385,6 +385,7 @@ void IRCompiler::register_header_handlers()
 
 	// Critical unimplemented headers
 	// (if a file uses one of these, there is no chance for the BMS to play even remotely correctly)
+	header_handlers.emplace("SCROLL",       &IRCompiler::parse_header_unimplemented_critical); // beatoraja extension, needs research, especially for negative values
 	header_handlers.emplace("WAVCMD",       &IRCompiler::parse_header_unimplemented_critical);
 	header_handlers.emplace("EXWAV",        &IRCompiler::parse_header_unimplemented_critical); // Underspecified, and likely unimplementable
 	header_handlers.emplace("RANDOM",       &IRCompiler::parse_header_unimplemented_critical);
