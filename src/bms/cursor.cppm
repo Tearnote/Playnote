@@ -33,6 +33,9 @@ public:
 	// Return the current position of the cursor in nanoseconds.
 	[[nodiscard]] auto get_progress_ns() const -> nanoseconds { return dev::Audio::samples_to_ns(get_progress()); }
 
+	// Return the number of playable notes that were already judged.
+	[[nodiscard]] auto get_judged_notes() const -> usize { return notes_judged; }
+
 	// Seek the cursor to the beginning of the chart.
 	void restart();
 

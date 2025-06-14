@@ -186,6 +186,7 @@ void show_metrics(bms::Cursor const& cursor, bms::Metrics const& metrics)
 	auto const progress = ns_to_minsec(cursor.get_progress_ns());
 	auto const audio_duration = ns_to_minsec(metrics.audio_duration);
 	im::text("Progress: {} / {}", progress, audio_duration);
+	im::text("Notes: {} / {}", cursor.get_judged_notes(), metrics.note_count);
 }
 
 void show_playback_controls(Broadcaster& broadcaster)
