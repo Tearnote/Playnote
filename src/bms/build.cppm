@@ -533,11 +533,25 @@ void calculate_audio_metrics(Cursor&& cursor, Metrics& metrics)
 	r128::cleanup(ctx);
 }
 
-void calculate_metrics(Chart& chart)
+void calculate_note_metrics(Chart::Lanes const& lanes, Metrics& metrics)
 {
-	chart.metrics.note_count = fold_left(chart.lanes, 0u, [](auto acc, auto const& lane) {
+	metrics.note_count = fold_left(lanes, 0u, [](auto acc, auto const& lane) {
 		return acc + (lane.playable? lane.notes.size() : 0);
 	});
+	metrics.chart_duration = fold_left(lanes |
+		views::filter([](auto const& lane) { return !lane.notes.empty() && lane.playable; }) |
+		views::transform([](auto const& lane) -> Note const& { return lane.notes.back(); }),
+		0ns, [](auto acc, Note const& last_note) {
+			auto note_end = last_note.timestamp;
+			if (last_note.type_is<Note::LN>()) note_end += last_note.params<Note::LN>().length;
+			return max(acc, note_end);
+		}
+	);
+}
+
+void calculate_metrics(Chart& chart)
+{
+	calculate_note_metrics(chart.lanes, chart.metrics);
 	calculate_audio_metrics(Cursor{chart}, chart.metrics);
 }
 

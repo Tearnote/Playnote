@@ -89,6 +89,7 @@ export struct Metadata {
 // Data about a chart calculated from its contents.
 export struct Metrics {
 	uint32 note_count; // Only counts notes for the player to hit
+	nanoseconds chart_duration; // Time when all notes are judged
 	nanoseconds audio_duration; // Time until the last sample stops
 	double loudness; // in LUFS
 	float gain; // Amplitude ratio to normalize loudness to -14 LUFS reference
@@ -118,10 +119,11 @@ export struct Chart: enable_shared_from_this<Chart> {
 		MeasureLine,
 		Size,
 	};
+	using Lanes = array<Lane, +LaneType::Size>;
 
 	Metadata metadata;
 	Metrics metrics;
-	array<Lane, +LaneType::Size> lanes;
+	Lanes lanes;
 	vector<BPMChange> bpm_changes; // Sorted from earliest
 	vector<vector<dev::Sample>> wav_slots;
 	float bpm = 130.0f; // BMS spec default

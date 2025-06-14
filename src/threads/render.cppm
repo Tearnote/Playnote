@@ -184,8 +184,9 @@ auto ns_to_minsec(nanoseconds duration) -> string
 void show_metrics(bms::Cursor const& cursor, bms::Metrics const& metrics)
 {
 	auto const progress = ns_to_minsec(cursor.get_progress_ns());
+	auto const chart_duration = ns_to_minsec(metrics.chart_duration);
 	auto const audio_duration = ns_to_minsec(metrics.audio_duration);
-	im::text("Progress: {} / {}", progress, audio_duration);
+	im::text("Progress: {} / {} ({})", progress, chart_duration, audio_duration);
 	im::text("Notes: {} / {}", cursor.get_judged_notes(), metrics.note_count);
 }
 
