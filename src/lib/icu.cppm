@@ -71,7 +71,7 @@ export auto detect_encoding(span<byte const> input, initializer_list<string_view
 }
 
 // Convert text from the provided charset to UTF-8.
-// Throws on ICU error; invalid bytes in the input data however will be decoded wither error
+// Throws on ICU error; invalid bytes in the input data however will be decoded without error
 // as a replacement character.
 export auto to_utf8(span<byte const> input, string_view input_charset) -> string
 {
@@ -79,7 +79,7 @@ export auto to_utf8(span<byte const> input, string_view input_charset) -> string
 	auto contents_capacity = input.size() * 2; // Most pessimistic case of 100% DBCS
 	contents.resize(contents_capacity);
 	auto err = U_ZERO_ERROR;
-	auto converted = ucnv_convert(string{input_charset}.c_str(), "UTF-8",
+	auto converted = ucnv_convert("UTF-8", string{input_charset}.c_str(),
 		contents.data(), contents_capacity,
 		reinterpret_cast<char const*>(input.data()), input.size(), &err);
 	handle_icu_error(err);
