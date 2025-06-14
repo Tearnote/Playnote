@@ -89,6 +89,7 @@ Logger::Impl::Impl(string_view log_file_path, LogLevel global_log_level)
 		.thread_name = "Logging",
 		.enable_yield_when_idle = true,
 		.sleep_duration = 0ns,
+		.check_printable_char = {}, // Allow UTF-8
 		.log_level_short_codes = ShortCodes,
 	}, SignalHandlerOptions{});
 
