@@ -17,10 +17,12 @@ import playnote.preamble;
 import playnote.logger;
 import playnote.lib.imgui;
 import playnote.dev.window;
+import playnote.dev.audio;
 import playnote.dev.gpu;
 import playnote.dev.os;
 import playnote.gfx.renderer;
 import playnote.bms.audio_player;
+import playnote.bms.cursor;
 import playnote.bms.chart;
 import playnote.threads.render_events;
 import playnote.threads.broadcaster;
@@ -64,7 +66,7 @@ void enqueue_frame(gfx::Renderer::Queue& queue)
 	queue.enqueue_rect("frame"_id, {{706,   0}, { 40, 539}, {0.035f, 0.035f, 0.035f, 1.000f}});
 }
 
-void enqueue_chart_objects(gfx::Renderer::Queue& queue, bms::AudioPlayer const& player, float scroll_speed)
+void enqueue_chart_objects(gfx::Renderer::Queue& queue, bms::Cursor const& cursor, float scroll_speed)
 {
 	using LaneType = bms::Chart::LaneType;
 	enum class NoteVisual { White, Blue, Red, Measure };
@@ -135,7 +137,6 @@ void enqueue_chart_objects(gfx::Renderer::Queue& queue, bms::AudioPlayer const& 
 
 	scroll_speed /= 4; // beat -> standard measure
 	auto const max_distance = 1.0f / scroll_speed;
-	auto const cursor = player.get_audio_cursor();
 	cursor.upcoming_notes(max_distance, [&](auto const& note, LaneType type, float distance) {
 		constexpr auto max_y = 539 + 6;
 		auto const visual = get_note_visual(type);
@@ -175,6 +176,18 @@ void show_metadata(bms::Metadata const& meta)
 	if (!meta.email.empty()) im::text(meta.email);
 }
 
+auto ns_to_minsec(nanoseconds duration) -> string
+{
+	return format("{}:{:02}", duration / 60s, duration % 60s / 1s);
+}
+
+void show_metrics(bms::Cursor const& cursor, bms::Metrics const& metrics)
+{
+	auto const progress = ns_to_minsec(cursor.get_progress_ns());
+	auto const audio_duration = ns_to_minsec(metrics.audio_duration);
+	im::text("Progress: {} / {}", progress, audio_duration);
+}
+
 void show_playback_controls(Broadcaster& broadcaster)
 {
 	if (im::button("Play")) broadcaster.shout(PlayerControl::Play);
@@ -201,12 +214,15 @@ void run(Broadcaster& broadcaster, dev::Window const& window, gfx::Renderer& ren
 		renderer.frame({"frame"_id, "measure"_id, "notes"_id}, [&](gfx::Renderer::Queue& queue) {
 			enqueue_frame(queue);
 			if (player) {
+				auto const cursor = player->get_audio_cursor();
 				show_metadata(player->get_chart().metadata);
+				im::text("");
+				show_metrics(cursor, player->get_chart().metrics);
 				im::text("");
 				show_playback_controls(broadcaster);
 				im::text("");
 				show_scroll_speed_controls(scroll_speed);
-				enqueue_chart_objects(queue, *player, scroll_speed);
+				enqueue_chart_objects(queue, cursor, scroll_speed);
 			}
 		});
 		FRAME_MARK();
