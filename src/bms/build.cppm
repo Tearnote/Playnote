@@ -496,11 +496,18 @@ void build_lanes(Chart& chart, span<AbsNote const> notes)
 	}
 }
 
-[[nodiscard]] auto measure_loudness(Chart const& chart) -> double
+[[nodiscard]] auto lufs_to_gain(double lufs) -> float
+{
+	constexpr auto LufsTarget = -14.0;
+	auto const db_from_target = LufsTarget - lufs;
+	auto const amplitude_ratio = pow(10.0, db_from_target / 20.0);
+	return static_cast<float>(amplitude_ratio);
+}
+
+void calculate_audio_metrics(Cursor&& cursor, Metrics& metrics)
 {
 	constexpr auto BufferSize = 4096zu / sizeof(dev::Sample);
 
-	auto cursor = Cursor{chart};
 	auto ctx = r128::init(dev::Audio::get_sampling_rate());
 	auto buffer = vector<dev::Sample>{};
 	buffer.reserve(BufferSize);
@@ -520,18 +527,10 @@ void build_lanes(Chart& chart, span<AbsNote const> notes)
 		buffer.clear();
 	}
 
-	auto const result = r128::get_loudness(ctx);
-
+	metrics.loudness = r128::get_loudness(ctx);
+	metrics.gain = lufs_to_gain(metrics.loudness);
+	metrics.audio_duration = cursor.get_progress_ns();
 	r128::cleanup(ctx);
-	return result;
-}
-
-[[nodiscard]] auto lufs_to_gain(double lufs) -> float
-{
-	constexpr auto LufsTarget = -14.0;
-	auto const db_from_target = LufsTarget - lufs;
-	auto const amplitude_ratio = pow(10.0, db_from_target / 20.0);
-	return static_cast<float>(amplitude_ratio);
 }
 
 void calculate_metrics(Chart& chart)
@@ -539,8 +538,7 @@ void calculate_metrics(Chart& chart)
 	chart.metrics.note_count = fold_left(chart.lanes, 0u, [](auto acc, auto const& lane) {
 		return acc + (lane.playable? lane.notes.size() : 0);
 	});
-	chart.metrics.loudness = measure_loudness(chart);
-	chart.metrics.gain = lufs_to_gain(chart.metrics.loudness);
+	calculate_audio_metrics(Cursor{chart}, chart.metrics);
 }
 
 // Generate a Chart from an IR. Requires a function to handle the loading of a bulk request.

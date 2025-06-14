@@ -88,7 +88,8 @@ export struct Metadata {
 
 // Data about a chart calculated from its contents.
 export struct Metrics {
-	uint32 note_count;
+	uint32 note_count; // Only counts notes for the player to hit
+	nanoseconds audio_duration; // Time until the last sample stops
 	double loudness; // in LUFS
 	float gain; // Amplitude ratio to normalize loudness to -14 LUFS reference
 };
