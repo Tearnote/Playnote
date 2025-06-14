@@ -21,6 +21,7 @@ module;
 #include "vuk/Buffer.hpp"
 #include "vuk/Types.hpp"
 #include "vuk/Value.hpp"
+#include "macros/assert.hpp"
 
 export module playnote.lib.imgui;
 
