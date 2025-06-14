@@ -30,6 +30,9 @@ public:
 	// Return the current position of the cursor in samples.
 	[[nodiscard]] auto get_progress() const -> usize { return sample_progress; }
 
+	// Return the current position of the cursor in nanoseconds.
+	[[nodiscard]] auto get_progress_ns() const -> nanoseconds { return dev::Audio::samples_to_ns(get_progress()); }
+
 	// Seek the cursor to the beginning of the chart.
 	void restart();
 
