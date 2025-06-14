@@ -206,8 +206,8 @@ export auto render(vk::Allocator& frame_allocator, vk::ManagedImage&& target, Co
 						};
 						cmd.set_scissor(0, scissor);
 
-						if (pcmd->TextureId) {
-							auto const ia_index = static_cast<size_t>(pcmd->TextureId) - 1;
+						if (pcmd->GetTexID()) {
+							auto const ia_index = static_cast<size_t>(pcmd->GetTexID()) - 1;
 							cmd.bind_image(0, 0, sis[ia_index].ia)
 							   .bind_sampler(0, 0, sis[ia_index].sci);
 						}
