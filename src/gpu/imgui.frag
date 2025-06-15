@@ -15,5 +15,5 @@ layout(location = 0) in struct {
 
 void main()
 {
-    fColor = In.Color * textureLod(sTexture, In.UV.st, 0.0);
+    fColor = In.Color * texture(sTexture, In.UV.st);
 }

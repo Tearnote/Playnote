@@ -65,6 +65,7 @@ export auto init(glfw::Window window, vk::Allocator& global_allocator) -> Contex
 		vuk::ImageAttachment::Preset::eMap2D, vuk::Format::eR8G8B8A8Srgb,
 		vuk::Extent3D{static_cast<unsigned>(width), static_cast<unsigned>(height), 1u},
 		vuk::Samples::e1);
+	font_ia.level_count = 1;
 	auto [image, view, fut] = vuk::create_image_and_view_with_data(global_allocator, vuk::DomainFlagBits::eTransferOnTransfer, font_ia, pixels);
 	auto comp = vuk::Compiler{};
 	fut.as_released(vuk::Access::eFragmentSampled, vuk::DomainFlagBits::eGraphicsQueue);
