@@ -201,9 +201,7 @@ void show_playback_controls(Broadcaster& broadcaster)
 
 void show_scroll_speed_controls(float& scroll_speed)
 {
-	im::text("Scroll speed");
-	im::same_line();
-	im::input_float("##scroll_speed", scroll_speed, 0.25f, 1.0f, "%.2f");
+	im::input_float("Scroll speed", scroll_speed, 0.25f, 1.0f, "%.2f");
 }
 
 void run(Broadcaster& broadcaster, dev::Window const& window, gfx::Renderer& renderer)
