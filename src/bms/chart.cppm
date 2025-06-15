@@ -17,7 +17,6 @@ import playnote.dev.audio;
 import playnote.bms.ir;
 
 namespace playnote::bms {
-
 // A note of a chart with a definite timestamp and vertical position, ready for playback.
 export struct Note {
 	struct Simple {};
@@ -86,8 +85,17 @@ export struct Metadata {
 	}
 };
 
+export enum class Playstyle {
+	_5K,
+	_7K,
+	_9K,
+	_10K,
+	_14K,
+};
+
 // Data about a chart calculated from its contents.
 export struct Metrics {
+	Playstyle playstyle;
 	uint32 note_count; // Only counts notes for the player to hit
 	nanoseconds chart_duration; // Time when all notes are judged
 	nanoseconds audio_duration; // Time until the last sample stops

@@ -40,7 +40,7 @@ private:
 };
 
 // Generate the hash of a string at compile-time.
-export [[nodiscard]] consteval auto operator ""_id(char const* str, usize len) {
+export [[nodiscard]] consteval auto operator ""_id(char const* str, usize len) -> id {
 	return id{string_view{str, len}};
 }
 

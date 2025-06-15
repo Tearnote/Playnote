@@ -504,6 +504,51 @@ void build_lanes(Chart& chart, span<AbsNote const> notes)
 	return static_cast<float>(amplitude_ratio);
 }
 
+auto determine_playstyle(Chart::Lanes const& lanes) -> Playstyle
+{
+	using enum Chart::LaneType;
+	auto lanes_used = array<bool, lanes.size()>{};
+	transform(lanes, lanes_used.begin(), [](auto const& lane) { return !lane.notes.empty(); });
+
+	if (lanes_used[+P2_Key6] ||
+		lanes_used[+P2_Key7])
+		return Playstyle::_14K;
+	if (lanes_used[+P2_Key1] ||
+		lanes_used[+P2_Key2] ||
+		lanes_used[+P2_Key3] ||
+		lanes_used[+P2_Key4] ||
+		lanes_used[+P2_Key5] ||
+		lanes_used[+P2_KeyS])
+		return Playstyle::_10K;
+	if (lanes_used[+P1_Key6] ||
+		lanes_used[+P1_Key7])
+		return Playstyle::_7K;
+	if (lanes_used[+P1_Key1] ||
+		lanes_used[+P1_Key2] ||
+		lanes_used[+P1_Key3] ||
+		lanes_used[+P1_Key4] ||
+		lanes_used[+P1_Key5] ||
+		lanes_used[+P1_KeyS])
+		return Playstyle::_5K;
+	return Playstyle::_7K; // Empty chart, but sure whatever
+}
+
+void calculate_note_metrics(Chart::Lanes const& lanes, Metrics& metrics)
+{
+	metrics.note_count = fold_left(lanes, 0u, [](auto acc, auto const& lane) {
+		return acc + (lane.playable? lane.notes.size() : 0);
+	});
+	metrics.chart_duration = fold_left(lanes |
+		views::filter([](auto const& lane) { return !lane.notes.empty() && lane.playable; }) |
+		views::transform([](auto const& lane) -> Note const& { return lane.notes.back(); }),
+		0ns, [](auto acc, Note const& last_note) {
+			auto note_end = last_note.timestamp;
+			if (last_note.type_is<Note::LN>()) note_end += last_note.params<Note::LN>().length;
+			return max(acc, note_end);
+		}
+	);
+}
+
 void calculate_audio_metrics(Cursor&& cursor, Metrics& metrics)
 {
 	constexpr auto BufferSize = 4096zu / sizeof(dev::Sample);
@@ -533,24 +578,9 @@ void calculate_audio_metrics(Cursor&& cursor, Metrics& metrics)
 	r128::cleanup(ctx);
 }
 
-void calculate_note_metrics(Chart::Lanes const& lanes, Metrics& metrics)
-{
-	metrics.note_count = fold_left(lanes, 0u, [](auto acc, auto const& lane) {
-		return acc + (lane.playable? lane.notes.size() : 0);
-	});
-	metrics.chart_duration = fold_left(lanes |
-		views::filter([](auto const& lane) { return !lane.notes.empty() && lane.playable; }) |
-		views::transform([](auto const& lane) -> Note const& { return lane.notes.back(); }),
-		0ns, [](auto acc, Note const& last_note) {
-			auto note_end = last_note.timestamp;
-			if (last_note.type_is<Note::LN>()) note_end += last_note.params<Note::LN>().length;
-			return max(acc, note_end);
-		}
-	);
-}
-
 void calculate_metrics(Chart& chart)
 {
+	chart.metrics.playstyle = determine_playstyle(chart.lanes);
 	calculate_note_metrics(chart.lanes, chart.metrics);
 	calculate_audio_metrics(Cursor{chart}, chart.metrics);
 }
