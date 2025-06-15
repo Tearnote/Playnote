@@ -8,7 +8,7 @@ include_guard()
 
 set(ASSET_DIR_PREFIX assets/)
 set(ASSET_PATHS
-	# Nothing
+	unifont-16.0.03.ttf
 )
 
 foreach(ASSET_PATH ${ASSET_PATHS})

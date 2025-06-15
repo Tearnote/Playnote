@@ -56,6 +56,17 @@ export auto init(glfw::Window window, vk::Allocator& global_allocator) -> Contex
 	io.BackendRendererName = "imgui_impl_vuk";
 	io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset; // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
 
+	auto config = ImFontConfig{};
+	config.PixelSnapH = true;
+	config.OversampleH = 1;
+	config.OversampleV = 1;
+	auto ranges = ImVector<ImWchar>{};
+	auto builder = ImFontGlyphRangesBuilder{};
+	builder.AddRanges(io.Fonts->GetGlyphRangesJapanese());
+	builder.AddRanges(io.Fonts->GetGlyphRangesKorean());
+	builder.AddRanges(io.Fonts->GetGlyphRangesChineseFull());
+	builder.BuildRanges(&ranges);
+	ASSERT(io.Fonts->AddFontFromFileTTF("assets/unifont-16.0.03.ttf", 16.0f, &config, ranges.Data));
 	auto* pixels = static_cast<unsigned char*>(nullptr);
 	auto width = 0;
 	auto height = 0;

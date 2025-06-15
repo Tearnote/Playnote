@@ -103,7 +103,7 @@ target_include_directories(ebur128 PUBLIC ${ebur128_SOURCE_DIR}/ebur128)
 
 FetchContent_Declare(imgui # Debug controls
 	GIT_REPOSITORY https://github.com/ocornut/imgui
-	GIT_TAG cfa43e721aa1300b17d633f7590516587ff23617
+	GIT_TAG v1.91.9b
 )
 FetchContent_MakeAvailable(imgui)
 add_library(imgui
