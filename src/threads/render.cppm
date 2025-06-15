@@ -217,6 +217,7 @@ void run(Broadcaster& broadcaster, dev::Window const& window, gfx::Renderer& ren
 			enqueue_frame(queue);
 			if (player) {
 				auto const cursor = player->get_audio_cursor();
+				im::begin_window("info", {860, 8}, {412, 280}, true);
 				show_metadata(player->get_chart().metadata);
 				im::text("");
 				show_metrics(cursor, player->get_chart().metrics);
@@ -225,6 +226,7 @@ void run(Broadcaster& broadcaster, dev::Window const& window, gfx::Renderer& ren
 				im::text("");
 				show_scroll_speed_controls(scroll_speed);
 				enqueue_chart_objects(queue, cursor, scroll_speed);
+				im::end_window();
 			}
 		});
 		FRAME_MARK();

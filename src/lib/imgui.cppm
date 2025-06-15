@@ -239,6 +239,27 @@ export auto render(vk::Allocator& frame_allocator, vk::ManagedImage&& target, Co
 	return pass(target, move(sampled_images_array));
 }
 
+// Start a new ImGui window. Initial position and size will be chosen automatically.
+export void begin_window(char const* title)
+{
+	ImGui::Begin(title);
+}
+
+// Start a new ImGui window at a specific position and size. If static_frame is true, the window
+// will have no title and won't be able to be modified by the user.
+export void begin_window(char const* title, uvec2 pos, uvec2 size, bool static_frame = false)
+{
+	ImGui::SetNextWindowPos({static_cast<float>(pos.x()), static_cast<float>(pos.y())});
+	ImGui::SetNextWindowSize({static_cast<float>(size.x()), static_cast<float>(size.y())});
+	ImGui::Begin(title, nullptr, static_frame? ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove : 0);
+}
+
+// Finalize a started window.
+export void end_window()
+{
+	ImGui::End();
+}
+
 // Use before an element to keep it on the same line as the previous one.
 export void same_line() { ImGui::SameLine(); }
 
@@ -249,13 +270,13 @@ export auto button(char const* str) -> bool
 }
 
 // Static text.
-export void text(string_view str) { ImGui::Text("%s", string{str}.c_str()); }
+export void text(string_view str) { ImGui::TextWrapped("%s", string{str}.c_str()); }
 
 // Static text, fmt overload.
 export template<typename... Args>
 void text(fmtquill::format_string<Args...> fmt, Args&&... args)
 {
-	ImGui::Text("%s", format(fmt, forward<Args>(args)...).c_str());
+	ImGui::TextWrapped("%s", format(fmt, forward<Args>(args)...).c_str());
 }
 
 // A control for a float variable, with +/- buttons and direct value input via keyboard.
