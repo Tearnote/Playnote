@@ -82,6 +82,7 @@ target_sources(Playnote PUBLIC
 	src/dev/audio.cppm
 	src/dev/gpu.cppm
 	src/dev/os.cppm
+	src/gfx/playfield.cppm
 	src/gfx/renderer.cppm
 	src/gfx/imgui.cppm
 	src/bms/audio_player.cppm
