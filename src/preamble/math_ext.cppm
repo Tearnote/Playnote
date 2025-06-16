@@ -72,9 +72,6 @@ public:
 	explicit constexpr vec(T fillVal) { fill(fillVal); }
 	// Create the vector with provided component values
 	constexpr vec(initializer_list<T> list) { copy(list, arr.begin()); }
-	// Variadic version of the above
-	template<typename... Args>
-	explicit constexpr vec(Args&&... args) { arr = to_array({static_cast<T>(args)...}); }
 
 	// Type cast
 	template<arithmetic U>
