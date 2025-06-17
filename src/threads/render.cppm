@@ -26,6 +26,7 @@ import playnote.bms.audio_player;
 import playnote.bms.cursor;
 import playnote.bms.chart;
 import playnote.threads.render_events;
+import playnote.threads.render_shouts;
 import playnote.threads.broadcaster;
 
 namespace playnote::threads {

@@ -23,6 +23,8 @@ import playnote.bms.build;
 import playnote.bms.ir;
 import playnote.threads.render_events;
 import playnote.threads.input_events;
+import playnote.threads.render_shouts;
+import playnote.threads.input_shouts;
 import playnote.threads.broadcaster;
 
 namespace playnote::threads {

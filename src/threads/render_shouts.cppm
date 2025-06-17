@@ -2,11 +2,11 @@
 This software is dual-licensed. For more details, please consult LICENSE.txt.
 Copyright (c) 2025 Tearnote (Hubert Maraszek)
 
-threads/render_events.cppm:
-Events that can be spawned by the render thread.
+threads/render_shouts.cppm:
+Shouts that can be spawned by the render thread.
 */
 
-export module playnote.threads.render_events;
+export module playnote.threads.render_shouts;
 
 namespace playnote::threads {
 

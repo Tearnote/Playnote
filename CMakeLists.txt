@@ -91,9 +91,10 @@ target_sources(Playnote PUBLIC
 	src/bms/chart.cppm
 	src/bms/build.cppm
 	src/bms/ir.cppm
+	src/threads/render_shouts.cppm
+	src/threads/audio_shouts.cppm
+	src/threads/input_shouts.cppm
 	src/threads/broadcaster.cppm
-	src/threads/render_events.cppm
-	src/threads/input_events.cppm
 	src/threads/render.cppm
 	src/threads/audio.cppm
 	src/threads/input.cppm
