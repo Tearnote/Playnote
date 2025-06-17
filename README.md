@@ -2,6 +2,8 @@
 
 A work-in-progress next-generation [BMS](https://en.wikipedia.org/wiki/Be-Music_Source) player for Windows and Linux.
 
+See the [wiki](https://github.com/Tearnote/Playnote/wiki) for project details, usage instructions and documentation.
+
 ![screenshot.png](screenshot.png)
 
 ## Why another BMS player from scratch?
