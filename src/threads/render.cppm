@@ -105,6 +105,10 @@ void run(Broadcaster& broadcaster, dev::Window const& window, gfx::Renderer& ren
 				playfield->notes_from_cursor(cursor, scroll_speed);
 				playfield->enqueue(queue);
 				im::end_window();
+			} else {
+				im::begin_window("loading", {520, 300}, 240, true);
+				im::text("Loading chart");
+				im::end_window();
 			}
 		});
 		FRAME_MARK();
