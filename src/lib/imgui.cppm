@@ -286,4 +286,13 @@ export void input_float(char const* str, float& value,
 	ImGui::InputFloat(str, &value, step, step_fast, format);
 }
 
+// A non-interactive progress bar control. If progress is nullopt, the bar will look intederminate.
+export void progress_bar(optional<float> progress, string_view text)
+{
+	if (progress)
+		ImGui::ProgressBar(*progress, ImVec2{-1.0f, 0.0f}, string{text}.c_str());
+	else
+		ImGui::ProgressBar(-1.0f * (static_cast<float>(ImGui::GetTime()) / 2.0f), ImVec2{-1.0f, 0.0f}, string{text}.c_str());
+}
+
 }

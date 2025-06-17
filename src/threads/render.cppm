@@ -130,9 +130,12 @@ void receive_loading_shouts(Broadcaster& broadcaster, optional<LoadingToast>& lo
 
 void enqueue_loading_toast(LoadingToast const& toast)
 {
-	im::begin_window("loading", {460, 300}, 360, true);
+	im::begin_window("loading", {420, 300}, 440, true);
 	im::text("Loading {}", toast.path);
 	im::text(toast.phase);
+	if (toast.progress_text) {
+		im::progress_bar(toast.progress, *toast.progress_text);
+	}
 	im::end_window();
 }
 

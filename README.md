@@ -53,7 +53,7 @@ Playnote is a personal passion project, written in bleeding-edge C++ that is rat
   - [ ] WASAPI audio backend
   - [x] Optimized build flags and platform support checks
   - [ ] Multithreaded decoding and resampling
-  - [ ] Loading feedback
+  - [x] Loading feedback
   - [x] Normalize volume via ReplayGain
   - [ ] Protect from clipping with a limiter
 
