@@ -21,9 +21,8 @@ import playnote.dev.os;
 import playnote.bms.audio_player;
 import playnote.bms.build;
 import playnote.bms.ir;
-import playnote.threads.render_events;
-import playnote.threads.input_events;
 import playnote.threads.render_shouts;
+import playnote.threads.audio_shouts;
 import playnote.threads.input_shouts;
 import playnote.threads.broadcaster;
 
@@ -50,7 +49,7 @@ void run(Broadcaster& broadcaster, dev::Window& window, dev::Audio& audio)
 	auto const bms_chart = chart_from_ir(bms_ir, [](auto& requests) { requests.process(); });
 	auto bms_player = make_shared<bms::AudioPlayer>(window.get_glfw(), audio);
 	bms_player->play(*bms_chart);
-	broadcaster.shout<weak_ptr<bms::AudioPlayer const>>(bms_player);
+	broadcaster.make_shout<ChartLoadProgress>(ChartLoadProgress::Finished{weak_ptr{bms_player}});
 	while (!window.is_closing()) {
 		broadcaster.receive_all<PlayerControl>([&](auto ev) {
 			switch (ev) {

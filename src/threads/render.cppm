@@ -25,8 +25,8 @@ import playnote.gfx.renderer;
 import playnote.bms.audio_player;
 import playnote.bms.cursor;
 import playnote.bms.chart;
-import playnote.threads.render_events;
 import playnote.threads.render_shouts;
+import playnote.threads.audio_shouts;
 import playnote.threads.broadcaster;
 
 namespace playnote::threads {
@@ -86,13 +86,18 @@ void run(Broadcaster& broadcaster, dev::Window const& window, gfx::Renderer& ren
 	auto scroll_speed = 2.0f;
 
 	while (!window.is_closing()) {
-		broadcaster.receive_all<weak_ptr<bms::AudioPlayer const>>([&](auto&& recv) {
-			player = recv.lock();
-			playfield = gfx::Playfield{{44, 0}, 545, player->get_chart().metrics.playstyle};
+		broadcaster.receive_all<ChartLoadProgress>([&](auto&& recv) {
+			visit(visitor {
+				[&](ChartLoadProgress::Finished& msg) {
+					player = msg.player.lock();
+					playfield = gfx::Playfield{{44, 0}, 545, player->get_chart().metrics.playstyle};
+				},
+				[](auto&&) {}
+			}, recv.type);
 		});
 		renderer.frame({"bg"_id, "frame"_id, "measure"_id, "judgment_line"_id, "notes"_id}, [&](gfx::Renderer::Queue& queue) {
+			queue.enqueue_rect("bg"_id, {{0, 0}, {1280, 720}, {0.060f, 0.060f, 0.060f, 1.000f}});
 			if (player) {
-				queue.enqueue_rect("bg"_id, {{0, 0}, {1280, 720}, {0.060f, 0.060f, 0.060f, 1.000f}});
 				auto const cursor = player->get_audio_cursor();
 				auto const& chart = cursor.get_chart();
 				im::begin_window("info", {860, 8}, 412, true);
@@ -120,7 +125,7 @@ export void render(Broadcaster& broadcaster, Barriers<3>& barriers, dev::Window&
 try {
 	dev::name_current_thread("render");
 	broadcaster.register_as_endpoint();
-	broadcaster.subscribe<weak_ptr<bms::AudioPlayer const>>();
+	broadcaster.subscribe<ChartLoadProgress>();
 	barriers.startup.arrive_and_wait();
 	auto gpu = dev::GPU{window};
 	auto renderer = gfx::Renderer{gpu};
