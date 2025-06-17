@@ -35,12 +35,13 @@ public:
 	void subscribe();
 
 	// Send message to all other threads that declared interest in this type.
-	template<typename T, typename... Args>
-	void shout(Args&&... args);
-
-	// Template type deduction for a copy/move shout.
 	template<typename T>
-	void shout(T&& message) { shout<T>(forward<T>(message)); }
+	void shout(T&& message) { make_shout<T>(forward<T>(message)); }
+
+	// Send message to all other threads that declared interest in this type, constructing
+	// the message in-place.
+	template<typename T, typename... Args>
+	void make_shout(Args&&... args);
 
 	// Call the provided function once for every pending message of type T. Must have previously
 	// subscribed to this type. Returns true if at least one message was processed.
@@ -89,7 +90,7 @@ void Broadcaster::subscribe()
 }
 
 template<typename T, typename... Args>
-void Broadcaster::shout(Args&&... args)
+void Broadcaster::make_shout(Args&&... args)
 {
 	using Type = remove_cvref_t<T>;
 	ASSUME(endpoint_id != -1zu);
