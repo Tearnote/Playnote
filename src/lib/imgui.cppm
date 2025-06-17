@@ -247,11 +247,11 @@ export void begin_window(char const* title)
 
 // Start a new ImGui window at a specific position and size. If static_frame is true, the window
 // will have no title and won't be able to be modified by the user.
-export void begin_window(char const* title, uvec2 pos, uvec2 size, bool static_frame = false)
+export void begin_window(char const* title, uvec2 pos, uint width, bool static_frame = false)
 {
 	ImGui::SetNextWindowPos({static_cast<float>(pos.x()), static_cast<float>(pos.y())});
-	ImGui::SetNextWindowSize({static_cast<float>(size.x()), static_cast<float>(size.y())});
-	ImGui::Begin(title, nullptr, static_frame? ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove : 0);
+	ImGui::SetNextWindowSize({static_cast<float>(width), 0});
+	ImGui::Begin(title, nullptr, static_frame? ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_AlwaysAutoResize : 0);
 }
 
 // Finalize a started window.

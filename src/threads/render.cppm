@@ -94,7 +94,7 @@ void run(Broadcaster& broadcaster, dev::Window const& window, gfx::Renderer& ren
 				queue.enqueue_rect("bg"_id, {{0, 0}, {1280, 720}, {0.060f, 0.060f, 0.060f, 1.000f}});
 				auto const cursor = player->get_audio_cursor();
 				auto const& chart = cursor.get_chart();
-				im::begin_window("info", {860, 8}, {412, 280}, true);
+				im::begin_window("info", {860, 8}, 412, true);
 				show_metadata(chart.metadata);
 				im::text("");
 				show_metrics(cursor, chart.metrics);
