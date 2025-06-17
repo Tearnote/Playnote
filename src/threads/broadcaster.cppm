@@ -35,8 +35,12 @@ public:
 	void subscribe();
 
 	// Send message to all other threads that declared interest in this type.
+	template<typename T, typename... Args>
+	void shout(Args&&... args);
+
+	// Template type deduction for a copy/move shout.
 	template<typename T>
-	void shout(T&& message);
+	void shout(T&& message) { shout<T>(forward<T>(message)); }
 
 	// Call the provided function once for every pending message of type T. Must have previously
 	// subscribed to this type. Returns true if at least one message was processed.
@@ -84,15 +88,15 @@ void Broadcaster::subscribe()
 	channels[endpoint_id][typeid(Type)] = make_shared<channel<Type>>();
 }
 
-template<typename T>
-void Broadcaster::shout(T&& message)
+template<typename T, typename... Args>
+void Broadcaster::shout(Args&&... args)
 {
 	using Type = remove_cvref_t<T>;
 	ASSUME(endpoint_id != -1zu);
 	for (auto [idx, in_channel]: channels | views::enumerate) {
 		if (endpoint_id == idx) continue;
 		if (!in_channel.contains(typeid(Type))) continue;
-		(*static_pointer_cast<channel<Type>>(in_channel[typeid(Type)])) << message;
+		(*static_pointer_cast<channel<Type>>(in_channel[typeid(Type)])) << T{forward<Args>(args)...};
 	}
 }
 
