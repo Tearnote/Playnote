@@ -20,43 +20,6 @@ Because our community is long overdue for an upgrade. The players we use right n
 
 Playnote is a personal passion project, written in bleeding-edge C++ that is rather different from most code out there. Issue reports are appreciated, but any non-trivial pull request I would most likely refactor of rewrite before merging to maintain style and vision. If you are okay with that, please go ahead.
 
-## Milestones
-
-- [x] `0.0.1`: A usable non-interactive player of BMS songs.
-  - [x] Quill low-latency logging
-  - [x] GLFW windowing and input
-  - [x] Direct Pipewire audio interface
-  - [x] WAV/OGG decoding and sample rate conversion
-  - [x] Vulkan device creation
-  - [x] Threaded rendering via vuk
-  - [x] Dear ImGui debug controls support
-  - [x] BMS text encoding detection and conversion
-  - [x] BMS command parsing
-  - [x] Compilation of BMS commands into IR
-  - [x] Generation of a playable song from IR
-  - [x] Loading song assets
-  - [x] Song audio mixing and playback
-  - [x] Basic Imgui playback controls
-  - [x] Basic timeline visualization
-- [ ] `0.0.2`: Correctness, efficiency and UX improvements.
-  - [x] Universal timing system synchronizing wall clock and audio thread
-  - [x] Always use native sampling rate
-  - [x] Long Note support
-  - [x] Measure length change support
-  - [x] BPM change support
-  - [x] Measure lines
-  - [ ] Precomputed acceleration structure for reachable slots
-  - [x] Basic metadata display
-  - [x] Chart loading from command line argument
-  - [ ] Catching BMS loading errors and communicating them to the user
-  - [ ] Working Windows build
-  - [ ] WASAPI audio backend
-  - [x] Optimized build flags and platform support checks
-  - [ ] Multithreaded decoding and resampling
-  - [x] Loading feedback
-  - [x] Normalize volume via ReplayGain
-  - [ ] Protect from clipping with a limiter
-
 ## [Dependencies](./cmake/Dependencies.cmake)
 
 Required to be installed locally:
