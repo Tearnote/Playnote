@@ -1,6 +1,8 @@
 # Playnote
 
-A [BMS](https://en.wikipedia.org/wiki/Be-Music_Source) player for Windows and Linux, with a focus on correctness and user experience.
+A work-in-progress next-generation [BMS](https://en.wikipedia.org/wiki/Be-Music_Source) player for Windows and Linux.
+
+![screenshot.png](screenshot.png)
 
 ## Why another BMS player from scratch?
 
