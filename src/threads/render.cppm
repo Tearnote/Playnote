@@ -79,24 +79,78 @@ void show_scroll_speed_controls(float& scroll_speed)
 	im::input_float("Scroll speed", scroll_speed, 0.25f, 1.0f, "%.2f");
 }
 
+struct LoadingToast {
+	fs::path path;
+	string phase;
+	optional<float> progress;
+	optional<string> progress_text;
+};
+
+template<callable<void(shared_ptr<bms::AudioPlayer const>)> Func>
+void receive_loading_shouts(Broadcaster& broadcaster, optional<LoadingToast>& loading_toast, Func&& on_finish)
+{
+	broadcaster.receive_all<ChartLoadProgress>([&](auto&& recv) {
+		visit(visitor {
+			[&](ChartLoadProgress::CompilingIR& msg) {
+				if (!loading_toast) loading_toast.emplace();
+				loading_toast->path = msg.chart_path;
+				loading_toast->phase = "Compiling IR";
+				loading_toast->progress = nullopt;
+				loading_toast->progress_text = nullopt;
+			},
+			[&](ChartLoadProgress::Building& msg) {
+				if (!loading_toast) loading_toast.emplace();
+				loading_toast->path = msg.chart_path;
+				loading_toast->phase = "Building";
+				loading_toast->progress = nullopt;
+				loading_toast->progress_text = nullopt;
+			},
+			[&](ChartLoadProgress::LoadingFile& msg) {
+				if (!loading_toast) loading_toast.emplace();
+				loading_toast->path = msg.chart_path;
+				loading_toast->phase = "Loading files";
+				loading_toast->progress = static_cast<float>(msg.index) / static_cast<float>(msg.total);
+				loading_toast->progress_text = format("{} / {}", msg.index, msg.total);
+			},
+			[&](ChartLoadProgress::Measuring& msg) {
+				if (!loading_toast) loading_toast.emplace();
+				loading_toast->path = msg.chart_path;
+				loading_toast->phase = "Measuring loudness";
+				loading_toast->progress = nullopt;
+				loading_toast->progress_text = ns_to_minsec(msg.progress);
+			},
+			[&](ChartLoadProgress::Finished& msg) {
+				loading_toast.reset();
+				on_finish(msg.player.lock());
+			},
+			[](auto&&) {}
+		}, recv.type);
+	});
+}
+
+void enqueue_loading_toast(LoadingToast const& toast)
+{
+	im::begin_window("loading", {460, 300}, 360, true);
+	im::text("Loading {}", toast.path);
+	im::text(toast.phase);
+	im::end_window();
+}
+
 void run(Broadcaster& broadcaster, dev::Window const& window, gfx::Renderer& renderer)
 {
 	auto player = shared_ptr<bms::AudioPlayer const>{};
 	auto playfield = optional<gfx::Playfield>{};
+	auto loading_toast = optional<LoadingToast>{};
 	auto scroll_speed = 2.0f;
 
 	while (!window.is_closing()) {
-		broadcaster.receive_all<ChartLoadProgress>([&](auto&& recv) {
-			visit(visitor {
-				[&](ChartLoadProgress::Finished& msg) {
-					player = msg.player.lock();
-					playfield = gfx::Playfield{{44, 0}, 545, player->get_chart().metrics.playstyle};
-				},
-				[](auto&&) {}
-			}, recv.type);
+		receive_loading_shouts(broadcaster, loading_toast, [&](auto finished_player) {
+			player = move(finished_player);
+			playfield = gfx::Playfield{{44, 0}, 545, player->get_chart().metrics.playstyle};
 		});
 		renderer.frame({"bg"_id, "frame"_id, "measure"_id, "judgment_line"_id, "notes"_id}, [&](gfx::Renderer::Queue& queue) {
 			queue.enqueue_rect("bg"_id, {{0, 0}, {1280, 720}, {0.060f, 0.060f, 0.060f, 1.000f}});
+			if (loading_toast) enqueue_loading_toast(*loading_toast);
 			if (player) {
 				auto const cursor = player->get_audio_cursor();
 				auto const& chart = cursor.get_chart();
@@ -110,10 +164,6 @@ void run(Broadcaster& broadcaster, dev::Window const& window, gfx::Renderer& ren
 				show_scroll_speed_controls(scroll_speed);
 				playfield->notes_from_cursor(cursor, scroll_speed);
 				playfield->enqueue(queue);
-				im::end_window();
-			} else {
-				im::begin_window("loading", {520, 300}, 240, true);
-				im::text("Loading chart");
 				im::end_window();
 			}
 		});

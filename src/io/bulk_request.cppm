@@ -37,7 +37,8 @@ public:
 		});
 	}
 
-	void process()
+	template<callable<void(string_view, usize, usize)> Func>
+	void process(Func&& before_load = [](string_view, usize, usize){})
 	{
 		INFO("Beginning file loads from \"{}\"", domain);
 
@@ -49,7 +50,7 @@ public:
 		}
 
 		// Process each request for matches in the file list
-		for (auto& request: requests) {
+		for (auto [idx, request]: requests | views::enumerate) {
 			auto match = find_if(file_list, [&](auto const& path) {
 				auto path_str = path.string();
 
@@ -74,6 +75,7 @@ public:
 				continue;
 			}
 			TRACE("Found \"{}\", reading at \"{}\"", request.resource, domain / *match);
+			before_load(request.resource, idx, requests.size());
 			auto const raw = io::read_file(domain / *match);
 			request.processor(raw.contents);
 		}

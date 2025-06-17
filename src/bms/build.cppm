@@ -549,7 +549,8 @@ void calculate_note_metrics(Chart::Lanes const& lanes, Metrics& metrics)
 	);
 }
 
-void calculate_audio_metrics(Cursor&& cursor, Metrics& metrics)
+template<callable<void(nanoseconds)> Func>
+void calculate_audio_metrics(Cursor&& cursor, Metrics& metrics, Func&& measuring_progress)
 {
 	constexpr auto BufferSize = 4096zu / sizeof(dev::Sample);
 
@@ -568,6 +569,7 @@ void calculate_audio_metrics(Cursor&& cursor, Metrics& metrics)
 			if (!processing) break;
 		}
 
+		measuring_progress(cursor.get_progress_ns());
 		r128::add_frames(ctx, buffer);
 		buffer.clear();
 	}
@@ -578,17 +580,18 @@ void calculate_audio_metrics(Cursor&& cursor, Metrics& metrics)
 	r128::cleanup(ctx);
 }
 
-void calculate_metrics(Chart& chart)
+template<callable<void(nanoseconds)> Func>
+void calculate_metrics(Chart& chart, Func&& measuring_progress)
 {
 	chart.metrics.playstyle = determine_playstyle(chart.lanes);
 	calculate_note_metrics(chart.lanes, chart.metrics);
-	calculate_audio_metrics(Cursor{chart}, chart.metrics);
+	calculate_audio_metrics(Cursor{chart}, chart.metrics, measuring_progress);
 }
 
 // Generate a Chart from an IR. Requires a function to handle the loading of a bulk request.
 // The provided function must block until the bulk request is complete.
-export template<callable<void(io::BulkRequest&)> Func>
-auto chart_from_ir(IR const& ir, Func file_loader) -> shared_ptr<Chart const>
+export template<callable<void(io::BulkRequest&)> Func, callable<void(nanoseconds)> Func2>
+auto chart_from_ir(IR const& ir, Func&& file_loader, Func2&& measuring_progress) -> shared_ptr<Chart const>
 {
 	static constexpr auto AudioExtensions = {"wav"sv, "ogg"sv, "mp3"sv, "flac"sv, "opus"sv};
 
@@ -636,7 +639,7 @@ auto chart_from_ir(IR const& ir, Func file_loader) -> shared_ptr<Chart const>
 	file_loader(requests);
 
 	// Metrics require a fully loaded chart
-	calculate_metrics(*chart);
+	calculate_metrics(*chart, measuring_progress);
 
 	INFO("Built chart \"{}\"", chart->metadata.title);
 

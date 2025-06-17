@@ -14,19 +14,27 @@ import playnote.bms.audio_player;
 namespace playnote::threads {
 
 export struct ChartLoadProgress {
-	struct Build {};
-	struct FileLoad {
+	struct CompilingIR {
+		fs::path chart_path;
+	};
+	struct Building {
+		fs::path chart_path;
+	};
+	struct LoadingFile {
+		fs::path chart_path;
 		string filename;
 		usize index;
 		usize total;
 	};
-	struct LoudnessCalc {
+	struct Measuring {
+		fs::path chart_path;
 		nanoseconds progress;
 	};
 	struct Finished {
+		fs::path chart_path;
 		weak_ptr<bms::AudioPlayer const> player;
 	};
-	using Type = variant<monostate, Build, FileLoad, LoudnessCalc, Finished>;
+	using Type = variant<monostate, CompilingIR, Building, LoadingFile, Measuring, Finished>;
 	Type type;
 
 	// Shouts must be default-constructible

@@ -44,12 +44,31 @@ void run(Broadcaster& broadcaster, dev::Window& window, dev::Audio& audio)
 		[&](auto&& path) { chart_path = path; },
 		[]() { yield(); });
 
+	broadcaster.make_shout<ChartLoadProgress>(ChartLoadProgress::CompilingIR{chart_path});
 	auto bms_compiler = bms::IRCompiler{};
 	auto const bms_ir = load_bms(bms_compiler, chart_path);
-	auto const bms_chart = chart_from_ir(bms_ir, [](auto& requests) { requests.process(); });
+	broadcaster.make_shout<ChartLoadProgress>(ChartLoadProgress::Building{chart_path});
+	auto const bms_chart = chart_from_ir(bms_ir, [&](auto& requests) {
+		requests.process([&](string_view file, usize idx, usize total) {
+			broadcaster.make_shout<ChartLoadProgress>(ChartLoadProgress::LoadingFile{
+				.chart_path = chart_path,
+				.filename = string{file},
+				.index = idx,
+				.total = total,
+			});
+		});
+	}, [&](nanoseconds progress) {
+		broadcaster.make_shout<ChartLoadProgress>(ChartLoadProgress::Measuring{
+			.chart_path = chart_path,
+			.progress = progress,
+		});
+	});
 	auto bms_player = make_shared<bms::AudioPlayer>(window.get_glfw(), audio);
 	bms_player->play(*bms_chart);
-	broadcaster.make_shout<ChartLoadProgress>(ChartLoadProgress::Finished{weak_ptr{bms_player}});
+	broadcaster.make_shout<ChartLoadProgress>(ChartLoadProgress::Finished{
+		.chart_path = chart_path,
+		.player = weak_ptr{bms_player},
+	});
 	while (!window.is_closing()) {
 		broadcaster.receive_all<PlayerControl>([&](auto ev) {
 			switch (ev) {
