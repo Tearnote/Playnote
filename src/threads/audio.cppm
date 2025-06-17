@@ -97,13 +97,11 @@ try {
 	barriers.startup.arrive_and_wait();
 	auto audio = dev::Audio{};
 	run(broadcaster, window, audio);
-	broadcaster.clear();
 	barriers.shutdown.arrive_and_wait();
 }
 catch (exception const& e) {
 	CRIT("Uncaught exception: {}", e.what());
 	window.request_close();
-	broadcaster.clear();
 	barriers.shutdown.arrive_and_wait();
 }
 

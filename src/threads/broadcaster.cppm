@@ -55,9 +55,6 @@ public:
 	template<typename T, callable<void(T&&)> Func, callable<void()> SleepFunc>
 	void await(Func&& func, SleepFunc&& sleep);
 
-	// Empty all of the thread's incoming channels, discarding all messages.
-	void clear();
-
 private:
 	inline static thread_local auto endpoint_id = -1zu;
 	mutex register_lock;
@@ -70,13 +67,6 @@ void Broadcaster::register_as_endpoint()
 	auto lock = lock_guard{register_lock};
 	endpoint_id = channels.size();
 	channels.emplace_back();
-}
-
-void Broadcaster::clear()
-{
-	ASSUME(endpoint_id != -1zu);
-	auto lock = lock_guard{register_lock};
-	channels[endpoint_id].clear();
 }
 
 template<typename T>

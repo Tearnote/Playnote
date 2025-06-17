@@ -183,13 +183,11 @@ try {
 	auto gpu = dev::GPU{window};
 	auto renderer = gfx::Renderer{gpu};
 	run(broadcaster, window, renderer);
-	broadcaster.clear();
 	barriers.shutdown.arrive_and_wait();
 }
 catch (exception const& e) {
 	CRIT("Uncaught exception: {}", e.what());
 	window.request_close();
-	broadcaster.clear();
 	barriers.shutdown.arrive_and_wait();
 }
 
