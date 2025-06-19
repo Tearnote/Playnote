@@ -304,8 +304,18 @@ export struct PlotValues {
 	vec4 color;
 };
 
+export struct PlotMarker {
+	enum Type {
+		Horizontal,
+		Vertical,
+	};
+	Type type;
+	float value;
+	vec4 color;
+};
+
 // A simple line plot of an array of values.
-export void plot(char const* label, initializer_list<PlotValues> values, uint32 height = 0, bool stacked = false)
+export void plot(char const* label, initializer_list<PlotValues> values, initializer_list<PlotMarker> markers = {}, uint32 height = 0, bool stacked = false)
 {
 	if (!ImPlot::BeginPlot(label, ImVec2{-1, static_cast<float>(height)}, ImPlotFlags_NoLegend | ImPlotFlags_NoInputs | ImPlotFlags_NoFrame)) return;
 	ImPlot::SetupAxis(ImAxis_X1, nullptr, ImPlotAxisFlags_NoTickLabels);
@@ -341,6 +351,10 @@ export void plot(char const* label, initializer_list<PlotValues> values, uint32 
 		ImPlot::SetNextFillStyle(implot_color, 0.5f);
 		auto ref = ValueRef{values, idx};
 		ImPlot::PlotLineG(value.name, value_func, &ref, value.data.size(), ImPlotLineFlags_Shaded);
+	}
+	for (auto const& marker: markers) {
+		ImPlot::SetNextLineStyle({marker.color.r(), marker.color.g(), marker.color.b(), marker.color.a()});
+		ImPlot::PlotInfLines("Marker", &marker.value, 1, marker.type == PlotMarker::Type::Horizontal? ImPlotInfLinesFlags_Horizontal : 0);
 	}
 
 	ImPlot::EndPlot();
