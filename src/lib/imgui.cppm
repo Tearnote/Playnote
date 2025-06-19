@@ -295,4 +295,10 @@ export void progress_bar(optional<float> progress, string_view text)
 		ImGui::ProgressBar(-1.0f * (static_cast<float>(ImGui::GetTime()) / 2.0f), ImVec2{-1.0f, 0.0f}, string{text}.c_str());
 }
 
+// A simple line plot of an array of values.
+export void plot(string_view label, span<float const> values)
+{
+	ImGui::PlotLines(string{label}.c_str(), values.data(), values.size(), 0, nullptr, FLT_MAX, FLT_MAX, ImVec2(0.0f, 48.0f));
+}
+
 }

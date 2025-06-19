@@ -93,6 +93,16 @@ export enum class Playstyle {
 	_14K,
 };
 
+// Density functions of a chart's notes, and calculated NPS values.
+export struct Density {
+	nanoseconds resolution; // real time between values
+	vector<float> key_density;
+	vector<float> scratch_density;
+	vector<float> ln_density;
+	float average_nps; // The densest the chart gets outside of short bursts
+	float peak_nps; // Real peak
+};
+
 // Data about a chart calculated from its contents.
 export struct Metrics {
 	Playstyle playstyle;
@@ -101,6 +111,7 @@ export struct Metrics {
 	nanoseconds audio_duration; // Time until the last sample stops
 	double loudness; // in LUFS
 	float gain; // Amplitude ratio to normalize loudness to -14 LUFS reference
+	Density density;
 };
 
 // An entire loaded chart, with all of its notes and meta information. Immutable; a chart is played

@@ -580,12 +580,54 @@ void calculate_audio_metrics(Cursor&& cursor, Metrics& metrics, Func&& measuring
 	r128::cleanup(ctx);
 }
 
+auto notes_around(span<Note const> notes, nanoseconds cursor, nanoseconds window)
+{
+	auto const from = cursor - window;
+	auto const to = cursor + window;
+	return notes | views::filter([&](auto const& note) {
+		return note.timestamp >= from && note.timestamp <= to;
+	});
+}
+
+auto calculate_density_distribution(Chart::Lanes const& lanes, nanoseconds chart_duration, nanoseconds resolution, nanoseconds window) -> Density
+{
+	constexpr auto Bandwidth = 3.0f; // in standard deviations
+	auto const SqrtTau = sqrt(Tau);
+	// scale back a stretched window, and correct for considering only 3 standard deviations
+	auto const NormalizeWindow = 1.0f / (window / 1s) * (1.0f / 0.973f);
+
+	auto result = Density{};
+	auto const points = chart_duration / resolution + 1;
+	result.key_density.resize(points);
+	result.scratch_density.resize(points);
+	result.ln_density.resize(points);
+
+	for (auto [cursor, key, scratch, ln]: views::zip(
+		views::iota(0u) | views::transform([&](auto i) { return i * resolution; }),
+		result.key_density,
+		result.scratch_density,
+		result.ln_density)) {
+		for (auto [lane, type]: views::zip(
+			lanes,
+			views::iota(0u) | views::transform([](auto i) { return Chart::LaneType{i}; }))) {
+			if (!lane.playable) continue;
+			for (auto const& note: notes_around(lane.notes, cursor, window)) {
+				auto const delta = note.timestamp - cursor;
+				auto const delta_scaled = delta / window * Bandwidth; // now within [-Bandwidth, Bandwidth]
+				key += exp(-pow(delta_scaled, 2.0f) / 2.0f) * (1.0f / SqrtTau) * NormalizeWindow; // Gaussian filter
+			}
+		}
+	}
+	return result;
+}
+
 template<callable<void(nanoseconds)> Func>
 void calculate_metrics(Chart& chart, Func&& measuring_progress)
 {
 	chart.metrics.playstyle = determine_playstyle(chart.lanes);
 	calculate_note_metrics(chart.lanes, chart.metrics);
 	calculate_audio_metrics(Cursor{chart}, chart.metrics, measuring_progress);
+	chart.metrics.density = calculate_density_distribution(chart.lanes, chart.metrics.chart_duration, 125ms, 2s);
 }
 
 // Generate a Chart from an IR. Requires a function to handle the loading of a bulk request.

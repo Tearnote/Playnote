@@ -63,6 +63,7 @@ void show_metrics(bms::Cursor const& cursor, bms::Metrics const& metrics)
 	auto const audio_duration = ns_to_minsec(metrics.audio_duration);
 	im::text("Progress: {} / {} ({})", progress, chart_duration, audio_duration);
 	im::text("Notes: {} / {}", cursor.get_judged_notes(), metrics.note_count);
+	im::plot("Note density", metrics.density.key_density);
 }
 
 void show_playback_controls(Broadcaster& broadcaster)
