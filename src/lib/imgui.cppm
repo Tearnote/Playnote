@@ -309,11 +309,37 @@ export void plot(char const* label, initializer_list<PlotValues> values, uint32 
 {
 	if (!ImPlot::BeginPlot(label, ImVec2{-1, static_cast<float>(height)}, ImPlotFlags_NoLegend | ImPlotFlags_NoInputs | ImPlotFlags_NoFrame)) return;
 
-	for (auto const& value: values | views::reverse) {
+	struct ValueRef {
+		span<PlotValues const> values;
+		usize idx;
+	};
+
+	auto const value_func = [&]() -> ImPlotGetter {
+		if (!stacked) {
+			return [](int idx, void* userdata) -> ImPlotPoint {
+				auto const& value_ref = *static_cast<ValueRef*>(userdata);
+				return {
+					static_cast<double>(idx),
+					value_ref.values[value_ref.idx].data[idx]
+				};
+			};
+		}
+		return [](int idx, void* userdata) -> ImPlotPoint {
+			auto const& value_ref = *static_cast<ValueRef*>(userdata);
+			return {
+				static_cast<double>(idx),
+				fold_left(value_ref.values | views::take(value_ref.idx + 1), 0.0f,
+					[&](float sum, auto const& value) { return sum + value.data[idx]; })
+			};
+		};
+	}();
+
+	for (auto [idx, value]: views::zip(views::iota(0zu), values) | views::reverse) {
 		auto const implot_color = ImVec4{value.color.r(), value.color.g(), value.color.b(), value.color.a()};
 		ImPlot::SetNextLineStyle(implot_color);
-		ImPlot::SetNextFillStyle(implot_color, 0.2);
-		ImPlot::PlotLine(value.name, value.data.data(), value.data.size(), 1, 0, ImPlotLineFlags_Shaded);
+		ImPlot::SetNextFillStyle(implot_color, 0.5f);
+		auto ref = ValueRef{values, idx};
+		ImPlot::PlotLineG(value.name, value_func, &ref, value.data.size(), ImPlotLineFlags_Shaded);
 	}
 
 	ImPlot::EndPlot();
