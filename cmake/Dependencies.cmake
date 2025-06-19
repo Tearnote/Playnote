@@ -115,4 +115,16 @@ add_library(imgui
 	${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
 )
 target_include_directories(imgui PUBLIC "${imgui_SOURCE_DIR}")
-target_link_libraries(imgui PRIVATE libassert::assert)
+target_link_libraries(imgui PUBLIC libassert::assert)
+
+FetchContent_Declare(implot # Debug plot drawing
+	GIT_REPOSITORY https://github.com/epezent/implot
+	GIT_TAG 47522f47054d33178e7defa780042bd2a06b09f9
+)
+FetchContent_MakeAvailable(implot)
+add_library(implot
+	${implot_SOURCE_DIR}/implot.cpp
+	${implot_SOURCE_DIR}/implot_items.cpp
+)
+target_include_directories(implot PUBLIC "${implot_SOURCE_DIR}")
+target_link_libraries(implot PRIVATE imgui)

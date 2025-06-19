@@ -9,7 +9,9 @@ Parts are adapted from vuk's built-in Imgui integration; reproduced here under t
 
 module;
 #include "backends/imgui_impl_glfw.h"
+#include "implot.h"
 #include "quill/bundled/fmt/base.h"
+#include "imgui.h"
 #include "vuk/runtime/vk/AllocatorHelpers.hpp"
 #include "vuk/runtime/vk/PipelineTypes.hpp"
 #include "vuk/runtime/vk/VkRuntime.hpp"
@@ -46,6 +48,7 @@ export auto init(glfw::Window window, vk::Allocator& global_allocator) -> Contex
 {
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
+	ImPlot::CreateContext();
 	ImGui::StyleColorsDark();
 	ImGui_ImplGlfw_InitForVulkan(window, true);
 
@@ -295,10 +298,25 @@ export void progress_bar(optional<float> progress, string_view text)
 		ImGui::ProgressBar(-1.0f * (static_cast<float>(ImGui::GetTime()) / 2.0f), ImVec2{-1.0f, 0.0f}, string{text}.c_str());
 }
 
+export struct PlotValues {
+	char const* name;
+	span<float const> data;
+	vec4 color;
+};
+
 // A simple line plot of an array of values.
-export void plot(string_view label, span<float const> values)
+export void plot(char const* label, initializer_list<PlotValues> values, uint32 height = 0, bool stacked = false)
 {
-	ImGui::PlotLines(string{label}.c_str(), values.data(), values.size(), 0, nullptr, FLT_MAX, FLT_MAX, ImVec2(0.0f, 48.0f));
+	if (!ImPlot::BeginPlot(label, ImVec2{-1, static_cast<float>(height)}, ImPlotFlags_NoLegend | ImPlotFlags_NoInputs | ImPlotFlags_NoFrame)) return;
+
+	for (auto const& value: values | views::reverse) {
+		auto const implot_color = ImVec4{value.color.r(), value.color.g(), value.color.b(), value.color.a()};
+		ImPlot::SetNextLineStyle(implot_color);
+		ImPlot::SetNextFillStyle(implot_color, 0.2);
+		ImPlot::PlotLine(value.name, value.data.data(), value.data.size(), 1, 0, ImPlotLineFlags_Shaded);
+	}
+
+	ImPlot::EndPlot();
 }
 
 }
