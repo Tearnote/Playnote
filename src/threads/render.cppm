@@ -120,6 +120,13 @@ void receive_loading_shouts(Broadcaster& broadcaster, optional<LoadingToast>& lo
 				loading_toast->progress = nullopt;
 				loading_toast->progress_text = ns_to_minsec(msg.progress);
 			},
+			[&](ChartLoadProgress::DensityCalculation& msg) {
+				if (!loading_toast) loading_toast.emplace();
+				loading_toast->path = msg.chart_path;
+				loading_toast->phase = "Calculating density";
+				loading_toast->progress = nullopt;
+				loading_toast->progress_text = ns_to_minsec(msg.progress);
+			},
 			[&](ChartLoadProgress::Finished& msg) {
 				loading_toast.reset();
 				on_finish(msg.player.lock());

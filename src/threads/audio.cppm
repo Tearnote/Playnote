@@ -57,11 +57,13 @@ void run(Broadcaster& broadcaster, dev::Window& window, dev::Audio& audio)
 				.total = total,
 			});
 		});
-	}, [&](nanoseconds progress) {
-		broadcaster.make_shout<ChartLoadProgress>(ChartLoadProgress::Measuring{
-			.chart_path = chart_path,
-			.progress = progress,
-		});
+	}, [&](ChartLoadProgress::Type progress) {
+		visit(visitor {
+			[&](ChartLoadProgress::Measuring& msg) { msg.chart_path = chart_path; },
+			[&](ChartLoadProgress::DensityCalculation& msg) { msg.chart_path = chart_path; },
+			[](auto&&){}
+		}, progress);
+		broadcaster.make_shout<ChartLoadProgress>(move(progress));
 	});
 	auto bms_player = make_shared<bms::AudioPlayer>(window.get_glfw(), audio);
 	bms_player->play(*bms_chart);
