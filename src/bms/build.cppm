@@ -584,8 +584,10 @@ auto notes_around(span<Note const> notes, nanoseconds cursor, nanoseconds window
 {
 	auto const from = cursor - window;
 	auto const to = cursor + window;
-	return notes | views::filter([&](auto const& note) {
-		return note.timestamp >= from && note.timestamp <= to;
+	return notes | views::drop_while([&](auto const& note) {
+		return note.timestamp < from;
+	}) | views::take_while([&](auto const& note) {
+		return note.timestamp <= to;
 	});
 }
 
