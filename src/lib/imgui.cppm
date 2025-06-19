@@ -308,6 +308,7 @@ export struct PlotValues {
 export void plot(char const* label, initializer_list<PlotValues> values, uint32 height = 0, bool stacked = false)
 {
 	if (!ImPlot::BeginPlot(label, ImVec2{-1, static_cast<float>(height)}, ImPlotFlags_NoLegend | ImPlotFlags_NoInputs | ImPlotFlags_NoFrame)) return;
+	ImPlot::SetupAxis(ImAxis_X1, nullptr, ImPlotAxisFlags_NoTickLabels);
 
 	struct ValueRef {
 		span<PlotValues const> values;
