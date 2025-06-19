@@ -615,10 +615,15 @@ auto calculate_density_distribution(Chart::Lanes const& lanes, nanoseconds chart
 		for (auto [lane, type]: views::zip(lanes,
 			views::iota(0u) | views::transform([](auto i) { return Chart::LaneType{i}; }))) {
 			if (!lane.playable) continue;
-			for (auto const& note: notes_around(lane.notes, cursor, window)) {
+			for (Note const& note: notes_around(lane.notes, cursor, window)) {
+				auto& target = [&]() -> float& {
+					if (type == Chart::LaneType::P1_KeyS || type == Chart::LaneType::P2_KeyS) return scratch;
+					if (note.type_is<Note::LN>()) return ln;
+					return key;
+				}();
 				auto const delta = note.timestamp - cursor;
 				auto const delta_scaled = delta / window * Bandwidth; // now within [-Bandwidth, Bandwidth]
-				key += exp(-pow(delta_scaled, 2.0f) / 2.0f) * GaussianScale; // Gaussian filter
+				target += exp(-pow(delta_scaled, 2.0f) / 2.0f) * GaussianScale; // Gaussian filter
 			}
 		}
 
