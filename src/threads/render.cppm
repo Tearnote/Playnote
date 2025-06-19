@@ -36,15 +36,9 @@ namespace im = lib::imgui;
 void show_metadata(bms::Metadata const& meta)
 {
 	im::text(meta.title);
-	if (!meta.subtitle.empty()) {
-		im::same_line();
-		im::text(meta.subtitle);
-	}
+	if (!meta.subtitle.empty()) im::text(meta.subtitle);
 	im::text(meta.artist);
-	if (!meta.subartist.empty()) {
-		im::same_line();
-		im::text(meta.subartist);
-	}
+	if (!meta.subartist.empty()) im::text(meta.subartist);
 	im::text(meta.genre);
 	im::text("Difficulty: {}", bms::Metadata::to_str(meta.difficulty));
 	if (!meta.url.empty()) im::text(meta.url);
