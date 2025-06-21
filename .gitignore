@@ -4,3 +4,6 @@
 
 # Test data
 songs/**
+
+# Build artifacts
+target/**
