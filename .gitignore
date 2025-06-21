@@ -1,12 +1,6 @@
 # IDE config
 .idea/**
-
-# Build artifacts
-build/**
+.refact/**
 
 # Test data
 songs/**
-
-# Runtime files, if running the executable in the project folder
-imgui.ini
-playnote*.log
