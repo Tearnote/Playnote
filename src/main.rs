@@ -7,18 +7,20 @@ use tracing_subscriber::filter::{EnvFilter, LevelFilter};
 
 fn main() -> Result<()> {
 	init_logging()?;
-	info!("Initializing Playnote 0.0.0");
+	const NAME: &str = env!("CARGO_PKG_NAME");
+	const VERSION: &str = env!("CARGO_PKG_VERSION");
+	info!("Initializing {NAME} {VERSION}");
 	Ok(())
 }
 
 fn init_logging() -> Result<()> {
-	let default_level = if cfg!(debug_assertions) { LevelFilter::DEBUG } else { LevelFilter::INFO };
-	let filename = if cfg!(debug_assertions) { "playnote-debug.log" } else { "playnote.log" };
-	let file = File::create(filename)
-		.with_context(|| format!("Failed to open log file \"{}\" for writing", filename))?;
-	
+	const DEFAULT_LEVEL: LevelFilter = if cfg!(debug_assertions) { LevelFilter::DEBUG } else { LevelFilter::INFO };
+	const FILENAME: &str = if cfg!(debug_assertions) { "playnote-debug.log" } else { "playnote.log" };
+	let file = File::create(FILENAME)
+		.with_context(|| format!("Failed to open log file \"{}\" for writing", FILENAME))?;
+
 	let filter = EnvFilter::builder()
-		.with_default_directive(default_level.into())
+		.with_default_directive(DEFAULT_LEVEL.into())
 		.with_env_var("PLAYNOTE_LOG")
 		.from_env_lossy();
 	let con_writer = fmt::layer();
