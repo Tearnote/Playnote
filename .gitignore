@@ -1,9 +1,11 @@
 # IDE config
 .idea/**
-.refact/**
 
 # Test data
 songs/**
 
 # Build artifacts
 target/**
+
+# Runtime-created files
+*.log
