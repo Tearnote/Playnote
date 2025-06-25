@@ -7,7 +7,7 @@ use anyhow::{Context, Result};
 use tracing::info;
 use tracing_subscriber::{prelude::*, fmt};
 use tracing_subscriber::filter::{EnvFilter, LevelFilter};
-use wgpu::{BackendOptions, Backends, Instance, InstanceDescriptor, InstanceFlags};
+use wgpu::{BackendOptions, Backends, Instance, InstanceDescriptor, InstanceFlags, PowerPreference, RequestAdapterOptions};
 use winit::application::ApplicationHandler;
 use winit::dpi::PhysicalSize;
 use winit::event::WindowEvent;
@@ -27,7 +27,7 @@ struct AppContext {
 impl ApplicationHandler for App {
 	fn resumed(&mut self, event_loop: &ActiveEventLoop) {
 		if matches!(self, App::Initialized(_)) { return }
-		
+
 		let attributes = WindowAttributes::default()
 			.with_inner_size(PhysicalSize::new(1280, 720))
 			.with_resizable(false)
@@ -45,7 +45,12 @@ impl ApplicationHandler for App {
 				flags: InstanceFlags::from_env_or_default(),
 				backend_options: BackendOptions::from_env_or_default(),
 			});
-			let _surface = instance.create_surface(window_rx.recv().unwrap());
+			let surface = instance.create_surface(window_rx.recv().unwrap()).unwrap_or_else(|e| panic_any(e));
+			let _adapter = instance.request_adapter(&RequestAdapterOptions {
+				power_preference: PowerPreference::LowPower,
+				force_fallback_adapter: false,
+				compatible_surface: Some(&surface),
+			});
 		});
 
 		let ctx = AppContext {
