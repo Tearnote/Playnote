@@ -1,3 +1,5 @@
+mod threads;
+
 use std::fs::File;
 use std::sync::Arc;
 use std::thread;
@@ -7,7 +9,6 @@ use anyhow::{Context, Result};
 use tracing::info;
 use tracing_subscriber::{prelude::*, fmt};
 use tracing_subscriber::filter::{EnvFilter, LevelFilter};
-use wgpu::{BackendOptions, Backends, Instance, InstanceDescriptor, InstanceFlags, PowerPreference, RequestAdapterOptions};
 use winit::application::ApplicationHandler;
 use winit::dpi::PhysicalSize;
 use winit::event::WindowEvent;
@@ -38,20 +39,7 @@ impl ApplicationHandler for App {
 
 		let (window_tx, window_rx) = crossbeam_channel::bounded(1);
 		window_tx.send(window.clone()).unwrap();
-
-		let render_thread_handle = thread::spawn(move || {
-			let instance = Instance::new(&InstanceDescriptor {
-				backends: Backends::PRIMARY,
-				flags: InstanceFlags::from_env_or_default(),
-				backend_options: BackendOptions::from_env_or_default(),
-			});
-			let surface = instance.create_surface(window_rx.recv().unwrap()).unwrap_or_else(|e| panic_any(e));
-			let _adapter = instance.request_adapter(&RequestAdapterOptions {
-				power_preference: PowerPreference::LowPower,
-				force_fallback_adapter: false,
-				compatible_surface: Some(&surface),
-			});
-		});
+		let render_thread_handle = thread::spawn(move || { pollster::block_on(threads::render(window_rx)) });
 
 		let ctx = AppContext {
 			window,
