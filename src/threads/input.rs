@@ -1,7 +1,8 @@
 use std::sync::Arc;
 use std::sync::atomic::{self, AtomicBool};
-use std::thread;
-use tracing::{info, instrument};
+use std::thread::{self, JoinHandle};
+use anyhow::Result;
+use tracing::{error, info, instrument};
 use winit::application::ApplicationHandler;
 use winit::dpi::PhysicalSize;
 use winit::event::WindowEvent;
@@ -9,11 +10,12 @@ use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
 use winit::window::{WindowAttributes, WindowId};
 use super::ThreadShared;
 
-pub fn input() {
-	let event_loop = EventLoop::new().expect("Failed to initialize OS windowing");
+pub fn input() -> Result<()> {
+	let event_loop = EventLoop::new()?;
 	event_loop.set_control_flow(ControlFlow::Poll);
 	let mut app = App::Uninitialized;
-	event_loop.run_app(&mut app).expect("OS error");
+	event_loop.run_app(&mut app)?;
+	Ok(())
 }
 
 enum App {
@@ -23,7 +25,7 @@ enum App {
 
 struct AppContext {
 	shared: ThreadShared,
-	render_thread_handle: Option<thread::JoinHandle<()>>,
+	render_thread_handle: Option<JoinHandle<()>>,
 }
 
 impl ApplicationHandler for App {
@@ -35,8 +37,14 @@ impl ApplicationHandler for App {
 			.with_inner_size(PhysicalSize::new(1280, 720))
 			.with_resizable(false)
 			.with_title(env!("CARGO_PKG_NAME"));
-		let window = Arc::new(event_loop.create_window(attributes)
-			.expect("Failed to create application window"));
+		let window = match event_loop.create_window(attributes) {
+			Ok(w) => Arc::new(w),
+			Err(e) => {
+				error!(target: "input", "Failed to create application window: {e}");
+				event_loop.exit();
+				return;
+			}
+		};
 		info!(target: "input", "Created application window with {:?}", window.inner_size());
 
 		let shared = ThreadShared {
@@ -44,9 +52,7 @@ impl ApplicationHandler for App {
 			window,
 		};
 		let render_shared = shared.clone();
-		let render_thread_handle = thread::spawn(move || {
-			pollster::block_on(super::render(render_shared))
-		});
+		let render_thread_handle = thread::spawn(move || { super::render(render_shared) });
 
 		let ctx = AppContext {
 			shared,
@@ -69,7 +75,9 @@ impl ApplicationHandler for App {
 		let App::Initialized(ctx) = self else { return };
 		ctx.shared.running.store(false, atomic::Ordering::Relaxed);
 		let render_thread_handle = ctx.render_thread_handle.take().unwrap();
-		render_thread_handle.join().expect("Render thread panicked");
+		// Outer Result is Err if thread panicked, inner Result is Error if 
+		let _ = render_thread_handle.join().expect("Render thread panicked");
 		*self = App::Uninitialized;
 	}
 }
+

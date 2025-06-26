@@ -3,20 +3,21 @@ mod threads;
 use tracing_subscriber::filter::LevelFilter;
 use std::fs;
 use std::sync::Arc;
-use anyhow::Context;
+use anyhow::{Context, Result};
 use tracing::info;
 use tracing_subscriber::{prelude::*, fmt};
 use tracing_subscriber::filter::EnvFilter;
 
-fn main() {
-	init_logging().expect("Failed to initialize logging");
+fn main() -> Result<()> {
+	init_logging()?;
 	const NAME: &str = env!("CARGO_PKG_NAME");
 	const VERSION: &str = env!("CARGO_PKG_VERSION");
 	info!(target: "input", "Starting up {NAME} {VERSION}");
-	threads::input();
+	threads::input()?;
+	Ok(())
 }
 
-fn init_logging() -> anyhow::Result<()> {
+fn init_logging() -> Result<()> {
 	const DEFAULT_LEVEL: LevelFilter = if cfg!(debug_assertions) { LevelFilter::DEBUG } else { LevelFilter::INFO };
 	const FILENAME: &str = if cfg!(debug_assertions) { "playnote-debug.log" } else { "playnote.log" };
 	let file = fs::File::create(FILENAME)
