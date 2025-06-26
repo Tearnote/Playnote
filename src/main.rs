@@ -7,7 +7,7 @@ use std::panic::panic_any;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread::JoinHandle;
 use anyhow::{Context, Result};
-use tracing::info;
+use tracing::{info, instrument};
 use tracing_subscriber::{prelude::*, fmt};
 use tracing_subscriber::filter::{EnvFilter, LevelFilter};
 use winit::application::ApplicationHandler;
@@ -28,6 +28,7 @@ struct AppContext {
 }
 
 impl ApplicationHandler for App {
+	#[instrument(target = "main", name = "window_init", skip_all)]
 	fn resumed(&mut self, event_loop: &ActiveEventLoop) {
 		if matches!(self, App::Initialized(_)) { return }
 
@@ -36,9 +37,9 @@ impl ApplicationHandler for App {
 			.with_resizable(false)
 			.with_title(env!("CARGO_PKG_NAME"));
 		let window = Arc::new(event_loop.create_window(attributes)
-			.context("Failed to create application window")
-			.unwrap_or_else(|e| panic_any(e)));
-		
+			.expect("Failed to create application window"));
+		info!(target: "main", "Created application window with {:?}", window.inner_size());
+
 		let shared = ThreadShared {
 			running: Arc::new(AtomicBool::new(true)),
 			window,
@@ -58,6 +59,7 @@ impl ApplicationHandler for App {
 	fn window_event(&mut self, event_loop: &ActiveEventLoop, _window_id: WindowId, event: WindowEvent) {
 		match event {
 			WindowEvent::CloseRequested => {
+				info!(target: "main", "Application close requested");
 				event_loop.exit();
 			}
 			_ => (),
@@ -77,7 +79,7 @@ fn main() -> Result<()> {
 	init_logging()?;
 	const NAME: &str = env!("CARGO_PKG_NAME");
 	const VERSION: &str = env!("CARGO_PKG_VERSION");
-	info!("Initializing {NAME} {VERSION}");
+	info!(target: "main", "Starting up {NAME} {VERSION}");
 
 	let event_loop = EventLoop::new().context("Failed to initialize windowing")?;
 	event_loop.set_control_flow(ControlFlow::Poll);
