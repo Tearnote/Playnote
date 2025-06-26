@@ -1,12 +1,14 @@
 mod render;
+mod input;
 
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
-use winit::window::Window;
-pub use render::render;
+
+pub use self::render::render;
+pub use self::input::input;
 
 #[derive(Clone)]
 pub struct ThreadShared {
 	pub running: Arc<AtomicBool>,
-	pub window: Arc<Window>,
+	pub window: Arc<winit::window::Window>,
 }
