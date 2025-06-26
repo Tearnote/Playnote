@@ -8,7 +8,7 @@ use wgpu::{
 };
 use winit::dpi::PhysicalSize;
 use winit::window::Window;
-use super::ThreadShared;
+use super::{ThreadShared, UserEvent};
 
 struct Context<'a> {
 	surface: Surface<'a>,
@@ -19,7 +19,7 @@ struct Context<'a> {
 pub fn render(shared: ThreadShared) {
 	pollster::block_on(render_inner(&shared)).unwrap_or_else(|e| {
 		error!(target: "render", "{e}");
-		shared.running.store(false, Ordering::Relaxed);
+		let _ = shared.proxy.send_event(UserEvent::Quit);
 	});
 }
 
@@ -63,4 +63,4 @@ async fn init_gpu(window: &Window) -> Result<Context> {
 	})
 }
 
-fn configure_surface(surface: &Surface, size: PhysicalSize<u32>) {}
+// fn configure_surface(surface: &Surface, size: PhysicalSize<u32>) {}
