@@ -4,6 +4,7 @@ use std::fs::File;
 use std::sync::Arc;
 use std::thread;
 use std::panic::panic_any;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread::JoinHandle;
 use anyhow::{Context, Result};
 use tracing::info;
@@ -13,7 +14,8 @@ use winit::application::ApplicationHandler;
 use winit::dpi::PhysicalSize;
 use winit::event::WindowEvent;
 use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
-use winit::window::{Window, WindowAttributes, WindowId};
+use winit::window::{WindowAttributes, WindowId};
+use crate::threads::ThreadShared;
 
 enum App {
 	Uninitialized,
@@ -21,7 +23,7 @@ enum App {
 }
 
 struct AppContext {
-	window: Arc<Window>,
+	shared: ThreadShared,
 	render_thread_handle: Option<JoinHandle<()>>,
 }
 
@@ -36,13 +38,18 @@ impl ApplicationHandler for App {
 		let window = Arc::new(event_loop.create_window(attributes)
 			.context("Failed to create application window")
 			.unwrap_or_else(|e| panic_any(e)));
-
-		let (window_tx, window_rx) = crossbeam_channel::bounded(1);
-		window_tx.send(window.clone()).unwrap();
-		let render_thread_handle = thread::spawn(move || { pollster::block_on(threads::render(window_rx)) });
+		
+		let shared = ThreadShared {
+			running: Arc::new(AtomicBool::new(true)),
+			window,
+		};
+		let render_shared = shared.clone();
+		let render_thread_handle = thread::spawn(move || {
+			pollster::block_on(threads::render(render_shared))
+		});
 
 		let ctx = AppContext {
-			window,
+			shared,
 			render_thread_handle: Some(render_thread_handle),
 		};
 		*self = App::Initialized(ctx);
@@ -59,6 +66,7 @@ impl ApplicationHandler for App {
 
 	fn exiting(&mut self, _event_loop: &ActiveEventLoop) {
 		let App::Initialized(ctx) = self else { return };
+		ctx.shared.running.store(false, Ordering::Relaxed);
 		let render_thread_handle = ctx.render_thread_handle.take().unwrap();
 		render_thread_handle.join().unwrap_or_else(|e| panic_any(e));
 		*self = App::Uninitialized;
