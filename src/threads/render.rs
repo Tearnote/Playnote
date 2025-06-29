@@ -1,8 +1,8 @@
 use std::sync::atomic::Ordering;
 use anyhow::{Context as AnyhowContext, Result};
 use tracing::{debug, error, info, instrument};
-use wgpu::{BackendOptions, Backends, CompositeAlphaMode, Device, DeviceDescriptor, Features, Instance, InstanceDescriptor, InstanceFlags, Limits, MemoryHints, PowerPreference, PresentMode, Queue, RequestAdapterOptions, Surface, SurfaceError, TextureFormat, TextureUsages, Trace};
-use wgpu::wgt::SurfaceConfiguration;
+use wgpu::{BackendOptions, Backends, Color, CompositeAlphaMode, Device, DeviceDescriptor, Features, Instance, InstanceDescriptor, InstanceFlags, Limits, LoadOp, MemoryHints, Operations, PowerPreference, PresentMode, Queue, RenderPassColorAttachment, RenderPassDescriptor, RequestAdapterOptions, StoreOp, Surface, SurfaceError, TextureFormat, TextureUsages, TextureViewDescriptor, Trace};
+use wgpu::wgt::{CommandEncoderDescriptor, SurfaceConfiguration};
 use winit::dpi::PhysicalSize;
 use winit::window::Window;
 use super::{ThreadShared, UserEvent};
@@ -32,6 +32,26 @@ async fn render_inner(shared: &ThreadShared) -> Result<()> {
 			}
 			Err(e) => return Err(e.into())
 		};
+
+		let mut encoder = context.device.create_command_encoder(&CommandEncoderDescriptor::default());
+		let surface_view = output.texture.create_view(&TextureViewDescriptor::default());
+
+		drop(encoder.begin_render_pass(&RenderPassDescriptor {
+			label: Some("clear"),
+			color_attachments: &[Some(RenderPassColorAttachment {
+				view: &surface_view,
+				resolve_target: None,
+				ops: Operations {
+					load: LoadOp::Clear(Color {r: 0.060, g: 0.060, b: 0.060, a: 1.000}),
+					store: StoreOp::Store,
+				},
+			})],
+			depth_stencil_attachment: None,
+			occlusion_query_set: None,
+			timestamp_writes: None,
+		}));
+
+		context.queue.submit(Some(encoder.finish()));
 		output.present();
 	}
 	Ok(())
