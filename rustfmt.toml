@@ -1,0 +1,12 @@
+format_code_in_doc_comments = true
+format_strings = true
+hard_tabs = true
+hex_literal_case = "Lower"
+match_block_trailing_comma = true
+imports_granularity = "Module"
+overflow_delimited_expr = true
+reorder_impl_items = true
+group_imports = "StdExternalCrate"
+style_edition = "2024"
+use_field_init_shorthand = true
+wrap_comments = true

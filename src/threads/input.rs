@@ -1,14 +1,14 @@
+use super::{ThreadShared, UserEvent};
+use anyhow::Result;
 use std::sync::Arc;
 use std::sync::atomic::{self, AtomicBool};
 use std::thread::{self, JoinHandle};
-use anyhow::Result;
 use tracing::{error, info, instrument};
 use winit::application::ApplicationHandler;
 use winit::dpi::PhysicalSize;
 use winit::event::WindowEvent;
 use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop, EventLoopProxy};
 use winit::window::{WindowAttributes, WindowId};
-use super::{ThreadShared, UserEvent};
 
 pub fn input() -> Result<()> {
 	let event_loop = EventLoop::<UserEvent>::with_user_event().build()?;
@@ -32,7 +32,9 @@ struct AppContext {
 impl ApplicationHandler<UserEvent> for App {
 	#[instrument(target = "input", name = "window_init", skip_all)]
 	fn resumed(&mut self, event_loop: &ActiveEventLoop) {
-		let App::Initializing(proxy) = self else { return };
+		let App::Initializing(proxy) = self else {
+			return;
+		};
 
 		let attributes = WindowAttributes::default()
 			.with_inner_size(PhysicalSize::new(1280, 720))
@@ -44,7 +46,7 @@ impl ApplicationHandler<UserEvent> for App {
 				error!(target: "input", "Failed to create application window: {e}");
 				event_loop.exit();
 				return;
-			}
+			},
 		};
 		info!(target: "input", "Created application window with {:?}", window.inner_size());
 
@@ -54,7 +56,7 @@ impl ApplicationHandler<UserEvent> for App {
 			window,
 		};
 		let render_shared = shared.clone();
-		let render_thread_handle = thread::spawn(move || { super::render(render_shared) });
+		let render_thread_handle = thread::spawn(move || super::render(render_shared));
 
 		let ctx = AppContext {
 			shared,
@@ -68,11 +70,11 @@ impl ApplicationHandler<UserEvent> for App {
 			WindowEvent::CloseRequested => {
 				info!(target: "input", "Application close requested");
 				event_loop.exit();
-			}
+			},
 			_ => (),
 		}
 	}
-	
+
 	fn user_event(&mut self, event_loop: &ActiveEventLoop, event: UserEvent) {
 		match event {
 			UserEvent::Quit => event_loop.exit(),
@@ -82,7 +84,11 @@ impl ApplicationHandler<UserEvent> for App {
 	fn exiting(&mut self, _: &ActiveEventLoop) {
 		let App::Initialized(ctx) = self else { return };
 		ctx.shared.running.store(false, atomic::Ordering::Relaxed);
-		ctx.render_thread_handle.take().unwrap().join().expect("Render thread panicked");
+		ctx.render_thread_handle
+			.take()
+			.unwrap()
+			.join()
+			.expect("Render thread panicked");
 		*self = App::Uninitialized;
 	}
 }
