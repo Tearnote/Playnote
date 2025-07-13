@@ -1,4 +1,5 @@
 use super::{ThreadShared, UserEvent};
+use crate::gfx::EguiRenderer;
 use anyhow::{Context as AnyhowContext, Result};
 use std::sync::atomic::Ordering;
 use tracing::{debug, error, info, instrument};
@@ -13,10 +14,13 @@ use wgpu::{
 use winit::dpi::PhysicalSize;
 use winit::window::Window;
 
+const SURFACE_FORMAT: TextureFormat = TextureFormat::Bgra8Unorm;
+
 struct Context<'a> {
 	surface: Surface<'a>,
 	device: Device,
 	queue: Queue,
+	egui_renderer: EguiRenderer,
 }
 
 pub fn render(shared: ThreadShared) {
@@ -27,7 +31,7 @@ pub fn render(shared: ThreadShared) {
 }
 
 async fn render_inner(shared: &ThreadShared) -> Result<()> {
-	let context = init_gpu(shared.window.as_ref())
+	let mut context = init_gpu(shared.window.as_ref())
 		.await
 		.context("GPU initialization failed")?;
 
@@ -72,6 +76,19 @@ async fn render_inner(shared: &ThreadShared) -> Result<()> {
 			timestamp_writes: None,
 		}));
 
+		context.egui_renderer.frame(
+			shared.window.as_ref(),
+			&context.device,
+			&context.queue,
+			&mut encoder,
+			|ctx| {
+				egui::Window::new("Hello World").show(&ctx, |ui| {
+					ui.label("Hello World!");
+				});
+				(surface_view, output.texture.size())
+			},
+		);
+
 		context.queue.submit(Some(encoder.finish()));
 		output.present();
 	}
@@ -107,10 +124,13 @@ async fn init_gpu(window: &Window) -> Result<Context> {
 		})
 		.await?;
 	configure_surface(&surface, &device, window.inner_size());
+	let egui_renderer = EguiRenderer::new(window, &device, SURFACE_FORMAT);
+
 	Ok(Context {
 		surface,
 		device,
 		queue,
+		egui_renderer,
 	})
 }
 
@@ -119,7 +139,7 @@ fn configure_surface(surface: &Surface, device: &Device, size: PhysicalSize<u32>
 		device,
 		&SurfaceConfiguration {
 			usage: TextureUsages::RENDER_ATTACHMENT,
-			format: TextureFormat::Bgra8UnormSrgb,
+			format: SURFACE_FORMAT,
 			width: size.width,
 			height: size.height,
 			present_mode: PresentMode::AutoVsync,
