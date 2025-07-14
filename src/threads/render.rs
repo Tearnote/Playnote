@@ -2,6 +2,7 @@ use super::{ThreadShared, UserEvent};
 use crate::gfx::EguiRenderer;
 use anyhow::{Context as AnyhowContext, Result};
 use std::sync::atomic::Ordering;
+use std::sync::mpsc;
 use tracing::{debug, error, info, instrument};
 use wgpu::wgt::{CommandEncoderDescriptor, SurfaceConfiguration};
 use wgpu::{
@@ -35,7 +36,19 @@ async fn render_inner(shared: &ThreadShared) -> Result<()> {
 		.await
 		.context("GPU initialization failed")?;
 
+	let (window_event_tx, window_event_rx) = mpsc::channel();
+	if let Ok(mut handlers) = shared.input_handlers.lock() {
+		handlers.push(Box::new(move |event| {
+			let _ = window_event_tx.send(event);
+			true
+		}));
+	}
+
 	while shared.running.load(Ordering::Relaxed) {
+		for event in window_event_rx.try_iter() {
+			context.egui_renderer.handle_input(&shared.window, &event);
+		}
+
 		let output = match context.surface.get_current_texture() {
 			Ok(output) => output,
 			Err(SurfaceError::Lost | SurfaceError::Outdated) => {

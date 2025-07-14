@@ -1,6 +1,6 @@
 use super::{ThreadShared, UserEvent};
 use anyhow::Result;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::sync::atomic::{self, AtomicBool};
 use std::thread::{self, JoinHandle};
 use tracing::{error, info, instrument};
@@ -54,6 +54,7 @@ impl ApplicationHandler<UserEvent> for App {
 			proxy: proxy.clone(),
 			running: Arc::new(AtomicBool::new(true)),
 			window,
+			input_handlers: Arc::new(Mutex::new(vec![])),
 		};
 		let render_shared = shared.clone();
 		let render_thread_handle = thread::spawn(move || super::render(render_shared));
@@ -65,19 +66,25 @@ impl ApplicationHandler<UserEvent> for App {
 		*self = App::Initialized(ctx);
 	}
 
+	fn user_event(&mut self, event_loop: &ActiveEventLoop, event: UserEvent) {
+		match event {
+			UserEvent::Quit => event_loop.exit(),
+		}
+	}
+
 	fn window_event(&mut self, event_loop: &ActiveEventLoop, _: WindowId, event: WindowEvent) {
+		let App::Initialized(ctx) = self else { return };
+		if let Ok(mut handlers) = ctx.shared.input_handlers.lock() {
+			for handler in handlers.iter_mut() {
+				if !handler(event.clone()) { return };
+			}
+		}
 		match event {
 			WindowEvent::CloseRequested => {
 				info!(target: "input", "Application close requested");
 				event_loop.exit();
 			},
 			_ => (),
-		}
-	}
-
-	fn user_event(&mut self, event_loop: &ActiveEventLoop, event: UserEvent) {
-		match event {
-			UserEvent::Quit => event_loop.exit(),
 		}
 	}
 

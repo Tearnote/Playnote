@@ -5,6 +5,7 @@ use wgpu::{
 	CommandEncoder, Device, Extent3d, LoadOp, Operations, Queue, RenderPassColorAttachment,
 	RenderPassDescriptor, StoreOp, TextureFormat, TextureView,
 };
+use winit::event::WindowEvent;
 use winit::window::Window;
 
 pub struct EguiRenderer {
@@ -25,6 +26,10 @@ impl EguiRenderer {
 		);
 		let renderer = Renderer::new(device, output_format, None, 1, true);
 		EguiRenderer { state, renderer }
+	}
+
+	pub fn handle_input(&mut self, window: &Window, event: &WindowEvent) {
+		let _ = self.state.on_window_event(&window, &event);
 	}
 
 	pub fn frame<F>(
