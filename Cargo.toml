@@ -13,3 +13,4 @@ winit = "0.30.11"
 egui = { version = "0.32.0", features = ["log"] }
 egui-winit = "0.32.0"
 egui-wgpu = { version = "0.32.0", features = ["winit"] }
+pipewire = "0.8.0"

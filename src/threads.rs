@@ -1,10 +1,12 @@
+mod audio;
 mod input;
 mod render;
 
+pub use self::audio::audio;
 pub use self::input::input;
 pub use self::render::render;
-use std::sync::{Arc, Mutex};
 use std::sync::atomic::AtomicBool;
+use std::sync::{Arc, Mutex};
 use winit::event::WindowEvent;
 use winit::event_loop::EventLoopProxy;
 

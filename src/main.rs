@@ -1,5 +1,5 @@
-mod threads;
 mod gfx;
+mod threads;
 
 use anyhow::{Context, Result};
 use std::fs;

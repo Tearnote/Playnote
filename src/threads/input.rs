@@ -1,7 +1,7 @@
 use super::{ThreadShared, UserEvent};
 use anyhow::Result;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
-use std::sync::atomic::{self, AtomicBool};
 use std::thread::{self, JoinHandle};
 use tracing::{error, info, instrument};
 use winit::application::ApplicationHandler;
@@ -27,6 +27,7 @@ enum App {
 struct AppContext {
 	shared: ThreadShared,
 	render_thread_handle: Option<JoinHandle<()>>,
+	audio_thread_handle: Option<JoinHandle<()>>,
 }
 
 impl ApplicationHandler<UserEvent> for App {
@@ -58,10 +59,13 @@ impl ApplicationHandler<UserEvent> for App {
 		};
 		let render_shared = shared.clone();
 		let render_thread_handle = thread::spawn(move || super::render(render_shared));
+		let audio_shared = shared.clone();
+		let audio_thread_handle = thread::spawn(move || super::audio(audio_shared));
 
 		let ctx = AppContext {
 			shared,
 			render_thread_handle: Some(render_thread_handle),
+			audio_thread_handle: Some(audio_thread_handle),
 		};
 		*self = App::Initialized(ctx);
 	}
@@ -76,7 +80,9 @@ impl ApplicationHandler<UserEvent> for App {
 		let App::Initialized(ctx) = self else { return };
 		if let Ok(mut handlers) = ctx.shared.input_handlers.lock() {
 			for handler in handlers.iter_mut() {
-				if !handler(event.clone()) { return };
+				if !handler(event.clone()) {
+					return;
+				};
 			}
 		}
 		match event {
@@ -90,7 +96,12 @@ impl ApplicationHandler<UserEvent> for App {
 
 	fn exiting(&mut self, _: &ActiveEventLoop) {
 		let App::Initialized(ctx) = self else { return };
-		ctx.shared.running.store(false, atomic::Ordering::Relaxed);
+		ctx.shared.running.store(false, Ordering::Relaxed);
+		ctx.audio_thread_handle
+			.take()
+			.unwrap()
+			.join()
+			.expect("Audio thread panicked");
 		ctx.render_thread_handle
 			.take()
 			.unwrap()
