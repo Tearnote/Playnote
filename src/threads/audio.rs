@@ -4,6 +4,8 @@ use pipewire::context::Context;
 use pipewire::properties::properties;
 use pipewire::spa::param::ParamType;
 use pipewire::spa::param::audio::{AudioFormat, AudioInfoRaw};
+use pipewire::spa::param::format::{MediaSubtype, MediaType};
+use pipewire::spa::param::format_utils::parse_format;
 use pipewire::spa::pod::serialize::PodSerializer;
 use pipewire::spa::pod::{Object, Pod, Property, Value};
 use pipewire::spa::utils::{Direction, SpaTypes};
@@ -11,8 +13,9 @@ use pipewire::stream::{Stream, StreamFlags};
 use pipewire::thread_loop::ThreadLoop;
 use std::io::Cursor;
 use std::sync::atomic::Ordering;
+use std::sync::{Arc, Mutex};
 use std::thread;
-use tracing::error;
+use tracing::{error, info};
 
 const AUDIO_LATENCY: u32 = 128;
 
@@ -38,6 +41,36 @@ fn audio_inner(shared: &ThreadShared) -> Result<()> {
 		},
 	)?;
 
+	let sample_rate: Arc<Mutex<Option<u32>>> = Arc::new(Mutex::new(None));
+	let sample_rate_copy = sample_rate.clone();
+	let _stream_listener = stream
+		.add_local_listener::<()>()
+		.param_changed(move |_, _, id, param| {
+			let Some(param) = param else { return };
+			if id != ParamType::Format.as_raw() {
+				return;
+			};
+			let Ok((media_type, media_subtype)) = parse_format(param) else {
+				return;
+			};
+			if media_type != MediaType::Audio || media_subtype != MediaSubtype::Raw {
+				return;
+			};
+			let mut audio_info = AudioInfoRaw::default();
+			let Ok(_) = audio_info.parse(param) else {
+				return;
+			};
+			if audio_info.rate() <= 0 {
+				return;
+			};
+			let Ok(mut sample_rate) = sample_rate_copy.lock() else {
+				return;
+			};
+			*sample_rate = Some(audio_info.rate());
+			info!(target: "audio", "Sample rate negotiated to {}", audio_info.rate());
+		})
+		.register()?;
+
 	let mut audio_info = AudioInfoRaw::new();
 	audio_info.set_format(AudioFormat::F32LE);
 	audio_info.set_channels(2);
@@ -58,8 +91,9 @@ fn audio_inner(shared: &ThreadShared) -> Result<()> {
 		StreamFlags::AUTOCONNECT | StreamFlags::MAP_BUFFERS | StreamFlags::RT_PROCESS,
 		&mut params,
 	)?;
-	
+
 	thread_loop.start();
+	info!(target: "audio", "pipewire audio initialized");
 	while shared.running.load(Ordering::Relaxed) {
 		thread::yield_now();
 	}
