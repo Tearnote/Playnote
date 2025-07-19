@@ -1,28 +1,14 @@
 use super::{ThreadShared, UserEvent};
-use crate::gfx::EguiRenderer;
+use crate::gfx::{EguiRenderer, GPU};
 use anyhow::{Context as AnyhowContext, Result};
 use std::sync::atomic::Ordering;
 use std::sync::mpsc;
-use tracing::{debug, error, info, instrument};
-use wgpu::wgt::{CommandEncoderDescriptor, SurfaceConfiguration};
+use tracing::error;
+use wgpu::wgt::CommandEncoderDescriptor;
 use wgpu::{
-	BackendOptions, Backends, Color, CompositeAlphaMode, Device, DeviceDescriptor, Features,
-	Instance, InstanceDescriptor, InstanceFlags, Limits, LoadOp, MemoryHints, Operations,
-	PowerPreference, PresentMode, Queue, RenderPassColorAttachment, RenderPassDescriptor,
-	RequestAdapterOptions, StoreOp, Surface, SurfaceError, TextureFormat, TextureUsages,
-	TextureViewDescriptor, Trace,
+	Color, LoadOp, Operations, RenderPassColorAttachment, RenderPassDescriptor, StoreOp,
+	SurfaceError, TextureViewDescriptor,
 };
-use winit::dpi::PhysicalSize;
-use winit::window::Window;
-
-const SURFACE_FORMAT: TextureFormat = TextureFormat::Bgra8Unorm;
-
-struct Context<'a> {
-	surface: Surface<'a>,
-	device: Device,
-	queue: Queue,
-	egui_renderer: EguiRenderer,
-}
 
 pub fn render(shared: ThreadShared) {
 	pollster::block_on(render_inner(&shared)).unwrap_or_else(|e| {
@@ -32,9 +18,10 @@ pub fn render(shared: ThreadShared) {
 }
 
 async fn render_inner(shared: &ThreadShared) -> Result<()> {
-	let mut context = init_gpu(shared.window.as_ref())
+	let gpu = GPU::new(shared.window.as_ref())
 		.await
 		.context("GPU initialization failed")?;
+	let mut egui_renderer = EguiRenderer::new(&shared.window, &gpu, GPU::SURFACE_FORMAT);
 
 	let (window_event_tx, window_event_rx) = mpsc::channel();
 	if let Ok(mut handlers) = shared.input_handlers.lock() {
@@ -46,23 +33,19 @@ async fn render_inner(shared: &ThreadShared) -> Result<()> {
 
 	while shared.running.load(Ordering::Relaxed) {
 		for event in window_event_rx.try_iter() {
-			context.egui_renderer.handle_input(&shared.window, &event);
+			egui_renderer.handle_input(&shared.window, &event);
 		}
 
-		let output = match context.surface.get_current_texture() {
+		let output = match gpu.surface.get_current_texture() {
 			Ok(output) => output,
 			Err(SurfaceError::Lost | SurfaceError::Outdated) => {
-				configure_surface(
-					&context.surface,
-					&context.device,
-					shared.window.inner_size(),
-				);
+				gpu.configure_surface(shared.window.inner_size());
 				continue;
 			},
 			Err(e) => return Err(e.into()),
 		};
 
-		let mut encoder = context
+		let mut encoder = gpu
 			.device
 			.create_command_encoder(&CommandEncoderDescriptor::default());
 		let surface_view = output
@@ -89,10 +72,10 @@ async fn render_inner(shared: &ThreadShared) -> Result<()> {
 			timestamp_writes: None,
 		}));
 
-		context.egui_renderer.frame(
+		egui_renderer.frame(
 			shared.window.as_ref(),
-			&context.device,
-			&context.queue,
+			&gpu.device,
+			&gpu.queue,
 			&mut encoder,
 			|ctx| {
 				egui::Window::new("Hello World").show(&ctx, |ui| {
@@ -102,63 +85,8 @@ async fn render_inner(shared: &ThreadShared) -> Result<()> {
 			},
 		);
 
-		context.queue.submit(Some(encoder.finish()));
+		gpu.queue.submit(Some(encoder.finish()));
 		output.present();
 	}
 	Ok(())
-}
-
-#[instrument(target = "render", name = "gpu_init", skip_all)]
-async fn init_gpu(window: &Window) -> Result<Context> {
-	let instance = Instance::new(&InstanceDescriptor {
-		backends: Backends::PRIMARY,
-		flags: InstanceFlags::from_env_or_default(),
-		backend_options: BackendOptions::from_env_or_default(),
-	});
-	debug!(target: "render", "Created wgpu instance");
-
-	let surface = instance.create_surface(window)?;
-	let adapter = instance
-		.request_adapter(&RequestAdapterOptions {
-			power_preference: PowerPreference::LowPower,
-			force_fallback_adapter: false,
-			compatible_surface: Some(&surface),
-		})
-		.await?;
-	info!(target: "render", "Using GPU: {}", adapter.get_info().name);
-
-	let (device, queue) = adapter
-		.request_device(&DeviceDescriptor {
-			label: Some("my epic gpu"),
-			required_features: Features::default(),
-			required_limits: Limits::downlevel_defaults(),
-			memory_hints: MemoryHints::Performance,
-			trace: Trace::Off,
-		})
-		.await?;
-	configure_surface(&surface, &device, window.inner_size());
-	let egui_renderer = EguiRenderer::new(window, &device, SURFACE_FORMAT);
-
-	Ok(Context {
-		surface,
-		device,
-		queue,
-		egui_renderer,
-	})
-}
-
-fn configure_surface(surface: &Surface, device: &Device, size: PhysicalSize<u32>) {
-	surface.configure(
-		device,
-		&SurfaceConfiguration {
-			usage: TextureUsages::RENDER_ATTACHMENT,
-			format: SURFACE_FORMAT,
-			width: size.width,
-			height: size.height,
-			present_mode: PresentMode::AutoVsync,
-			desired_maximum_frame_latency: 2,
-			alpha_mode: CompositeAlphaMode::Auto,
-			view_formats: vec![TextureFormat::Bgra8UnormSrgb],
-		},
-	);
 }

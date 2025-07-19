@@ -1,3 +1,4 @@
+use crate::gfx::GPU;
 use egui::{Context, ViewportId};
 use egui_wgpu::{Renderer, ScreenDescriptor};
 use egui_winit::State;
@@ -14,7 +15,7 @@ pub struct EguiRenderer {
 }
 
 impl EguiRenderer {
-	pub fn new(window: &Window, device: &Device, output_format: TextureFormat) -> EguiRenderer {
+	pub fn new(window: &Window, gpu: &GPU, output_format: TextureFormat) -> EguiRenderer {
 		let context = Context::default();
 		let state = State::new(
 			context,
@@ -24,7 +25,7 @@ impl EguiRenderer {
 			None,
 			Some(2048),
 		);
-		let renderer = Renderer::new(device, output_format, None, 1, true);
+		let renderer = Renderer::new(&gpu.device, output_format, None, 1, true);
 		EguiRenderer { state, renderer }
 	}
 
