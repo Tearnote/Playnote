@@ -7,8 +7,8 @@ Construction of a chart from an IR.
 */
 
 module;
-#include "macros/assert.hpp"
 #include "preamble.hpp"
+#include "assert.hpp"
 #include "logger.hpp"
 #include "lib/ebur128.hpp"
 #include "io/bulk_request.hpp"

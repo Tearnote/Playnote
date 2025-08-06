@@ -8,8 +8,8 @@ but condensed, cleaned and serializable to a binary file.
 */
 
 module;
-#include "macros/assert.hpp"
 #include "preamble.hpp"
+#include "assert.hpp"
 #include "config.hpp"
 #include "logger.hpp"
 #include "lib/openssl.hpp"

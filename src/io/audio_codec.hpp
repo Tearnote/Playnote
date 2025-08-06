@@ -7,8 +7,8 @@ The file codec to decode the audio format and convert sample rate.
 */
 
 #pragma once
-#include "macros/assert.hpp"
 #include "preamble.hpp"
+#include "assert.hpp"
 #include "lib/ffmpeg.hpp"
 
 import playnote.dev.audio;

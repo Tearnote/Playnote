@@ -7,8 +7,8 @@ A definite, playable rhythm game chart optimized for playback.
 */
 
 module;
-#include "macros/assert.hpp"
 #include "preamble.hpp"
+#include "assert.hpp"
 #include "logger.hpp"
 
 export module playnote.bms.chart;

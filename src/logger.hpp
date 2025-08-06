@@ -7,7 +7,6 @@ Wrapper for the Quill threaded async logging library.
 */
 
 #pragma once
-#include "macros/assert.hpp"
 #include "quill/sinks/ConsoleSink.h"
 #include "quill/sinks/FileSink.h"
 #include "quill/LogMacros.h"
@@ -15,6 +14,7 @@ Wrapper for the Quill threaded async logging library.
 #include "quill/Backend.h"
 #include "quill/Logger.h"
 #include "preamble.hpp"
+#include "assert.hpp"
 
 #define TRACE(...) LOG_TRACE_L1(globals::logger->global, __VA_ARGS__)
 #define DEBUG(...) LOG_DEBUG(globals::logger->global, __VA_ARGS__)

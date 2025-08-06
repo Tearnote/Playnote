@@ -7,8 +7,8 @@ Initializes audio and submits buffers for playback, filled with audio from regis
 */
 
 module;
-#include "macros/assert.hpp"
 #include "preamble.hpp"
+#include "assert.hpp"
 #include "config.hpp"
 #include "logger.hpp"
 #include "lib/pipewire.hpp"

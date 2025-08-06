@@ -7,8 +7,8 @@ Initializes audio and handles queueing of playback events.
 */
 
 module;
-#include "macros/assert.hpp"
 #include "preamble.hpp"
+#include "assert.hpp"
 #include "logger.hpp"
 #include "io/file.hpp"
 

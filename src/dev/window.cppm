@@ -8,8 +8,8 @@ Initializes GLFW and manages windows. Windows handle keyboard and mouse input, a
 */
 
 module;
-#include "macros/assert.hpp"
 #include "preamble.hpp"
+#include "assert.hpp"
 #include "logger.hpp"
 #include "lib/vulkan.hpp"
 #include "lib/glfw.hpp"

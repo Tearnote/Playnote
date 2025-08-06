@@ -7,8 +7,8 @@ A cursor wrapper that sends audio samples to the audio device.
 */
 
 module;
-#include "macros/assert.hpp"
 #include "preamble.hpp"
+#include "assert.hpp"
 #include "logger.hpp"
 
 export module playnote.bms.audio_player;

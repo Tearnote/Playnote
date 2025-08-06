@@ -9,8 +9,8 @@ Wrapper for ICU charset handling.
 #pragma once
 #include <unicode/ucsdet.h>
 #include <unicode/ucnv.h>
-#include "macros/assert.hpp"
 #include "preamble.hpp"
+#include "assert.hpp"
 #include "logger.hpp"
 
 namespace playnote::lib::icu {

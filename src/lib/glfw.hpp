@@ -10,8 +10,8 @@ Wrapper for GLFW window and input handling.
 #include <vulkan/vulkan_core.h>
 #include "GLFW/glfw3.h"
 #include "volk.h"
-#include "macros/assert.hpp"
 #include "preamble.hpp"
+#include "assert.hpp"
 #include "lib/vulkan.hpp"
 
 namespace playnote::lib::glfw {

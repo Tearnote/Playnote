@@ -23,8 +23,8 @@ Parts are adapted from vuk's built-in Imgui integration; reproduced here under t
 #include "vuk/Buffer.hpp"
 #include "vuk/Types.hpp"
 #include "vuk/Value.hpp"
-#include "macros/assert.hpp"
 #include "preamble.hpp"
+#include "assert.hpp"
 #include "lib/vulkan.hpp"
 #include "lib/glfw.hpp"
 

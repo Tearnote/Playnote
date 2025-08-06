@@ -7,8 +7,8 @@ Representation of a moment in chart's playback.
 */
 
 module;
-#include "macros/assert.hpp"
 #include "preamble.hpp"
+#include "assert.hpp"
 
 export module playnote.bms.cursor;
 

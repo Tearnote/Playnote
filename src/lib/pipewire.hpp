@@ -10,8 +10,8 @@ Wrapper for libpipewire client library for Linux audio support.
 #include <spa/param/audio/format-utils.h>
 #include <spa/param/latency-utils.h>
 #include <pipewire/pipewire.h>
-#include "macros/assert.hpp"
 #include "preamble.hpp"
+#include "assert.hpp"
 #include "logger.hpp"
 
 namespace playnote::lib::pw {

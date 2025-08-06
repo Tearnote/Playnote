@@ -6,8 +6,8 @@ main.cpp:
 Entry point. Initializes basic facilities, spawns threads.
 */
 
-#include "macros/assert.hpp"
 #include "preamble.hpp"
+#include "assert.hpp"
 #include "config.hpp"
 #include "logger.hpp"
 #include "lib/debug.hpp"

@@ -14,8 +14,8 @@ extern "C" {
 #include <libavutil/opt.h>
 }
 #include <cerrno>
-#include "macros/assert.hpp"
 #include "preamble.hpp"
+#include "assert.hpp"
 #include "logger.hpp"
 #include "lib/pipewire.hpp"
 

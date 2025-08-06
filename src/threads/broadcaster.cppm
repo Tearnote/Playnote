@@ -7,9 +7,9 @@ Allows threads to subscribe to events and receive messages from other threads.
 */
 
 module;
-#include "macros/assert.hpp"
 #include "quill/core/Codec.h"
 #include "preamble.hpp"
+#include "assert.hpp"
 
 export module playnote.threads.broadcaster;
 

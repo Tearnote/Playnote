@@ -7,8 +7,8 @@ Initializes Vulkan and the rendergraph.
 */
 
 module;
-#include "macros/assert.hpp"
 #include "preamble.hpp"
+#include "assert.hpp"
 #include "config.hpp"
 #include "logger.hpp"
 #include "lib/vulkan.hpp"

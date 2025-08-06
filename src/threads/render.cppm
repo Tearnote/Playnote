@@ -7,9 +7,9 @@ Presents current game state onto the window at the screen's refresh rate.
 */
 
 module;
-#include "macros/assert.hpp"
 #include "gfx/renderer.hpp"
 #include "preamble.hpp"
+#include "assert.hpp"
 #include "logger.hpp"
 #include "lib/imgui.hpp"
 #include "lib/tracy.hpp"

@@ -24,8 +24,8 @@ Imports of Vulkan and helper libraries.
 #include "vuk/RenderGraph.hpp"
 #include "vuk/Value.hpp"
 #include "vuk/Types.hpp"
-#include "macros/assert.hpp"
 #include "preamble.hpp"
+#include "assert.hpp"
 #include "config.hpp"
 #include "logger.hpp"
 

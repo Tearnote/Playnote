@@ -7,8 +7,8 @@ A BMS format parser - turns a complete BMS file into a list of commands.
 */
 
 module;
-#include "macros/assert.hpp"
 #include "preamble.hpp"
+#include "assert.hpp"
 #include "logger.hpp"
 #include "lib/icu.hpp"
 
