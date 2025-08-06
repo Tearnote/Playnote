@@ -8,8 +8,8 @@ Entry point. Initializes basic facilities, spawns threads.
 
 #include "macros/logger.hpp"
 #include "macros/assert.hpp"
+#include "preamble.hpp"
 
-import playnote.preamble;
 import playnote.config;
 import playnote.logger;
 import playnote.lib.debug;

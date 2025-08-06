@@ -2,16 +2,13 @@
 This software is dual-licensed. For more details, please consult LICENSE.txt.
 Copyright (c) 2025 Tearnote (Hubert Maraszek)
 
-gfx/renderer.cppm:
+gfx/renderer.hpp:
 A renderer of primitives.
 */
 
-module;
+#pragma once
 #include "macros/vuk.hpp"
-
-export module playnote.gfx.renderer;
-
-import playnote.preamble;
+#include "preamble.hpp"
 import playnote.lib.vulkan;
 import playnote.dev.gpu;
 import playnote.gfx.imgui;
@@ -20,7 +17,7 @@ namespace playnote::gfx {
 
 namespace vk = lib::vk;
 
-export class Renderer {
+class Renderer {
 public:
 	// Solid color rectangle primitive.
 	struct Rect {
@@ -59,7 +56,7 @@ private:
 	[[nodiscard]] auto draw_rects(vk::Allocator&, vk::ManagedImage&&, span<Rect const>) -> vk::ManagedImage;
 };
 
-Renderer::Renderer(dev::GPU& gpu):
+inline Renderer::Renderer(dev::GPU& gpu):
 	gpu{gpu},
 	imgui{gpu}
 {
@@ -92,7 +89,7 @@ void Renderer::frame(initializer_list<id> layer_order, Func&& func)
 	});
 }
 
-auto Renderer::draw_rects(vk::Allocator& allocator, vk::ManagedImage&& dest, span<Rect const> rects) -> vk::ManagedImage
+inline auto Renderer::draw_rects(vk::Allocator& allocator, vk::ManagedImage&& dest, span<Rect const> rects) -> vk::ManagedImage
 {
 	auto rects_buf = vk::create_scratch_buffer(allocator, span{rects});
 	auto pass = vk::make_pass("rects",

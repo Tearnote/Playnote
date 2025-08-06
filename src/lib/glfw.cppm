@@ -11,10 +11,10 @@ module;
 #include "GLFW/glfw3.h"
 #include "volk.h"
 #include "macros/assert.hpp"
+#include "preamble.hpp"
 
 export module playnote.lib.glfw;
 
-import playnote.preamble;
 import playnote.lib.vulkan;
 
 namespace playnote::lib::glfw {

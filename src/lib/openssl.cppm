@@ -8,10 +8,9 @@ Wrapper for mio file mapping.
 
 module;
 #include <openssl/evp.h>
+#include "preamble.hpp"
 
 export module playnote.lib.openssl;
-
-import playnote.preamble;
 
 namespace playnote::lib::openssl {
 

@@ -9,10 +9,10 @@ Initializes audio and submits buffers for playback, filled with audio from regis
 module;
 #include "macros/logger.hpp"
 #include "macros/assert.hpp"
+#include "preamble.hpp"
 
 export module playnote.dev.audio;
 
-import playnote.preamble;
 import playnote.config;
 import playnote.logger;
 import playnote.lib.pipewire;

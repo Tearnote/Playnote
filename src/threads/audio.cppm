@@ -9,10 +9,10 @@ Initializes audio and handles queueing of playback events.
 module;
 #include "macros/logger.hpp"
 #include "macros/assert.hpp"
+#include "preamble.hpp"
 
 export module playnote.threads.audio;
 
-import playnote.preamble;
 import playnote.logger;
 import playnote.io.file;
 import playnote.dev.window;

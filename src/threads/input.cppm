@@ -10,10 +10,10 @@ Only the process's main thread can be the input thread.
 module;
 #include "macros/tracing.hpp"
 #include "macros/logger.hpp"
+#include "preamble.hpp"
 
 export module playnote.threads.input;
 
-import playnote.preamble;
 import playnote.logger;
 import playnote.dev.window;
 import playnote.dev.os;

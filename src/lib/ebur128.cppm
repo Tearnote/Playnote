@@ -8,10 +8,10 @@ Wrapper for libebur128 psychoacoustic audio volume analysis.
 
 module;
 #include "ebur128.h"
+#include "preamble.hpp"
 
 export module playnote.lib.ebur128;
 
-import playnote.preamble;
 import playnote.lib.pipewire;
 
 namespace playnote::lib::ebur128 {

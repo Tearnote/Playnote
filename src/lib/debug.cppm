@@ -22,10 +22,9 @@ module;
 #include <fcntl.h>
 #include <io.h>
 #endif
+#include "preamble.hpp"
 
 export module playnote.lib.debug;
-
-import playnote.preamble;
 
 namespace playnote::lib::dbg {
 

@@ -11,10 +11,10 @@ module;
 #include <unicode/ucnv.h>
 #include "macros/logger.hpp"
 #include "macros/assert.hpp"
+#include "preamble.hpp"
 
 export module playnote.lib.icu;
 
-import playnote.preamble;
 import playnote.logger;
 
 namespace playnote::lib::icu {

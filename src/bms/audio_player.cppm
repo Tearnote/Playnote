@@ -9,10 +9,10 @@ A cursor wrapper that sends audio samples to the audio device.
 module;
 #include "macros/assert.hpp"
 #include "macros/logger.hpp"
+#include "preamble.hpp"
 
 export module playnote.bms.audio_player;
 
-import playnote.preamble;
 import playnote.logger;
 import playnote.dev.window;
 import playnote.dev.audio;

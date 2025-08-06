@@ -42,27 +42,10 @@ include(cmake/Dependencies.cmake)
 # Main target
 
 add_executable(Playnote
-	src/macros/tracing.hpp
-	src/macros/assert.hpp
-	src/macros/logger.hpp
-	src/macros/vuk.hpp
 	src/main.cpp
 )
 target_sources(Playnote PUBLIC
 	FILE_SET CXX_MODULES FILES
-	src/preamble/algorithm.cppm
-	src/preamble/container.cppm
-	src/preamble/concepts.cppm
-	src/preamble/math_ext.cppm
-	src/preamble/utility.cppm
-	src/preamble/string.cppm
-	src/preamble/except.cppm
-	src/preamble/types.cppm
-	src/preamble/math.cppm
-	src/preamble/time.cppm
-	src/preamble/id.cppm
-	src/preamble/os.cppm
-	src/preamble.cppm
 	src/lib/pipewire.cppm
 	src/lib/ebur128.cppm
 	src/lib/openssl.cppm
@@ -83,7 +66,6 @@ target_sources(Playnote PUBLIC
 	src/dev/gpu.cppm
 	src/dev/os.cppm
 	src/gfx/playfield.cppm
-	src/gfx/renderer.cppm
 	src/gfx/imgui.cppm
 	src/bms/audio_player.cppm
 	src/bms/cursor.cppm

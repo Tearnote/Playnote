@@ -6,9 +6,10 @@ threads/input_shouts.cppm:
 Shouts that can be spawned by the input thread. Typically messages from the OS message queue.
 */
 
-export module playnote.threads.input_shouts;
+module;
+#include "preamble.hpp"
 
-import playnote.preamble;
+export module playnote.threads.input_shouts;
 
 namespace playnote::threads {
 

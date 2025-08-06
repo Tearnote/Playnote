@@ -10,10 +10,10 @@ Initializes GLFW and manages windows. Windows handle keyboard and mouse input, a
 module;
 #include "macros/assert.hpp"
 #include "macros/logger.hpp"
+#include "preamble.hpp"
 
 export module playnote.dev.window;
 
-import playnote.preamble;
 import playnote.logger;
 import playnote.lib.vulkan;
 import playnote.lib.glfw;

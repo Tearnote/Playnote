@@ -8,10 +8,9 @@ Wrapper for Tracy profiler functions.
 
 module;
 #include "tracy/Tracy.hpp"
+#include "preamble.hpp"
 
 export module playnote.lib.tracy;
-
-import playnote.preamble;
 
 namespace playnote::lib::tracy {
 

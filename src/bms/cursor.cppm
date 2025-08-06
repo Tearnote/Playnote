@@ -8,10 +8,10 @@ Representation of a moment in chart's playback.
 
 module;
 #include "macros/assert.hpp"
+#include "preamble.hpp"
 
 export module playnote.bms.cursor;
 
-import playnote.preamble;
 import playnote.dev.audio;
 import playnote.bms.chart;
 

@@ -26,10 +26,10 @@ module;
 #include "vuk/Types.hpp"
 #include "macros/assert.hpp"
 #include "macros/logger.hpp"
+#include "preamble.hpp"
 
 export module playnote.lib.vulkan;
 
-import playnote.preamble;
 import playnote.config;
 import playnote.logger;
 

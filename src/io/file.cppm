@@ -6,9 +6,11 @@ io/file.cppm:
 Raw file I/O utilities.
 */
 
+module;
+#include "preamble.hpp"
+
 export module playnote.io.file;
 
-import playnote.preamble;
 import playnote.lib.mio;
 
 namespace playnote::io {

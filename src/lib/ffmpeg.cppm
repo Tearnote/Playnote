@@ -16,10 +16,10 @@ extern "C" {
 #include <cerrno>
 #include "macros/assert.hpp"
 #include "macros/logger.hpp"
+#include "preamble.hpp"
 
 export module playnote.lib.ffmpeg;
 
-import playnote.preamble;
 import playnote.logger;
 import playnote.lib.pipewire;
 

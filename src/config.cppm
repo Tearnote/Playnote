@@ -7,9 +7,11 @@ Global game configuration - controls which features are on/off depending on buil
 and their hardcoded values.
 */
 
+module;
+#include "preamble.hpp"
+
 export module playnote.config;
 
-import playnote.preamble;
 import playnote.logger;
 
 namespace playnote {

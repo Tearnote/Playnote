@@ -24,10 +24,10 @@ module;
 #include "vuk/Types.hpp"
 #include "vuk/Value.hpp"
 #include "macros/assert.hpp"
+#include "preamble.hpp"
 
 export module playnote.lib.imgui;
 
-import playnote.preamble;
 import playnote.lib.vulkan;
 import playnote.lib.glfw;
 

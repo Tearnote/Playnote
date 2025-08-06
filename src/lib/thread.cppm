@@ -18,10 +18,9 @@ module;
 #else
 #include <pthread.h>
 #endif
+#include "preamble.hpp"
 
 export module playnote.lib.thread;
-
-import playnote.preamble;
 
 namespace playnote::lib::thread {
 

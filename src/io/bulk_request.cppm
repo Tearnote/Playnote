@@ -8,10 +8,10 @@ A mechanism to request multiple files at once, to be fulfilled later on all at o
 
 module;
 #include "macros/logger.hpp"
+#include "preamble.hpp"
 
 export module playnote.io.bulk_request;
 
-import playnote.preamble;
 import playnote.logger;
 import playnote.io.file;
 

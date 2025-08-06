@@ -10,10 +10,11 @@ module;
 #include "macros/tracing.hpp"
 #include "macros/assert.hpp"
 #include "macros/logger.hpp"
+#include "gfx/renderer.hpp"
+#include "preamble.hpp"
 
 export module playnote.threads.render;
 
-import playnote.preamble;
 import playnote.logger;
 import playnote.lib.imgui;
 import playnote.dev.window;
@@ -21,7 +22,6 @@ import playnote.dev.audio;
 import playnote.dev.gpu;
 import playnote.dev.os;
 import playnote.gfx.playfield;
-import playnote.gfx.renderer;
 import playnote.bms.audio_player;
 import playnote.bms.cursor;
 import playnote.bms.chart;

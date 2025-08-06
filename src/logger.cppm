@@ -13,10 +13,9 @@ module;
 #include "quill/Frontend.h"
 #include "quill/Backend.h"
 #include "quill/Logger.h"
+#include "preamble.hpp"
 
 export module playnote.logger;
-
-import playnote.preamble;
 
 namespace playnote {
 

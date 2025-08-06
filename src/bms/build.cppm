@@ -9,10 +9,10 @@ Construction of a chart from an IR.
 module;
 #include "macros/assert.hpp"
 #include "macros/logger.hpp"
+#include "preamble.hpp"
 
 export module playnote.bms.build;
 
-import playnote.preamble;
 import playnote.logger;
 import playnote.lib.ebur128;
 import playnote.dev.audio;

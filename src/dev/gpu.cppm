@@ -9,10 +9,10 @@ Initializes Vulkan and the rendergraph.
 module;
 #include "macros/assert.hpp"
 #include "macros/logger.hpp"
+#include "preamble.hpp"
 
 export module playnote.dev.gpu;
 
-import playnote.preamble;
 import playnote.config;
 import playnote.logger;
 import playnote.lib.vulkan;

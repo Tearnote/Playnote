@@ -2,23 +2,20 @@
 This software is dual-licensed. For more details, please consult LICENSE.txt.
 Copyright (c) 2025 Tearnote (Hubert Maraszek)
 
-preamble/math_ext.cppm:
+preamble/math_ext.hpp:
 Additional math types and functions. Introduces 2-4 component vectors.
 */
 
-module;
+#pragma once
 #include <type_traits>
 #include <concepts>
 #include <numbers>
-
-export module playnote.preamble:math_ext;
-
-import :algorithm;
-import :container;
-import :concepts;
-import :utility;
-import :types;
-import :math;
+#include "preamble/algorithm.hpp"
+#include "preamble/container.hpp"
+#include "preamble/concepts.hpp"
+#include "preamble/utility.hpp"
+#include "preamble/types.hpp"
+#include "preamble/math.hpp"
 
 namespace playnote {
 
@@ -27,12 +24,12 @@ template<typename T>
 concept arithmetic = std::is_arithmetic_v<T>;
 
 // https://www.tauday.com/
-export template<std::floating_point T>
+template<std::floating_point T>
 constexpr auto Tau_v = std::numbers::pi_v<T> * 2;
-export constexpr auto Tau = Tau_v<float>;
+constexpr auto Tau = Tau_v<float>;
 
 // degrees -> radians
-export template<arithmetic T, std::floating_point Prec = float>
+template<arithmetic T, std::floating_point Prec = float>
 constexpr auto radians(T deg) -> Prec { return static_cast<Prec>(deg) * Tau_v<Prec> / 360; }
 
 // True modulo operation (as opposed to remainder, which is operator% in C++.)
@@ -49,18 +46,18 @@ constexpr auto radians(T deg) -> Prec { return static_cast<Prec>(deg) * Tau_v<Pr
 // -3 mod 4 = 1
 // -4 mod 4 = 0
 // -5 mod 4 = 3
-export template<std::integral T>
+template<std::integral T>
 [[nodiscard]] constexpr auto tmod(T num, T div) { return num % div + (num % div < 0) * div; }
 
 // GLSL-style scalar clamp
-export template<arithmetic T>
+template<arithmetic T>
 [[nodiscard]] constexpr auto clamp(T val, T vmin, T vmax) -> T
 {
 	return max(vmin, min(val, vmax));
 }
 
 // Generic math vector, of any dimension between 2 to 4 and any underlying type
-export template<usize Dim, arithmetic T>
+template<usize Dim, arithmetic T>
 class vec {
 public:
 	static_assert(Dim >= 2 && Dim <= 4, "Vectors need to have 2, 3 or 4 components");
@@ -302,7 +299,7 @@ constexpr auto vec<Dim, T>::operator>>=(T other) -> self_t&
 	return *this;
 }
 
-export template<usize Dim, arithmetic T>
+template<usize Dim, arithmetic T>
 constexpr auto operator+(vec<Dim, T> const& left, vec<Dim, T> const& right) -> vec<Dim, T>
 {
 	auto result = left;
@@ -310,7 +307,7 @@ constexpr auto operator+(vec<Dim, T> const& left, vec<Dim, T> const& right) -> v
 	return result;
 }
 
-export template<usize Dim, arithmetic T>
+template<usize Dim, arithmetic T>
 constexpr auto operator-(vec<Dim, T> const& left, vec<Dim, T> const& right) -> vec<Dim, T>
 {
 	auto result = left;
@@ -318,7 +315,7 @@ constexpr auto operator-(vec<Dim, T> const& left, vec<Dim, T> const& right) -> v
 	return result;
 }
 
-export template<usize Dim, arithmetic T>
+template<usize Dim, arithmetic T>
 constexpr auto operator*(vec<Dim, T> const& left, vec<Dim, T> const& right) -> vec<Dim, T>
 {
 	auto result = left;
@@ -326,7 +323,7 @@ constexpr auto operator*(vec<Dim, T> const& left, vec<Dim, T> const& right) -> v
 	return result;
 }
 
-export template<usize Dim, arithmetic T>
+template<usize Dim, arithmetic T>
 constexpr auto operator/(vec<Dim, T> const& left, vec<Dim, T> const& right) -> vec<Dim, T>
 {
 	auto result = left;
@@ -334,7 +331,7 @@ constexpr auto operator/(vec<Dim, T> const& left, vec<Dim, T> const& right) -> v
 	return result;
 }
 
-export template<usize Dim, std::integral T>
+template<usize Dim, std::integral T>
 constexpr auto operator%(vec<Dim, T> const& left, vec<Dim, T> const& right) -> vec<Dim, T>
 {
 	auto result = left;
@@ -342,7 +339,7 @@ constexpr auto operator%(vec<Dim, T> const& left, vec<Dim, T> const& right) -> v
 	return result;
 }
 
-export template<usize Dim, arithmetic T>
+template<usize Dim, arithmetic T>
 constexpr auto operator==(vec<Dim, T> const& left, vec<Dim, T> const& right) -> bool
 {
 	for (auto i: views::iota(0uz, Dim)) {
@@ -352,7 +349,7 @@ constexpr auto operator==(vec<Dim, T> const& left, vec<Dim, T> const& right) -> 
 	return true;
 }
 
-export template<usize Dim, arithmetic T>
+template<usize Dim, arithmetic T>
 constexpr auto min(vec<Dim, T> const& left, vec<Dim, T> const& right) -> vec<Dim, T>
 {
 	auto result = vec<Dim, T>();
@@ -361,7 +358,7 @@ constexpr auto min(vec<Dim, T> const& left, vec<Dim, T> const& right) -> vec<Dim
 	return result;
 }
 
-export template<usize Dim, arithmetic T>
+template<usize Dim, arithmetic T>
 constexpr auto max(vec<Dim, T> const& left, vec<Dim, T> const& right) -> vec<Dim, T>
 {
 	auto result = vec<Dim, T>();
@@ -370,7 +367,7 @@ constexpr auto max(vec<Dim, T> const& left, vec<Dim, T> const& right) -> vec<Dim
 	return result;
 }
 
-export template<usize Dim, arithmetic T>
+template<usize Dim, arithmetic T>
 constexpr auto operator*(vec<Dim, T> const& left, T right) -> vec<Dim, T>
 {
 	auto result = left;
@@ -378,10 +375,10 @@ constexpr auto operator*(vec<Dim, T> const& left, T right) -> vec<Dim, T>
 	return result;
 }
 
-export template<usize Dim, arithmetic T>
+template<usize Dim, arithmetic T>
 constexpr auto operator*(T left, vec<Dim, T> const& right) -> vec<Dim, T> { return right * left; }
 
-export template<usize Dim, arithmetic T>
+template<usize Dim, arithmetic T>
 constexpr auto operator/(vec<Dim, T> const& left, T right) -> vec<Dim, T>
 {
 	auto result = left;
@@ -389,7 +386,7 @@ constexpr auto operator/(vec<Dim, T> const& left, T right) -> vec<Dim, T>
 	return result;
 }
 
-export template<usize Dim, std::integral T>
+template<usize Dim, std::integral T>
 constexpr auto operator%(vec<Dim, T> const& left, T right) -> vec<Dim, T>
 {
 	auto result = left;
@@ -397,7 +394,7 @@ constexpr auto operator%(vec<Dim, T> const& left, T right) -> vec<Dim, T>
 	return result;
 }
 
-export template<usize Dim, std::integral T>
+template<usize Dim, std::integral T>
 constexpr auto operator<<(vec<Dim, T> const& left, T right) -> vec<Dim, T>
 {
 	auto result = left;
@@ -405,7 +402,7 @@ constexpr auto operator<<(vec<Dim, T> const& left, T right) -> vec<Dim, T>
 	return result;
 }
 
-export template<usize Dim, std::integral T>
+template<usize Dim, std::integral T>
 constexpr auto operator>>(vec<Dim, T> const& left, T right) -> vec<Dim, T>
 {
 	auto result = left;
@@ -414,7 +411,7 @@ constexpr auto operator>>(vec<Dim, T> const& left, T right) -> vec<Dim, T>
 }
 
 // Component-wise absolute value
-export template<usize Dim, std::floating_point T>
+template<usize Dim, std::floating_point T>
 constexpr auto abs(vec<Dim, T> const& v) -> vec<Dim, T>
 {
 	auto result = vec<Dim, T>{};
@@ -424,15 +421,15 @@ constexpr auto abs(vec<Dim, T> const& v) -> vec<Dim, T>
 }
 
 // GLSL-like shorthands
-export using vec2 = vec<2, float>;
-export using vec3 = vec<3, float>;
-export using vec4 = vec<4, float>;
-export using ivec2 = vec<2, int32>;
-export using ivec3 = vec<3, int32>;
-export using ivec4 = vec<4, int32>;
-export using uvec2 = vec<2, uint32>;
-export using uvec3 = vec<3, uint32>;
-export using uvec4 = vec<4, uint32>;
+using vec2 = vec<2, float>;
+using vec3 = vec<3, float>;
+using vec4 = vec<4, float>;
+using ivec2 = vec<2, int32>;
+using ivec3 = vec<3, int32>;
+using ivec4 = vec<4, int32>;
+using uvec2 = vec<2, uint32>;
+using uvec3 = vec<3, uint32>;
+using uvec4 = vec<4, uint32>;
 
 static_assert(std::is_trivially_constructible_v<vec2>);
 static_assert(std::is_trivially_constructible_v<vec3>);
@@ -443,4 +440,5 @@ static_assert(std::is_trivially_constructible_v<ivec4>);
 static_assert(std::is_trivially_constructible_v<uvec2>);
 static_assert(std::is_trivially_constructible_v<uvec3>);
 static_assert(std::is_trivially_constructible_v<uvec4>);
+
 }

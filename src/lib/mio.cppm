@@ -8,10 +8,9 @@ Wrapper for mio file mapping.
 
 module;
 #include "mio/mmap.hpp"
+#include "preamble.hpp"
 
 export module playnote.lib.mio;
-
-import playnote.preamble;
 
 namespace playnote::lib::mio {
 

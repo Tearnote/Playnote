@@ -6,9 +6,11 @@ gfx/imgui.cppm:
 Wrapper for vuk's Imgui integration.
 */
 
+module;
+#include "preamble.hpp"
+
 export module playnote.gfx.imgui;
 
-import playnote.preamble;
 import playnote.lib.vulkan;
 import playnote.lib.imgui;
 import playnote.dev.gpu;

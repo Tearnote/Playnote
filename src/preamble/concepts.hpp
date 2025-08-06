@@ -2,23 +2,20 @@
 This software is dual-licensed. For more details, please consult LICENSE.txt.
 Copyright (c) 2025 Tearnote (Hubert Maraszek)
 
-preamble/concepts.cppm:
+preamble/concepts.hpp:
 Useful generic concepts.
 */
 
-module;
+#pragma once
 #include <type_traits>
 #include <concepts>
-
-export module playnote.preamble:concepts;
-
-import :utility;
+#include "preamble/utility.hpp"
 
 namespace playnote {
 
-export using std::same_as;
+using std::same_as;
 
-export template<typename T, typename Base>
+template<typename T, typename Base>
 concept implements = std::derived_from<T, Base>;
 
 template<class T, class Variant>
@@ -29,7 +26,7 @@ inline constexpr auto is_variant_alternative_v<T, variant<Ts...>> =
 	(... || std::is_same_v<T, Ts>);
 
 // Constrain type T to one of a std::variant's available alternatives
-export template<class T, class Variant>
+template<class T, class Variant>
 concept variant_alternative = is_variant_alternative_v<T, Variant>;
 
 // "applicable" concept
@@ -65,7 +62,7 @@ struct callable_unpack<R(Args...)> {
 	using rtype = R;
 };
 
-export template<class F, typename Sig,
+template<class F, typename Sig,
 	typename Unpack = callable_unpack<Sig>,
 	typename ArgsT = typename Unpack::args,
 	typename Rtype = typename Unpack::rtype>

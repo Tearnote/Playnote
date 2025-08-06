@@ -6,9 +6,11 @@ dev/os.cppm:
 Various OS-specific utilities.
 */
 
+module;
+#include "preamble.hpp"
+
 export module playnote.dev.os;
 
-import playnote.preamble;
 import playnote.config;
 import playnote.lib.thread;
 import playnote.lib.tracy;

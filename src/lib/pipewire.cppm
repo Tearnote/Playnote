@@ -12,10 +12,10 @@ module;
 #include <pipewire/pipewire.h>
 #include "macros/assert.hpp"
 #include "macros/logger.hpp"
+#include "preamble.hpp"
 
 export module playnote.lib.pipewire;
 
-import playnote.preamble;
 import playnote.logger;
 
 namespace playnote::lib::pw {

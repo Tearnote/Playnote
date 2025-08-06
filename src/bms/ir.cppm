@@ -10,10 +10,10 @@ but condensed, cleaned and serializable to a binary file.
 module;
 #include "macros/logger.hpp"
 #include "macros/assert.hpp"
+#include "preamble.hpp"
 
 export module playnote.bms.ir;
 
-import playnote.preamble;
 import playnote.config;
 import playnote.logger;
 import playnote.lib.openssl;

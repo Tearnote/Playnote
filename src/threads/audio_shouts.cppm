@@ -6,9 +6,11 @@ threads/audio_events.cppm:
 Shouts that can be spawned by the audio thread.
 */
 
+module;
+#include "preamble.hpp"
+
 export module playnote.threads.audio_shouts;
 
-import playnote.preamble;
 import playnote.bms.audio_player;
 
 namespace playnote::threads {
