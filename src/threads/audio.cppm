@@ -10,10 +10,10 @@ module;
 #include "macros/assert.hpp"
 #include "preamble.hpp"
 #include "logger.hpp"
+#include "io/file.hpp"
 
 export module playnote.threads.audio;
 
-import playnote.io.file;
 import playnote.dev.window;
 import playnote.dev.audio;
 import playnote.dev.os;

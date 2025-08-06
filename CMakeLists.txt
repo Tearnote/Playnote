@@ -58,9 +58,6 @@ target_sources(Playnote PUBLIC
 	src/lib/glfw.cppm
 	src/lib/icu.cppm
 	src/lib/mio.cppm
-	src/io/audio_codec.cppm
-	src/io/bulk_request.cppm
-	src/io/file.cppm
 	src/dev/window.cppm
 	src/dev/audio.cppm
 	src/dev/gpu.cppm

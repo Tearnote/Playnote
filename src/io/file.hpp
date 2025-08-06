@@ -2,33 +2,29 @@
 This software is dual-licensed. For more details, please consult LICENSE.txt.
 Copyright (c) 2025 Tearnote (Hubert Maraszek)
 
-io/file.cppm:
+io/file.hpp:
 Raw file I/O utilities.
 */
 
-module;
+#pragma once
 #include "preamble.hpp"
-
-export module playnote.io.file;
 
 import playnote.lib.mio;
 
 namespace playnote::io {
 
-namespace mio = lib::mio;
-
 // A file open for reading. Contents represents the entire length of the file mapped into memory.
 // Map is a RAII wrapper ensuring contents are available.
 struct ReadFile {
 	fs::path path;
-	mio::ReadMapping map;
+	lib::mio::ReadMapping map;
 	span<byte const> contents;
 };
 
 // Open a file for reading.
 // Throws runtime_error if the provided path doesn't exist or isn't a regular file, or if mio
 // throws system_error.
-export auto read_file(fs::path const& path) -> ReadFile
+inline auto read_file(fs::path const& path) -> ReadFile
 {
 	auto const status = fs::status(path);
 	if (!fs::exists(status))
@@ -38,7 +34,7 @@ export auto read_file(fs::path const& path) -> ReadFile
 
 	auto file = ReadFile{
 		.path = path,
-		.map = mio::ReadMapping{path.c_str()},
+		.map = lib::mio::ReadMapping{path.c_str()},
 	};
 	file.contents = {file.map.data(), file.map.size()}; // Can't refer to .map in the same initializer
 	return file;

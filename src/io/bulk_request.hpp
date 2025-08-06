@@ -2,21 +2,18 @@
 This software is dual-licensed. For more details, please consult LICENSE.txt.
 Copyright (c) 2025 Tearnote (Hubert Maraszek)
 
-io/bulk_request.cppm:
+io/bulk_request.hpp:
 A mechanism to request multiple files at once, to be fulfilled later on all at once.
 */
 
-module;
+#pragma once
 #include "preamble.hpp"
 #include "logger.hpp"
-
-export module playnote.io.bulk_request;
-
-import playnote.io.file;
+#include "io/file.hpp"
 
 namespace playnote::io {
 
-export class BulkRequest {
+class BulkRequest {
 public:
 	explicit BulkRequest(fs::path domain): domain{move(domain)} {}
 
