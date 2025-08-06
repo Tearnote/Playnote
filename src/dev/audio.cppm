@@ -11,10 +11,9 @@ module;
 #include "preamble.hpp"
 #include "config.hpp"
 #include "logger.hpp"
+#include "lib/pipewire.hpp"
 
 export module playnote.dev.audio;
-
-import playnote.lib.pipewire;
 
 namespace playnote::dev {
 

@@ -2,11 +2,11 @@
 This software is dual-licensed. For more details, please consult LICENSE.txt.
 Copyright (c) 2025 Tearnote (Hubert Maraszek)
 
-lib/thread.cppm:
+lib/thread.hpp:
 Wrapper for OS-specific thread handling functions not provided by STL.
 */
 
-module;
+#pragma once
 #ifdef _WIN32
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -20,13 +20,11 @@ module;
 #endif
 #include "preamble.hpp"
 
-export module playnote.lib.thread;
-
 namespace playnote::lib::thread {
 
 // Set current thread name in the OS scheduler, which can help with debugging.
 // Throws runtime_error on failure.
-export void name_current(string_view name)
+inline void name_current(string_view name)
 {
 #ifdef _WIN32
 	auto const lname = std::wstring{name.begin(), name.end()};
@@ -44,7 +42,7 @@ export void name_current(string_view name)
 // of thread sleep and yield. Pair with a matching callto end_thread_scheduler_period
 // with the same period.
 // Throws runtime_error on failure.
-export void begin_scheduler_period([[maybe_unused]] milliseconds period)
+inline void begin_scheduler_period([[maybe_unused]] milliseconds period)
 {
 #ifdef _WIN32
 	if (timeBeginPeriod(period.count()) != TIMERR_NOERROR)
@@ -53,7 +51,7 @@ export void begin_scheduler_period([[maybe_unused]] milliseconds period)
 }
 
 // End a previously started thread scheduler period. Failure is ignored.
-export void end_scheduler_period([[maybe_unused]] milliseconds period) noexcept
+inline void end_scheduler_period([[maybe_unused]] milliseconds period) noexcept
 {
 #ifdef _WIN32
 	timeEndPeriod(period.count());

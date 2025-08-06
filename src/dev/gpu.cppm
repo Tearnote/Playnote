@@ -11,10 +11,10 @@ module;
 #include "preamble.hpp"
 #include "config.hpp"
 #include "logger.hpp"
+#include "lib/vulkan.hpp"
 
 export module playnote.dev.gpu;
 
-import playnote.lib.vulkan;
 import playnote.dev.window;
 
 namespace playnote::dev {

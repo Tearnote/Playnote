@@ -6,19 +6,17 @@ lib/icu.cppm:
 Wrapper for ICU charset handling.
 */
 
-module;
+#pragma once
 #include <unicode/ucsdet.h>
 #include <unicode/ucnv.h>
 #include "macros/assert.hpp"
 #include "preamble.hpp"
 #include "logger.hpp"
 
-export module playnote.lib.icu;
-
 namespace playnote::lib::icu {
 
 // Throw runtime_error on any ICU error, other than invalid byte during decoding.
-void handle_icu_error(UErrorCode err)
+inline void handle_icu_error(UErrorCode err)
 {
 	if (err == U_ZERO_ERROR) return;
 	if (U_SUCCESS(err)) {
@@ -35,7 +33,7 @@ void handle_icu_error(UErrorCode err)
 // Detect the most likely encoding of a piece of text. If a list of charsets is provided, then
 // only charsets belonging to the list will be considered. Returns nullopt on no match.
 // Throws runtime_error on ICU failure.
-export auto detect_encoding(span<byte const> input, initializer_list<string_view> charsets = {}) -> optional<string>
+inline auto detect_encoding(span<byte const> input, initializer_list<string_view> charsets = {}) -> optional<string>
 {
 	using Detector = unique_resource<UCharsetDetector*, decltype([](auto* d) {
 		ucsdet_close(d);
@@ -71,7 +69,7 @@ export auto detect_encoding(span<byte const> input, initializer_list<string_view
 // Convert text from the provided charset to UTF-8.
 // Throws on ICU error; invalid bytes in the input data however will be decoded without error
 // as a replacement character.
-export auto to_utf8(span<byte const> input, string_view input_charset) -> string
+inline auto to_utf8(span<byte const> input, string_view input_charset) -> string
 {
 	auto contents = string{};
 	auto contents_capacity = input.size() * 2; // Most pessimistic case of 100% DBCS

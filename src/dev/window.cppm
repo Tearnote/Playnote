@@ -11,11 +11,10 @@ module;
 #include "macros/assert.hpp"
 #include "preamble.hpp"
 #include "logger.hpp"
+#include "lib/vulkan.hpp"
+#include "lib/glfw.hpp"
 
 export module playnote.dev.window;
-
-import playnote.lib.vulkan;
-import playnote.lib.glfw;
 
 namespace playnote::dev {
 

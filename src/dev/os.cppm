@@ -9,11 +9,10 @@ Various OS-specific utilities.
 module;
 #include "preamble.hpp"
 #include "config.hpp"
+#include "lib/thread.hpp"
+#include "lib/tracy.hpp"
 
 export module playnote.dev.os;
-
-import playnote.lib.thread;
-import playnote.lib.tracy;
 
 namespace playnote::dev {
 

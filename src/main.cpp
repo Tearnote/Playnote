@@ -10,8 +10,8 @@ Entry point. Initializes basic facilities, spawns threads.
 #include "preamble.hpp"
 #include "config.hpp"
 #include "logger.hpp"
+#include "lib/debug.hpp"
 
-import playnote.lib.debug;
 import playnote.dev.window;
 import playnote.dev.os;
 import playnote.threads.broadcaster;

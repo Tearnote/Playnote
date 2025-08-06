@@ -7,9 +7,8 @@ A renderer of primitives.
 */
 
 #pragma once
-#include "macros/vuk.hpp"
+#include "lib/vulkan.hpp"
 #include "preamble.hpp"
-import playnote.lib.vulkan;
 import playnote.dev.gpu;
 import playnote.gfx.imgui;
 

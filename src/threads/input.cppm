@@ -8,9 +8,9 @@ Only the process's main thread can be the input thread.
 */
 
 module;
-#include "macros/tracing.hpp"
 #include "preamble.hpp"
 #include "logger.hpp"
+#include "lib/tracy.hpp"
 
 export module playnote.threads.input;
 

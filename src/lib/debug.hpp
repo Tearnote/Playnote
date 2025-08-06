@@ -2,11 +2,11 @@
 This software is dual-licensed. For more details, please consult LICENSE.txt.
 Copyright (c) 2025 Tearnote (Hubert Maraszek)
 
-lib/debug.cppm:
+lib/debug.hpp:
 Wrapper for OS-specific debugging enablement.
 */
 
-module;
+#pragma once
 #include "libassert/assert.hpp"
 #ifdef _WIN32
 #ifndef NOMINMAX
@@ -24,12 +24,10 @@ module;
 #endif
 #include "preamble.hpp"
 
-export module playnote.lib.debug;
-
 namespace playnote::lib::dbg {
 
 // Register a handler to make all assert failures throw.
-export void set_assert_handler()
+inline void set_assert_handler()
 {
 	libassert::set_failure_handler([](auto const& info) {
 		throw runtime_error{info.to_string()};
@@ -39,7 +37,7 @@ export void set_assert_handler()
 
 // Open the console window and attach standard outputs to it.
 // https://github.com/ocaml/ocaml/issues/9252#issuecomment-576383814
-export void attach_console()
+inline void attach_console()
 {
 #ifdef _WIN32
 	AllocConsole();

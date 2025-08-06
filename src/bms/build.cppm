@@ -10,12 +10,12 @@ module;
 #include "macros/assert.hpp"
 #include "preamble.hpp"
 #include "logger.hpp"
+#include "lib/ebur128.hpp"
 #include "io/bulk_request.hpp"
 #include "io/audio_codec.hpp"
 
 export module playnote.bms.build;
 
-import playnote.lib.ebur128;
 import playnote.dev.audio;
 import playnote.bms.cursor;
 import playnote.bms.chart;

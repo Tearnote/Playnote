@@ -16,6 +16,22 @@ Wrapper for the Quill threaded async logging library.
 #include "quill/Logger.h"
 #include "preamble.hpp"
 
+#define TRACE(...) LOG_TRACE_L1(globals::logger->global, __VA_ARGS__)
+#define DEBUG(...) LOG_DEBUG(globals::logger->global, __VA_ARGS__)
+#define INFO(...) LOG_INFO(globals::logger->global, __VA_ARGS__)
+#define WARN(...) LOG_WARNING(globals::logger->global, __VA_ARGS__)
+#define ERROR(...) LOG_ERROR(globals::logger->global, __VA_ARGS__)
+#define CRIT(...) LOG_CRITICAL(globals::logger->global, __VA_ARGS__)
+
+// Log to a specific category
+
+#define TRACE_AS(category, ...) LOG_TRACE_L1(category, __VA_ARGS__)
+#define DEBUG_AS(category, ...) LOG_DEBUG(category, __VA_ARGS__)
+#define INFO_AS(category, ...) LOG_INFO(category, __VA_ARGS__)
+#define WARN_AS(category, ...) LOG_WARNING(category, __VA_ARGS__)
+#define ERROR_AS(category, ...) LOG_ERROR(category, __VA_ARGS__)
+#define CRIT_AS(category, ...) LOG_CRITICAL(category, __VA_ARGS__)
+
 namespace playnote {
 
 class Logger {
@@ -117,19 +133,3 @@ inline auto Logger::Impl::register_category(string_view name, Level level, bool 
 namespace playnote::globals {
 inline auto logger = Logger{};
 }
-
-#define TRACE(...) LOG_TRACE_L1(globals::logger->global, __VA_ARGS__)
-#define DEBUG(...) LOG_DEBUG(globals::logger->global, __VA_ARGS__)
-#define INFO(...) LOG_INFO(globals::logger->global, __VA_ARGS__)
-#define WARN(...) LOG_WARNING(globals::logger->global, __VA_ARGS__)
-#define ERROR(...) LOG_ERROR(globals::logger->global, __VA_ARGS__)
-#define CRIT(...) LOG_CRITICAL(globals::logger->global, __VA_ARGS__)
-
-// Log to a specific category
-
-#define TRACE_AS(category, ...) LOG_TRACE_L1(category, __VA_ARGS__)
-#define DEBUG_AS(category, ...) LOG_DEBUG(category, __VA_ARGS__)
-#define INFO_AS(category, ...) LOG_INFO(category, __VA_ARGS__)
-#define WARN_AS(category, ...) LOG_WARNING(category, __VA_ARGS__)
-#define ERROR_AS(category, ...) LOG_ERROR(category, __VA_ARGS__)
-#define CRIT_AS(category, ...) LOG_CRITICAL(category, __VA_ARGS__)

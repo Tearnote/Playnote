@@ -8,11 +8,11 @@ Wrapper for vuk's Imgui integration.
 
 module;
 #include "preamble.hpp"
+#include "lib/vulkan.hpp"
+#include "lib/imgui.hpp"
 
 export module playnote.gfx.imgui;
 
-import playnote.lib.vulkan;
-import playnote.lib.imgui;
 import playnote.dev.gpu;
 
 namespace playnote::gfx {

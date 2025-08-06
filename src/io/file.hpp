@@ -8,8 +8,7 @@ Raw file I/O utilities.
 
 #pragma once
 #include "preamble.hpp"
-
-import playnote.lib.mio;
+#include "lib/mio.hpp"
 
 namespace playnote::io {
 

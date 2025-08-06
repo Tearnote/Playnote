@@ -2,12 +2,12 @@
 This software is dual-licensed. For more details, please consult LICENSE.txt.
 Copyright (c) 2025 Tearnote (Hubert Maraszek)
 
-lib/imgui.cppm:
+lib/imgui.hpp:
 Imgui initialization and usage.
 Parts are adapted from vuk's built-in Imgui integration; reproduced here under the MIT license.
 */
 
-module;
+#pragma once
 #include "backends/imgui_impl_glfw.h"
 #include "implot.h"
 #include "quill/bundled/fmt/base.h"
@@ -25,16 +25,13 @@ module;
 #include "vuk/Value.hpp"
 #include "macros/assert.hpp"
 #include "preamble.hpp"
-
-export module playnote.lib.imgui;
-
-import playnote.lib.vulkan;
-import playnote.lib.glfw;
+#include "lib/vulkan.hpp"
+#include "lib/glfw.hpp"
 
 namespace playnote::lib::imgui {
 
 // Bundle of resources used in Imgui integration.
-export struct Context {
+struct Context {
 	vuk::Unique<vuk::Image> font_image;
 	vuk::Unique<vuk::ImageView> font_image_view;
 	vuk::SamplerCreateInfo font_sci;
@@ -44,7 +41,7 @@ export struct Context {
 
 // Initialize Imgui and relevant GPU resources.
 // Throws if vuk throws.
-export auto init(glfw::Window window, vk::Allocator& global_allocator) -> Context
+inline auto init(glfw::Window window, vk::Allocator& global_allocator) -> Context
 {
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
@@ -112,18 +109,18 @@ export auto init(glfw::Window window, vk::Allocator& global_allocator) -> Contex
 }
 
 // Mark the start of a new frame for Imgui. All Imgui commands must come after this is called.
-export void begin()
+inline void begin()
 {
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
 }
 
 // Finalize Imgui commands and prepare buffers for rendering. Imgui commands cannot be used anymore.
-export void end() { ImGui::Render(); }
+inline void end() { ImGui::Render(); }
 
 // Draw queued Imgui commands onto the provided image.
 // Throws if vuk throws.
-export auto render(vk::Allocator& frame_allocator, vk::ManagedImage&& target, Context& context) -> vk::ManagedImage
+inline auto render(vk::Allocator& frame_allocator, vk::ManagedImage&& target, Context& context) -> vk::ManagedImage
 {
 	// Function body below adapted from vuk::extra::ImGui_ImplVuk_Render()
 
@@ -243,14 +240,11 @@ export auto render(vk::Allocator& frame_allocator, vk::ManagedImage&& target, Co
 }
 
 // Start a new ImGui window. Initial position and size will be chosen automatically.
-export void begin_window(char const* title)
-{
-	ImGui::Begin(title);
-}
+inline void begin_window(char const* title) { ImGui::Begin(title); }
 
 // Start a new ImGui window at a specific position and size. If static_frame is true, the window
 // will have no title and won't be able to be modified by the user.
-export void begin_window(char const* title, uvec2 pos, uint width, bool static_frame = false)
+inline void begin_window(char const* title, uvec2 pos, uint width, bool static_frame = false)
 {
 	ImGui::SetNextWindowPos({static_cast<float>(pos.x()), static_cast<float>(pos.y())});
 	ImGui::SetNextWindowSize({static_cast<float>(width), 0});
@@ -258,39 +252,33 @@ export void begin_window(char const* title, uvec2 pos, uint width, bool static_f
 }
 
 // Finalize a started window.
-export void end_window()
-{
-	ImGui::End();
-}
+inline void end_window() { ImGui::End(); }
 
 // Use before an element to keep it on the same line as the previous one.
-export void same_line() { ImGui::SameLine(); }
+inline void same_line() { ImGui::SameLine(); }
 
 // A clickable button. Returns true when clicked.
-export auto button(char const* str) -> bool
-{
-	return ImGui::Button(str);
-}
+inline auto button(char const* str) -> bool { return ImGui::Button(str); }
 
 // Static text.
-export void text(string_view str) { ImGui::TextWrapped("%s", string{str}.c_str()); }
+inline void text(string_view str) { ImGui::TextWrapped("%s", string{str}.c_str()); }
 
 // Static text, fmt overload.
-export template<typename... Args>
+template<typename... Args>
 void text(fmtquill::format_string<Args...> fmt, Args&&... args)
 {
 	ImGui::TextWrapped("%s", format(fmt, forward<Args>(args)...).c_str());
 }
 
 // A control for a float variable, with +/- buttons and direct value input via keyboard.
-export void input_float(char const* str, float& value,
+inline void input_float(char const* str, float& value,
 	float step = 0.0f, float step_fast = 0.0f, char const* format = "%.3f")
 {
 	ImGui::InputFloat(str, &value, step, step_fast, format);
 }
 
 // A non-interactive progress bar control. If progress is nullopt, the bar will look intederminate.
-export void progress_bar(optional<float> progress, string_view text)
+inline void progress_bar(optional<float> progress, string_view text)
 {
 	if (progress)
 		ImGui::ProgressBar(*progress, ImVec2{-1.0f, 0.0f}, string{text}.c_str());
@@ -298,13 +286,13 @@ export void progress_bar(optional<float> progress, string_view text)
 		ImGui::ProgressBar(-1.0f * (static_cast<float>(ImGui::GetTime()) / 2.0f), ImVec2{-1.0f, 0.0f}, string{text}.c_str());
 }
 
-export struct PlotValues {
+struct PlotValues {
 	char const* name;
 	span<float const> data;
 	vec4 color;
 };
 
-export struct PlotMarker {
+struct PlotMarker {
 	enum Type {
 		Horizontal,
 		Vertical,
@@ -315,7 +303,7 @@ export struct PlotMarker {
 };
 
 // A simple line plot of an array of values.
-export void plot(char const* label, initializer_list<PlotValues> values, initializer_list<PlotMarker> markers = {}, uint32 height = 0, bool stacked = false)
+inline void plot(char const* label, initializer_list<PlotValues> values, initializer_list<PlotMarker> markers = {}, uint32 height = 0, bool stacked = false)
 {
 	if (!ImPlot::BeginPlot(label, ImVec2{-1, static_cast<float>(height)}, ImPlotFlags_NoLegend | ImPlotFlags_NoInputs | ImPlotFlags_NoFrame)) return;
 	ImPlot::SetupAxis(ImAxis_X1, nullptr, ImPlotAxisFlags_NoTickLabels);

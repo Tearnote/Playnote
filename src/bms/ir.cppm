@@ -12,10 +12,10 @@ module;
 #include "preamble.hpp"
 #include "config.hpp"
 #include "logger.hpp"
+#include "lib/openssl.hpp"
 
 export module playnote.bms.ir;
 
-import playnote.lib.openssl;
 import playnote.bms.parser;
 
 namespace playnote::bms {

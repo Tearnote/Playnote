@@ -2,18 +2,16 @@
 This software is dual-licensed. For more details, please consult LICENSE.txt.
 Copyright (c) 2025 Tearnote (Hubert Maraszek)
 
-lib/mio.cppm:
+lib/mio.hpp:
 Wrapper for mio file mapping.
 */
 
-module;
+#pragma once
 #include "mio/mmap.hpp"
 #include "preamble.hpp"
 
-export module playnote.lib.mio;
-
 namespace playnote::lib::mio {
 
-export using ReadMapping = ::mio::basic_mmap_source<byte>;
+using ReadMapping = ::mio::basic_mmap_source<byte>;
 
 }

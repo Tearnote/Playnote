@@ -46,18 +46,6 @@ add_executable(Playnote
 )
 target_sources(Playnote PUBLIC
 	FILE_SET CXX_MODULES FILES
-	src/lib/pipewire.cppm
-	src/lib/ebur128.cppm
-	src/lib/openssl.cppm
-	src/lib/ffmpeg.cppm
-	src/lib/thread.cppm
-	src/lib/vulkan.cppm
-	src/lib/imgui.cppm
-	src/lib/tracy.cppm
-	src/lib/debug.cppm
-	src/lib/glfw.cppm
-	src/lib/icu.cppm
-	src/lib/mio.cppm
 	src/dev/window.cppm
 	src/dev/audio.cppm
 	src/dev/gpu.cppm

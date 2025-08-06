@@ -2,11 +2,11 @@
 This software is dual-licensed. For more details, please consult LICENSE.txt.
 Copyright (c) 2025 Tearnote (Hubert Maraszek)
 
-lib/vulkan.cppm:
+lib/vulkan.hpp:
 Imports of Vulkan and helper libraries.
 */
 
-module;
+#pragma once
 #include <vector> // need std::vector specifically
 #include <memory> // need std::unique_ptr specifically
 #include "volk.h"
@@ -29,16 +29,14 @@ module;
 #include "config.hpp"
 #include "logger.hpp"
 
-export module playnote.lib.vulkan;
-
 namespace playnote::lib::vk {
 
 // A Vulkan instance, representing library context.
-export using vkb::Instance;
+using vkb::Instance;
 
 // Function called whenever a Vulkan logging event occurs. Provides diagnostic info, validation
 // messages and shader printf.
-auto debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT severity_code,
+inline auto debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT severity_code,
 	VkDebugUtilsMessageTypeFlagsEXT type_code, VkDebugUtilsMessengerCallbackDataEXT const* data,
 	void* logger_ptr) -> VkBool32
 {
@@ -68,7 +66,7 @@ auto debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT severity_code,
 
 // Create a Vulkan instance.
 // Throws runtime_error on failure.
-export auto create_instance(string_view name, Logger::Category* debug_logger) -> Instance
+inline auto create_instance(string_view name, Logger::Category* debug_logger) -> Instance
 {
 	auto instance_builder = vkb::InstanceBuilder{}
 		.set_app_name(string{name}.c_str())
@@ -108,25 +106,25 @@ export auto create_instance(string_view name, Logger::Category* debug_logger) ->
 }
 
 // Destroy the Vulkan instance.
-export void destroy_instance(Instance& instance) noexcept { vkb::destroy_instance(instance); }
+inline void destroy_instance(Instance& instance) noexcept { vkb::destroy_instance(instance); }
 
 // A window's surface, as visible for Vulkan as a drawing target.
-export using Surface = VkSurfaceKHR;
+using Surface = VkSurfaceKHR;
 
 // Surface creation is handled by lib.window
 
 // Destroy the window's Vulkan surface.
-export void destroy_surface(Instance const& instance, Surface surface) noexcept
+inline void destroy_surface(Instance const& instance, Surface surface) noexcept
 {
 	vkDestroySurfaceKHR(instance, surface, nullptr);
 }
 
 // A specific Vulkan-compatible GPU on the system.
-export using PhysicalDevice = vkb::PhysicalDevice;
+using PhysicalDevice = vkb::PhysicalDevice;
 
 // Choose and return the best available GPU.
 // Throws runtime_error if none is found.
-export auto select_physical_device(Instance const& instance, Surface surface) -> PhysicalDevice
+inline auto select_physical_device(Instance const& instance, Surface surface) -> PhysicalDevice
 {
 	constexpr auto features = []() {
 		auto features = VkPhysicalDeviceFeatures{};
@@ -187,7 +185,7 @@ export auto select_physical_device(Instance const& instance, Surface surface) ->
 }
 
 // Return the driver version triple in use by a specific GPU.
-export auto get_driver_version(PhysicalDevice const& physical_device) -> array<uint32, 3>
+inline auto get_driver_version(PhysicalDevice const& physical_device) -> array<uint32, 3>
 {
 	return to_array({
 		VK_API_VERSION_MAJOR(physical_device.properties.driverVersion),
@@ -197,11 +195,11 @@ export auto get_driver_version(PhysicalDevice const& physical_device) -> array<u
 }
 
 // A logical Vulkan device created from a physical one.
-export using Device = vkb::Device;
+using Device = vkb::Device;
 
 // Create a Vulkan device out of a physical device.
 // Throws runtime_error on failure.
-export auto create_device(PhysicalDevice const& physical_device) -> Device
+inline auto create_device(PhysicalDevice const& physical_device) -> Device
 {
 	auto device_result = vkb::DeviceBuilder(physical_device).build();
 	if (!device_result)
@@ -213,13 +211,13 @@ export auto create_device(PhysicalDevice const& physical_device) -> Device
 }
 
 // Destroy the Vulkan device. Make sure it's idle first.
-export void destroy_device(Device& device) noexcept { vkb::destroy_device(device); }
+inline void destroy_device(Device& device) noexcept { vkb::destroy_device(device); }
 
 // A queue into which GPU commands can be submitted.
-export using Queue = VkQueue;
+using Queue = VkQueue;
 
 // Set of queues available on a device. A queue is nullptr if unavailable.
-export struct QueueSet {
+struct QueueSet {
 	Queue graphics;
 	uint32 graphics_family_index;
 	Queue transfer;
@@ -229,7 +227,7 @@ export struct QueueSet {
 };
 
 // Fill in a QueueSet from a Vulkan device.
-export auto retrieve_device_queues(Device const& device) -> QueueSet
+inline auto retrieve_device_queues(Device const& device) -> QueueSet
 {
 	auto result = QueueSet{};
 
@@ -256,14 +254,14 @@ export auto retrieve_device_queues(Device const& device) -> QueueSet
 }
 
 // A shorthand for an image attachment currently being managed by vuk's rendergraph.
-export using ManagedImage = vuk::Value<vuk::ImageAttachment>;
+using ManagedImage = vuk::Value<vuk::ImageAttachment>;
 
 // A set of Vulkan object references used by vuk.
-export using Runtime = vuk::Runtime;
+using Runtime = vuk::Runtime;
 
 // Initialize vuk by building a Runtime object.
 // Throws if vuk throws.
-export auto create_runtime(Instance const& instance, Device const& device,
+inline auto create_runtime(Instance const& instance, Device const& device,
 	QueueSet const& queues) -> Runtime
 {
 	auto const pointers = vuk::FunctionPointers{
@@ -302,18 +300,18 @@ export auto create_runtime(Instance const& instance, Device const& device,
 
 // An allocator resource providing memory for objects that span multiple frames, and is the parent
 // resource for single-frame resources.
-export using GlobalResource = vuk::DeviceSuperFrameResource;
+using GlobalResource = vuk::DeviceSuperFrameResource;
 
 // An interface for creating Vulkan objects out of a resource.
-export using Allocator = vuk::Allocator;
+using Allocator = vuk::Allocator;
 
 // An encapsulation of window surface and related access objects.
-export using Swapchain = vuk::Swapchain;
+using Swapchain = vuk::Swapchain;
 
 // Create a swapchain object from a device's surface. The swapchain image is RGB8 Unorm, non-linear.
 // FIFO presentation mode is used.
 // Throws runtime_error on failure, or if vuk throws.
-export [[nodiscard]] auto create_swapchain(Allocator& allocator, Device& device, uvec2 size,
+[[nodiscard]] inline auto create_swapchain(Allocator& allocator, Device& device, uvec2 size,
 	optional<Swapchain> old = nullopt) -> Swapchain
 {
 	auto vkbswapchain_result = vkb::SwapchainBuilder{device}
@@ -368,17 +366,17 @@ export [[nodiscard]] auto create_swapchain(Allocator& allocator, Device& device,
 }
 
 // Shorthand for vuk's Tracy integration resources.
-export using TracyContext = std::unique_ptr<vuk::extra::TracyContext>;
+using TracyContext = std::unique_ptr<vuk::extra::TracyContext>;
 
 // Create the resources for vuk's Tracy integration.
-export [[nodiscard]] auto create_tracy_context(Allocator& allocator) -> TracyContext
+[[nodiscard]] inline auto create_tracy_context(Allocator& allocator) -> TracyContext
 {
 	return vuk::extra::init_Tracy(allocator);
 }
 
 // Start a new frame and create its single-frame allocator.
 // Throws if vuk throws.
-export auto begin_frame(Runtime& runtime, GlobalResource& resource) -> vk::Allocator
+inline auto begin_frame(Runtime& runtime, GlobalResource& resource) -> Allocator
 {
 	auto& frame_resource = resource.get_next_frame();
 	auto frame_allocator = vk::Allocator{frame_resource};
@@ -388,7 +386,7 @@ export auto begin_frame(Runtime& runtime, GlobalResource& resource) -> vk::Alloc
 
 // Retrieve and acquire the next image in the swapchain.
 // Throws if vuk throws.
-export [[nodiscard]] auto acquire_swapchain_image(Swapchain& swapchain,
+[[nodiscard]] inline auto acquire_swapchain_image(Swapchain& swapchain,
 	string_view name) -> ManagedImage
 {
 	auto acquired_swapchain = vuk::acquire_swapchain(swapchain);
@@ -397,7 +395,7 @@ export [[nodiscard]] auto acquire_swapchain_image(Swapchain& swapchain,
 
 // Submit the given image for presentation on the swapchain surface.
 // Throws if vuk throws.
-export void submit(Allocator& allocator, TracyContext const& tracy_context, ManagedImage&& image)
+inline void submit(Allocator& allocator, TracyContext const& tracy_context, ManagedImage&& image)
 {
 	auto entire_thing = vuk::enqueue_presentation(move(image));
 	auto compiler = vuk::Compiler{};
@@ -407,7 +405,7 @@ export void submit(Allocator& allocator, TracyContext const& tracy_context, Mana
 
 // Compile a vertex and fragment shader pair into a graphics pipeline.
 // Throws if vuk throws.
-export template<usize NVert, usize NFrag>
+template<usize NVert, usize NFrag>
 void create_graphics_pipeline(Runtime& runtime, string_view name,
 	array<uint32, NVert> const& vertex_shader, array<uint32, NFrag> const& fragment_shader)
 {
@@ -421,28 +419,22 @@ void create_graphics_pipeline(Runtime& runtime, string_view name,
 
 // Clear an image with a solid color.
 // Throws if vuk throws.
-export auto clear_image(ManagedImage&& input, vec4 color) -> ManagedImage
+inline auto clear_image(ManagedImage&& input, vec4 color) -> ManagedImage
 {
 	return vuk::clear_image(move(input), vuk::ClearColor{color.r(), color.g(), color.b(), color.a()});
 }
 
-// macros/vuk.hpp support
-
-export using vuk::Access;
-export using vuk::Arg;
-export using vuk::ImageAttachment;
-export using vuk::Buffer;
-export using vuk::tag_type;
-
 // Rendergraph support
 
-export using vuk::make_pass;
-export using vuk::CommandBuffer;
+using vuk::make_pass;
+using vuk::CommandBuffer;
+using vuk::Access;
+using vuk::Buffer;
 
 // Create a host-visible buffer with the provided data. Memory is never freed, so use with
 // a frame allocator.
 // Throws if vuk throws.
-export template<typename T>
+template<typename T>
 auto create_scratch_buffer(Allocator& allocator, span<T> data) -> Buffer
 {
 	auto [buf, fut] = vuk::create_buffer(allocator, vuk::MemoryUsage::eCPUtoGPU, vuk::DomainFlagBits::eTransferOnGraphics, data);
@@ -451,7 +443,7 @@ auto create_scratch_buffer(Allocator& allocator, span<T> data) -> Buffer
 
 // Set the default command buffer configuration used by this application.
 // Throws if vuk throws.
-export auto set_cmd_defaults(CommandBuffer& cmd) -> CommandBuffer&
+inline auto set_cmd_defaults(CommandBuffer& cmd) -> CommandBuffer&
 {
 	return cmd
 		.set_dynamic_state(vuk::DynamicStateFlagBits::eScissor | vuk::DynamicStateFlagBits::eViewport)

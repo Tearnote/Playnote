@@ -2,19 +2,17 @@
 This software is dual-licensed. For more details, please consult LICENSE.txt.
 Copyright (c) 2025 Tearnote (Hubert Maraszek)
 
-lib/pipewire.cppm:
+lib/pipewire.hpp:
 Wrapper for libpipewire client library for Linux audio support.
 */
 
-module;
+#pragma once
 #include <spa/param/audio/format-utils.h>
 #include <spa/param/latency-utils.h>
 #include <pipewire/pipewire.h>
 #include "macros/assert.hpp"
 #include "preamble.hpp"
 #include "logger.hpp"
-
-export module playnote.lib.pipewire;
 
 namespace playnote::lib::pw {
 
@@ -26,46 +24,46 @@ auto ptr_check(T* ptr, string_view message = "libpipewire error") -> T*
 	return ptr;
 }
 
-void ret_check(int ret, string_view message = "libpipewire error")
+inline void ret_check(int ret, string_view message = "libpipewire error")
 {
 	if (ret < 0) throw system_error_fmt("{}", message);
 }
 
 // Initialize PipeWire.
-export void init() { pw_init(nullptr, nullptr); }
+inline void init() { pw_init(nullptr, nullptr); }
 
 // Return the runtime version of PipeWire.
-export [[nodiscard]] auto get_version() -> string_view { return ASSERT_VAL(pw_get_library_version()); }
+[[nodiscard]] inline auto get_version() -> string_view { return ASSERT_VAL(pw_get_library_version()); }
 
-export using ThreadLoop = pw_thread_loop*;
+using ThreadLoop = pw_thread_loop*;
 
 // Create a new thread loop object.
 // Throws system_error on failure.
-export [[nodiscard]] auto create_thread_loop() -> ThreadLoop
+[[nodiscard]] inline auto create_thread_loop() -> ThreadLoop
 {
 	return ptr_check(pw_thread_loop_new(nullptr, nullptr));
 }
 
 // Destroy the thread loop.
-export void destroy_thread_loop(ThreadLoop loop) noexcept { pw_thread_loop_destroy(loop); }
+inline void destroy_thread_loop(ThreadLoop loop) noexcept { pw_thread_loop_destroy(loop); }
 
 // Start the thread loop. It will begin to process events on its own thread.
-export void start_thread_loop(ThreadLoop loop) { pw_thread_loop_start(loop); }
+inline void start_thread_loop(ThreadLoop loop) { pw_thread_loop_start(loop); }
 
 // Lock the thread loop. This ensures that succeeding code won't run concurrently with the callback.
-export void lock_thread_loop(ThreadLoop loop) { pw_thread_loop_lock(loop); }
+inline void lock_thread_loop(ThreadLoop loop) { pw_thread_loop_lock(loop); }
 
 // Unlock the thread loop, allowing the callbacks to run again.
-export void unlock_thread_loop(ThreadLoop loop) { pw_thread_loop_unlock(loop); }
+inline void unlock_thread_loop(ThreadLoop loop) { pw_thread_loop_unlock(loop); }
 
-export using Stream = pw_stream*;
-export using SPAPod = spa_pod const*;
+using Stream = pw_stream*;
+using SPAPod = spa_pod const*;
 using ProcessCallback = void(*)(void*);
 using ParamChangedCallback = void(*)(void*, uint32_t, SPAPod);
 
 // Helper function to extract a new sampling rate that was set for the stream. If the event is about
 // something else, returns nullopt.
-export auto get_sampling_rate_from_param(uint32_t id, spa_pod const* param) -> optional<uint32>
+inline auto get_sampling_rate_from_param(uint32_t id, spa_pod const* param) -> optional<uint32>
 {
 	if (!param || id != SPA_PARAM_Format) return nullopt;
 	auto audio_info = spa_audio_info{};
@@ -81,7 +79,7 @@ export auto get_sampling_rate_from_param(uint32_t id, spa_pod const* param) -> o
 // to be provided, and it will receive the optional user_ptr as argument. The stream will have
 // 2 audio channels and 32-bit float sample format.
 // Throws system_error on failure.
-export template<typename T = void, typename = decltype([]{})> // Thumbprint ensures static data is unique per callsite
+template<typename T = void, typename = decltype([]{})> // Thumbprint ensures static data is unique per callsite
 [[nodiscard]] auto create_stream(ThreadLoop loop, string_view name, uint32 latency,
 	ProcessCallback on_process, ParamChangedCallback on_param_changed, T* user_ptr = nullptr) -> Stream
 {
@@ -116,30 +114,30 @@ export template<typename T = void, typename = decltype([]{})> // Thumbprint ensu
 }
 
 // Destroy the stream. Make sure it's not in use anymore first.
-export void destroy_stream(ThreadLoop loop, Stream stream) noexcept
+inline void destroy_stream(ThreadLoop loop, Stream stream) noexcept
 {
 	pw_thread_loop_lock(loop);
 	pw_stream_destroy(stream);
 	pw_thread_loop_unlock(loop);
 }
 
-export auto get_stream_time(Stream stream) -> nanoseconds
+inline auto get_stream_time(Stream stream) -> nanoseconds
 {
 	return nanoseconds{pw_stream_get_nsec(stream)};
 }
 
 // A single audio sample (frame).
-export struct Sample {
+struct Sample {
 	float left;
 	float right;
 };
 
-export using BufferRequest = pw_buffer*;
+using BufferRequest = pw_buffer*;
 
 // Retrieve a buffer request from the queue. If return value is nullopt, a buffer is unavailable,
 // and there is nothing to do. Otherwise, return value is the buffer which needs to be filled
 // to its full size, and the request object to submit back when finished.
-export [[nodiscard]] auto dequeue_buffer(Stream stream) -> optional<pair<span<Sample>, BufferRequest>>
+[[nodiscard]] inline auto dequeue_buffer(Stream stream) -> optional<pair<span<Sample>, BufferRequest>>
 {
 	auto* buffer_outer = pw_stream_dequeue_buffer(stream);
 	if (!buffer_outer) return nullopt;
@@ -160,7 +158,7 @@ export [[nodiscard]] auto dequeue_buffer(Stream stream) -> optional<pair<span<Sa
 }
 
 // Submit a fulfilled buffer request.
-export void enqueue_buffer(Stream stream, BufferRequest request)
+inline void enqueue_buffer(Stream stream, BufferRequest request)
 {
 	pw_stream_queue_buffer(stream, request);
 }

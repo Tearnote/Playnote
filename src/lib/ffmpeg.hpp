@@ -2,11 +2,11 @@
 This software is dual-licensed. For more details, please consult LICENSE.txt.
 Copyright (c) 2025 Tearnote (Hubert Maraszek)
 
-lib/sndfile.cppm:
-Wrapper for libsndfile decoding and libswresample resampling.
+lib/ffmpeg.hpp:
+Wrapper for libav/libswresample audio file decoding.
 */
 
-module;
+#pragma once
 extern "C" {
 #include <libswresample/swresample.h>
 #include <libavformat/avformat.h>
@@ -17,14 +17,11 @@ extern "C" {
 #include "macros/assert.hpp"
 #include "preamble.hpp"
 #include "logger.hpp"
-
-export module playnote.lib.ffmpeg;
-
-import playnote.lib.pipewire;
+#include "lib/pipewire.hpp"
 
 namespace playnote::lib::ffmpeg {
 
-auto check_ret(int ret) -> int
+inline auto check_ret(int ret) -> int
 {
 	if (ret < 0) throw runtime_error_fmt("ffmpeg error: {}", av_err2str(ret));
 	return ret;
@@ -42,7 +39,7 @@ struct SeekBuffer {
 	usize cursor;
 };
 
-auto av_io_read(void* opaque, uint8_t* buf, int buf_size) -> int
+inline auto av_io_read(void* opaque, uint8_t* buf, int buf_size) -> int
 {
 	auto& buffer = *static_cast<SeekBuffer*>(opaque);
 	auto* byte_buf = reinterpret_cast<byte*>(buf);
@@ -54,12 +51,12 @@ auto av_io_read(void* opaque, uint8_t* buf, int buf_size) -> int
 	return static_cast<int>(bytes_to_read);
 }
 
-auto av_io_write(void* opaque, uint8_t const* buf, int buf_size) -> int
+inline auto av_io_write(void* opaque, uint8_t const* buf, int buf_size) -> int
 {
 	PANIC("ffmpeg attempted to write to a read-only file");
 }
 
-auto av_io_seek(void* opaque, int64_t offset, int whence) -> int64_t
+inline auto av_io_seek(void* opaque, int64_t offset, int whence) -> int64_t
 {
 	auto& buffer = *static_cast<SeekBuffer*>(opaque);
 	auto new_cursor = 0zu;
@@ -85,7 +82,7 @@ struct DecoderOutput {
 	bool planar;
 };
 
-auto decode_file_buffer(span<byte const> file_contents) -> DecoderOutput
+inline auto decode_file_buffer(span<byte const> file_contents) -> DecoderOutput
 {
 	static constexpr auto PageSize = 4096zu;
 	using AVBuffer = unique_resource<void*, decltype([](auto* buf) { av_free(buf); })>;
@@ -191,7 +188,7 @@ auto decode_file_buffer(span<byte const> file_contents) -> DecoderOutput
 	return result;
 }
 
-auto resample_buffer(DecoderOutput const& input, uint32 sampling_rate) -> vector<pw::Sample>
+inline auto resample_buffer(DecoderOutput const& input, uint32 sampling_rate) -> vector<pw::Sample>
 {
 	auto* swr = static_cast<SwrContext*>(nullptr);
 	constexpr auto channel_layout = (AVChannelLayout)AV_CHANNEL_LAYOUT_STEREO;
@@ -219,7 +216,7 @@ auto resample_buffer(DecoderOutput const& input, uint32 sampling_rate) -> vector
 	return output;
 }
 
-export auto decode_and_resample_file_buffer(span<byte const> file_contents, uint32 sampling_rate) -> vector<pw::Sample>
+inline auto decode_and_resample_file_buffer(span<byte const> file_contents, uint32 sampling_rate) -> vector<pw::Sample>
 {
 	auto decoder_output = decode_file_buffer(file_contents);
 	auto result = resample_buffer(decoder_output, sampling_rate);

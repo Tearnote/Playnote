@@ -10,10 +10,9 @@ module;
 #include "macros/assert.hpp"
 #include "preamble.hpp"
 #include "logger.hpp"
+#include "lib/icu.hpp"
 
 export module playnote.bms.parser;
-
-import playnote.lib.icu;
 
 namespace playnote::bms {
 
