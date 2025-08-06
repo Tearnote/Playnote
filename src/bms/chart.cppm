@@ -9,10 +9,10 @@ A definite, playable rhythm game chart optimized for playback.
 module;
 #include "macros/assert.hpp"
 #include "preamble.hpp"
+#include "logger.hpp"
 
 export module playnote.bms.chart;
 
-import playnote.logger;
 import playnote.dev.audio;
 import playnote.bms.ir;
 

@@ -11,12 +11,10 @@ module;
 #include <spa/param/latency-utils.h>
 #include <pipewire/pipewire.h>
 #include "macros/assert.hpp"
-#include "macros/logger.hpp"
 #include "preamble.hpp"
+#include "logger.hpp"
 
 export module playnote.lib.pipewire;
-
-import playnote.logger;
 
 namespace playnote::lib::pw {
 

@@ -8,10 +8,10 @@ Various OS-specific utilities.
 
 module;
 #include "preamble.hpp"
+#include "config.hpp"
 
 export module playnote.dev.os;
 
-import playnote.config;
 import playnote.lib.thread;
 import playnote.lib.tracy;
 

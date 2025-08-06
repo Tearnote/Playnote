@@ -80,8 +80,6 @@ target_sources(Playnote PUBLIC
 	src/threads/render.cppm
 	src/threads/audio.cppm
 	src/threads/input.cppm
-	src/logger.cppm
-	src/config.cppm
 )
 
 target_include_directories(Playnote PRIVATE src) # All includes start from src as root

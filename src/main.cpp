@@ -6,12 +6,11 @@ main.cpp:
 Entry point. Initializes basic facilities, spawns threads.
 */
 
-#include "macros/logger.hpp"
 #include "macros/assert.hpp"
 #include "preamble.hpp"
+#include "config.hpp"
+#include "logger.hpp"
 
-import playnote.config;
-import playnote.logger;
 import playnote.lib.debug;
 import playnote.dev.window;
 import playnote.dev.os;

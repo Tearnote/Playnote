@@ -15,12 +15,11 @@ extern "C" {
 }
 #include <cerrno>
 #include "macros/assert.hpp"
-#include "macros/logger.hpp"
 #include "preamble.hpp"
+#include "logger.hpp"
 
 export module playnote.lib.ffmpeg;
 
-import playnote.logger;
 import playnote.lib.pipewire;
 
 namespace playnote::lib::ffmpeg {

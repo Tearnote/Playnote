@@ -9,13 +9,11 @@ Wrapper for ICU charset handling.
 module;
 #include <unicode/ucsdet.h>
 #include <unicode/ucnv.h>
-#include "macros/logger.hpp"
 #include "macros/assert.hpp"
 #include "preamble.hpp"
+#include "logger.hpp"
 
 export module playnote.lib.icu;
-
-import playnote.logger;
 
 namespace playnote::lib::icu {
 

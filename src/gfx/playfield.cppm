@@ -8,13 +8,12 @@ A renderable visual representation of a BMS chart playfield.
 
 module;
 #include "macros/assert.hpp"
-#include "macros/logger.hpp"
 #include "gfx/renderer.hpp"
 #include "preamble.hpp"
+#include "logger.hpp"
 
 export module playnote.gfx.playfield;
 
-import playnote.logger;
 import playnote.bms.cursor;
 import playnote.bms.chart;
 

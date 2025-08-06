@@ -7,13 +7,12 @@ A BMS format parser - turns a complete BMS file into a list of commands.
 */
 
 module;
-#include "macros/logger.hpp"
 #include "macros/assert.hpp"
 #include "preamble.hpp"
+#include "logger.hpp"
 
 export module playnote.bms.parser;
 
-import playnote.logger;
 import playnote.lib.icu;
 
 namespace playnote::bms {

@@ -9,13 +9,12 @@ Presents current game state onto the window at the screen's refresh rate.
 module;
 #include "macros/tracing.hpp"
 #include "macros/assert.hpp"
-#include "macros/logger.hpp"
 #include "gfx/renderer.hpp"
 #include "preamble.hpp"
+#include "logger.hpp"
 
 export module playnote.threads.render;
 
-import playnote.logger;
 import playnote.lib.imgui;
 import playnote.dev.window;
 import playnote.dev.audio;

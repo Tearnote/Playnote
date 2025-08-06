@@ -8,14 +8,13 @@ but condensed, cleaned and serializable to a binary file.
 */
 
 module;
-#include "macros/logger.hpp"
 #include "macros/assert.hpp"
 #include "preamble.hpp"
+#include "config.hpp"
+#include "logger.hpp"
 
 export module playnote.bms.ir;
 
-import playnote.config;
-import playnote.logger;
 import playnote.lib.openssl;
 import playnote.bms.parser;
 
