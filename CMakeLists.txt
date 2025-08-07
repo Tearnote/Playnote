@@ -45,16 +45,6 @@ add_executable(Playnote
 	src/main.cpp
 )
 target_precompile_headers(Playnote PRIVATE src/preamble.hpp)
-target_sources(Playnote PUBLIC
-	FILE_SET CXX_MODULES FILES
-	src/threads/render_shouts.cppm
-	src/threads/input_shouts.cppm
-	src/threads/broadcaster.cppm
-	src/threads/render.cppm
-	src/threads/audio.cppm
-	src/threads/input.cppm
-)
-
 target_include_directories(Playnote PRIVATE src) # All includes start from src as root
 
 target_link_libraries(Playnote PRIVATE vk-bootstrap)

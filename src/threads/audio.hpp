@@ -2,11 +2,11 @@
 This software is dual-licensed. For more details, please consult LICENSE.txt.
 Copyright (c) 2025 Tearnote (Hubert Maraszek)
 
-threads/audio.cppm:
+threads/audio.hpp:
 Initializes audio and handles queueing of playback events.
 */
 
-module;
+#pragma once
 #include "preamble.hpp"
 #include "assert.hpp"
 #include "logger.hpp"
@@ -17,17 +17,14 @@ module;
 #include "bms/audio_player.hpp"
 #include "bms/build.hpp"
 #include "bms/ir.hpp"
+#include "threads/render_shouts.hpp"
 #include "threads/audio_shouts.hpp"
-
-export module playnote.threads.audio;
-
-import playnote.threads.render_shouts;
-import playnote.threads.input_shouts;
-import playnote.threads.broadcaster;
+#include "threads/input_shouts.hpp"
+#include "threads/broadcaster.hpp"
 
 namespace playnote::threads {
 
-auto load_bms(bms::IRCompiler& compiler, fs::path const& path) -> bms::IR
+inline auto load_bms(bms::IRCompiler& compiler, fs::path const& path) -> bms::IR
 {
 	INFO("Loading BMS file \"{}\"", path.c_str());
 	auto const file = io::read_file(path);
@@ -36,7 +33,7 @@ auto load_bms(bms::IRCompiler& compiler, fs::path const& path) -> bms::IR
 	return ir;
 }
 
-void run(Broadcaster& broadcaster, dev::Window& window, dev::Audio& audio)
+inline void run_audio(Broadcaster& broadcaster, dev::Window& window, dev::Audio& audio)
 {
 	auto chart_path = fs::path{};
 	broadcaster.await<ChartLoadRequest>(
@@ -89,7 +86,7 @@ void run(Broadcaster& broadcaster, dev::Window& window, dev::Audio& audio)
 	}
 }
 
-export void audio(Broadcaster& broadcaster, Barriers<3>& barriers, dev::Window& window)
+inline void audio(Broadcaster& broadcaster, Barriers<3>& barriers, dev::Window& window)
 try {
 	dev::name_current_thread("audio");
 	broadcaster.register_as_endpoint();
@@ -97,7 +94,7 @@ try {
 	broadcaster.subscribe<ChartLoadRequest>();
 	barriers.startup.arrive_and_wait();
 	auto audio = dev::Audio{};
-	run(broadcaster, window, audio);
+	run_audio(broadcaster, window, audio);
 	barriers.shutdown.arrive_and_wait();
 }
 catch (exception const& e) {

@@ -13,11 +13,10 @@ Entry point. Initializes basic facilities, spawns threads.
 #include "lib/debug.hpp"
 #include "dev/window.hpp"
 #include "dev/os.hpp"
-
-import playnote.threads.broadcaster;
-import playnote.threads.render;
-import playnote.threads.audio;
-import playnote.threads.input;
+#include "threads/broadcaster.hpp"
+#include "threads/render.hpp"
+#include "threads/audio.hpp"
+#include "threads/input.hpp"
 
 using namespace playnote; // Can't namespace main()
 

@@ -2,27 +2,25 @@
 This software is dual-licensed. For more details, please consult LICENSE.txt.
 Copyright (c) 2025 Tearnote (Hubert Maraszek)
 
-threads/broadcaster.cppm:
+threads/broadcaster.hpp:
 Allows threads to subscribe to events and receive messages from other threads.
 */
 
-module;
+#pragma once
 #include "quill/core/Codec.h"
 #include "preamble.hpp"
 #include "assert.hpp"
 
-export module playnote.threads.broadcaster;
-
 namespace playnote::threads {
 
 // Simple shared struct for controlling thread lifetime.
-export template<usize N>
+template<usize N>
 struct Barriers {
 	latch startup{N}; // Threads wait on this after registering with the broadcaster
 	latch shutdown{N}; // Threads wait on this before exiting
 };
 
-export class Broadcaster {
+class Broadcaster {
 public:
 	Broadcaster() = default;
 
@@ -60,7 +58,7 @@ private:
 	vector<unordered_map<type_index, shared_ptr<void>>> channels;
 };
 
-void Broadcaster::register_as_endpoint()
+inline void Broadcaster::register_as_endpoint()
 {
 	ASSUME(endpoint_id == -1zu);
 	auto lock = lock_guard{register_lock};

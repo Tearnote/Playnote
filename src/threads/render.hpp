@@ -2,11 +2,11 @@
 This software is dual-licensed. For more details, please consult LICENSE.txt.
 Copyright (c) 2025 Tearnote (Hubert Maraszek)
 
-threads/render.cppm:
+threads/render.hpp:
 Presents current game state onto the window at the screen's refresh rate.
 */
 
-module;
+#pragma once
 #include "preamble.hpp"
 #include "assert.hpp"
 #include "logger.hpp"
@@ -21,62 +21,57 @@ module;
 #include "bms/audio_player.hpp"
 #include "bms/cursor.hpp"
 #include "bms/chart.hpp"
+#include "threads/render_shouts.hpp"
 #include "threads/audio_shouts.hpp"
-
-export module playnote.threads.render;
-
-import playnote.threads.render_shouts;
-import playnote.threads.broadcaster;
+#include "threads/broadcaster.hpp"
 
 namespace playnote::threads {
 
-namespace im = lib::imgui;
-
-void show_metadata(bms::Metadata const& meta)
+inline void show_metadata(bms::Metadata const& meta)
 {
-	im::text(meta.title);
-	if (!meta.subtitle.empty()) im::text(meta.subtitle);
-	im::text(meta.artist);
-	if (!meta.subartist.empty()) im::text(meta.subartist);
-	im::text(meta.genre);
-	im::text("Difficulty: {}", bms::Metadata::to_str(meta.difficulty));
-	if (!meta.url.empty()) im::text(meta.url);
-	if (!meta.email.empty()) im::text(meta.email);
+	lib::imgui::text(meta.title);
+	if (!meta.subtitle.empty()) lib::imgui::text(meta.subtitle);
+	lib::imgui::text(meta.artist);
+	if (!meta.subartist.empty()) lib::imgui::text(meta.subartist);
+	lib::imgui::text(meta.genre);
+	lib::imgui::text("Difficulty: {}", bms::Metadata::to_str(meta.difficulty));
+	if (!meta.url.empty()) lib::imgui::text(meta.url);
+	if (!meta.email.empty()) lib::imgui::text(meta.email);
 }
 
-auto ns_to_minsec(nanoseconds duration) -> string
+inline auto ns_to_minsec(nanoseconds duration) -> string
 {
 	return format("{}:{:02}", duration / 60s, duration % 60s / 1s);
 }
 
-void show_metrics(bms::Cursor const& cursor, bms::Metrics const& metrics)
+inline void show_metrics(bms::Cursor const& cursor, bms::Metrics const& metrics)
 {
 	auto const progress = ns_to_minsec(cursor.get_progress_ns());
 	auto const chart_duration = ns_to_minsec(metrics.chart_duration);
 	auto const audio_duration = ns_to_minsec(metrics.audio_duration);
-	im::text("Progress: {} / {} ({})", progress, chart_duration, audio_duration);
-	im::text("Notes: {} / {}", cursor.get_judged_notes(), metrics.note_count);
-	im::plot("Note density", {
+	lib::imgui::text("Progress: {} / {} ({})", progress, chart_duration, audio_duration);
+	lib::imgui::text("Notes: {} / {}", cursor.get_judged_notes(), metrics.note_count);
+	lib::imgui::plot("Note density", {
 		{"Scratch", metrics.density.scratch_density, {1.0f, 0.1f, 0.1f, 1.0f}},
 		{"LN", metrics.density.ln_density, {0.1f, 0.1f, 1.0f, 1.0f}},
 		{"Key", metrics.density.key_density, {1.0f, 1.0f, 1.0f, 1.0f}},
 	}, {
-		{im::PlotMarker::Type::Vertical, static_cast<float>(cursor.get_progress_ns() / 125ms), {1.0f, 0.0f, 0.0f, 1.0f}}
+		{lib::imgui::PlotMarker::Type::Vertical, static_cast<float>(cursor.get_progress_ns() / 125ms), {1.0f, 0.0f, 0.0f, 1.0f}}
 	}, 120, true);
 }
 
-void show_playback_controls(Broadcaster& broadcaster)
+inline void show_playback_controls(Broadcaster& broadcaster)
 {
-	if (im::button("Play")) broadcaster.shout(PlayerControl::Play);
-	im::same_line();
-	if (im::button("Pause")) broadcaster.shout(PlayerControl::Pause);
-	im::same_line();
-	if (im::button("Restart")) broadcaster.shout(PlayerControl::Restart);
+	if (lib::imgui::button("Play")) broadcaster.shout(PlayerControl::Play);
+	lib::imgui::same_line();
+	if (lib::imgui::button("Pause")) broadcaster.shout(PlayerControl::Pause);
+	lib::imgui::same_line();
+	if (lib::imgui::button("Restart")) broadcaster.shout(PlayerControl::Restart);
 }
 
-void show_scroll_speed_controls(float& scroll_speed)
+inline void show_scroll_speed_controls(float& scroll_speed)
 {
-	im::input_float("Scroll speed", scroll_speed, 0.25f, 1.0f, "%.2f");
+	lib::imgui::input_float("Scroll speed", scroll_speed, 0.25f, 1.0f, "%.2f");
 }
 
 struct LoadingToast {
@@ -135,18 +130,18 @@ void receive_loading_shouts(Broadcaster& broadcaster, optional<LoadingToast>& lo
 	});
 }
 
-void enqueue_loading_toast(LoadingToast const& toast)
+inline void enqueue_loading_toast(LoadingToast const& toast)
 {
-	im::begin_window("loading", {420, 300}, 440, true);
-	im::text("Loading {}", toast.path);
-	im::text(toast.phase);
+	lib::imgui::begin_window("loading", {420, 300}, 440, true);
+	lib::imgui::text("Loading {}", toast.path);
+	lib::imgui::text(toast.phase);
 	if (toast.progress_text) {
-		im::progress_bar(toast.progress, *toast.progress_text);
+		lib::imgui::progress_bar(toast.progress, *toast.progress_text);
 	}
-	im::end_window();
+	lib::imgui::end_window();
 }
 
-void run(Broadcaster& broadcaster, dev::Window const& window, gfx::Renderer& renderer)
+inline void run_render(Broadcaster& broadcaster, dev::Window const& window, gfx::Renderer& renderer)
 {
 	auto player = shared_ptr<bms::AudioPlayer const>{};
 	auto playfield = optional<gfx::Playfield>{};
@@ -164,24 +159,24 @@ void run(Broadcaster& broadcaster, dev::Window const& window, gfx::Renderer& ren
 			if (player) {
 				auto const cursor = player->get_audio_cursor();
 				auto const& chart = cursor.get_chart();
-				im::begin_window("info", {860, 8}, 412, true);
+				lib::imgui::begin_window("info", {860, 8}, 412, true);
 				show_metadata(chart.metadata);
-				im::text("");
+				lib::imgui::text("");
 				show_metrics(cursor, chart.metrics);
-				im::text("");
+				lib::imgui::text("");
 				show_playback_controls(broadcaster);
-				im::text("");
+				lib::imgui::text("");
 				show_scroll_speed_controls(scroll_speed);
 				playfield->notes_from_cursor(cursor, scroll_speed);
 				playfield->enqueue(queue);
-				im::end_window();
+				lib::imgui::end_window();
 			}
 		});
 		FRAME_MARK();
 	}
 }
 
-export void render(Broadcaster& broadcaster, Barriers<3>& barriers, dev::Window& window)
+inline void render(Broadcaster& broadcaster, Barriers<3>& barriers, dev::Window& window)
 try {
 	dev::name_current_thread("render");
 	broadcaster.register_as_endpoint();
@@ -189,7 +184,7 @@ try {
 	barriers.startup.arrive_and_wait();
 	auto gpu = dev::GPU{window};
 	auto renderer = gfx::Renderer{gpu};
-	run(broadcaster, window, renderer);
+	run_render(broadcaster, window, renderer);
 	barriers.shutdown.arrive_and_wait();
 }
 catch (exception const& e) {
