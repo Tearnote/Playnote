@@ -7,14 +7,14 @@ A renderable visual representation of a BMS chart playfield.
 */
 
 module;
-#include "gfx/renderer.hpp"
 #include "preamble.hpp"
 #include "assert.hpp"
 #include "logger.hpp"
+#include "gfx/renderer.hpp"
+#include "bms/cursor.hpp"
 
 export module playnote.gfx.playfield;
 
-import playnote.bms.cursor;
 import playnote.bms.chart;
 
 namespace playnote::gfx {

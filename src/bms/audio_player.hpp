@@ -2,25 +2,23 @@
 This software is dual-licensed. For more details, please consult LICENSE.txt.
 Copyright (c) 2025 Tearnote (Hubert Maraszek)
 
-bms/audio_player.cppm:
+bms/audio_player.hpp:
 A cursor wrapper that sends audio samples to the audio device.
 */
 
-module;
+#pragma once
 #include "preamble.hpp"
 #include "assert.hpp"
 #include "logger.hpp"
-
-export module playnote.bms.audio_player;
+#include "dev/audio.hpp"
+#include "bms/cursor.hpp"
 
 import playnote.dev.window;
-import playnote.dev.audio;
-import playnote.bms.cursor;
 import playnote.bms.chart;
 
 namespace playnote::bms {
 
-export class AudioPlayer: public dev::Generator {
+class AudioPlayer: public dev::Generator {
 public:
 	// Create the audio player with no cursor attached. Will begin to immediately generate blank
 	// samples.
@@ -68,7 +66,7 @@ private:
 	nanoseconds timer_slop;
 };
 
-void AudioPlayer::play(Chart const& chart, bool paused)
+inline void AudioPlayer::play(Chart const& chart, bool paused)
 {
 	cursor.emplace(chart);
 	gain = chart.metrics.gain;
@@ -77,7 +75,7 @@ void AudioPlayer::play(Chart const& chart, bool paused)
 	this->paused = paused;
 }
 
-auto AudioPlayer::get_audio_cursor() const -> Cursor
+inline auto AudioPlayer::get_audio_cursor() const -> Cursor
 {
 	auto const buffer_start_progress =
 		cursor->get_progress() > dev::Audio::Latency?
@@ -91,7 +89,7 @@ auto AudioPlayer::get_audio_cursor() const -> Cursor
 	return result;
 }
 
-void AudioPlayer::begin_buffer()
+inline void AudioPlayer::begin_buffer()
 {
 	if (paused) return;
 	auto const estimated = timer_slop + dev::Audio::samples_to_ns(cursor->get_progress());
@@ -102,7 +100,7 @@ void AudioPlayer::begin_buffer()
 	if (difference < -5ms) WARN("Audio timer was early by {}ms", -difference / 1ms);
 }
 
-auto AudioPlayer::next_sample() -> dev::Sample
+inline auto AudioPlayer::next_sample() -> dev::Sample
 {
 	if (paused) {
 		timer_slop += dev::Audio::samples_to_ns(1);

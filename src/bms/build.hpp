@@ -2,25 +2,23 @@
 This software is dual-licensed. For more details, please consult LICENSE.txt.
 Copyright (c) 2025 Tearnote (Hubert Maraszek)
 
-bms/build.cppm:
+bms/build.hpp:
 Construction of a chart from an IR.
 */
 
-module;
+#pragma once
 #include "preamble.hpp"
 #include "assert.hpp"
 #include "logger.hpp"
 #include "lib/ebur128.hpp"
+#include "dev/audio.hpp"
 #include "io/bulk_request.hpp"
 #include "io/audio_codec.hpp"
+#include "bms/cursor.hpp"
+#include "threads/audio_shouts.hpp"
 
-export module playnote.bms.build;
-
-import playnote.dev.audio;
-import playnote.bms.cursor;
 import playnote.bms.chart;
 import playnote.bms.ir;
-import playnote.threads.audio_shouts;
 
 namespace playnote::bms {
 
@@ -132,7 +130,7 @@ struct FileReferences {
 	vector<string> wav;
 };
 
-void LaneBuilder::add_note(AbsNote const& note)
+inline void LaneBuilder::add_note(AbsNote const& note)
 {
 	if (note.type_is<Simple>())
 		notes.emplace_back(note);
@@ -141,7 +139,7 @@ void LaneBuilder::add_note(AbsNote const& note)
 	else PANIC();
 }
 
-auto LaneBuilder::build(bool deduplicate) -> Lane
+inline auto LaneBuilder::build(bool deduplicate) -> Lane
 {
 	auto result = Lane{};
 
@@ -154,7 +152,7 @@ auto LaneBuilder::build(bool deduplicate) -> Lane
 	return result;
 }
 
-void LaneBuilder::convert_simple(vector<AbsNote> const& notes, vector<Note>& result)
+inline void LaneBuilder::convert_simple(vector<AbsNote> const& notes, vector<Note>& result)
 {
 	transform(notes, back_inserter(result), [&](AbsNote const& note) {
 		ASSERT(note.type_is<Simple>());
@@ -167,7 +165,7 @@ void LaneBuilder::convert_simple(vector<AbsNote> const& notes, vector<Note>& res
 	});
 }
 
-void LaneBuilder::convert_ln(vector<AbsNote>& ln_ends, vector<Note>& result)
+inline void LaneBuilder::convert_ln(vector<AbsNote>& ln_ends, vector<Note>& result)
 {
 	stable_sort(ln_ends, [](auto const& a, auto const& b) { return a.position.timestamp < b.position.timestamp; });
 	if (ln_ends.size() % 2 != 0) {
@@ -189,7 +187,7 @@ void LaneBuilder::convert_ln(vector<AbsNote>& ln_ends, vector<Note>& result)
 	});
 }
 
-void LaneBuilder::sort_and_deduplicate(vector<Note>& result, bool deduplicate)
+inline void LaneBuilder::sort_and_deduplicate(vector<Note>& result, bool deduplicate)
 {
 	if (!deduplicate) {
 		stable_sort(result, [](auto const& a, auto const& b) {
@@ -211,7 +209,7 @@ void LaneBuilder::sort_and_deduplicate(vector<Note>& result, bool deduplicate)
 	reverse(result); // Reverse back
 }
 
-auto channel_to_note_type(IR::ChannelEvent::Type ch) -> RelativeNoteType
+inline auto channel_to_note_type(IR::ChannelEvent::Type ch) -> RelativeNoteType
 {
 	using ChannelType = IR::ChannelEvent::Type;
 	if (ch >= ChannelType::BGM && ch <= ChannelType::Note_P2_KeyS) return Simple{};
@@ -219,7 +217,7 @@ auto channel_to_note_type(IR::ChannelEvent::Type ch) -> RelativeNoteType
 	PANIC();
 }
 
-auto channel_to_lane(IR::ChannelEvent::Type ch) -> Chart::LaneType
+inline auto channel_to_lane(IR::ChannelEvent::Type ch) -> Chart::LaneType
 {
 	switch (ch) {
 	case IR::ChannelEvent::Type::BGM:
@@ -276,20 +274,20 @@ auto channel_to_lane(IR::ChannelEvent::Type ch) -> Chart::LaneType
 	}
 }
 
-void extend_measure_lengths(vector<double>& measure_lengths, usize max_measure)
+inline void extend_measure_lengths(vector<double>& measure_lengths, usize max_measure)
 {
 	auto const min_length = max_measure + 1;
 	if (measure_lengths.size() >= min_length) return;
 	measure_lengths.resize(min_length, 1.0);
 }
 
-void set_measure_length(vector<double>& measure_lengths, usize measure, double length)
+inline void set_measure_length(vector<double>& measure_lengths, usize measure, double length)
 {
 	extend_measure_lengths(measure_lengths, measure);
 	measure_lengths[measure] = length;
 }
 
-auto process_ir_headers(Chart& chart, IR const& ir, FileReferences& file_references) -> SlotValues
+inline auto process_ir_headers(Chart& chart, IR const& ir, FileReferences& file_references) -> SlotValues
 {
 	auto slot_values = SlotValues{};
 	ir.each_header_event([&](IR::HeaderEvent const& event) {
@@ -311,7 +309,7 @@ auto process_ir_headers(Chart& chart, IR const& ir, FileReferences& file_referen
 	return slot_values;
 }
 
-void process_ir_channels(IR const& ir, SlotValues const& slot_values, vector<MeasureRelNote>& notes, vector<MeasureRelBPM>& bpms, vector<double>& measure_lengths)
+inline void process_ir_channels(IR const& ir, SlotValues const& slot_values, vector<MeasureRelNote>& notes, vector<MeasureRelBPM>& bpms, vector<double>& measure_lengths)
 {
 	ir.each_channel_event([&](IR::ChannelEvent const& event) {
 		if (event.type == IR::ChannelEvent::Type::MeasureLength) {
@@ -350,7 +348,7 @@ void process_ir_channels(IR const& ir, SlotValues const& slot_values, vector<Mea
 	});
 }
 
-auto build_bpm_relative_measures(span<double const> measure_lengths) -> vector<BeatRelMeasure>
+inline auto build_bpm_relative_measures(span<double const> measure_lengths) -> vector<BeatRelMeasure>
 {
 	auto result = vector<BeatRelMeasure>{};
 	result.reserve(measure_lengths.size());
@@ -367,7 +365,7 @@ auto build_bpm_relative_measures(span<double const> measure_lengths) -> vector<B
 	return result;
 }
 
-auto measure_rel_notes_to_beat_rel(span<MeasureRelNote const> notes, span<BeatRelMeasure const> measures) -> vector<BeatRelNote>
+inline auto measure_rel_notes_to_beat_rel(span<MeasureRelNote const> notes, span<BeatRelMeasure const> measures) -> vector<BeatRelNote>
 {
 	auto result = vector<BeatRelNote>{};
 	result.reserve(notes.size());
@@ -384,7 +382,7 @@ auto measure_rel_notes_to_beat_rel(span<MeasureRelNote const> notes, span<BeatRe
 	return result;
 }
 
-void generate_measure_lines(vector<BeatRelNote>& notes, span<BeatRelMeasure const> measures)
+inline void generate_measure_lines(vector<BeatRelNote>& notes, span<BeatRelMeasure const> measures)
 {
 	transform(measures, back_inserter(notes), [](auto const& measure) {
 		return BeatRelNote{
@@ -395,7 +393,7 @@ void generate_measure_lines(vector<BeatRelNote>& notes, span<BeatRelMeasure cons
 	});
 }
 
-auto measure_rel_bpms_to_beat_rel(span<MeasureRelBPM const> bpms, span<BeatRelMeasure const> measures) -> vector<BeatRelBPM>
+inline auto measure_rel_bpms_to_beat_rel(span<MeasureRelBPM const> bpms, span<BeatRelMeasure const> measures) -> vector<BeatRelBPM>
 {
 	auto result = vector<BeatRelBPM>{};
 	result.reserve(bpms.size());
@@ -411,7 +409,7 @@ auto measure_rel_bpms_to_beat_rel(span<MeasureRelBPM const> bpms, span<BeatRelMe
 	return result;
 }
 
-auto beat_rel_notes_to_abs(span<BeatRelNote const> notes, span<BeatRelBPM const> beat_rel_bpms, span<BPMChange const> bpm_changes) -> vector<AbsNote>
+inline auto beat_rel_notes_to_abs(span<BeatRelNote const> notes, span<BeatRelBPM const> beat_rel_bpms, span<BPMChange const> bpm_changes) -> vector<AbsNote>
 {
 	auto result = vector<AbsNote>{};
 	result.reserve(notes.size());
@@ -444,7 +442,7 @@ auto beat_rel_notes_to_abs(span<BeatRelNote const> notes, span<BeatRelBPM const>
 	return result;
 }
 
-auto build_bpm_changes(span<BeatRelBPM const> bpms) -> vector<BPMChange>
+inline auto build_bpm_changes(span<BeatRelBPM const> bpms) -> vector<BPMChange>
 {
 	auto result = vector<BPMChange>{};
 	result.reserve(bpms.size());
@@ -479,7 +477,7 @@ auto build_bpm_changes(span<BeatRelBPM const> bpms) -> vector<BPMChange>
 	return result;
 }
 
-void build_lanes(Chart& chart, span<AbsNote const> notes)
+inline void build_lanes(Chart& chart, span<AbsNote const> notes)
 {
 	auto lane_builders = array<LaneBuilder, +Chart::LaneType::Size>{};
 
@@ -496,7 +494,7 @@ void build_lanes(Chart& chart, span<AbsNote const> notes)
 	}
 }
 
-[[nodiscard]] auto lufs_to_gain(double lufs) -> float
+[[nodiscard]] inline auto lufs_to_gain(double lufs) -> float
 {
 	constexpr auto LufsTarget = -14.0;
 	auto const db_from_target = LufsTarget - lufs;
@@ -504,7 +502,7 @@ void build_lanes(Chart& chart, span<AbsNote const> notes)
 	return static_cast<float>(amplitude_ratio);
 }
 
-auto determine_playstyle(Chart::Lanes const& lanes) -> Playstyle
+inline auto determine_playstyle(Chart::Lanes const& lanes) -> Playstyle
 {
 	using enum Chart::LaneType;
 	auto lanes_used = array<bool, lanes.size()>{};
@@ -533,7 +531,7 @@ auto determine_playstyle(Chart::Lanes const& lanes) -> Playstyle
 	return Playstyle::_7K; // Empty chart, but sure whatever
 }
 
-void calculate_note_metrics(Chart::Lanes const& lanes, Metrics& metrics)
+inline void calculate_note_metrics(Chart::Lanes const& lanes, Metrics& metrics)
 {
 	metrics.note_count = fold_left(lanes, 0u, [](auto acc, auto const& lane) {
 		return acc + (lane.playable? lane.notes.size() : 0);
@@ -580,7 +578,7 @@ void calculate_audio_metrics(Cursor&& cursor, Metrics& metrics, Func&& progress)
 	r128::cleanup(ctx);
 }
 
-auto notes_around(span<Note const> notes, nanoseconds cursor, nanoseconds window)
+inline auto notes_around(span<Note const> notes, nanoseconds cursor, nanoseconds window)
 {
 	auto const from = cursor - window;
 	auto const to = cursor + window;
@@ -646,7 +644,7 @@ void calculate_metrics(Chart& chart, Func&& progress)
 
 // Generate a Chart from an IR. Requires a function to handle the loading of a bulk request.
 // The provided function must block until the bulk request is complete.
-export template<callable<void(io::BulkRequest&)> Func, callable<void(threads::ChartLoadProgress::Type)> Func2>
+template<callable<void(io::BulkRequest&)> Func, callable<void(threads::ChartLoadProgress::Type)> Func2>
 auto chart_from_ir(IR const& ir, Func&& file_loader, Func2&& progress) -> shared_ptr<Chart const>
 {
 	static constexpr auto AudioExtensions = {"wav"sv, "ogg"sv, "mp3"sv, "flac"sv, "opus"sv};

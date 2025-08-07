@@ -10,8 +10,7 @@ The file codec to decode the audio format and convert sample rate.
 #include "preamble.hpp"
 #include "assert.hpp"
 #include "lib/ffmpeg.hpp"
-
-import playnote.dev.audio;
+#include "dev/audio.hpp"
 
 namespace playnote::io {
 

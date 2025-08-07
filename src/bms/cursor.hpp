@@ -2,24 +2,22 @@
 This software is dual-licensed. For more details, please consult LICENSE.txt.
 Copyright (c) 2025 Tearnote (Hubert Maraszek)
 
-bms/cursor.cppm:
+bms/cursor.hpp:
 Representation of a moment in chart's playback.
 */
 
-module;
+#pragma once
 #include "preamble.hpp"
 #include "assert.hpp"
+#include "dev/audio.hpp"
 
-export module playnote.bms.cursor;
-
-import playnote.dev.audio;
 import playnote.bms.chart;
 
 namespace playnote::bms {
 
 // A cursor allows for playing back an immutable Chart, tracking all state related to note progress
 // and audio playback progress.
-export class Cursor {
+class Cursor {
 public:
 	// Create a cursor for the given chart. The chart's lifetime will be extended by the cursor's.
 	explicit Cursor(Chart const& chart);
@@ -68,7 +66,7 @@ private:
 	vector<WavSlotProgress> wav_slot_progress;
 };
 
-[[nodiscard]] auto get_bpm_section(nanoseconds timestamp, span<BPMChange const> bpm_changes) -> BPMChange const&
+[[nodiscard]] inline auto get_bpm_section(nanoseconds timestamp, span<BPMChange const> bpm_changes) -> BPMChange const&
 {
 	auto bpm_section = bpm_changes | views::reverse | views::filter([&](auto const& bc) {
 		if (timestamp >= bc.position) return true;
@@ -78,13 +76,13 @@ private:
 	return *bpm_section.begin();
 }
 
-Cursor::Cursor(Chart const& chart):
+inline Cursor::Cursor(Chart const& chart):
 	chart{chart.shared_from_this()}
 {
 	wav_slot_progress.resize(chart.wav_slots.size());
 }
 
-void Cursor::restart()
+inline void Cursor::restart()
 {
 	sample_progress = 0zu;
 	notes_judged = 0zu;
@@ -92,7 +90,7 @@ void Cursor::restart()
 	for (auto& slot: wav_slot_progress) slot.playback_pos = WavSlotProgress::Stopped;
 }
 
-void Cursor::fast_forward(usize samples)
+inline void Cursor::fast_forward(usize samples)
 {
 	for (auto const i: views::iota(0zu, samples)) advance_one_sample([](dev::Sample){});
 }

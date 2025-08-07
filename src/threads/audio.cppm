@@ -10,18 +10,18 @@ module;
 #include "preamble.hpp"
 #include "assert.hpp"
 #include "logger.hpp"
+#include "dev/audio.hpp"
 #include "io/file.hpp"
+#include "bms/audio_player.hpp"
+#include "bms/build.hpp"
+#include "threads/audio_shouts.hpp"
 
 export module playnote.threads.audio;
 
 import playnote.dev.window;
-import playnote.dev.audio;
 import playnote.dev.os;
-import playnote.bms.audio_player;
-import playnote.bms.build;
 import playnote.bms.ir;
 import playnote.threads.render_shouts;
-import playnote.threads.audio_shouts;
 import playnote.threads.input_shouts;
 import playnote.threads.broadcaster;
 

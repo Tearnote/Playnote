@@ -47,19 +47,14 @@ add_executable(Playnote
 target_sources(Playnote PUBLIC
 	FILE_SET CXX_MODULES FILES
 	src/dev/window.cppm
-	src/dev/audio.cppm
 	src/dev/gpu.cppm
 	src/dev/os.cppm
 	src/gfx/playfield.cppm
 	src/gfx/imgui.cppm
-	src/bms/audio_player.cppm
-	src/bms/cursor.cppm
 	src/bms/parser.cppm
 	src/bms/chart.cppm
-	src/bms/build.cppm
 	src/bms/ir.cppm
 	src/threads/render_shouts.cppm
-	src/threads/audio_shouts.cppm
 	src/threads/input_shouts.cppm
 	src/threads/broadcaster.cppm
 	src/threads/render.cppm

@@ -2,20 +2,17 @@
 This software is dual-licensed. For more details, please consult LICENSE.txt.
 Copyright (c) 2025 Tearnote (Hubert Maraszek)
 
-threads/audio_events.cppm:
+threads/audio_events.hpp:
 Shouts that can be spawned by the audio thread.
 */
 
-module;
+#pragma once
 #include "preamble.hpp"
-
-export module playnote.threads.audio_shouts;
-
-import playnote.bms.audio_player;
+#include "bms/audio_player.hpp"
 
 namespace playnote::threads {
 
-export struct ChartLoadProgress {
+struct ChartLoadProgress {
 	struct CompilingIR {
 		fs::path chart_path;
 	};

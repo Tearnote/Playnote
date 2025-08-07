@@ -10,10 +10,10 @@ module;
 #include "preamble.hpp"
 #include "assert.hpp"
 #include "logger.hpp"
+#include "dev/audio.hpp"
 
 export module playnote.bms.chart;
 
-import playnote.dev.audio;
 import playnote.bms.ir;
 
 namespace playnote::bms {
