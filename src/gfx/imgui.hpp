@@ -2,28 +2,23 @@
 This software is dual-licensed. For more details, please consult LICENSE.txt.
 Copyright (c) 2025 Tearnote (Hubert Maraszek)
 
-gfx/imgui.cppm:
+gfx/imgui.hpp:
 Wrapper for vuk's Imgui integration.
 */
 
-module;
+#pragma once
 #include "preamble.hpp"
 #include "lib/vulkan.hpp"
 #include "lib/imgui.hpp"
 #include "dev/gpu.hpp"
 
-export module playnote.gfx.imgui;
-
 namespace playnote::gfx {
 
-namespace imgui = lib::imgui;
-namespace vk = lib::vk;
-
 // Encapsulation of Dear ImGui initialization and drawing.
-export class Imgui {
+class Imgui {
 public:
 	explicit Imgui(dev::GPU& gpu):
-		context{imgui::init(gpu.get_window().handle(), gpu.get_global_allocator())}
+		context{lib::imgui::init(gpu.get_window().handle(), gpu.get_global_allocator())}
 	{}
 
 	// Prepare Imgui to accept commands.
@@ -32,24 +27,24 @@ public:
 	void enqueue(Func);
 
 	// Draw enqueued Imgui state into the image. Must be run once and after enqueue().
-	auto draw(vk::Allocator&, dev::ManagedImage) -> dev::ManagedImage;
+	auto draw(lib::vk::Allocator&, dev::ManagedImage) -> dev::ManagedImage;
 
 private:
 	InstanceLimit<Imgui, 1> instance_limit;
-	imgui::Context context;
+	lib::imgui::Context context;
 };
 
 template<callable<void()> Func>
 void Imgui::enqueue(Func func)
 {
-	imgui::begin();
+	lib::imgui::begin();
 	func();
-	imgui::end();
+	lib::imgui::end();
 }
 
-auto Imgui::draw(vk::Allocator& allocator, dev::ManagedImage target) -> dev::ManagedImage
+inline auto Imgui::draw(lib::vk::Allocator& allocator, dev::ManagedImage target) -> dev::ManagedImage
 {
-	return imgui::render(allocator, move(target), context);
+	return lib::imgui::render(allocator, move(target), context);
 }
 
 }

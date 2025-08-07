@@ -7,7 +7,6 @@ Presents current game state onto the window at the screen's refresh rate.
 */
 
 module;
-#include "gfx/renderer.hpp"
 #include "preamble.hpp"
 #include "assert.hpp"
 #include "logger.hpp"
@@ -17,13 +16,14 @@ module;
 #include "dev/audio.hpp"
 #include "dev/gpu.hpp"
 #include "dev/os.hpp"
+#include "gfx/playfield.hpp"
+#include "gfx/renderer.hpp"
 #include "bms/audio_player.hpp"
 #include "bms/cursor.hpp"
 #include "threads/audio_shouts.hpp"
 
 export module playnote.threads.render;
 
-import playnote.gfx.playfield;
 import playnote.bms.chart;
 import playnote.threads.render_shouts;
 import playnote.threads.broadcaster;

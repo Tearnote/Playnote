@@ -10,7 +10,7 @@ A renderer of primitives.
 #include "preamble.hpp"
 #include "lib/vulkan.hpp"
 #include "dev/gpu.hpp"
-import playnote.gfx.imgui;
+#include "gfx/imgui.hpp"
 
 namespace playnote::gfx {
 

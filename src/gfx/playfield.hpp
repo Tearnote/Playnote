@@ -2,24 +2,22 @@
 This software is dual-licensed. For more details, please consult LICENSE.txt.
 Copyright (c) 2025 Tearnote (Hubert Maraszek)
 
-gfx/playfield.cppm:
+gfx/playfield.hpp:
 A renderable visual representation of a BMS chart playfield.
 */
 
-module;
+#pragma once
 #include "preamble.hpp"
 #include "assert.hpp"
 #include "logger.hpp"
 #include "gfx/renderer.hpp"
 #include "bms/cursor.hpp"
 
-export module playnote.gfx.playfield;
-
 import playnote.bms.chart;
 
 namespace playnote::gfx {
 
-export class Playfield {
+class Playfield {
 public:
 	enum class Side {
 		Left,
@@ -78,7 +76,7 @@ private:
 	static void enqueue_measure_lines(Renderer::Queue&, span<float const> measure_lines, ivec2 position, ivec2 size);
 };
 
-Playfield::Playfield(ivec2 position, int32 length, bms::Playstyle playstyle):
+inline Playfield::Playfield(ivec2 position, int32 length, bms::Playstyle playstyle):
 	position{position},
 	length{length},
 	playstyle{playstyle}
@@ -104,7 +102,7 @@ Playfield::Playfield(ivec2 position, int32 length, bms::Playstyle playstyle):
 	}
 }
 
-void Playfield::notes_from_cursor(bms::Cursor const& cursor, float scroll_speed)
+inline void Playfield::notes_from_cursor(bms::Cursor const& cursor, float scroll_speed)
 {
 	for (auto& field: fields)
 		for (auto& lane: field)
@@ -124,7 +122,7 @@ void Playfield::notes_from_cursor(bms::Cursor const& cursor, float scroll_speed)
 	});
 }
 
-void Playfield::enqueue(Renderer::Queue& queue)
+inline void Playfield::enqueue(Renderer::Queue& queue)
 {
 	auto x_advance = position.x();
 	for (auto const& field: fields) {
@@ -139,7 +137,7 @@ void Playfield::enqueue(Renderer::Queue& queue)
 	}
 }
 
-auto Playfield::get_lane(bms::Chart::LaneType type) -> Lane&
+inline auto Playfield::get_lane(bms::Chart::LaneType type) -> Lane&
 {
 	switch (playstyle) {
 	case bms::Playstyle::_5K:
@@ -184,7 +182,7 @@ auto Playfield::get_lane(bms::Chart::LaneType type) -> Lane&
 	}
 }
 
-auto Playfield::lane_width(Lane::Visual visual) -> int32
+inline auto Playfield::lane_width(Lane::Visual visual) -> int32
 {
 	switch (visual) {
 	case Lane::Visual::Odd: return 40;
@@ -194,7 +192,7 @@ auto Playfield::lane_width(Lane::Visual visual) -> int32
 	}
 }
 
-auto Playfield::lane_background_color(Lane::Visual visual) -> vec4
+inline auto Playfield::lane_background_color(Lane::Visual visual) -> vec4
 {
 	switch (visual) {
 	case Lane::Visual::Scratch:
@@ -204,7 +202,7 @@ auto Playfield::lane_background_color(Lane::Visual visual) -> vec4
 	}
 }
 
-auto Playfield::lane_note_color(Lane::Visual visual) -> vec4
+inline auto Playfield::lane_note_color(Lane::Visual visual) -> vec4
 {
 	switch (visual) {
 	case Lane::Visual::Odd: return {0.800f, 0.800f, 0.800f, 1.000f};
@@ -214,7 +212,7 @@ auto Playfield::lane_note_color(Lane::Visual visual) -> vec4
 	}
 }
 
-auto Playfield::make_field(bms::Playstyle playstyle, Side side) -> vector<Lane>
+inline auto Playfield::make_field(bms::Playstyle playstyle, Side side) -> vector<Lane>
 {
 	auto result = vector<Lane>{};
 	switch (playstyle) {
@@ -262,7 +260,7 @@ auto Playfield::make_field(bms::Playstyle playstyle, Side side) -> vector<Lane>
 	}
 }
 
-void Playfield::enqueue_field_border(Renderer::Queue& queue, ivec2 position, ivec2 size)
+inline void Playfield::enqueue_field_border(Renderer::Queue& queue, ivec2 position, ivec2 size)
 {
 	queue.enqueue_rect("judgment_line"_id, {
 		{position.x(), position.y() + size.y() - JudgmentLineHeight},
@@ -286,7 +284,7 @@ void Playfield::enqueue_field_border(Renderer::Queue& queue, ivec2 position, ive
 	});
 }
 
-void Playfield::enqueue_lane(Renderer::Queue& queue, ivec2 position, int32 length, Lane const& lane, bool left_border)
+inline void Playfield::enqueue_lane(Renderer::Queue& queue, ivec2 position, int32 length, Lane const& lane, bool left_border)
 {
 	auto const width = lane_width(lane.visual);
 	queue.enqueue_rect("frame"_id, {
@@ -312,7 +310,7 @@ void Playfield::enqueue_lane(Renderer::Queue& queue, ivec2 position, int32 lengt
 	}
 }
 
-void Playfield::enqueue_measure_lines(Renderer::Queue& queue, span<float const> measure_lines, ivec2 position, ivec2 size)
+inline void Playfield::enqueue_measure_lines(Renderer::Queue& queue, span<float const> measure_lines, ivec2 position, ivec2 size)
 {
 	for (auto y_pos: measure_lines) {
 		queue.enqueue_rect("measure"_id, {
