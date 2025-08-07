@@ -42,6 +42,7 @@ include(cmake/Dependencies.cmake)
 # Main target
 
 add_executable(Playnote
+	src/lib/debug.cpp
 	src/main.cpp
 )
 target_precompile_headers(Playnote PRIVATE src/preamble.hpp)
