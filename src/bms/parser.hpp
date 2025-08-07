@@ -2,24 +2,20 @@
 This software is dual-licensed. For more details, please consult LICENSE.txt.
 Copyright (c) 2025 Tearnote (Hubert Maraszek)
 
-bms/parser.cppm:
+bms/parser.hpp:
 A BMS format parser - turns a complete BMS file into a list of commands.
 */
 
-module;
+#pragma once
 #include "preamble.hpp"
 #include "assert.hpp"
 #include "logger.hpp"
 #include "lib/icu.hpp"
 
-export module playnote.bms.parser;
-
 namespace playnote::bms {
 
-namespace icu = lib::icu;
-
 // A "header" type BMS command.
-export struct HeaderCommand {
+struct HeaderCommand {
 	usize line; // Line counter, for diagnostics
 	string header; // Name of the command, uppercased
 	string slot; // Slot affected by the command; empty or up to 2 characters
@@ -27,7 +23,7 @@ export struct HeaderCommand {
 };
 
 // A "channel" type BMS command.
-export struct ChannelCommand {
+struct ChannelCommand {
 	usize line; // Line counter, for diagnostics
 	int32 measure; // Which measure is receiving events, starting at 0
 	string channel; // Which channel is receiving events, up to 2 characters
@@ -36,23 +32,23 @@ export struct ChannelCommand {
 
 // The list of encodings that are known to be used by BMS files in the wild.
 // Encoding detection is limited to this list to help avoid false positives.
-static inline constexpr auto KnownEncodings = {"UTF-8"sv, "Shift_JIS"sv, "EUC-KR"sv};
+inline constexpr auto KnownEncodings = {"UTF-8"sv, "Shift_JIS"sv, "EUC-KR"sv};
 
 // Convert a BMS of unknown encoding into UTF-8. Output is guaranteed to be valid UTF-8, possibly
 // with replacement characters (U+FFFD).
 // Throws if ICU throws.
-auto raw_to_utf8(Logger::Category* cat, span<byte const> raw_file_contents) -> string
+inline auto raw_to_utf8(Logger::Category* cat, span<byte const> raw_file_contents) -> string
 {
-	auto encoding = icu::detect_encoding(raw_file_contents, KnownEncodings);
+	auto encoding = lib::icu::detect_encoding(raw_file_contents, KnownEncodings);
 	if (!encoding) {
 		WARN_AS(cat, "Found an unexpected encoding; assuming Shift_JIS");
 		encoding = "Shift_JIS";
 	}
-	return icu::to_utf8(raw_file_contents, *encoding);
+	return lib::icu::to_utf8(raw_file_contents, *encoding);
 }
 
 // Ensure all line endings are '\n' (UNIX style).
-void normalize_line_endings(string& text)
+inline void normalize_line_endings(string& text)
 {
 	replace_all(text, "\r\n", "\n");
 	replace_all(text, "\r", "\n");
@@ -60,7 +56,7 @@ void normalize_line_endings(string& text)
 
 // Parse a known "header" type command into its individual components.
 // If the command is malformed, measure will be set to -1 which is otherwise an invalid value.
-auto parse_channel(string_view command, usize line_index) -> ChannelCommand
+inline auto parse_channel(string_view command, usize line_index) -> ChannelCommand
 {
 	if (command.size() < 4) return { .measure = -1 }; // Not enough space for even the measure number
 	auto const measure = lexical_cast<int32>(command.substr(1, 3)); // We checked that at least the first character is a digit, so this won't throw
@@ -82,7 +78,7 @@ auto parse_channel(string_view command, usize line_index) -> ChannelCommand
 // Parse a known "header" type command into its individual components. Some fields might be returned
 // empty if the command is malformed. Command is expected to be trimmed, start with '#' and have
 // at least 1 more character.
-auto parse_header(string_view command, usize line_index) -> HeaderCommand
+inline auto parse_header(string_view command, usize line_index) -> HeaderCommand
 {
 	ASSUME(!command.empty());
 	ASSUME(command[0] == '#');
@@ -125,7 +121,7 @@ auto parse_header(string_view command, usize line_index) -> HeaderCommand
 
 // Parse a line into the appropriate command.
 // If the line doesn't contain a valid command, std::monostate is returned.
-auto parse_line(string_view line, usize line_index) -> variant<monostate, HeaderCommand, ChannelCommand>
+inline auto parse_line(string_view line, usize line_index) -> variant<monostate, HeaderCommand, ChannelCommand>
 {
 	line = trim_copy(line); // BMS occasionally uses leading whitespace
 	if (line.empty()) return {};
@@ -139,7 +135,7 @@ auto parse_line(string_view line, usize line_index) -> variant<monostate, Header
 // Parse an entire BMS file, running the provided functions once for each command. The functions
 // are called in the same order the lines appear in the file. Only basic tokenization is done
 // and the commands are not validated; some fields might be empty.
-export template<
+template<
 	callable<void(HeaderCommand&&)> HFunc,
 	callable<void(ChannelCommand&&)> CFunc
 >

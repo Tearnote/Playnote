@@ -20,11 +20,11 @@ module;
 #include "gfx/renderer.hpp"
 #include "bms/audio_player.hpp"
 #include "bms/cursor.hpp"
+#include "bms/chart.hpp"
 #include "threads/audio_shouts.hpp"
 
 export module playnote.threads.render;
 
-import playnote.bms.chart;
 import playnote.threads.render_shouts;
 import playnote.threads.broadcaster;
 

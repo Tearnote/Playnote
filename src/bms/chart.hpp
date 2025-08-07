@@ -6,19 +6,16 @@ bms/chart.cppm:
 A definite, playable rhythm game chart optimized for playback.
 */
 
-module;
+#pragma once
 #include "preamble.hpp"
 #include "assert.hpp"
 #include "logger.hpp"
 #include "dev/audio.hpp"
-
-export module playnote.bms.chart;
-
-import playnote.bms.ir;
+#include "bms/ir.hpp"
 
 namespace playnote::bms {
 // A note of a chart with a definite timestamp and vertical position, ready for playback.
-export struct Note {
+struct Note {
 	struct Simple {};
 	struct LN {
 		nanoseconds length;
@@ -45,7 +42,7 @@ export struct Note {
 
 // A column of a chart, with all the notes that will appear on it from start to end.
 // Notes are expected to be sorted by timestamp from earliest.
-export struct Lane {
+struct Lane {
 	vector<Note> notes;
 	bool playable; // Are the notes for the player to hit?
 	bool visible; // Are the notes shown on the screen in some way?
@@ -53,7 +50,7 @@ export struct Lane {
 };
 
 // A point in the chart at which the BPM changes.
-export struct BPMChange {
+struct BPMChange {
 	nanoseconds position;
 	float bpm;
 	double y_pos;
@@ -61,7 +58,7 @@ export struct BPMChange {
 };
 
 // A list of all possible metadata about a chart.
-export struct Metadata {
+struct Metadata {
 	using Difficulty = IR::HeaderEvent::Difficulty::Level;
 	string title;
 	string subtitle;
@@ -85,7 +82,7 @@ export struct Metadata {
 	}
 };
 
-export enum class Playstyle {
+enum class Playstyle {
 	_5K,
 	_7K,
 	_9K,
@@ -94,7 +91,7 @@ export enum class Playstyle {
 };
 
 // Density functions of a chart's notes, and calculated NPS values.
-export struct Density {
+struct Density {
 	nanoseconds resolution; // real time between values
 	vector<float> key_density;
 	vector<float> scratch_density;
@@ -104,7 +101,7 @@ export struct Density {
 };
 
 // Data about a chart calculated from its contents.
-export struct Metrics {
+struct Metrics {
 	Playstyle playstyle;
 	uint32 note_count; // Only counts notes for the player to hit
 	nanoseconds chart_duration; // Time when all notes are judged
@@ -116,7 +113,7 @@ export struct Metrics {
 
 // An entire loaded chart, with all of its notes and meta information. Immutable; a chart is played
 // by creating and advancing a Play from it.
-export struct Chart: enable_shared_from_this<Chart> {
+struct Chart: enable_shared_from_this<Chart> {
 	enum class LaneType: usize {
 		P1_Key1,
 		P1_Key2,

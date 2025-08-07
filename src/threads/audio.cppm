@@ -16,11 +16,11 @@ module;
 #include "io/file.hpp"
 #include "bms/audio_player.hpp"
 #include "bms/build.hpp"
+#include "bms/ir.hpp"
 #include "threads/audio_shouts.hpp"
 
 export module playnote.threads.audio;
 
-import playnote.bms.ir;
 import playnote.threads.render_shouts;
 import playnote.threads.input_shouts;
 import playnote.threads.broadcaster;

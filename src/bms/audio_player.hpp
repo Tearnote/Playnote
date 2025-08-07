@@ -13,8 +13,7 @@ A cursor wrapper that sends audio samples to the audio device.
 #include "dev/window.hpp"
 #include "dev/audio.hpp"
 #include "bms/cursor.hpp"
-
-import playnote.bms.chart;
+#include "bms/chart.hpp"
 
 namespace playnote::bms {
 

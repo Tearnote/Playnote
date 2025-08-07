@@ -47,9 +47,6 @@ add_executable(Playnote
 target_precompile_headers(Playnote PRIVATE src/preamble.hpp)
 target_sources(Playnote PUBLIC
 	FILE_SET CXX_MODULES FILES
-	src/bms/parser.cppm
-	src/bms/chart.cppm
-	src/bms/ir.cppm
 	src/threads/render_shouts.cppm
 	src/threads/input_shouts.cppm
 	src/threads/broadcaster.cppm

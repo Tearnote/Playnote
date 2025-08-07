@@ -15,10 +15,9 @@ Construction of a chart from an IR.
 #include "io/bulk_request.hpp"
 #include "io/audio_codec.hpp"
 #include "bms/cursor.hpp"
+#include "bms/chart.hpp"
+#include "bms/ir.hpp"
 #include "threads/audio_shouts.hpp"
-
-import playnote.bms.chart;
-import playnote.bms.ir;
 
 namespace playnote::bms {
 

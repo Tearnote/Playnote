@@ -10,8 +10,7 @@ Representation of a moment in chart's playback.
 #include "preamble.hpp"
 #include "assert.hpp"
 #include "dev/audio.hpp"
-
-import playnote.bms.chart;
+#include "bms/chart.hpp"
 
 namespace playnote::bms {
 
