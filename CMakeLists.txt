@@ -32,8 +32,8 @@ add_compile_options("-Wall;-Wextra;-Wno-deprecated-literal-operator;-Wno-unquali
 add_compile_options("-march=x86-64-v3;-ffast-math;-fno-strict-float-cast-overflow;-fassume-nothrow-exception-dtor")
 add_compile_options("-fno-strict-aliasing;-fexceptions;-frtti")
 add_compile_options("$<$<NOT:$<CONFIG:Release>>:-g;-glldb>")
-add_compile_options("$<$<CONFIG:Release>:-g0;-flto>;$<$<NOT:$<CONFIG:Debug>>:-O3>") # CMake says LTO isn't supported, but it works?
-add_link_options("-fuse-ld=lld;$<$<NOT:$<CONFIG:Debug>>:-O3>;$<$<CONFIG:Release>:-flto>")
+add_compile_options("$<$<CONFIG:Release>:-g0>;$<$<NOT:$<CONFIG:Debug>>:-O3>")
+add_link_options("-fuse-ld=lld;$<$<NOT:$<CONFIG:Debug>>:-O3>")
 # Communicate build type to the project
 add_compile_definitions("BUILD_TYPE=$<$<CONFIG:Debug>:BUILD_DEBUG>$<$<CONFIG:RelWithDebInfo>:BUILD_RELDEB>$<$<CONFIG:Release>:BUILD_RELEASE>")
 
