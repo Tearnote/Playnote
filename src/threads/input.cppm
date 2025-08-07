@@ -11,11 +11,11 @@ module;
 #include "preamble.hpp"
 #include "logger.hpp"
 #include "lib/tracy.hpp"
+#include "dev/window.hpp"
+#include "dev/os.hpp"
 
 export module playnote.threads.input;
 
-import playnote.dev.window;
-import playnote.dev.os;
 import playnote.threads.broadcaster;
 
 namespace playnote::threads {

@@ -10,10 +10,9 @@ module;
 #include "preamble.hpp"
 #include "lib/vulkan.hpp"
 #include "lib/imgui.hpp"
+#include "dev/gpu.hpp"
 
 export module playnote.gfx.imgui;
-
-import playnote.dev.gpu;
 
 namespace playnote::gfx {
 

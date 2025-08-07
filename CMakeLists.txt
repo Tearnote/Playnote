@@ -44,11 +44,9 @@ include(cmake/Dependencies.cmake)
 add_executable(Playnote
 	src/main.cpp
 )
+target_precompile_headers(Playnote PRIVATE src/preamble.hpp)
 target_sources(Playnote PUBLIC
 	FILE_SET CXX_MODULES FILES
-	src/dev/window.cppm
-	src/dev/gpu.cppm
-	src/dev/os.cppm
 	src/gfx/playfield.cppm
 	src/gfx/imgui.cppm
 	src/bms/parser.cppm

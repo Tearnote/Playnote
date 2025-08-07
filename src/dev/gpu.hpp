@@ -2,29 +2,24 @@
 This software is dual-licensed. For more details, please consult LICENSE.txt.
 Copyright (c) 2025 Tearnote (Hubert Maraszek)
 
-dev/gpu.cppm:
+dev/gpu.hpp:
 Initializes Vulkan and the rendergraph.
 */
 
-module;
+#pragma once
 #include "preamble.hpp"
 #include "assert.hpp"
 #include "config.hpp"
 #include "logger.hpp"
 #include "lib/vulkan.hpp"
-
-export module playnote.dev.gpu;
-
-import playnote.dev.window;
+#include "dev/window.hpp"
 
 namespace playnote::dev {
 
-namespace vk = lib::vk;
-
-export using vk::ManagedImage;
+using lib::vk::ManagedImage;
 
 // RAII encapsulation of GPU state, handling initialization and frame preparation/presentation
-export class GPU {
+class GPU {
 public:
 	static constexpr auto FramesInFlight = 2u; // 2 or 3, low latency vs smoothness
 
@@ -32,11 +27,11 @@ public:
 	~GPU() { runtime.wait_idle(); }
 
 	[[nodiscard]] auto get_window() const -> dev::Window& { return window; }
-	[[nodiscard]] auto get_global_allocator() -> vk::Allocator& { return global_allocator; }
+	[[nodiscard]] auto get_global_allocator() -> lib::vk::Allocator& { return global_allocator; }
 
 	// Prepare and present a single frame. All vuk draw commands must be submitted within
 	// the callback. The callback is provided with the frame allocator and swapchain image.
-	template<callable<ManagedImage(vk::Allocator&, ManagedImage&&)> Func>
+	template<callable<ManagedImage(lib::vk::Allocator&, ManagedImage&&)> Func>
 	void frame(Func&&);
 
 	GPU(GPU const&) = delete;
@@ -51,7 +46,7 @@ private:
 	// RAII wrapper of a Vulkan instance.
 	class Instance {
 	public:
-		vk::Instance instance;
+		lib::vk::Instance instance;
 
 		explicit Instance(Logger::Category*);
 		~Instance() noexcept;
@@ -68,7 +63,7 @@ private:
 	// RAII wrapper of a Vulkan surface.
 	class Surface {
 	public:
-		vk::Surface surface;
+		lib::vk::Surface surface;
 
 		Surface(Logger::Category*, dev::Window&, Instance&);
 		~Surface() noexcept;
@@ -86,9 +81,9 @@ private:
 	// RAII wrapper of a Vulkan device.
 	class Device {
 	public:
-		vk::Device device;
+		lib::vk::Device device;
 
-		Device(Logger::Category*, vk::PhysicalDevice const&);
+		Device(Logger::Category*, lib::vk::PhysicalDevice const&);
 		~Device() noexcept;
 
 		Device(Device const&) = delete;
@@ -101,71 +96,71 @@ private:
 	};
 
 	// Logging wrappers.
-	[[nodiscard]] auto select_physical_device(Instance const&, Surface const&) const -> vk::PhysicalDevice;
-	auto create_swapchain(vk::Allocator& allocator, Device& device, uvec2 size,
-		optional<vk::Swapchain> old = nullopt) const -> vk::Swapchain;
+	[[nodiscard]] auto select_physical_device(Instance const&, Surface const&) const -> lib::vk::PhysicalDevice;
+	auto create_swapchain(lib::vk::Allocator& allocator, Device& device, uvec2 size,
+		optional<lib::vk::Swapchain> old = nullopt) const -> lib::vk::Swapchain;
 
 	dev::Window& window;
 
 	Instance instance;
 	Surface surface;
-	vk::PhysicalDevice physical_device;
+	lib::vk::PhysicalDevice physical_device;
 	Device device;
-	vk::Runtime runtime;
-	vk::GlobalResource global_resource;
-	vk::Allocator global_allocator;
-	vk::Swapchain swapchain;
-	vk::TracyContext tracy_context;
+	lib::vk::Runtime runtime;
+	lib::vk::GlobalResource global_resource;
+	lib::vk::Allocator global_allocator;
+	lib::vk::Swapchain swapchain;
+	lib::vk::TracyContext tracy_context;
 };
 
-GPU::Instance::Instance(Logger::Category* cat):
-	instance{vk::create_instance(AppTitle, cat)},
+inline GPU::Instance::Instance(Logger::Category* cat):
+	instance{lib::vk::create_instance(AppTitle, cat)},
 	cat{cat}
 { DEBUG_AS(cat, "Vulkan instance created"); }
 
-GPU::Instance::~Instance() noexcept
+inline GPU::Instance::~Instance() noexcept
 {
-	vk::destroy_instance(instance);
+	lib::vk::destroy_instance(instance);
 	DEBUG_AS(cat, "Vulkan instance cleaned up");
 }
 
-GPU::Surface::Surface(Logger::Category* cat, dev::Window& window, Instance& instance):
+inline GPU::Surface::Surface(Logger::Category* cat, dev::Window& window, Instance& instance):
 	surface{window.create_surface(instance.instance)},
 	cat{cat},
 	instance{instance} {}
 
-GPU::Surface::~Surface() noexcept
+inline GPU::Surface::~Surface() noexcept
 {
-	vk::destroy_surface(instance.instance, surface);
+	lib::vk::destroy_surface(instance.instance, surface);
 	DEBUG_AS(cat, "Vulkan surface cleaned up");
 }
 
-GPU::Device::Device(Logger::Category* cat, vk::PhysicalDevice const& physical_device):
-	device{vk::create_device(physical_device)},
+inline GPU::Device::Device(Logger::Category* cat, lib::vk::PhysicalDevice const& physical_device):
+	device{lib::vk::create_device(physical_device)},
 	cat{cat}
 { DEBUG_AS(cat, "Vulkan device created"); }
 
-GPU::Device::~Device() noexcept
+inline GPU::Device::~Device() noexcept
 {
-	vk::destroy_device(device);
+	lib::vk::destroy_device(device);
 	DEBUG_AS(cat, "Vulkan device cleaned up");
 }
 
-[[nodiscard]] auto GPU::select_physical_device(Instance const& instance, Surface const& surface) const -> vk::PhysicalDevice
+[[nodiscard]] inline auto GPU::select_physical_device(Instance const& instance, Surface const& surface) const -> lib::vk::PhysicalDevice
 {
-	auto physical_device = vk::select_physical_device(instance.instance, surface.surface);
-	auto const version = vk::get_driver_version(physical_device);
+	auto physical_device = lib::vk::select_physical_device(instance.instance, surface.surface);
+	auto const version = lib::vk::get_driver_version(physical_device);
 
 	INFO_AS(cat, "GPU selected: {}", physical_device.properties.deviceName);
 	DEBUG_AS(cat, "Vulkan driver version {}.{}.{}", version[0], version[1], version[2]);
 	return physical_device;
 }
 
-auto GPU::create_swapchain(vk::Allocator& allocator, Device& device, uvec2 size,
-	optional<vk::Swapchain> old) const -> vk::Swapchain
+auto inline GPU::create_swapchain(lib::vk::Allocator& allocator, Device& device, uvec2 size,
+	optional<lib::vk::Swapchain> old) const -> lib::vk::Swapchain
 {
 	auto const recreating = old.has_value();
-	auto swapchain = vk::create_swapchain(allocator, device.device, size, move(old));
+	auto swapchain = lib::vk::create_swapchain(allocator, device.device, size, move(old));
 	if (!recreating)
 		DEBUG_AS(cat, "Created swapchain, size {}", size);
 	else
@@ -173,7 +168,7 @@ auto GPU::create_swapchain(vk::Allocator& allocator, Device& device, uvec2 size,
 	return swapchain;
 }
 
-GPU::GPU(dev::Window& window):
+inline GPU::GPU(dev::Window& window):
 	// Beautiful, isn't it
 	cat{globals::logger->register_category("Graphics", LogLevelGraphics)},
 	window{window},
@@ -181,22 +176,22 @@ GPU::GPU(dev::Window& window):
 	surface{cat, window, instance},
 	physical_device{select_physical_device(instance, surface)},
 	device{cat, physical_device},
-	runtime{vk::create_runtime(instance.instance, device.device, vk::retrieve_device_queues(device.device))},
+	runtime{lib::vk::create_runtime(instance.instance, device.device, lib::vk::retrieve_device_queues(device.device))},
 	global_resource{runtime, FramesInFlight},
 	global_allocator{global_resource},
 	swapchain{create_swapchain(global_allocator, device, window.size())},
-	tracy_context{vk::create_tracy_context(global_allocator)}
+	tracy_context{lib::vk::create_tracy_context(global_allocator)}
 {
 	INFO_AS(cat, "Vulkan initialized");
 }
 
-template<callable<ManagedImage(vk::Allocator&, ManagedImage&&)> Func>
+template<callable<ManagedImage(lib::vk::Allocator&, ManagedImage&&)> Func>
 void GPU::frame(Func&& func)
 {
-	auto frame_allocator = vk::begin_frame(runtime, global_resource);
-	auto swapchain_image = vk::acquire_swapchain_image(swapchain, "swp_img");
+	auto frame_allocator = lib::vk::begin_frame(runtime, global_resource);
+	auto swapchain_image = lib::vk::acquire_swapchain_image(swapchain, "swp_img");
 	auto result = func(frame_allocator, move(swapchain_image));
-	vk::submit(frame_allocator, tracy_context, move(result));
+	lib::vk::submit(frame_allocator, tracy_context, move(result));
 
 }
 

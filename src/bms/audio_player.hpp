@@ -10,10 +10,10 @@ A cursor wrapper that sends audio samples to the audio device.
 #include "preamble.hpp"
 #include "assert.hpp"
 #include "logger.hpp"
+#include "dev/window.hpp"
 #include "dev/audio.hpp"
 #include "bms/cursor.hpp"
 
-import playnote.dev.window;
 import playnote.bms.chart;
 
 namespace playnote::bms {

@@ -2,36 +2,32 @@
 This software is dual-licensed. For more details, please consult LICENSE.txt.
 Copyright (c) 2025 Tearnote (Hubert Maraszek)
 
-dev/window.cppm:
+dev/window.hpp:
 Initializes GLFW and manages windows. Windows handle keyboard and mouse input, and the window's
 "should close" state manages application lifetime.
 */
 
-module;
+#pragma once
 #include "preamble.hpp"
 #include "assert.hpp"
 #include "logger.hpp"
 #include "lib/vulkan.hpp"
 #include "lib/glfw.hpp"
 
-export module playnote.dev.window;
-
 namespace playnote::dev {
 
-namespace glfw = lib::glfw;
-
 // RAII abstraction for GLFW library initialization.
-export class GLFW {
+class GLFW {
 public:
 	GLFW();
 	~GLFW() noexcept;
 
 	// Retrieve time since application start.
-	[[nodiscard]] auto get_time() const -> nanoseconds { return glfw::time_since_init(); }
+	[[nodiscard]] auto get_time() const -> nanoseconds { return lib::glfw::time_since_init(); }
 
 	// Pump the message queue.
 	// Run this as often as possible to receive accurate event timestamps.
-	void poll() { glfw::process_events(); }
+	void poll() { lib::glfw::process_events(); }
 
 	GLFW(GLFW const&) = delete;
 	auto operator=(GLFW const&) -> GLFW& = delete;
@@ -43,12 +39,12 @@ private:
 };
 
 // RAII abstraction of a single application window, providing a drawing surface and input handling.
-export class Window {
+class Window {
 public:
-	using KeyCode = glfw::KeyCode;
-	using KeyAction = glfw::KeyAction;
-	using MouseButton = glfw::MouseButton;
-	using MouseButtonAction = glfw::MouseButtonAction;
+	using KeyCode = lib::glfw::KeyCode;
+	using KeyAction = lib::glfw::KeyAction;
+	using MouseButton = lib::glfw::MouseButton;
+	using MouseButtonAction = lib::glfw::MouseButtonAction;
 
 	Window(GLFW&, string_view title, uvec2 size);  // GLFW parameter is a semantic dependency
 
@@ -58,11 +54,11 @@ public:
 	// to mark a user-requested quit event).
 	[[nodiscard]] auto is_closing() const -> bool
 	{
-		return glfw::get_window_closing_flag(window_handle.get());
+		return lib::glfw::get_window_closing_flag(window_handle.get());
 	}
 
 	// Signal the application to cleanly close as soon as possible.
-	void request_close() { glfw::set_window_closing_flag(window_handle.get(), true); }
+	void request_close() { lib::glfw::set_window_closing_flag(window_handle.get(), true); }
 
 	// Size of the window's framebuffer.
 	[[nodiscard]] auto size() const -> uvec2;
@@ -88,7 +84,7 @@ public:
 		mouse_button_callbacks.emplace_back(move(func));
 	}
 
-	auto handle() -> glfw::Window { return window_handle.get(); }
+	auto handle() -> lib::glfw::Window { return window_handle.get(); }
 
 	// Create a Vulkan surface for the window's framebuffer.
 	// Destruction needs to be handled manually by the caller.
@@ -100,9 +96,9 @@ public:
 	auto operator=(Window&&) -> Window& = delete;
 
 private:
-	using WindowHandle = unique_resource<glfw::Window, decltype([](auto* w) noexcept {
-		auto const title = string{glfw::get_window_title(w)};
-		glfw::destroy_window(w);
+	using WindowHandle = unique_resource<lib::glfw::Window, decltype([](auto* w) noexcept {
+		auto const title = string{lib::glfw::get_window_title(w)};
+		lib::glfw::destroy_window(w);
 		INFO("Window \"{}\" closed", title);
 	})>;
 
@@ -114,47 +110,47 @@ private:
 	vector<function<void(MouseButton, bool)>> mouse_button_callbacks;
 };
 
-GLFW::GLFW()
+inline GLFW::GLFW()
 {
 	// Convert GLFW errors to exceptions, freeing us from having to check error codes
-	glfw::register_error_handler();
-	glfw::init();
-	glfw::set_window_creation_hints();
+	lib::glfw::register_error_handler();
+	lib::glfw::init();
+	lib::glfw::set_window_creation_hints();
 	INFO("GLFW initialized");
 }
 
-GLFW::~GLFW() noexcept
+inline GLFW::~GLFW() noexcept
 {
-	glfw::cleanup();
+	lib::glfw::cleanup();
 	INFO("GLFW cleaned up");
 }
 
-Window::Window(GLFW& glfw, string_view title, uvec2 size):
+inline Window::Window(GLFW& glfw, string_view title, uvec2 size):
 	glfw{glfw}
 {
 	ASSERT(size.x() > 0 && size.y() > 0);
 
-	window_handle = WindowHandle{glfw::create_window(size, title)};
+	window_handle = WindowHandle{lib::glfw::create_window(size, title)};
 
 	// Provide event callbacks full access to the associated Window instance
-	glfw::set_window_user_pointer(window_handle.get(), this);
+	lib::glfw::set_window_user_pointer(window_handle.get(), this);
 
-	glfw::set_window_key_handler(window_handle.get(), [](glfw::Window window_ptr, int key, int, int action, int) {
+	lib::glfw::set_window_key_handler(window_handle.get(), [](lib::glfw::Window window_ptr, int key, int, int action, int) {
 		if (action == +KeyAction::Repeat) return; // Only care about press and release
-		auto& window = *glfw::get_window_user_pointer<Window>(window_ptr);
+		auto& window = *lib::glfw::get_window_user_pointer<Window>(window_ptr);
 		for (auto& func: window.key_callbacks)
 			func(KeyCode{key}, action == +KeyAction::Press);
 	});
 
-	glfw::set_window_cursor_motion_handler(window_handle.get(), [](glfw::Window window_ptr, double x, double y) {
-		auto& window = *glfw::get_window_user_pointer<Window>(window_ptr);
+	lib::glfw::set_window_cursor_motion_handler(window_handle.get(), [](lib::glfw::Window window_ptr, double x, double y) {
+		auto& window = *lib::glfw::get_window_user_pointer<Window>(window_ptr);
 		for (auto& func: window.cursor_motion_callbacks)
 			func(vec2{static_cast<float>(x), static_cast<float>(y)});
 	});
 
-	glfw::set_window_mouse_button_handler(window_handle.get(),
-		[](glfw::Window window_ptr, int button, int action, int) {
-			auto& window = *glfw::get_window_user_pointer<Window>(window_ptr);
+	lib::glfw::set_window_mouse_button_handler(window_handle.get(),
+		[](lib::glfw::Window window_ptr, int button, int action, int) {
+			auto& window = *lib::glfw::get_window_user_pointer<Window>(window_ptr);
 			for (auto& func: window.mouse_button_callbacks)
 				func(MouseButton{button}, action == +MouseButtonAction::Press);
 		}
@@ -163,14 +159,14 @@ Window::Window(GLFW& glfw, string_view title, uvec2 size):
 	INFO("Created window {}, size {}", title, size);
 }
 
-auto Window::size() const -> uvec2
+inline auto Window::size() const -> uvec2
 {
-	return glfw::get_window_framebuffer_size(window_handle.get());
+	return lib::glfw::get_window_framebuffer_size(window_handle.get());
 }
 
-auto Window::create_surface(lib::vk::Instance const& instance) -> lib::vk::Surface
+inline auto Window::create_surface(lib::vk::Instance const& instance) -> lib::vk::Surface
 {
-	return glfw::create_window_surface(window_handle.get(), instance);
+	return lib::glfw::create_window_surface(window_handle.get(), instance);
 }
 
 }
