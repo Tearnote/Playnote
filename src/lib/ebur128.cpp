@@ -1,6 +1,9 @@
 /*
 This software is dual-licensed. For more details, please consult LICENSE.txt.
 Copyright (c) 2025 Tearnote (Hubert Maraszek)
+
+lib/ebur128.cpp:
+Implementation file for lib/ebur128.hpp.
 */
 
 #include "lib/ebur128.hpp"
