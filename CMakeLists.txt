@@ -42,6 +42,7 @@ include(cmake/Dependencies.cmake)
 # Main target
 
 add_executable(Playnote
+	src/lib/ebur128.cpp
 	src/lib/debug.cpp
 	src/main.cpp
 )

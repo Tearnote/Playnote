@@ -7,53 +7,29 @@ Wrapper for libebur128 psychoacoustic audio volume analysis.
 */
 
 #pragma once
-#include "ebur128.h"
 #include "preamble.hpp"
 #include "lib/pipewire.hpp"
 
 namespace playnote::lib::ebur128 {
 
 // Library context for storing accumulated loudness information.
-using Context = ebur128_state*;
-
-// Error checking wrappers for libebur128 functions.
-template<typename T>
-auto ptr_check(T* ptr, string_view message = "libebur128 error") -> T*
-{
-	if (!ptr) throw system_error_fmt("{}", message);
-	return ptr;
-}
-
-inline void ret_check(int ret, string_view message = "libebur128 error")
-{
-	if (ret != EBUR128_SUCCESS) throw system_error_fmt("{}: #{}", message, ret);
-}
+struct Context_t;
+using Context = Context_t*;
 
 // Create a context to accumulate audio frames. Call cleanup() when finished.
 // Throws if libebur128 throws.
-inline auto init(uint32 sampling_rate) -> Context
-{
-	return ptr_check(ebur128_init(2, sampling_rate, EBUR128_MODE_I));
-}
+auto init(uint32 sampling_rate) -> Context;
 
 // Destroy a context once finished.
-inline void cleanup(Context ctx) noexcept { ebur128_destroy(&ctx); }
+void cleanup(Context ctx) noexcept;
 
 // Process audio frames. They can all be added at once, or in chunks to save memory.
 // Throws if libebur128 throws.
-inline void add_frames(Context ctx, span<pw::Sample const> frames)
-{
-	ret_check(ebur128_add_frames_float(ctx, reinterpret_cast<float const*>(frames.data()), frames.size()));
-}
+void add_frames(Context ctx, span<pw::Sample const> frames);
 
 // After all frames were added, call this to get the loudness of the entire audio in LUFS
 // (Loudness Units relative to Full Scale).
 // Throws if libebur128 throws.
-inline auto get_loudness(Context ctx) -> double
-{
-	auto result = 0.0;
-	ret_check(ebur128_loudness_global(ctx, &result));
-	return result;
-}
+auto get_loudness(Context ctx) -> double;
 
 }
