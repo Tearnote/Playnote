@@ -12,13 +12,20 @@ Wrapper for libav/libswresample audio file decoding.
 
 namespace playnote::lib::ffmpeg {
 
+// Opaque type for raw decoder output, unusable before being resampled to a known format.
 struct DecoderOutput_t;
 using DecoderOutput = unique_ptr<DecoderOutput_t>;
 
+// Decode an audio file from a buffer into uncompressed audio data.
+// Throws runtime_error if ffmpeg throws.
 auto decode_file_buffer(span<byte const> file_contents) -> DecoderOutput;
 
+// Resample decoded audio to a known format.
+// Throws runtime_error if ffmpeg throws.
 auto resample_buffer(DecoderOutput&& input, uint32 sampling_rate) -> vector<pw::Sample>;
 
+// Perform both decoding and resampling in one step.
+// Throws runtime_error if ffmpeg throws.
 auto decode_and_resample_file_buffer(span<byte const> file_contents, uint32 sampling_rate) -> vector<pw::Sample>;
 
 }

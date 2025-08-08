@@ -16,6 +16,8 @@ namespace playnote::lib::ebur128 {
 
 struct Context_t: ebur128_state {};
 
+// Helper functions for error handling
+
 template<typename T>
 static auto ptr_check(T* ptr, string_view message = "libebur128 error") -> T*
 {

@@ -31,6 +31,8 @@ struct DecoderOutput_t {
 	bool planar;
 };
 
+// Helper functions for error handling
+
 static auto check_ret(int ret) -> int
 {
 	if (ret < 0) throw runtime_error_fmt("ffmpeg error: {}", av_err2str(ret));
@@ -44,10 +46,13 @@ static auto check_ptr(T* ptr) -> T*
 	return ptr;
 }
 
+// Data buffer wrapper with a cursor for seeking support.
 struct SeekBuffer {
 	span<byte const> buffer;
 	usize cursor;
 };
+
+// Memory buffer IO callbacks
 
 static auto av_io_read(void* opaque, uint8_t* buf, int buf_size) -> int
 {
