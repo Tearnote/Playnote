@@ -46,6 +46,7 @@ add_executable(Playnote
 	src/lib/ffmpeg.cpp
 	src/lib/debug.cpp
 	src/lib/glfw.cpp
+	src/lib/icu.cpp
 	src/main.cpp
 )
 target_precompile_headers(Playnote PRIVATE src/preamble.hpp)
