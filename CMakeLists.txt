@@ -43,6 +43,7 @@ include(cmake/Dependencies.cmake)
 
 add_executable(Playnote
 	src/lib/ebur128.cpp
+	src/lib/openssl.cpp
 	src/lib/ffmpeg.cpp
 	src/lib/debug.cpp
 	src/lib/glfw.cpp
