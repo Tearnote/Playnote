@@ -7,55 +7,21 @@ Wrapper for OS-specific thread handling functions not provided by STL.
 */
 
 #pragma once
-#ifdef _WIN32
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#ifdef WIN32_LEAN_AND_MEAN
-#undef WIN32_LEAN_AND_MEAN
-#endif
-#include <Windows.h>
-#else
-#include <pthread.h>
-#endif
 #include "preamble.hpp"
 
 namespace playnote::lib::thread {
 
 // Set current thread name in the OS scheduler, which can help with debugging.
 // Throws runtime_error on failure.
-inline void name_current(string_view name)
-{
-#ifdef _WIN32
-	auto const lname = std::wstring{name.begin(), name.end()};
-	auto const err = SetThreadDescription(GetCurrentThread(), lname.c_str());
-	if (FAILED(err))
-		throw runtime_error_fmt{"Failed to set thread name: error {}", err};
-#else
-	auto const err = pthread_setname_np(pthread_self(), string{name}.c_str());
-	if (err != 0)
-		throw system_error("Failed to set thread name");
-#endif
-}
+void name_current(string_view name);
 
 // Set the thread scheduler period to at most the provided value. This can increase the resolution
 // of thread sleep and yield. Pair with a matching callto end_thread_scheduler_period
 // with the same period.
 // Throws runtime_error on failure.
-inline void begin_scheduler_period([[maybe_unused]] milliseconds period)
-{
-#ifdef _WIN32
-	if (timeBeginPeriod(period.count()) != TIMERR_NOERROR)
-		throw runtime_error{"Failed to initialize thread scheduler period"};
-#endif
-}
+void begin_scheduler_period([[maybe_unused]] milliseconds period);
 
 // End a previously started thread scheduler period. Failure is ignored.
-inline void end_scheduler_period([[maybe_unused]] milliseconds period) noexcept
-{
-#ifdef _WIN32
-	timeEndPeriod(period.count());
-#endif
-}
+void end_scheduler_period([[maybe_unused]] milliseconds period) noexcept;
 
 }
