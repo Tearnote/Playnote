@@ -48,6 +48,7 @@ add_executable(Playnote
 	src/lib/ffmpeg.cpp
 	src/lib/thread.cpp
 	src/lib/debug.cpp
+	src/lib/imgui.cpp
 	src/lib/glfw.cpp
 	src/lib/icu.cpp
 	src/main.cpp
