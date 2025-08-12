@@ -133,12 +133,12 @@ auto decode_file_buffer(span<byte const> file_contents) -> DecoderOutput
 	codec_ctx->pkt_timebase = stream->time_base; // Fix "Could not update timestamps for discarded samples."
 	check_ret(avcodec_open2(codec_ctx.get(), codec, nullptr));
 
-	auto result = make_unique<DecoderOutput_t>(DecoderOutput_t{
+	auto result = new DecoderOutput_t{
 		.sample_format = codec_ctx->sample_fmt,
 		.sample_rate = static_cast<uint32>(codec_ctx->sample_rate),
 		.channel_layout = codec_ctx->ch_layout,
 		.planar = static_cast<bool>(av_sample_fmt_is_planar(codec_ctx->sample_fmt)),
-	});
+	};
 	auto const planes = result->planar? result->channel_layout.nb_channels : 1u;
 	auto const bytes_per_sample = av_get_bytes_per_sample(codec_ctx->sample_fmt);
 	auto const samples_per_frame = result->planar? 1u : result->channel_layout.nb_channels;
@@ -219,6 +219,7 @@ auto resample_buffer(DecoderOutput&& input, uint32 sampling_rate) -> vector<pw::
 	output.resize(out_samples);
 
 	swr_free(&swr);
+	delete input;
 	return output;
 }
 

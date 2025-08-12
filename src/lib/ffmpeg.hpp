@@ -14,9 +14,10 @@ namespace playnote::lib::ffmpeg {
 
 // Opaque type for raw decoder output, unusable before being resampled to a known format.
 struct DecoderOutput_t;
-using DecoderOutput = unique_ptr<DecoderOutput_t>;
+using DecoderOutput = DecoderOutput_t*;
 
-// Decode an audio file from a buffer into uncompressed audio data.
+// Decode an audio file from a buffer into uncompressed audio data. The returned output must be
+// consumed by resample_buffer() to free the underlying resources.
 // Throws runtime_error if ffmpeg throws.
 auto decode_file_buffer(span<byte const> file_contents) -> DecoderOutput;
 
