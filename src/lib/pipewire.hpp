@@ -43,15 +43,7 @@ void unlock_thread_loop(ThreadLoop loop);
 
 struct Stream_t;
 
-namespace detail {
-
-struct StreamDeleter {
-	static void operator()(Stream_t* stream) noexcept;
-};
-
-}
-
-using Stream = unique_ptr<Stream_t, detail::StreamDeleter>;
+using Stream = Stream_t*;
 
 using SPAPod = spa_pod const*;
 using ProcessCallback = void(*)(void*);
@@ -81,7 +73,12 @@ template<typename T = void>
 	return detail::create_stream_raw(loop, name, latency, on_process, on_param_changed, user_ptr);
 }
 
-auto get_stream_time(Stream const& stream) -> nanoseconds;
+// Destroy an audio stream. Ensures the loop is frozen for the duration to prevent race conditions
+// with the realtime thread.
+void destroy_stream(ThreadLoop loop, Stream stream) noexcept;
+
+// Return the playback progress of the stream.
+auto get_stream_time(Stream const& stream) noexcept -> nanoseconds;
 
 // A single audio sample (frame).
 struct Sample {

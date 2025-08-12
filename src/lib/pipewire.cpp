@@ -59,7 +59,6 @@ auto get_sampling_rate_from_param(uint32_t id, spa_pod const* param) -> optional
 }
 
 struct Stream_t {
-	ThreadLoop loop;
 	pw_stream* stream;
 	pw_stream_events events;
 };
@@ -69,8 +68,7 @@ namespace detail {
 [[nodiscard]] auto create_stream_raw(ThreadLoop loop, string_view name, uint32 latency,
 	ProcessCallback on_process, ParamChangedCallback on_param_changed, void* user_ptr) -> Stream
 {
-	auto result = Stream(new Stream_t);
-	result->loop = loop;
+	auto const result = new Stream_t;
 	result->events = pw_stream_events{
 		.version = PW_VERSION_STREAM_EVENTS,
 		.param_changed = on_param_changed,
@@ -101,17 +99,17 @@ namespace detail {
 	return result;
 }
 
-void StreamDeleter::operator()(Stream_t* stream) noexcept
+}
+
+void destroy_stream(ThreadLoop loop, Stream stream) noexcept
 {
-	pw_thread_loop_lock(stream->loop);
+	pw_thread_loop_lock(loop);
 	pw_stream_destroy(stream->stream);
-	pw_thread_loop_unlock(stream->loop);
+	pw_thread_loop_unlock(loop);
 	delete stream;
 }
 
-}
-
-auto get_stream_time(Stream const& stream) -> nanoseconds
+auto get_stream_time(Stream const& stream) noexcept -> nanoseconds
 {
 	return nanoseconds{pw_stream_get_nsec(stream->stream)};
 }

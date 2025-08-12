@@ -104,7 +104,7 @@ inline Audio::Audio() {
 
 inline Audio::~Audio()
 {
-	stream.reset();
+	lib::pw::destroy_stream(loop, stream);
 	lib::pw::destroy_thread_loop(loop);
 }
 
