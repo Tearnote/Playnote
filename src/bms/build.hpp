@@ -593,10 +593,8 @@ auto calculate_density_distribution(Chart::Lanes const& lanes, nanoseconds chart
 	nanoseconds resolution, nanoseconds window, Func&& progress) -> Density
 {
 	constexpr auto Bandwidth = 3.0f; // in standard deviations
-	auto const InvSqrtTau = 1.0f / sqrt(Tau);
 	// scale back a stretched window, and correct for considering only 3 standard deviations
-	auto const NormalizeWindow = 1.0f / (window / 1s) * (1.0f / 0.973f);
-	auto const GaussianScale = NormalizeWindow * InvSqrtTau;
+	auto const GaussianScale = 1.0f / (window / 1s) * (1.0f / 0.973f);
 
 	auto result = Density{};
 	auto const points = chart_duration / resolution + 1;
