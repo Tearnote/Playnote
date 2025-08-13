@@ -58,17 +58,8 @@ void submit(Allocator& allocator, TracyContext const& tracy_context, ManagedImag
 
 // Compile a vertex and fragment shader pair into a graphics pipeline.
 // Throws if vuk throws.
-template<usize NVert, usize NFrag>
 void create_graphics_pipeline(Runtime& runtime, string_view name,
-	array<uint32, NVert> const& vertex_shader, array<uint32, NFrag> const& fragment_shader)
-{
-	auto const vert_name = format("{}.vert", name);
-	auto const frag_name = format("{}.frag", name);
-	auto pci = PipelineBaseCreateInfo{};
-	pci.add_static_spirv(vertex_shader.data(), NVert, move(vert_name));
-	pci.add_static_spirv(fragment_shader.data(), NFrag, move(frag_name));
-	runtime.create_named_pipeline(name, pci);
-}
+	span<uint32 const> vertex_shader, span<uint32 const> fragment_shader);
 
 // Clear an image with a solid color.
 // Throws if vuk throws.

@@ -132,6 +132,16 @@ void submit(Allocator& allocator, TracyContext const& tracy_context, ManagedImag
 	entire_thing.submit(allocator, compiler, {.callbacks = profiling_cbs});
 }
 
+void create_graphics_pipeline(Runtime& runtime, string_view name, span<uint32 const> vertex_shader,
+	span<uint32 const> fragment_shader) {
+	auto const vert_name = format("{}.vert", name);
+	auto const frag_name = format("{}.frag", name);
+	auto pci = PipelineBaseCreateInfo{};
+	pci.add_static_spirv(vertex_shader.data(), vertex_shader.size(), move(vert_name));
+	pci.add_static_spirv(fragment_shader.data(), fragment_shader.size(), move(frag_name));
+	runtime.create_named_pipeline(name, pci);
+}
+
 auto clear_image(ManagedImage&& input, vec4 color) -> ManagedImage
 {
 	return clear_image(move(input), ClearColor{color.r(), color.g(), color.b(), color.a()});
