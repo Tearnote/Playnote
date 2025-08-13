@@ -52,7 +52,7 @@ class Logger {
 			"%(time) [%(log_level_short_code)] [%(logger)] %(message)",
 			"%H:%M:%S.%Qms"
 		};
-		static auto constexpr ShortCodes = to_array<string>({
+		static inline auto const ShortCodes = to_array<string>({
 			"TR3", "TR2", "TRA", "DBG", "INF", "NTC",
 			"WRN", "ERR", "CRT", "BCT", "___", "DYN"
 		});

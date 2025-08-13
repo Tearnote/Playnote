@@ -21,19 +21,16 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 if(NOT UNIX)
 	message(FATAL_ERROR "Unsupported platform; Playnote requires Linux")
 endif()
-if(NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-	message(FATAL_ERROR "Unsupported compiler; Playnote requires Clang")
-endif()
 
 # Global build settings
 
 set(BUILD_SHARED_LIBS OFF)
-add_compile_options("-Wall;-Wextra;-Wno-deprecated-literal-operator;-Wno-unqualified-std-cast-call;-Wno-missing-field-initializers;-Wno-missing-designated-field-initializers;-Wno-nan-infinity-disabled")
-add_compile_options("-march=x86-64-v3;-ffast-math;-fno-strict-float-cast-overflow;-fassume-nothrow-exception-dtor")
-add_compile_options("-fno-strict-aliasing;-fexceptions;-frtti")
-add_compile_options("$<$<NOT:$<CONFIG:Release>>:-g;-glldb>")
+add_compile_options("-Wall;-Wextra")
+add_compile_options("-march=x86-64-v3;-ffast-math")
+add_compile_options("-fno-strict-aliasing;$<$<COMPILE_LANGUAGE:CXX>:-fexceptions;-frtti>")
+add_compile_options("$<$<NOT:$<CONFIG:Release>>:-g>")
 add_compile_options("$<$<CONFIG:Release>:-g0>;$<$<NOT:$<CONFIG:Debug>>:-O3>")
-add_link_options("-fuse-ld=lld;$<$<NOT:$<CONFIG:Debug>>:-O3>")
+add_link_options("$<$<NOT:$<CONFIG:Debug>>:-O3>")
 # Communicate build type to the project
 add_compile_definitions("BUILD_TYPE=$<$<CONFIG:Debug>:BUILD_DEBUG>$<$<CONFIG:RelWithDebInfo>:BUILD_RELDEB>$<$<CONFIG:Release>:BUILD_RELEASE>")
 

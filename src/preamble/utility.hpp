@@ -80,11 +80,7 @@ public:
 	// Default copy and move constructors should behave as expected
 
 private:
-	static usize count;
+	static inline auto count = 0zu;
 };
-
-// Moving the definition inline causes linker errors for some reason
-template<typename T, usize Limit>
-auto InstanceLimit<T, Limit>::count = 0zu;
 
 }
