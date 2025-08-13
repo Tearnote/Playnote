@@ -581,15 +581,16 @@ inline auto notes_around(span<Note const> notes, nanoseconds cursor, nanoseconds
 {
 	auto const from = cursor - window;
 	auto const to = cursor + window;
-	return notes | views::drop_while([&](auto const& note) {
+	return notes | views::drop_while([=](auto const& note) {
 		return note.timestamp < from;
-	}) | views::take_while([&](auto const& note) {
+	}) | views::take_while([=](auto const& note) {
 		return note.timestamp <= to;
 	});
 }
 
 template<callable<void(threads::ChartLoadProgress::Type)> Func>
-auto calculate_density_distribution(Chart::Lanes const& lanes, nanoseconds chart_duration, nanoseconds resolution, nanoseconds window, Func&& progress) -> Density
+auto calculate_density_distribution(Chart::Lanes const& lanes, nanoseconds chart_duration,
+	nanoseconds resolution, nanoseconds window, Func&& progress) -> Density
 {
 	constexpr auto Bandwidth = 3.0f; // in standard deviations
 	auto const InvSqrtTau = 1.0f / sqrt(Tau);
