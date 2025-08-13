@@ -8,8 +8,8 @@ Wrapper for vuk's Imgui integration.
 
 #pragma once
 #include "preamble.hpp"
-#include "lib/vulkan.hpp"
 #include "lib/imgui.hpp"
+#include "lib/vuk.hpp"
 #include "dev/gpu.hpp"
 
 namespace playnote::gfx {
@@ -27,7 +27,7 @@ public:
 	void enqueue(Func);
 
 	// Draw enqueued Imgui state into the image. Must be run once and after enqueue().
-	auto draw(lib::vk::Allocator&, dev::ManagedImage) -> dev::ManagedImage;
+	auto draw(lib::vuk::Allocator&, dev::ManagedImage) -> dev::ManagedImage;
 
 private:
 	InstanceLimit<Imgui, 1> instance_limit;
@@ -42,7 +42,7 @@ void Imgui::enqueue(Func func)
 	lib::imgui::end();
 }
 
-inline auto Imgui::draw(lib::vk::Allocator& allocator, dev::ManagedImage target) -> dev::ManagedImage
+inline auto Imgui::draw(lib::vuk::Allocator& allocator, dev::ManagedImage target) -> dev::ManagedImage
 {
 	return lib::imgui::render(allocator, move(target), context);
 }

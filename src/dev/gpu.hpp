@@ -12,11 +12,12 @@ Initializes Vulkan and the rendergraph.
 #include "config.hpp"
 #include "logger.hpp"
 #include "lib/vulkan.hpp"
+#include "lib/vuk.hpp"
 #include "dev/window.hpp"
 
 namespace playnote::dev {
 
-using lib::vk::ManagedImage;
+using lib::vuk::ManagedImage;
 
 // RAII encapsulation of GPU state, handling initialization and frame preparation/presentation
 class GPU {
@@ -27,11 +28,11 @@ public:
 	~GPU() { runtime.wait_idle(); }
 
 	[[nodiscard]] auto get_window() const -> dev::Window& { return window; }
-	[[nodiscard]] auto get_global_allocator() -> lib::vk::Allocator& { return global_allocator; }
+	[[nodiscard]] auto get_global_allocator() -> lib::vuk::Allocator& { return global_allocator; }
 
 	// Prepare and present a single frame. All vuk draw commands must be submitted within
 	// the callback. The callback is provided with the frame allocator and swapchain image.
-	template<callable<ManagedImage(lib::vk::Allocator&, ManagedImage&&)> Func>
+	template<callable<ManagedImage(lib::vuk::Allocator&, ManagedImage&&)> Func>
 	void frame(Func&&);
 
 	GPU(GPU const&) = delete;
@@ -97,8 +98,8 @@ private:
 
 	// Logging wrappers.
 	[[nodiscard]] auto select_physical_device(Instance const&, Surface const&) const -> lib::vk::PhysicalDevice;
-	auto create_swapchain(lib::vk::Allocator& allocator, Device& device, uvec2 size,
-		optional<lib::vk::Swapchain> old = nullopt) const -> lib::vk::Swapchain;
+	auto create_swapchain(lib::vuk::Allocator& allocator, Device& device, uvec2 size,
+		optional<lib::vuk::Swapchain> old = nullopt) const -> lib::vuk::Swapchain;
 
 	dev::Window& window;
 
@@ -106,11 +107,11 @@ private:
 	Surface surface;
 	lib::vk::PhysicalDevice physical_device;
 	Device device;
-	lib::vk::Runtime runtime;
-	lib::vk::GlobalResource global_resource;
-	lib::vk::Allocator global_allocator;
-	lib::vk::Swapchain swapchain;
-	lib::vk::TracyContext tracy_context;
+	lib::vuk::Runtime runtime;
+	lib::vuk::GlobalResource global_resource;
+	lib::vuk::Allocator global_allocator;
+	lib::vuk::Swapchain swapchain;
+	lib::vuk::TracyContext tracy_context;
 };
 
 inline GPU::Instance::Instance(Logger::Category* cat):
@@ -156,11 +157,11 @@ inline GPU::Device::~Device() noexcept
 	return physical_device;
 }
 
-auto inline GPU::create_swapchain(lib::vk::Allocator& allocator, Device& device, uvec2 size,
-	optional<lib::vk::Swapchain> old) const -> lib::vk::Swapchain
+auto inline GPU::create_swapchain(lib::vuk::Allocator& allocator, Device& device, uvec2 size,
+	optional<lib::vuk::Swapchain> old) const -> lib::vuk::Swapchain
 {
 	auto const recreating = old.has_value();
-	auto swapchain = lib::vk::create_swapchain(allocator, device.device, size, move(old));
+	auto swapchain = lib::vuk::create_swapchain(allocator, device.device, size, move(old));
 	if (!recreating)
 		DEBUG_AS(cat, "Created swapchain, size {}", size);
 	else
@@ -176,22 +177,22 @@ inline GPU::GPU(dev::Window& window):
 	surface{cat, window, instance},
 	physical_device{select_physical_device(instance, surface)},
 	device{cat, physical_device},
-	runtime{lib::vk::create_runtime(instance.instance, device.device, lib::vk::retrieve_device_queues(device.device))},
+	runtime{lib::vuk::create_runtime(instance.instance, device.device, lib::vk::retrieve_device_queues(device.device))},
 	global_resource{runtime, FramesInFlight},
 	global_allocator{global_resource},
 	swapchain{create_swapchain(global_allocator, device, window.size())},
-	tracy_context{lib::vk::create_tracy_context(global_allocator)}
+	tracy_context{lib::vuk::create_tracy_context(global_allocator)}
 {
 	INFO_AS(cat, "Vulkan initialized");
 }
 
-template<callable<ManagedImage(lib::vk::Allocator&, ManagedImage&&)> Func>
+template<callable<ManagedImage(lib::vuk::Allocator&, ManagedImage&&)> Func>
 void GPU::frame(Func&& func)
 {
-	auto frame_allocator = lib::vk::begin_frame(runtime, global_resource);
-	auto swapchain_image = lib::vk::acquire_swapchain_image(swapchain, "swp_img");
+	auto frame_allocator = lib::vuk::begin_frame(runtime, global_resource);
+	auto swapchain_image = lib::vuk::acquire_swapchain_image(swapchain, "swp_img");
 	auto result = func(frame_allocator, move(swapchain_image));
-	lib::vk::submit(frame_allocator, tracy_context, move(result));
+	lib::vuk::submit(frame_allocator, tracy_context, move(result));
 
 }
 

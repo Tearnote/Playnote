@@ -9,8 +9,8 @@ Parts are adapted from vuk's built-in Imgui integration; reproduced here under t
 
 #pragma once
 #include "preamble.hpp"
-#include "lib/vulkan.hpp"
 #include "lib/glfw.hpp"
+#include "lib/vuk.hpp"
 
 namespace playnote::lib::imgui {
 
@@ -29,7 +29,7 @@ using Context = unique_ptr<Context_t, detail::ContextDeleter>;
 
 // Initialize Imgui and relevant GPU resources.
 // Throws if vuk throws.
-auto init(glfw::Window window, vk::Allocator& global_allocator) -> Context;
+auto init(glfw::Window window, vuk::Allocator& global_allocator) -> Context;
 
 // Mark the start of a new frame for Imgui. All Imgui commands must come after this is called.
 void begin();
@@ -39,7 +39,7 @@ void end();
 
 // Draw queued Imgui commands onto the provided image.
 // Throws if vuk throws.
-auto render(vk::Allocator& frame_allocator, vk::ManagedImage&& target, Context& context) -> vk::ManagedImage;
+auto render(vuk::Allocator& frame_allocator, vuk::ManagedImage&& target, Context& context) -> vuk::ManagedImage;
 
 // Start a new ImGui window. Initial position and size will be chosen automatically.
 void begin_window(char const* title);

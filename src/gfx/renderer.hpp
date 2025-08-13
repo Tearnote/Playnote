@@ -8,7 +8,7 @@ A renderer of primitives.
 
 #pragma once
 #include "preamble.hpp"
-#include "lib/vulkan.hpp"
+#include "lib/vuk.hpp"
 #include "dev/gpu.hpp"
 #include "gfx/imgui.hpp"
 
@@ -52,7 +52,7 @@ private:
 	dev::GPU& gpu;
 	Imgui imgui;
 
-	[[nodiscard]] auto draw_rects(vk::Allocator&, vk::ManagedImage&&, span<Rect const>) -> vk::ManagedImage;
+	[[nodiscard]] auto draw_rects(lib::vuk::Allocator&, lib::vuk::ManagedImage&&, span<Rect const>) -> lib::vuk::ManagedImage;
 };
 
 inline Renderer::Renderer(dev::GPU& gpu):
@@ -66,7 +66,7 @@ inline Renderer::Renderer(dev::GPU& gpu):
 #include "spv/rects.frag.spv"
 	});
 	auto& context = gpu.get_global_allocator().get_context();
-	vk::create_graphics_pipeline(context, "rects", rects_vert_src, rects_frag_src);
+	lib::vuk::create_graphics_pipeline(context, "rects", rects_vert_src, rects_frag_src);
 }
 
 template<callable<void(Renderer::Queue&)> Func>
@@ -75,8 +75,8 @@ void Renderer::frame(initializer_list<id> layer_order, Func&& func)
 	auto queue = Queue{};
 	imgui.enqueue([&]() { func(queue); });
 
-	gpu.frame([&, this](auto& allocator, auto&& target) -> vk::ManagedImage {
-		auto next = vk::clear_image(move(target), {0.0f, 0.0f, 0.0f, 1.0f});
+	gpu.frame([&, this](auto& allocator, auto&& target) -> lib::vuk::ManagedImage {
+		auto next = lib::vuk::clear_image(move(target), {0.0f, 0.0f, 0.0f, 1.0f});
 
 		for (auto const& layer: layer_order |
 			views::filter([&](auto id) { return queue.layers.contains(id); }) |
@@ -88,13 +88,13 @@ void Renderer::frame(initializer_list<id> layer_order, Func&& func)
 	});
 }
 
-inline auto Renderer::draw_rects(vk::Allocator& allocator, vk::ManagedImage&& dest, span<Rect const> rects) -> vk::ManagedImage
+inline auto Renderer::draw_rects(lib::vuk::Allocator& allocator, lib::vuk::ManagedImage&& dest, span<Rect const> rects) -> lib::vuk::ManagedImage
 {
-	auto rects_buf = vk::create_scratch_buffer(allocator, span{rects});
-	auto pass = vk::make_pass("rects",
+	auto rects_buf = lib::vuk::create_scratch_buffer(allocator, span{rects});
+	auto pass = lib::vuk::make_pass("rects",
 		[window_size = gpu.get_window().size(), rects_buf, rects_count = rects.size()]
-		(vk::CommandBuffer& cmd, VUK_IA(vk::Access::eColorWrite) target) {
-		vk::set_cmd_defaults(cmd)
+		(lib::vuk::CommandBuffer& cmd, VUK_IA(lib::vuk::Access::eColorWrite) target) {
+		lib::vuk::set_cmd_defaults(cmd)
 			.bind_graphics_pipeline("rects")
 			.bind_buffer(0, 0, rects_buf)
 			.specialize_constants(0, window_size.x()).specialize_constants(1, window_size.y())

@@ -11,17 +11,6 @@ Implementation file for lib/imgui.hpp.
 #include "backends/imgui_impl_glfw.h"
 #include "implot.h"
 #include "imgui.h"
-#include "vuk/runtime/vk/AllocatorHelpers.hpp"
-#include "vuk/runtime/vk/PipelineTypes.hpp"
-#include "vuk/runtime/vk/VkRuntime.hpp"
-#include "vuk/runtime/vk/Pipeline.hpp"
-#include "vuk/runtime/vk/Image.hpp"
-#include "vuk/vsl/Core.hpp"
-#include "vuk/ImageAttachment.hpp"
-#include "vuk/RenderGraph.hpp"
-#include "vuk/Buffer.hpp"
-#include "vuk/Types.hpp"
-#include "vuk/Value.hpp"
 #include "preamble.hpp"
 #include "assert.hpp"
 #include "lib/vulkan.hpp"
@@ -42,7 +31,7 @@ void detail::ContextDeleter::operator()(Context_t* ctx) noexcept
 	delete ctx;
 }
 
-auto init(glfw::Window window, vk::Allocator& global_allocator) -> Context
+auto init(glfw::Window window, vuk::Allocator& global_allocator) -> Context
 {
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
@@ -104,7 +93,7 @@ auto init(glfw::Window window, vk::Allocator& global_allocator) -> Context
 	constexpr auto imgui_frag_src = to_array<uint32>({
 #include "spv/imgui.frag.spv"
 	});
-	vk::create_graphics_pipeline(ctx, "imgui", imgui_vert_src, imgui_frag_src);
+	vuk::create_graphics_pipeline(ctx, "imgui", imgui_vert_src, imgui_frag_src);
 
 	return imgui_ctx;
 }
@@ -117,7 +106,7 @@ void begin()
 
 void end() { ImGui::Render(); }
 
-auto render(vk::Allocator& frame_allocator, vk::ManagedImage&& target, Context& context) -> vk::ManagedImage
+auto render(vuk::Allocator& frame_allocator, vuk::ManagedImage&& target, Context& context) -> vuk::ManagedImage
 {
 	// Function body below adapted from vuk::extra::ImGui_ImplVuk_Render()
 
