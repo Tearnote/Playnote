@@ -19,6 +19,12 @@ using std::chrono::milliseconds;
 using std::chrono::seconds;
 using std::chrono::duration;
 using std::chrono::duration_cast;
-using std::ratio;
+
+// Returns the ratio of two durations as a floating-point number.
+template<typename LRep, typename LPeriod, typename RRep, typename RPeriod>
+auto ratio(duration<LRep, LPeriod> num, duration<RRep, RPeriod> denom) -> double
+{
+	return duration_cast<duration<double, LPeriod>>(num) / duration_cast<duration<double, RPeriod>>(denom);
+}
 
 }

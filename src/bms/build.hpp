@@ -619,7 +619,7 @@ auto calculate_density_distribution(Chart::Lanes const& lanes, nanoseconds chart
 					return key;
 				}();
 				auto const delta = note.timestamp - cursor;
-				auto const delta_scaled = delta / window * Bandwidth; // now within [-Bandwidth, Bandwidth]
+				auto const delta_scaled = ratio(delta, window) * Bandwidth; // now within [-Bandwidth, Bandwidth]
 				target += exp(-pow(delta_scaled, 2.0f) / 2.0f) * GaussianScale; // Gaussian filter
 			}
 		}
