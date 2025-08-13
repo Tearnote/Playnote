@@ -53,6 +53,7 @@ add_executable(Playnote
 	src/lib/glfw.cpp
 	src/lib/icu.cpp
 	src/lib/vuk.cpp
+	src/threads/audio.cpp
 	src/main.cpp
 )
 target_precompile_headers(Playnote PRIVATE src/preamble.hpp)
