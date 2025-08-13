@@ -74,6 +74,7 @@ FetchContent_Declare(vuk # Vulkan rendergraph
 	GIT_TAG 4b88bb86ed3a6c40f21b3ee355f258c10f71e998
 )
 FetchContent_MakeAvailable(vuk)
+target_compile_options(vuk PRIVATE -g0) # Work around bug in Embed module
 target_compile_definitions(vuk PUBLIC VUK_CUSTOM_VULKAN_HEADER=<volk.h>)
 target_link_libraries(vuk PRIVATE volk)
 
