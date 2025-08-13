@@ -46,6 +46,7 @@ add_executable(Playnote
 	src/lib/ebur128.cpp
 	src/lib/openssl.cpp
 	src/lib/ffmpeg.cpp
+	src/lib/vulkan.cpp
 	src/lib/thread.cpp
 	src/lib/debug.cpp
 	src/lib/imgui.cpp

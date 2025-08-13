@@ -130,6 +130,6 @@ void set_window_mouse_button_handler(Window window, Func&& func)
 
 // Create a Vulkan surface for the window.
 // Throws runtime_error on failure.
-[[nodiscard]] auto create_window_surface(Window window, vk::Instance const& instance) -> vk::Surface;
+[[nodiscard]] auto create_window_surface(Window window, vk::Instance instance) -> vk::Surface;
 
 }

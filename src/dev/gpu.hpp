@@ -120,7 +120,7 @@ inline GPU::Instance::Instance(Logger::Category* cat):
 
 inline GPU::Instance::~Instance() noexcept
 {
-	lib::vk::destroy_instance(instance);
+	lib::vk::destroy_instance(move(instance));
 	DEBUG_AS(cat, "Vulkan instance cleaned up");
 }
 
@@ -142,7 +142,7 @@ inline GPU::Device::Device(Logger::Category* cat, lib::vk::PhysicalDevice const&
 
 inline GPU::Device::~Device() noexcept
 {
-	lib::vk::destroy_device(device);
+	lib::vk::destroy_device(move(device));
 	DEBUG_AS(cat, "Vulkan device cleaned up");
 }
 
@@ -151,7 +151,7 @@ inline GPU::Device::~Device() noexcept
 	auto physical_device = lib::vk::select_physical_device(instance.instance, surface.surface);
 	auto const version = lib::vk::get_driver_version(physical_device);
 
-	INFO_AS(cat, "GPU selected: {}", physical_device.properties.deviceName);
+	INFO_AS(cat, "GPU selected: {}", lib::vk::get_device_name(physical_device));
 	DEBUG_AS(cat, "Vulkan driver version {}.{}.{}", version[0], version[1], version[2]);
 	return physical_device;
 }

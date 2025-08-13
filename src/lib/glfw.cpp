@@ -123,10 +123,10 @@ catch (runtime_error const&) {}
 	return uvec2{static_cast<uint>(w), static_cast<uint>(h)};
 }
 
-[[nodiscard]] auto create_window_surface(Window window, vk::Instance const& instance) -> vk::Surface
+[[nodiscard]] auto create_window_surface(Window window, vk::Instance instance) -> vk::Surface
 {
 	auto result = VkSurfaceKHR{nullptr};
-	glfwCreateWindowSurface(instance, window, nullptr, &result);
+	glfwCreateWindowSurface(vk::get_raw_instance(instance), window, nullptr, &result);
 	return result;
 }
 
