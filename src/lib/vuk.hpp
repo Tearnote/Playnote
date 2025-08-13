@@ -10,12 +10,14 @@ Wrapper for vuk, a Vulkan rendergraph library.
 #include "vuk/runtime/vk/DeviceFrameResource.hpp"
 #include "vuk/runtime/CommandBuffer.hpp" // Required to work around bug in TracyIntegration.hpp
 #include "vuk/extra/TracyIntegration.hpp"
-#include "vuk/vsl/Core.hpp"
 #include "vuk/ImageAttachment.hpp"
-#include "vuk/RenderGraph.hpp"
 #include "vuk/Value.hpp"
 #include "preamble.hpp"
 #include "lib/vulkan.hpp"
+
+// vuk interface imports
+#include "vuk/vsl/Core.hpp"
+#include "vuk/RenderGraph.hpp"
 
 namespace playnote::lib::vuk {
 
