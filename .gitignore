@@ -2,7 +2,7 @@
 .idea/**
 
 # Build artifacts
-build/**
+build*/**
 
 # Test data
 songs/**
