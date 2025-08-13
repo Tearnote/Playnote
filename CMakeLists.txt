@@ -54,6 +54,7 @@ add_executable(Playnote
 	src/lib/icu.cpp
 	src/lib/vuk.cpp
 	src/threads/audio.cpp
+	src/threads/input.cpp
 	src/main.cpp
 )
 target_precompile_headers(Playnote PRIVATE src/preamble.hpp)
