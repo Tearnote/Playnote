@@ -14,6 +14,7 @@ Only the process's main thread can be the input thread.
 
 namespace playnote::threads {
 
+// Input thread entry point.
 void input(Broadcaster& broadcaster, Barriers<3>& barriers, dev::Window& window, fs::path const& song_request);
 
 }

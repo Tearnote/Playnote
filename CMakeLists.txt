@@ -53,6 +53,7 @@ add_executable(Playnote
 	src/lib/glfw.cpp
 	src/lib/icu.cpp
 	src/lib/vuk.cpp
+	src/threads/render.cpp
 	src/threads/audio.cpp
 	src/threads/input.cpp
 	src/main.cpp
