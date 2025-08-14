@@ -43,7 +43,17 @@ static void run_audio(Broadcaster& broadcaster, dev::Window& window, dev::Audio&
 
 	broadcaster.make_shout<ChartLoadProgress>(ChartLoadProgress::CompilingIR{chart_path});
 	auto bms_compiler = bms::IRCompiler{};
-	auto const bms_ir = load_bms(bms_compiler, chart_path);
+	auto try_bms_ir = optional<bms::IR>{};
+	try {
+		try_bms_ir.emplace(load_bms(bms_compiler, chart_path));
+	} catch (exception const& e) {
+		broadcaster.make_shout<ChartLoadProgress>(ChartLoadProgress::Failed{
+			.chart_path = chart_path,
+			.message = e.what(),
+		});
+		return;
+	}
+	auto bms_ir = move(*try_bms_ir);
 	broadcaster.make_shout<ChartLoadProgress>(ChartLoadProgress::Building{chart_path});
 	auto const bms_chart = chart_from_ir(bms_ir, [&](auto& requests) {
 		requests.process([&](string_view file, usize idx, usize total) {

@@ -126,6 +126,12 @@ void receive_loading_shouts(Broadcaster& broadcaster, optional<LoadingToast>& lo
 				loading_toast.reset();
 				on_finish(msg.player.lock());
 			},
+			[&](ChartLoadProgress::Failed& msg) {
+				loading_toast->path = msg.chart_path;
+				loading_toast->phase = format("Loading failed\n{}", msg.message);
+				loading_toast->progress = nullopt;
+				loading_toast->progress_text = nullopt;
+			},
 			[](auto&&) {}
 		}, recv.type);
 	});

@@ -37,7 +37,11 @@ struct ChartLoadProgress {
 		fs::path chart_path;
 		weak_ptr<bms::AudioPlayer const> player;
 	};
-	using Type = variant<monostate, CompilingIR, Building, LoadingFile, Measuring, DensityCalculation, Finished>;
+	struct Failed {
+		fs::path chart_path;
+		string message;
+	};
+	using Type = variant<monostate, CompilingIR, Building, LoadingFile, Measuring, DensityCalculation, Finished, Failed>;
 	Type type;
 
 	// Shouts must be default-constructible
