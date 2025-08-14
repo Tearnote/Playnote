@@ -16,6 +16,8 @@ Imports and helpers for container types.
 #include <boost/container/pmr/monotonic_buffer_resource.hpp>
 #include <boost/container/pmr/polymorphic_allocator.hpp>
 #include <boost/container/pmr/vector.hpp>
+#include <boost/container/static_vector.hpp>
+#include <boost/container/small_vector.hpp>
 #include <boost/container/vector.hpp>
 #include "preamble/types.hpp"
 
