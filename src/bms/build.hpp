@@ -662,7 +662,7 @@ inline void calculate_bb(Chart& chart)
 
 	for (auto const& lane: chart.lanes) {
 		if (!lane.audible) continue;
-		for (auto [idx, note]: views::enumerate(lane.notes)) {
+		for (auto [idx, note]: lane.notes | views::enumerate) {
 			if (chart.wav_slots[note.wav_slot].empty()) continue;
 			// Register note audio in the structure
 			auto const wav_len = dev::Audio::samples_to_ns(chart.wav_slots[note.wav_slot].size());
