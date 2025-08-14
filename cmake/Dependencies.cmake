@@ -129,3 +129,9 @@ add_library(implot
 )
 target_include_directories(implot PUBLIC "${implot_SOURCE_DIR}")
 target_link_libraries(implot PRIVATE imgui)
+
+FetchContent_Declare(signalsmith-basics # Audio processing
+	GIT_REPOSITORY https://github.com/Signalsmith-Audio/basics
+	GIT_TAG 1.0.1
+)
+FetchContent_MakeAvailable(signalsmith-basics)

@@ -11,6 +11,7 @@ Initializes audio and submits buffers for playback, filled with audio from regis
 #include "assert.hpp"
 #include "config.hpp"
 #include "logger.hpp"
+#include "lib/signalsmith.hpp"
 #include "lib/pipewire.hpp"
 
 namespace playnote::dev {
@@ -72,6 +73,8 @@ private:
 	unordered_map<void*, GeneratorOps> generators;
 	mutex generator_lock;
 
+	optional<lib::dsp::Limiter> limiter;
+
 	static void on_process(void*);
 	static void on_param_changed(void*, uint32_t, lib::pw::SPAPod);
 };
@@ -100,6 +103,7 @@ inline Audio::Audio() {
 	stream = lib::pw::create_stream(loop, AppTitle, Latency, &on_process, &on_param_changed, this);
 	lib::pw::start_thread_loop(loop);
 	while (sampling_rate == 0) yield();
+	limiter.emplace(sampling_rate, 1ms, 10ms, 100ms);
 }
 
 inline Audio::~Audio()
@@ -124,17 +128,15 @@ inline void Audio::on_process(void* userdata)
 		generator.begin_buffer();
 
 	for (auto& dest: buffer) {
-		dest = {};
+		auto next = lib::pw::Sample{};
 		for (auto const& generator: self.generators | views::values) {
 			auto const sample = generator.next_sample();
-			dest.left += sample.left;
-			dest.right += sample.right;
+			next.left += sample.left;
+			next.right += sample.right;
 		}
-		if (abs(dest.left) > 1.0f || abs(dest.right) > 1.0f) {
-			WARN("Sample overflow detected, clipping");
-			dest.left = clamp(dest.left, -1.0f, 1.0f);
-			dest.right = clamp(dest.right, -1.0f, 1.0f);
-		}
+
+		if (!self.limiter) continue;
+		dest = self.limiter->process(next);
 	}
 
 	lib::pw::enqueue_buffer(stream, request);

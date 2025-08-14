@@ -58,6 +58,7 @@ add_executable(Playnote
 target_precompile_headers(Playnote PRIVATE src/preamble.hpp)
 target_include_directories(Playnote PRIVATE src) # All includes start from src as root
 
+target_link_libraries(Playnote PRIVATE signalsmith-basics)
 target_link_libraries(Playnote PRIVATE vk-bootstrap)
 target_link_libraries(Playnote PRIVATE TracyClient)
 target_link_libraries(Playnote PRIVATE msd_channel)
