@@ -46,6 +46,7 @@ using std::ranges::reverse;
 using std::ranges::remove_if;
 using std::ranges::fold_left;
 using std::ranges::for_each;
+using std::ranges::any_of;
 
 using std::function;
 using std::invoke;

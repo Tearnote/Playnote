@@ -98,6 +98,12 @@ struct Density {
 	float peak_nps; // Real peak
 };
 
+// Features used by the chart that the player might want to know about ahead of time.
+struct Features {
+	bool has_ln; // Is there at least one LN?
+	bool has_soflan; // Are there scroll speed changes?
+};
+
 // Data about a chart calculated from its contents.
 struct Metrics {
 	Playstyle playstyle;
@@ -107,6 +113,7 @@ struct Metrics {
 	double loudness; // in LUFS
 	float gain; // Amplitude ratio to normalize loudness to -14 LUFS reference
 	Density density;
+	Features features;
 };
 
 // Bounding box acceleration structure for reachable WAV slots.

@@ -631,6 +631,21 @@ auto calculate_density_distribution(Chart::Lanes const& lanes, nanoseconds chart
 	return result;
 }
 
+inline auto calculate_features(Chart const& chart) -> Features
+{
+	auto result = Features{};
+	result.has_ln = any_of(chart.lanes, [](auto const& lane) {
+		if (!lane.playable) return false;
+		return any_of(lane.notes, [](Note const& note) {
+			return note.type_is<Note::LN>();
+		});
+	});
+	result.has_soflan = chart.bpm_changes.size() > 1;
+	TRACE("has_ln: {}", result.has_ln);
+	TRACE("has_soflan: {}", result.has_soflan);
+	return result;
+}
+
 template<callable<void(threads::ChartLoadProgress::Type)> Func>
 void calculate_metrics(Chart& chart, Func&& progress)
 {
@@ -638,6 +653,7 @@ void calculate_metrics(Chart& chart, Func&& progress)
 	calculate_note_metrics(chart.lanes, chart.metrics);
 	calculate_audio_metrics(Cursor{chart}, chart.metrics, progress);
 	chart.metrics.density = calculate_density_distribution(chart.lanes, chart.metrics.chart_duration, 125ms, 2s, progress);
+	chart.metrics.features = calculate_features(chart);
 }
 
 inline void calculate_bb(Chart& chart)
