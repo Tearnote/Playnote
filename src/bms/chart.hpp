@@ -8,8 +8,6 @@ A definite, playable rhythm game chart optimized for playback.
 
 #pragma once
 #include "preamble.hpp"
-#include "assert.hpp"
-#include "logger.hpp"
 #include "dev/audio.hpp"
 #include "bms/ir.hpp"
 
@@ -111,6 +109,13 @@ struct Metrics {
 	Density density;
 };
 
+// Bounding box acceleration structure for reachable WAV slots.
+struct SlotBB {
+	static constexpr auto WindowSize = 250ms; // Length of each window
+	static constexpr auto MaxSlots = 256zu; // Maximum number of WAV slots in each window
+	vector<static_vector<usize, MaxSlots>> windows;
+};
+
 // An entire loaded chart, with all of its notes and meta information. Immutable; a chart is played
 // by creating and advancing a Play from it.
 struct Chart: enable_shared_from_this<Chart> {
@@ -142,6 +147,7 @@ struct Chart: enable_shared_from_this<Chart> {
 	Lanes lanes;
 	vector<BPMChange> bpm_changes; // Sorted from earliest
 	vector<vector<dev::Sample>> wav_slots;
+	SlotBB slot_bb;
 	float bpm = 130.0f; // BMS spec default
 };
 

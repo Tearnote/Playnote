@@ -123,7 +123,7 @@ private:
 	static void sort_and_deduplicate(vector<Note>&, bool deduplicate);
 };
 
-// Mappings from slots to external resources. A calue might be empty if the chart didn't define
+// Mappings from slots to external resources. A value might be empty if the chart didn't define
 // a mapping.
 struct FileReferences {
 	vector<string> wav;
@@ -562,7 +562,7 @@ void calculate_audio_metrics(Cursor&& cursor, Metrics& metrics, Func&& progress)
 			processing = !cursor.advance_one_sample([&](auto new_sample) {
 				sample.left += new_sample.left;
 				sample.right += new_sample.right;
-			});
+			}, false);
 			if (!processing) break;
 		}
 
@@ -640,6 +640,40 @@ void calculate_metrics(Chart& chart, Func&& progress)
 	chart.metrics.density = calculate_density_distribution(chart.lanes, chart.metrics.chart_duration, 125ms, 2s, progress);
 }
 
+inline void calculate_bb(Chart& chart)
+{
+	chart.slot_bb.windows.resize(chart.metrics.audio_duration / SlotBB::WindowSize + 1);
+
+	for (auto const& lane: chart.lanes) {
+		if (!lane.audible) continue;
+		for (auto [idx, note]: views::enumerate(lane.notes)) {
+			if (chart.wav_slots[note.wav_slot].empty()) continue;
+			// Register note audio in the structure
+			auto const wav_len = dev::Audio::samples_to_ns(chart.wav_slots[note.wav_slot].size());
+			auto const next_note_start = idx >= lane.notes.size() - 1? chart.metrics.audio_duration :
+				lane.playable? lane.notes[idx + 1].timestamp : note.timestamp;
+			auto const start = note.timestamp;
+			auto const end = next_note_start + wav_len;
+			auto const first_window = clamp<usize>(start / SlotBB::WindowSize, 0zu, chart.slot_bb.windows.size() - 1);
+			auto const last_window = clamp<usize>(end / SlotBB::WindowSize + 1, 0zu, chart.slot_bb.windows.size() - 1);
+			for (auto& window: views::iota(first_window, last_window + 1) |
+				views::transform([&](auto i) -> auto& { return chart.slot_bb.windows[i]; })) {
+				if (contains(window, note.wav_slot)) continue;
+				if (window.size() == window.capacity()) {
+					WARN("Unable to add sample slot to bounding box; reached limit of {}", SlotBB::MaxSlots);
+					continue;
+				}
+				window.push_back(note.wav_slot);
+			}
+		}
+	}
+
+	auto biggest_window = 0zu;
+	for (auto const& window: chart.slot_bb.windows) {
+		biggest_window = max(biggest_window, window.size());
+	}
+}
+
 // Generate a Chart from an IR. Requires a function to handle the loading of a bulk request.
 // The provided function must block until the bulk request is complete.
 template<callable<void(io::BulkRequest&)> Func, callable<void(threads::ChartLoadProgress::Type)> Func2>
@@ -692,6 +726,7 @@ auto chart_from_ir(IR const& ir, Func&& file_loader, Func2&& progress) -> shared
 
 	// Metrics require a fully loaded chart
 	calculate_metrics(*chart, progress);
+	calculate_bb(*chart);
 
 	INFO("Built chart \"{}\"", chart->metadata.title);
 

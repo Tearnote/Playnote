@@ -39,7 +39,7 @@ public:
 	// Progress by one audio sample, calling the provided function once for every active
 	// sound playback.
 	template<callable<void(dev::Sample)> Func>
-	auto advance_one_sample(Func&& func = [](dev::Sample){}) -> bool;
+	auto advance_one_sample(Func&& func = [](dev::Sample){}, bool use_bb = true) -> bool;
 
 	// Progress by the given number of samples, without generating any audio.
 	void fast_forward(usize samples);
@@ -95,7 +95,7 @@ inline void Cursor::fast_forward(usize samples)
 }
 
 template<callable<void(dev::Sample)> Func>
-auto Cursor::advance_one_sample(Func&& func) -> bool
+auto Cursor::advance_one_sample(Func&& func, bool use_bb) -> bool
 {
 	auto chart_ended = (notes_judged >= chart->metrics.note_count);
 	sample_progress += 1;
@@ -121,14 +121,28 @@ auto Cursor::advance_one_sample(Func&& func) -> bool
 		}
 	}
 
-	for (auto [slot, progress]: views::zip(chart->wav_slots, wav_slot_progress)) {
-		if (progress.playback_pos == WavSlotProgress::Stopped) continue;
+	auto play_slot = [&](vector<dev::Sample> const& slot, WavSlotProgress& progress) {
+		if (progress.playback_pos == WavSlotProgress::Stopped) return;
 		auto const result = slot[progress.playback_pos];
 		progress.playback_pos += 1;
 		if (progress.playback_pos >= slot.size())
 			progress.playback_pos = WavSlotProgress::Stopped;
 		func(result);
 		chart_ended = false;
+	};
+
+	if (use_bb) {
+		auto window_id = clamp<usize>(progress_ns / SlotBB::WindowSize, 0zu, chart->slot_bb.windows.size() - 1);
+		auto const& window = chart->slot_bb.windows[window_id];
+		for (auto slot_id: window) {
+			auto const& slot = chart->wav_slots[slot_id];
+			auto& progress = wav_slot_progress[slot_id];
+			play_slot(slot, progress);
+		}
+	} else {
+		for (auto [slot, progress]: views::zip(chart->wav_slots, wav_slot_progress)) {
+			play_slot(slot, progress);
+		}
 	}
 
 	return chart_ended;
