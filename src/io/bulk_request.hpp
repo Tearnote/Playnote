@@ -7,6 +7,7 @@ A mechanism to request multiple files at once, to be fulfilled later on all at o
 */
 
 #pragma once
+#include <execution>
 #include "preamble.hpp"
 #include "logger.hpp"
 #include "io/file.hpp"
@@ -77,11 +78,19 @@ public:
 			TRACE("Found \"{}\", reading at \"{}\"", request.resource, matches.back());
 		}
 
-		for (auto [idx, request, match]: views::zip(views::iota(0zu), requests, matches)) {
-			auto const raw = io::read_file(match);
-			request.processor(raw.contents);
-			load_progress(idx, requests.size());
-		}
+		auto jobs = views::zip(requests, matches);
+		auto completed = atomic{0zu};
+		std::for_each(std::execution::par, jobs.begin(), jobs.end(), [&](auto&& pair) {
+			auto const& [request, match] = pair;
+			try {
+				auto const raw = io::read_file(match);
+				request.processor(raw.contents);
+			} catch (exception const& e) {
+				WARN("Failed to load \"{}\": {}", match, e.what());
+			}
+			auto completed_inc = completed.fetch_add(1) + 1;
+			load_progress(completed_inc, requests.size());
+		});
 		INFO("Finished reading files from \"{}\"", domain);
 	}
 

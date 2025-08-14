@@ -641,8 +641,6 @@ inline auto calculate_features(Chart const& chart) -> Features
 		});
 	});
 	result.has_soflan = chart.bpm_changes.size() > 1;
-	TRACE("has_ln: {}", result.has_ln);
-	TRACE("has_soflan: {}", result.has_soflan);
 	return result;
 }
 

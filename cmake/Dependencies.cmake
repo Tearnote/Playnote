@@ -11,6 +11,7 @@ include(FetchContent)
 
 # Local dependencies
 
+find_package(TBB REQUIRED) # Parallel algorithms
 find_package(OpenSSL REQUIRED) # MD5 hash
 find_package(Vulkan REQUIRED # GPU API
 	COMPONENTS glslc glslangValidator # Shader compiler
