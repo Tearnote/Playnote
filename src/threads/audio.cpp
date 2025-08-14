@@ -56,11 +56,10 @@ static void run_audio(Broadcaster& broadcaster, dev::Window& window, dev::Audio&
 	auto bms_ir = move(*try_bms_ir);
 	broadcaster.make_shout<ChartLoadProgress>(ChartLoadProgress::Building{chart_path});
 	auto const bms_chart = chart_from_ir(bms_ir, [&](auto& requests) {
-		requests.process([&](string_view file, usize idx, usize total) {
-			broadcaster.make_shout<ChartLoadProgress>(ChartLoadProgress::LoadingFile{
+		requests.process([&](usize loaded, usize total) {
+			broadcaster.make_shout<ChartLoadProgress>(ChartLoadProgress::LoadingFiles{
 				.chart_path = chart_path,
-				.filename = string{file},
-				.index = idx,
+				.loaded = loaded,
 				.total = total,
 			});
 		});
@@ -78,6 +77,7 @@ static void run_audio(Broadcaster& broadcaster, dev::Window& window, dev::Audio&
 		.chart_path = chart_path,
 		.player = weak_ptr{bms_player},
 	});
+
 	while (!window.is_closing()) {
 		broadcaster.receive_all<PlayerControl>([&](auto ev) {
 			switch (ev) {

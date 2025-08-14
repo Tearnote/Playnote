@@ -18,7 +18,7 @@ public:
 	explicit BulkRequest(fs::path domain): domain{move(domain)} {}
 
 	template<typename T>
-	void enqueue(typename T::Output& output, string_view resource,
+	void enqueue(T::Output& output, string_view resource,
 		initializer_list<string_view> extensions = {}, bool case_sensitive = true)
 	{
 		auto extensions_vec = vector<string>{};
@@ -33,19 +33,22 @@ public:
 		});
 	}
 
-	template<callable<void(string_view, usize, usize)> Func>
-	void process(Func&& before_load = [](string_view, usize, usize){})
+	template<callable<void(usize, usize)> Func>
+	void process(Func&& load_progress = [](usize, usize){})
 	{
 		INFO("Beginning file loads from \"{}\"", domain);
+		load_progress(0, requests.size());
 
 		// Enumerate available files
-		vector<fs::path> file_list;
+		auto file_list = vector<fs::path>{};
 		for (auto const& entry: fs::recursive_directory_iterator{domain}) {
 			if (!entry.is_regular_file()) continue;
 			file_list.emplace_back(fs::relative(entry, domain));
 		}
 
 		// Process each request for matches in the file list
+		auto matches = vector<fs::path>{};
+		matches.reserve(file_list.size());
 		for (auto [idx, request]: requests | views::enumerate) {
 			auto match = find_if(file_list, [&](auto const& path) {
 				auto path_str = path.string();
@@ -70,10 +73,14 @@ public:
 				WARN("Unable to load \"{}\": File not found", request.resource);
 				continue;
 			}
-			TRACE("Found \"{}\", reading at \"{}\"", request.resource, domain / *match);
-			before_load(request.resource, idx, requests.size());
-			auto const raw = io::read_file(domain / *match);
+			matches.emplace_back(domain / *match);
+			TRACE("Found \"{}\", reading at \"{}\"", request.resource, matches.back());
+		}
+
+		for (auto [idx, request, match]: views::zip(views::iota(0zu), requests, matches)) {
+			auto const raw = io::read_file(match);
 			request.processor(raw.contents);
+			load_progress(idx, requests.size());
 		}
 		INFO("Finished reading files from \"{}\"", domain);
 	}

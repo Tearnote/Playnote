@@ -101,12 +101,12 @@ void receive_loading_shouts(Broadcaster& broadcaster, optional<LoadingToast>& lo
 				loading_toast->progress = nullopt;
 				loading_toast->progress_text = nullopt;
 			},
-			[&](ChartLoadProgress::LoadingFile& msg) {
+			[&](ChartLoadProgress::LoadingFiles& msg) {
 				if (!loading_toast) loading_toast.emplace();
 				loading_toast->path = msg.chart_path;
 				loading_toast->phase = "Loading files";
-				loading_toast->progress = static_cast<float>(msg.index) / static_cast<float>(msg.total);
-				loading_toast->progress_text = format("{} / {}", msg.index, msg.total);
+				loading_toast->progress = static_cast<float>(msg.loaded) / static_cast<float>(msg.total);
+				loading_toast->progress_text = format("{} / {}", msg.loaded, msg.total);
 			},
 			[&](ChartLoadProgress::Measuring& msg) {
 				if (!loading_toast) loading_toast.emplace();

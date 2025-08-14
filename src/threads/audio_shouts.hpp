@@ -19,10 +19,9 @@ struct ChartLoadProgress {
 	struct Building {
 		fs::path chart_path;
 	};
-	struct LoadingFile {
+	struct LoadingFiles {
 		fs::path chart_path;
-		string filename;
-		usize index;
+		usize loaded;
 		usize total;
 	};
 	struct Measuring {
@@ -41,7 +40,7 @@ struct ChartLoadProgress {
 		fs::path chart_path;
 		string message;
 	};
-	using Type = variant<monostate, CompilingIR, Building, LoadingFile, Measuring, DensityCalculation, Finished, Failed>;
+	using Type = variant<monostate, CompilingIR, Building, LoadingFiles, Measuring, DensityCalculation, Finished, Failed>;
 	Type type;
 
 	// Shouts must be default-constructible
