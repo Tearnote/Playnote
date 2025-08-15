@@ -29,11 +29,11 @@ void name_current(string_view name)
 	auto const lname = std::wstring{name.begin(), name.end()};
 	auto const err = SetThreadDescription(GetCurrentThread(), lname.c_str());
 	if (FAILED(err))
-		throw runtime_error_fmt{"Failed to set thread name: error {}", err};
+		throw runtime_error_fmt("Failed to set thread name: error {}", err);
 #else
 	auto const err = pthread_setname_np(pthread_self(), string{name}.c_str());
 	if (err != 0)
-		throw system_error("Failed to set thread name");
+		throw system_error{"Failed to set thread name"};
 #endif
 }
 
