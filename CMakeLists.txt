@@ -54,7 +54,6 @@ target_include_directories(Playnote PRIVATE src) # All includes start from src a
 
 target_link_libraries(Playnote PRIVATE signalsmith-basics)
 target_link_libraries(Playnote PRIVATE vk-bootstrap)
-target_link_libraries(Playnote PRIVATE TracyClient)
 target_link_libraries(Playnote PRIVATE msd_channel)
 target_link_libraries(Playnote PRIVATE PkgConfig::libswresample)
 target_link_libraries(Playnote PRIVATE PkgConfig::libavformat)
