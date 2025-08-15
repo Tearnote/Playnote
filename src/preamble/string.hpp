@@ -55,7 +55,7 @@ template<>
 struct fmtquill::formatter<playnote::fs::path>: formatter<std::string_view> {
 	auto format(playnote::fs::path const& c, format_context& ctx) const -> format_context::iterator
 	{
-		return formatter<std::string_view>::format(c.c_str(), ctx);
+		return formatter<std::string_view>::format(c.string(), ctx);
 	}
 };
 template<>

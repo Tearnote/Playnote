@@ -27,10 +27,10 @@ namespace playnote::threads {
 
 static auto load_bms(bms::IRCompiler& compiler, fs::path const& path) -> bms::IR
 {
-	INFO("Loading BMS file \"{}\"", path.c_str());
+	INFO("Loading BMS file \"{}\"", path.string());
 	auto const file = io::read_file(path);
 	auto ir = compiler.compile(path, file.contents);
-	INFO("Loaded BMS file \"{}\" successfully", path.c_str());
+	INFO("Loaded BMS file \"{}\" successfully", path.string());
 	return ir;
 }
 

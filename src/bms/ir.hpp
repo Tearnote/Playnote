@@ -321,7 +321,7 @@ inline IRCompiler::IRCompiler()
 
 inline auto IRCompiler::compile(fs::path const& path, span<byte const> bms_file_contents) -> IR
 {
-	INFO_AS(cat, "Compiling BMS file \"{}\"", path.c_str());
+	INFO_AS(cat, "Compiling BMS file \"{}\"", path.string());
 	auto ir = IR{};
 	auto maps = SlotMappings{};
 
