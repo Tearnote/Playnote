@@ -227,7 +227,7 @@ auto render(vuk::Allocator& frame_allocator, vuk::ManagedImage&& target, Context
 
 void begin_window(char const* title) { ImGui::Begin(title); }
 
-void begin_window(char const* title, uvec2 pos, uint width, bool static_frame)
+void begin_window(char const* title, uvec2 pos, uint32 width, bool static_frame)
 {
 	ImGui::SetNextWindowPos({static_cast<float>(pos.x()), static_cast<float>(pos.y())});
 	ImGui::SetNextWindowSize({static_cast<float>(width), 0});

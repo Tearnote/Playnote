@@ -120,7 +120,7 @@ catch (runtime_error const&) {}
 	auto w = 0;
 	auto h = 0;
 	glfwGetFramebufferSize(window, &w, &h);
-	return uvec2{static_cast<uint>(w), static_cast<uint>(h)};
+	return uvec2{static_cast<uint32>(w), static_cast<uint32>(h)};
 }
 
 [[nodiscard]] auto create_window_surface(Window window, vk::Instance instance) -> vk::Surface

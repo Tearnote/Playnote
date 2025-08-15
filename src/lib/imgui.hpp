@@ -46,7 +46,7 @@ void begin_window(char const* title);
 
 // Start a new ImGui window at a specific position and size. If static_frame is true, the window
 // will have no title and won't be able to be modified by the user.
-void begin_window(char const* title, uvec2 pos, uint width, bool static_frame = false);
+void begin_window(char const* title, uvec2 pos, uint32 width, bool static_frame = false);
 
 // Finalize a started window.
 void end_window();
