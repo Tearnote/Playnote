@@ -67,16 +67,20 @@ private:
 
 	static inline atomic<uint32> sampling_rate = 0;
 
+#ifndef _WIN32
 	lib::pw::ThreadLoop loop;
 	lib::pw::Stream stream;
+#endif
 
 	unordered_map<void*, GeneratorOps> generators;
 	mutex generator_lock;
 
 	optional<lib::dsp::Limiter> limiter;
 
+#ifndef _WIN32
 	static void on_process(void*);
 	static void on_param_changed(void*, uint32_t, lib::pw::SPAPod);
+#endif
 };
 
 template<implements<Generator> T>
@@ -96,6 +100,7 @@ void Audio::remove_generator(T& generator)
 }
 
 inline Audio::Audio() {
+#ifndef _WIN32
 	lib::pw::init();
 	DEBUG("Using libpipewire {}", lib::pw::get_version());
 
@@ -104,14 +109,20 @@ inline Audio::Audio() {
 	lib::pw::start_thread_loop(loop);
 	while (sampling_rate == 0) yield();
 	limiter.emplace(sampling_rate, 1ms, 10ms, 100ms);
+#else
+	sampling_rate = 44100;
+#endif
 }
 
 inline Audio::~Audio()
 {
+#ifndef _WIN32
 	lib::pw::destroy_stream(loop, stream);
 	lib::pw::destroy_thread_loop(loop);
+#endif
 }
 
+#ifndef _WIN32
 inline void Audio::on_process(void* userdata)
 {
 	auto& self = *static_cast<Audio*>(userdata);
@@ -148,6 +159,7 @@ inline void Audio::on_param_changed(void*, uint32_t id, lib::pw::SPAPod param)
 	if (!new_sampling_rate) return;
 	sampling_rate = *new_sampling_rate;
 }
+#endif
 
 inline auto Audio::samples_to_ns(isize samples) -> nanoseconds
 {
