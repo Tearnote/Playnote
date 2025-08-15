@@ -16,12 +16,6 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Environment check
-
-if(NOT UNIX)
-	message(FATAL_ERROR "Unsupported platform; Playnote requires Linux")
-endif()
-
 # Global build settings
 
 set(BUILD_SHARED_LIBS OFF)
@@ -66,7 +60,9 @@ target_link_libraries(Playnote PRIVATE PkgConfig::libswresample)
 target_link_libraries(Playnote PRIVATE PkgConfig::libavformat)
 target_link_libraries(Playnote PRIVATE PkgConfig::libavcodec)
 target_link_libraries(Playnote PRIVATE PkgConfig::libavutil)
-target_link_libraries(Playnote PRIVATE PkgConfig::PipeWire)
+if(UNIX)
+	target_link_libraries(Playnote PRIVATE PkgConfig::PipeWire)
+endif()
 target_link_libraries(Playnote PRIVATE libassert::assert)
 target_link_libraries(Playnote PRIVATE OpenSSL::Crypto)
 target_link_libraries(Playnote PRIVATE ebur128)
