@@ -12,19 +12,6 @@ Implementation file for lib/vulkan.hpp.
 #include <memory> // need std::unique_ptr specifically
 #include "volk.h"
 #include "VkBootstrap.h"
-#include "vuk/runtime/vk/DeviceFrameResource.hpp"
-#include "vuk/runtime/vk/VkSwapchain.hpp"
-#include "vuk/runtime/vk/Allocator.hpp"
-#include "vuk/runtime/vk/VkRuntime.hpp"
-#include "vuk/runtime/vk/Pipeline.hpp"
-#include "vuk/runtime/ThisThreadExecutor.hpp"
-#include "vuk/runtime/CommandBuffer.hpp" // Required to work around bug in TracyIntegration.hpp
-#include "vuk/extra/TracyIntegration.hpp"
-#include "vuk/vsl/Core.hpp"
-#include "vuk/ImageAttachment.hpp"
-#include "vuk/RenderGraph.hpp"
-#include "vuk/Value.hpp"
-#include "vuk/Types.hpp"
 #include "preamble.hpp"
 #include "assert.hpp"
 #include "config.hpp"
@@ -174,7 +161,6 @@ auto select_physical_device(Instance const& instance, Surface surface) -> Physic
 			physical_device_selector_result.error().message());
 	}
 	auto physical_device = PhysicalDevice{new vkb::PhysicalDevice{physical_device_selector_result.value()}};
-	physical_device->enable_extension_if_present(VK_EXT_CALIBRATED_TIMESTAMPS_EXTENSION_NAME); // for vuk's Tracy integration
 	physical_device->enable_extension_if_present(VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME);
 	return physical_device;
 }

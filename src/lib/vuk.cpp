@@ -104,11 +104,6 @@ auto create_runtime(vk::Instance instance, vk::Device device, vk::QueueSet const
 	return swapchain;
 }
 
-[[nodiscard]] auto create_tracy_context(Allocator& allocator) -> TracyContext
-{
-	return extra::init_Tracy(allocator);
-}
-
 auto begin_frame(Runtime& runtime, GlobalResource& resource) -> Allocator
 {
 	auto& frame_resource = resource.get_next_frame();
@@ -124,12 +119,11 @@ auto begin_frame(Runtime& runtime, GlobalResource& resource) -> Allocator
 	return acquire_next_image(name, move(acquired_swapchain));
 }
 
-void submit(Allocator& allocator, TracyContext const& tracy_context, ManagedImage&& image)
+void submit(Allocator& allocator, ManagedImage&& image)
 {
 	auto entire_thing = enqueue_presentation(move(image));
 	auto compiler = Compiler{};
-	auto const profiling_cbs = extra::make_Tracy_callbacks(*tracy_context);
-	entire_thing.submit(allocator, compiler, {.callbacks = profiling_cbs});
+	entire_thing.submit(allocator, compiler);
 }
 
 void create_graphics_pipeline(Runtime& runtime, string_view name, span<uint32 const> vertex_shader,

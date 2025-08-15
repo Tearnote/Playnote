@@ -10,7 +10,6 @@ Various OS-specific utilities.
 #include "preamble.hpp"
 #include "config.hpp"
 #include "lib/thread.hpp"
-#include "lib/tracy.hpp"
 
 namespace playnote::dev {
 
@@ -40,7 +39,6 @@ inline void name_current_thread(string_view name)
 {
 	if constexpr (!ThreadNamesEnabled) return;
 	lib::thread::name_current(name);
-	lib::tracy::name_current_thread(name);
 }
 
 }

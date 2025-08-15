@@ -8,8 +8,6 @@ Wrapper for vuk, a Vulkan rendergraph library.
 
 #pragma once
 #include "vuk/runtime/vk/DeviceFrameResource.hpp"
-#include "vuk/runtime/CommandBuffer.hpp" // Required to work around bug in TracyIntegration.hpp
-#include "vuk/extra/TracyIntegration.hpp"
 #include "vuk/ImageAttachment.hpp"
 #include "vuk/Value.hpp"
 #include "preamble.hpp"
@@ -40,12 +38,6 @@ using GlobalResource = DeviceSuperFrameResource;
 [[nodiscard]] auto create_swapchain(Allocator& allocator, vk::Device device, uvec2 size,
 	optional<Swapchain> old = nullopt) -> Swapchain;
 
-// Shorthand for vuk's Tracy integration resources.
-using TracyContext = std::unique_ptr<extra::TracyContext>;
-
-// Create the resources for vuk's Tracy integration.
-[[nodiscard]] auto create_tracy_context(Allocator& allocator) -> TracyContext;
-
 // Start a new frame and create its single-frame allocator.
 // Throws if vuk throws.
 auto begin_frame(Runtime& runtime, GlobalResource& resource) -> Allocator;
@@ -56,7 +48,7 @@ auto begin_frame(Runtime& runtime, GlobalResource& resource) -> Allocator;
 
 // Submit the given image for presentation on the swapchain surface.
 // Throws if vuk throws.
-void submit(Allocator& allocator, TracyContext const& tracy_context, ManagedImage&& image);
+void submit(Allocator& allocator, ManagedImage&& image);
 
 // Compile a vertex and fragment shader pair into a graphics pipeline.
 // Throws if vuk throws.

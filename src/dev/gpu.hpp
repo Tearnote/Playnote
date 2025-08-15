@@ -111,7 +111,6 @@ private:
 	lib::vuk::GlobalResource global_resource;
 	lib::vuk::Allocator global_allocator;
 	lib::vuk::Swapchain swapchain;
-	lib::vuk::TracyContext tracy_context;
 };
 
 inline GPU::Instance::Instance(Logger::Category* cat):
@@ -180,8 +179,7 @@ inline GPU::GPU(dev::Window& window):
 	runtime{lib::vuk::create_runtime(instance.instance, device.device, lib::vk::retrieve_device_queues(device.device))},
 	global_resource{runtime, FramesInFlight},
 	global_allocator{global_resource},
-	swapchain{create_swapchain(global_allocator, device, window.size())},
-	tracy_context{lib::vuk::create_tracy_context(global_allocator)}
+	swapchain{create_swapchain(global_allocator, device, window.size())}
 {
 	INFO_AS(cat, "Vulkan initialized");
 }
@@ -192,7 +190,7 @@ void GPU::frame(Func&& func)
 	auto frame_allocator = lib::vuk::begin_frame(runtime, global_resource);
 	auto swapchain_image = lib::vuk::acquire_swapchain_image(swapchain, "swp_img");
 	auto result = func(frame_allocator, move(swapchain_image));
-	lib::vuk::submit(frame_allocator, tracy_context, move(result));
+	lib::vuk::submit(frame_allocator, move(result));
 
 }
 

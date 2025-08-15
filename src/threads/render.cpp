@@ -12,7 +12,6 @@ Implementation file for threads/render.hpp.
 #include "assert.hpp"
 #include "logger.hpp"
 #include "lib/imgui.hpp"
-#include "lib/tracy.hpp"
 #include "dev/window.hpp"
 #include "dev/audio.hpp"
 #include "dev/gpu.hpp"
@@ -179,7 +178,6 @@ static void run_render(Broadcaster& broadcaster, dev::Window const& window, gfx:
 				lib::imgui::end_window();
 			}
 		});
-		FRAME_MARK();
 	}
 }
 

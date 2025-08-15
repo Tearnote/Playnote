@@ -10,7 +10,6 @@ Implementation file for threads/audio.hpp.
 
 #include "preamble.hpp"
 #include "logger.hpp"
-#include "lib/tracy.hpp"
 #include "dev/window.hpp"
 #include "dev/os.hpp"
 #include "threads/broadcaster.hpp"
@@ -23,7 +22,6 @@ static void run_input(Broadcaster& broadcaster, dev::Window& window, fs::path co
 	broadcaster.shout(song_request);
 	while (!window.is_closing()) {
 		glfw.poll();
-		FRAME_MARK_NAMED("input");
 		yield();
 	}
 }
