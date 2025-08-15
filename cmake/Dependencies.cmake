@@ -102,6 +102,12 @@ FetchContent_Declare(ebur128 # Volume normalization
 FetchContent_MakeAvailable(ebur128)
 add_library(ebur128 ${ebur128_SOURCE_DIR}/ebur128/ebur128.c)
 target_include_directories(ebur128 PUBLIC ${ebur128_SOURCE_DIR}/ebur128)
+# Windows portability
+include(CheckIncludeFile)
+check_include_file(sys/queue.h HAVE_SYS_QUEUE_H)
+if(NOT HAVE_SYS_QUEUE_H)
+	target_include_directories(ebur128 PRIVATE ${ebur128_SOURCE_DIR}/ebur128/queue)
+endif()
 
 FetchContent_Declare(imgui # Debug controls
 	GIT_REPOSITORY https://github.com/ocornut/imgui
