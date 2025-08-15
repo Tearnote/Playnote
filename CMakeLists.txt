@@ -33,7 +33,6 @@ include(cmake/Dependencies.cmake)
 # Main target
 
 add_executable(Playnote
-	src/lib/pipewire.cpp
 	src/lib/ebur128.cpp
 	src/lib/openssl.cpp
 	src/lib/ffmpeg.cpp
@@ -49,6 +48,9 @@ add_executable(Playnote
 	src/threads/input.cpp
 	src/main.cpp
 )
+if(UNIX)
+	target_sources(Playnote PRIVATE src/lib/pipewire.cpp)
+endif()
 target_precompile_headers(Playnote PRIVATE src/preamble.hpp)
 target_include_directories(Playnote PRIVATE src) # All includes start from src as root
 
@@ -77,6 +79,9 @@ target_link_libraries(Playnote PRIVATE TBB::tbb)
 target_link_libraries(Playnote PRIVATE ICU::uc)
 target_link_libraries(Playnote PRIVATE mio::mio)
 target_link_libraries(Playnote PRIVATE vuk)
+if(WIN32)
+	target_link_libraries(Playnote PRIVATE winmm)
+endif()
 target_compile_definitions(imgui PUBLIC "IMGUI_USER_CONFIG=\"${PROJECT_SOURCE_DIR}/src/lib/imconfig.h\"")
 target_compile_definitions(Playnote PRIVATE _LIBCPP_ENABLE_PARALLEL_ALGORITHMS) # Enable std::execution in Clang
 
