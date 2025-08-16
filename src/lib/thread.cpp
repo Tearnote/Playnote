@@ -33,7 +33,7 @@ void name_current(string_view name)
 #else
 	auto const err = pthread_setname_np(pthread_self(), string{name}.c_str());
 	if (err != 0)
-		throw system_error{"Failed to set thread name"};
+		throw system_error("Failed to set thread name");
 #endif
 }
 
