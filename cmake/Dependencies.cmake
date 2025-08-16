@@ -71,8 +71,8 @@ set(VUK_USE_SHADERC OFF CACHE BOOL "" FORCE)
 set(VUK_EXTRA_IMGUI OFF CACHE BOOL "" FORCE)
 set(VUK_EXTRA_INIT OFF CACHE BOOL "" FORCE)
 FetchContent_Declare(vuk # Vulkan rendergraph
-	GIT_REPOSITORY https://github.com/martty/vuk
-	GIT_TAG 4b88bb86ed3a6c40f21b3ee355f258c10f71e998
+	GIT_REPOSITORY https://github.com/Tearnote/vuk
+	GIT_TAG f24c0316ad0a1eaa27685cec9fbef34273bc68be
 )
 FetchContent_MakeAvailable(vuk)
 target_compile_options(vuk PRIVATE -g0) # Work around bug in Embed module
