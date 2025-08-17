@@ -537,7 +537,7 @@ inline void calculate_note_metrics(Chart::Lanes const& lanes, Metrics& metrics)
 	});
 	metrics.chart_duration = fold_left(lanes,
 		0ns, [](auto acc, Lane const& lane) {
-			if (lane.notes.empty() || !lane.playable) return 0ns;
+			if (lane.notes.empty() || !lane.playable) return acc;
 			auto const& last_note = lane.notes.back();
 			auto note_end = last_note.timestamp;
 			if (last_note.type_is<Note::LN>()) note_end += last_note.params<Note::LN>().length;

@@ -84,7 +84,6 @@ void Broadcaster::make_shout(Args&&... args)
 		if (endpoint_id == idx) continue;
 		auto& in_channel = channels[idx];
 		if (!in_channel.contains(typeid(Type))) continue;
-		TRACE("Making shout of type {} from endpoint #{}", typeid(Type).name(), endpoint_id);
 		(*static_pointer_cast<channel<Type>>(in_channel[typeid(Type)])) << T{forward<Args>(args)...};
 	}
 }
