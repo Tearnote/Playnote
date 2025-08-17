@@ -141,13 +141,13 @@ inline void Audio::on_process(void* userdata)
 	if (!buffer_opt) return;
 	auto& [buffer, request] = buffer_opt.value();
 
-	for (auto const& generator: self.generators | views::values)
-		generator.begin_buffer();
+	for (auto const& generator: self.generators)
+		generator.second.begin_buffer();
 
 	for (auto& dest: buffer) {
 		auto next = lib::pw::Sample{};
-		for (auto const& generator: self.generators | views::values) {
-			auto const sample = generator.next_sample();
+		for (auto const& generator: self.generators) {
+			auto const sample = generator.second.next_sample();
 			next.left += sample.left;
 			next.right += sample.right;
 		}
