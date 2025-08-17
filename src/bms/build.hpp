@@ -599,7 +599,7 @@ auto calculate_density_distribution(Chart::Lanes const& lanes, nanoseconds chart
 		auto& scratch = result.scratch_density[idx];
 		auto& ln = result.ln_density[idx];
 		for (auto l_idx: irange(0zu, lanes.size())) {
-			auto const& lane = lanes[idx];
+			auto const& lane = lanes[l_idx];
 			auto const type = Chart::LaneType{l_idx};
 			if (!lane.playable) continue;
 			for (Note const& note: lane.notes) {
