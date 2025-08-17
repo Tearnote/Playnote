@@ -87,7 +87,7 @@ inline constexpr auto LogLevelBMSBuild = Logger::Level::Info;
 #endif
 
 // Whether Vulkan validation layers are enabled
-#if BUILD_TYPE == BUILD_DEBUG
+#if BUILD_TYPE == BUILD_DEBUG && TARGET == TARGET_LINUX
 inline constexpr auto VulkanValidationEnabled = true;
 #else
 inline constexpr auto VulkanValidationEnabled = false;
