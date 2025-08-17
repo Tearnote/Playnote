@@ -594,7 +594,7 @@ auto calculate_density_distribution(Chart::Lanes const& lanes, nanoseconds chart
 	auto const ProgressFreq = static_cast<uint32>(floor(1s / window));
 	auto until_progress_update = 0u;
 	for (auto idx: irange(0zu, result.key_density.size())) {
-		auto const cursor = idx * resolution;
+		auto const cursor = static_cast<isize>(idx) * resolution;
 		auto& key = result.key_density[idx];
 		auto& scratch = result.scratch_density[idx];
 		auto& ln = result.ln_density[idx];
@@ -611,6 +611,7 @@ auto calculate_density_distribution(Chart::Lanes const& lanes, nanoseconds chart
 					return key;
 				}();
 				auto const delta = note.timestamp - cursor;
+				TRACE("timestamp: {}ns, cursor: {}ns, delta: {}ns", note.timestamp.count(), cursor.count(), delta.count());
 				auto const delta_scaled = ratio(delta, window) * Bandwidth; // now within [-Bandwidth, Bandwidth]
 				target += exp(-pow(delta_scaled, 2.0f) / 2.0f) * GaussianScale; // Gaussian filter
 			}
