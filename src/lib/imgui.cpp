@@ -280,8 +280,8 @@ void plot(char const* label,
 		return [](int idx, void* userdata) -> ImPlotPoint {
 			auto const& value_ref = *static_cast<ValueRef*>(userdata);
 			auto sum = 0.0;
-			for (auto idx: irange(0zu, value_ref.idx + 1))
-				sum += value_ref.values[idx].data[idx];
+			for (auto i: irange(0zu, value_ref.idx + 1))
+				sum += value_ref.values[i].data[idx];
 			return {static_cast<double>(idx), sum};
 		};
 	}();
