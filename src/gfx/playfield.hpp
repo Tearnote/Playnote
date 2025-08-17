@@ -9,7 +9,6 @@ A renderable visual representation of a BMS chart playfield.
 #pragma once
 #include "preamble.hpp"
 #include "assert.hpp"
-#include "logger.hpp"
 #include "gfx/renderer.hpp"
 #include "bms/cursor.hpp"
 #include "bms/chart.hpp"

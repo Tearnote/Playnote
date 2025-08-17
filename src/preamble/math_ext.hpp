@@ -12,8 +12,6 @@ Additional math types and functions. Introduces 2-4 component vectors.
 #include <numbers>
 #include "preamble/algorithm.hpp"
 #include "preamble/container.hpp"
-#include "preamble/concepts.hpp"
-#include "preamble/utility.hpp"
 #include "preamble/types.hpp"
 #include "preamble/math.hpp"
 

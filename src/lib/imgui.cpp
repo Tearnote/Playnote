@@ -12,7 +12,6 @@ Implementation file for lib/imgui.hpp.
 #include "implot.h"
 #include "imgui.h"
 #include "preamble.hpp"
-#include "assert.hpp"
 #include "lib/vulkan.hpp"
 #include "lib/glfw.hpp"
 

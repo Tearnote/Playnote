@@ -18,7 +18,6 @@ Imports for string and text IO.
 #include <boost/rational.hpp>
 #include "quill/bundled/fmt/format.h"
 #include "quill/DeferredFormatCodec.h"
-#include "preamble/algorithm.hpp"
 #include "preamble/math_ext.hpp"
 #include "preamble/concepts.hpp"
 #include "preamble/math.hpp"
@@ -28,8 +27,8 @@ namespace playnote {
 
 using std::string;
 using std::string_view;
-using std::literals::operator ""s;
-using std::literals::operator ""sv;
+using std::literals::operator""s;
+using std::literals::operator""sv;
 using fmtquill::format;
 using fmtquill::print;
 using boost::trim;

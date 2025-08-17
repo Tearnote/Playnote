@@ -7,7 +7,6 @@ Allows threads to subscribe to events and receive messages from other threads.
 */
 
 #pragma once
-#include "quill/core/Codec.h"
 #include "preamble.hpp"
 #include "assert.hpp"
 
