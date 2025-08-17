@@ -83,8 +83,11 @@ auto create_runtime(vk::Instance instance, vk::Device device, vk::QueueSet const
 
 	auto swapchain = Swapchain{allocator, vkbswapchain.image_count};
 
-	for (auto [image, view]: views::zip(*vkbswapchain.get_images(),
-		     *vkbswapchain.get_image_views())) {
+	auto const& images = *vkbswapchain.get_images();
+	auto const& views = *vkbswapchain.get_image_views();
+	for (auto idx: irange(images.size())) {
+		auto const& image = images[idx];
+		auto const& view = views[idx];
 		swapchain.images.emplace_back(ImageAttachment{
 			.image = Image{image, nullptr},
 			.image_view = ImageView{{}, view},

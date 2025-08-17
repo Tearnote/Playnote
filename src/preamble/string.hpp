@@ -9,7 +9,6 @@ Imports for string and text IO.
 #pragma once
 #include <string_view>
 #include <filesystem>
-#include <ranges>
 #include <string>
 #include <boost/algorithm/string/case_conv.hpp>
 #include <boost/algorithm/string/replace.hpp>
@@ -46,6 +45,22 @@ auto substr_until(string_view text, Func&& pred) -> string_view
 {
 	auto found = find_if(text, pred);
 	return string_view{text.begin(), found};
+}
+
+// Run a function for each line in a string.
+template<callable<void(string_view)> Func>
+void for_each_line(string_view text, Func&& func)
+{
+	auto pos = 0zu;
+	while (pos < text.size()) {
+		auto const next = text.find('\n', pos);
+		if (next == string_view::npos) {
+			func(text.substr(pos));
+			break;
+		}
+		func(text.substr(pos, next - pos));
+		pos = next + 1;
+	}
 }
 
 }

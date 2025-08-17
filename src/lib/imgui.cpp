@@ -136,7 +136,7 @@ auto render(vuk::Allocator& frame_allocator, vuk::ManagedImage&& target, Context
 
 	auto vtx_dst = 0zu;
 	auto idx_dst = 0zu;
-	for (auto const n: views::iota(0, draw_data->CmdListsCount)) {
+	for (auto const n: irange(0, draw_data->CmdListsCount)) {
 		auto const* cmd_list = draw_data->CmdLists[n];
 		auto imverto = imvert->add_offset(vtx_dst * sizeof(ImDrawVert));
 		auto imindo = imind->add_offset(idx_dst * sizeof(ImDrawIdx));
@@ -170,9 +170,9 @@ auto render(vuk::Allocator& frame_allocator, vuk::ManagedImage&& target, Context
 		// (Because we merged all buffers into a single one, we maintain our own offset into them)
 		auto global_vtx_offset = 0;
 		auto global_idx_offset = 0;
-		for (auto const n: views::iota(0, draw_data->CmdListsCount)) {
+		for (auto const n: irange(0, draw_data->CmdListsCount)) {
 			auto const* cmd_list = draw_data->CmdLists[n];
-			for (auto const cmd_i: views::iota(0, cmd_list->CmdBuffer.Size)) {
+			for (auto const cmd_i: irange(0, cmd_list->CmdBuffer.Size)) {
 				auto const* pcmd = &cmd_list->CmdBuffer[cmd_i];
 				if (pcmd->UserCallback != nullptr) {
 					// User callback, registered via ImDrawList::AddCallback()
@@ -279,19 +279,19 @@ void plot(char const* label,
 		}
 		return [](int idx, void* userdata) -> ImPlotPoint {
 			auto const& value_ref = *static_cast<ValueRef*>(userdata);
-			return {
-				static_cast<double>(idx),
-				fold_left(value_ref.values | views::take(value_ref.idx + 1), 0.0f,
-					[&](float sum, auto const& value) { return sum + value.data[idx]; })
-			};
+			auto sum = 0.0;
+			for (auto idx: irange(0zu, value_ref.idx + 1))
+				sum += value_ref.values[idx].data[idx];
+			return {static_cast<double>(idx), sum};
 		};
 	}();
 
-	for (auto [idx, value]: views::zip(views::iota(0zu), values) | views::reverse) {
+	for (auto idx: irange(0zu, values.size()) | reversed) {
+		auto ref = ValueRef{values, idx};
+		auto const& value = ref.values[idx];
 		auto const implot_color = ImVec4{value.color.r(), value.color.g(), value.color.b(), value.color.a()};
 		ImPlot::SetNextLineStyle(implot_color);
 		ImPlot::SetNextFillStyle(implot_color, 0.5f);
-		auto ref = ValueRef{values, idx};
 		ImPlot::PlotLineG(value.name, value_func, &ref, value.data.size(), ImPlotLineFlags_Shaded);
 	}
 	for (auto const& marker: markers) {

@@ -48,14 +48,14 @@ public:
 		}
 
 		// Process each request for matches in the file list
-		auto matches = vector<fs::path>{};
-		matches.reserve(file_list.size());
 		struct LoadJob {
 			usize request_idx;
 			fs::path match;
 		};
 		auto jobs = vector<LoadJob>{};
 		jobs.reserve(file_list.size());
+		for (auto idx: irange(0zu, requests.size())) {
+			auto const& request = requests[idx];
 			auto match = find_if(file_list, [&](auto const& path) {
 				auto path_str = path.string();
 

@@ -130,7 +130,7 @@ template<arithmetic U>
 	requires (!same_as<T, U>)
 constexpr vec<Dim, T>::vec(vec<Dim, U> const& other)
 {
-	for (auto i: views::iota(0uz, Dim))
+	for (auto i: irange(0zu, Dim))
 		arr[i] = static_cast<T>(other[i]);
 }
 
@@ -139,7 +139,7 @@ template<usize N>
 	requires (N > Dim)
 constexpr vec<Dim, T>::vec(vec<N, T> const& other)
 {
-	for (auto i: views::iota(0uz, Dim))
+	for (auto i: irange(0zu, Dim))
 		arr[i] = other[i];
 }
 
@@ -149,7 +149,7 @@ template<usize N>
 constexpr vec<Dim, T>::vec(vec<N, T> const& other, T fill)
 {
 	arr.fill(fill);
-	for (auto i: views::iota(0uz, N))
+	for (auto i: irange(0zu, N))
 		arr[i] = other[i];
 }
 
@@ -212,7 +212,7 @@ constexpr auto vec<Dim, T>::w() const -> T
 template<usize Dim, arithmetic T>
 constexpr auto vec<Dim, T>::operator+=(self_t const& other) -> self_t&
 {
-	for (auto i: views::iota(0uz, Dim))
+	for (auto i: irange(0zu, Dim))
 		arr[i] += other[i];
 	return *this;
 }
@@ -220,7 +220,7 @@ constexpr auto vec<Dim, T>::operator+=(self_t const& other) -> self_t&
 template<usize Dim, arithmetic T>
 constexpr auto vec<Dim, T>::operator-=(self_t const& other) -> self_t&
 {
-	for (auto i: views::iota(0uz, Dim))
+	for (auto i: irange(0zu, Dim))
 		arr[i] -= other[i];
 	return *this;
 }
@@ -228,7 +228,7 @@ constexpr auto vec<Dim, T>::operator-=(self_t const& other) -> self_t&
 template<usize Dim, arithmetic T>
 constexpr auto vec<Dim, T>::operator*=(self_t const& other) -> self_t&
 {
-	for (auto i: views::iota(0uz, Dim))
+	for (auto i: irange(0zu, Dim))
 		arr[i] *= other[i];
 	return *this;
 }
@@ -236,7 +236,7 @@ constexpr auto vec<Dim, T>::operator*=(self_t const& other) -> self_t&
 template<usize Dim, arithmetic T>
 constexpr auto vec<Dim, T>::operator/=(self_t const& other) -> self_t&
 {
-	for (auto i: views::iota(0uz, Dim))
+	for (auto i: irange(0zu, Dim))
 		arr[i] /= other[i];
 	return *this;
 }
@@ -246,7 +246,7 @@ constexpr auto vec<Dim, T>::operator%=(self_t const& other) -> self_t&
 {
 	static_assert(std::is_integral_v<T>);
 
-	for (auto i: views::iota(0uz, Dim))
+	for (auto i: irange(0zu, Dim))
 		arr[i] %= other[i];
 	return *this;
 }
@@ -254,7 +254,7 @@ constexpr auto vec<Dim, T>::operator%=(self_t const& other) -> self_t&
 template<usize Dim, arithmetic T>
 constexpr auto vec<Dim, T>::operator*=(T other) -> self_t&
 {
-	for (auto i: views::iota(0uz, Dim))
+	for (auto i: irange(0zu, Dim))
 		arr[i] *= other;
 	return *this;
 }
@@ -262,7 +262,7 @@ constexpr auto vec<Dim, T>::operator*=(T other) -> self_t&
 template<usize Dim, arithmetic T>
 constexpr auto vec<Dim, T>::operator/=(T other) -> self_t&
 {
-	for (auto i: views::iota(0uz, Dim))
+	for (auto i: irange(0zu, Dim))
 		arr[i] /= other;
 	return *this;
 }
@@ -272,7 +272,7 @@ constexpr auto vec<Dim, T>::operator%=(T other) -> self_t&
 {
 	static_assert(std::is_integral_v<T>);
 
-	for (auto i: views::iota(0uz, Dim))
+	for (auto i: irange(0zu, Dim))
 		arr[i] %= other;
 	return *this;
 }
@@ -282,7 +282,7 @@ constexpr auto vec<Dim, T>::operator<<=(T other) -> self_t&
 {
 	static_assert(std::is_integral_v<T>);
 
-	for (auto i: views::iota(0uz, Dim))
+	for (auto i: irange(0zu, Dim))
 		arr[i] <<= other;
 	return *this;
 }
@@ -292,7 +292,7 @@ constexpr auto vec<Dim, T>::operator>>=(T other) -> self_t&
 {
 	static_assert(std::is_integral_v<T>);
 
-	for (auto i: views::iota(0uz, Dim))
+	for (auto i: irange(0zu, Dim))
 		arr[i] >>= other;
 	return *this;
 }
@@ -340,7 +340,7 @@ constexpr auto operator%(vec<Dim, T> const& left, vec<Dim, T> const& right) -> v
 template<usize Dim, arithmetic T>
 constexpr auto operator==(vec<Dim, T> const& left, vec<Dim, T> const& right) -> bool
 {
-	for (auto i: views::iota(0uz, Dim)) {
+	for (auto i: irange(0zu, Dim)) {
 		if (left[i] != right[i])
 			return false;
 	}
@@ -351,7 +351,7 @@ template<usize Dim, arithmetic T>
 constexpr auto min(vec<Dim, T> const& left, vec<Dim, T> const& right) -> vec<Dim, T>
 {
 	auto result = vec<Dim, T>();
-	for (auto i: views::iota(0uz, Dim))
+	for (auto i: irange(0zu, Dim))
 		result[i] = min(left[i], right[i]);
 	return result;
 }
@@ -360,7 +360,7 @@ template<usize Dim, arithmetic T>
 constexpr auto max(vec<Dim, T> const& left, vec<Dim, T> const& right) -> vec<Dim, T>
 {
 	auto result = vec<Dim, T>();
-	for (auto i: views::iota(0uz, Dim))
+	for (auto i: irange(0zu, Dim))
 		result[i] = max(left[i], right[i]);
 	return result;
 }
@@ -413,7 +413,7 @@ template<usize Dim, std::floating_point T>
 constexpr auto abs(vec<Dim, T> const& v) -> vec<Dim, T>
 {
 	auto result = vec<Dim, T>{};
-	for (auto i: views::iota(0uz, Dim))
+	for (auto i: irange(0zu, Dim))
 		result[i] = abs(v[i]);
 	return result;
 }

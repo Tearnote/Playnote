@@ -453,21 +453,21 @@ inline void IRCompiler::register_channel_handlers()
 	channel_handlers.emplace("02" /* Measure length      */, &IRCompiler::parse_channel_measure_length);
 	channel_handlers.emplace("03" /* BPM                 */, &IRCompiler::parse_channel_bpm);
 	channel_handlers.emplace("08" /* BPMxx               */, &IRCompiler::parse_channel_bpmxx);
-	for (auto const i: views::iota(1zu, 10zu)) // P1 notes
+	for (auto const i: irange(1zu, 10zu)) // P1 notes
 		channel_handlers.emplace(string{"1"} + static_cast<char>('0' + i), &IRCompiler::parse_channel_note);
-	for (auto const i: views::iota(0zu, 26zu)) // ^
+	for (auto const i: irange(0zu, 26zu)) // ^
 		channel_handlers.emplace(string{"1"} + static_cast<char>('A' + i), &IRCompiler::parse_channel_note);
-	for (auto const i: views::iota(1zu, 10zu)) // P2 notes
+	for (auto const i: irange(1zu, 10zu)) // P2 notes
 		channel_handlers.emplace(string{"2"} + static_cast<char>('0' + i), &IRCompiler::parse_channel_note);
-	for (auto const i: views::iota(0zu, 26zu)) // ^
+	for (auto const i: irange(0zu, 26zu)) // ^
 		channel_handlers.emplace(string{"2"} + static_cast<char>('A' + i), &IRCompiler::parse_channel_note);
-	for (auto const i: views::iota(1zu, 10zu)) // P1 long notes
+	for (auto const i: irange(1zu, 10zu)) // P1 long notes
 		channel_handlers.emplace(string{"5"} + static_cast<char>('0' + i), &IRCompiler::parse_channel_ln);
-	for (auto const i: views::iota(0zu, 26zu)) // ^
+	for (auto const i: irange(0zu, 26zu)) // ^
 		channel_handlers.emplace(string{"5"} + static_cast<char>('A' + i), &IRCompiler::parse_channel_ln);
-	for (auto const i: views::iota(1zu, 10zu)) // P2 long notes
+	for (auto const i: irange(1zu, 10zu)) // P2 long notes
 		channel_handlers.emplace(string{"6"} + static_cast<char>('0' + i), &IRCompiler::parse_channel_ln);
-	for (auto const i: views::iota(0zu, 26zu)) // ^
+	for (auto const i: irange(0zu, 26zu)) // ^
 		channel_handlers.emplace(string{"6"} + static_cast<char>('A' + i), &IRCompiler::parse_channel_ln);
 
 	// Unimplemented channels
@@ -485,17 +485,17 @@ inline void IRCompiler::register_channel_handlers()
 	channel_handlers.emplace("A3" /* BGA layer 2 overlay */, &IRCompiler::parse_channel_unimplemented);
 	channel_handlers.emplace("A4" /* BGA poor overlay    */, &IRCompiler::parse_channel_unimplemented);
 	channel_handlers.emplace("A5" /* BGA key-bound       */, &IRCompiler::parse_channel_unimplemented);
-	for (auto const i: views::iota(1zu, 10zu))// P1 notes (adlib)
+	for (auto const i: irange(1zu, 10zu))// P1 notes (adlib)
 		channel_handlers.emplace(string{"3"} + static_cast<char>('0' + i), &IRCompiler::parse_channel_unimplemented);
-	for (auto const i: views::iota(0zu, 26zu)) // ^
+	for (auto const i: irange(0zu, 26zu)) // ^
 		channel_handlers.emplace(string{"3"} + static_cast<char>('A' + i), &IRCompiler::parse_channel_unimplemented);
-	for (auto const i: views::iota(1zu, 10zu)) // P2 notes (adlib)
+	for (auto const i: irange(1zu, 10zu)) // P2 notes (adlib)
 		channel_handlers.emplace(string{"4"} + static_cast<char>('0' + i), &IRCompiler::parse_channel_unimplemented);
-	for (auto const i: views::iota(0zu, 26zu)) // ^
+	for (auto const i: irange(0zu, 26zu)) // ^
 		channel_handlers.emplace(string{"4"} + static_cast<char>('A' + i), &IRCompiler::parse_channel_unimplemented);
-	for (auto const i: views::iota(1zu, 10zu)) // P1 mines
+	for (auto const i: irange(1zu, 10zu)) // P1 mines
 		channel_handlers.emplace(string{"D"} + static_cast<char>('0' + i), &IRCompiler::parse_channel_unimplemented);
-	for (auto const i: views::iota(1zu, 10zu)) // P2 mines
+	for (auto const i: irange(1zu, 10zu)) // P2 mines
 		channel_handlers.emplace(string{"E"} + static_cast<char>('0' + i), &IRCompiler::parse_channel_unimplemented);
 
 	// Critical unimplemented channels
@@ -568,7 +568,8 @@ inline void IRCompiler::handle_channel(IR& ir, ChannelCommand&& cmd, SlotMapping
 		// Advance 2 chars at a time, creating an event for each note
 		auto numerator = 0zu;
 		auto const denominator = cmd.value.size() / 2;
-		for (auto note: value | views::chunk(2) | views::to_sv) {
+		for (auto idx: irange(0zu, value.size(), 2)) {
+			auto note = value.substr(idx, 2);
 			(this->*channel_handlers.at(cmd.channel))(ir, SingleChannelCommand{
 				.line = cmd.line,
 				.position = cmd.measure + NotePosition{numerator, denominator},

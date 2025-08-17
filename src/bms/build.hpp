@@ -171,19 +171,21 @@ inline void LaneBuilder::convert_ln(vector<AbsNote>& ln_ends, vector<Note>& resu
 		WARN("Unpaired LN end found; chart is most likely invalid");
 		ln_ends.pop_back();
 	}
-	transform(ln_ends | views::chunk(2), back_inserter(result), [&](auto ends) {
-		auto const ln_length = ends[1].position.timestamp - ends[0].position.timestamp;
-		auto const ln_height = ends[1].position.y_pos - ends[0].position.y_pos;
-		return Note{
+	for (auto idx: irange(0zu, ln_ends.size(), 2)) {
+		auto const& begin = ln_ends[idx];
+		auto const& end = ln_ends[idx + 1];
+		auto const ln_length = end.position.timestamp - begin.position.timestamp;
+		auto const ln_height = end.position.y_pos - begin.position.y_pos;
+		result.emplace_back(Note{
 			.type = Note::LN{
 				.length = ln_length,
 				.height = static_cast<float>(ln_height),
 			},
-			.timestamp = ends[0].position.timestamp,
-			.y_pos = ends[0].position.y_pos,
-			.wav_slot = ends[0].wav_slot,
-		};
-	});
+			.timestamp = begin.position.timestamp,
+			.y_pos = begin.position.y_pos,
+			.wav_slot = begin.wav_slot,
+		});
+	};
 }
 
 inline void LaneBuilder::sort_and_deduplicate(vector<Note>& result, bool deduplicate)
@@ -413,16 +415,12 @@ inline auto beat_rel_notes_to_abs(span<BeatRelNote const> notes, span<BeatRelBPM
 	auto result = vector<AbsNote>{};
 	result.reserve(notes.size());
 	transform(notes, back_inserter(result), [&](BeatRelNote const& note) {
-		auto bpm_section =
-			views::zip(beat_rel_bpms, bpm_changes) |
-			views::reverse |
-			views::filter([&](auto const& view) {
-				if (note.position >= get<0>(view).position) return true;
-				return false;
-			}) |
-			views::take(1);
+		auto bpm_section = find_last_if(beat_rel_bpms, [&](auto const& bpm) {
+			return note.position >= bpm.position;
+		});
 		ASSERT(!bpm_section.empty());
-		auto [beat_rel_bpm, bpm] = *bpm_section.begin();
+		auto const& beat_rel_bpm = *bpm_section.begin();
+		auto const& bpm = bpm_changes[distance(beat_rel_bpms.begin(), bpm_section.begin())];
 
 		auto const beats_since_bpm = note.position - beat_rel_bpm.position;
 		auto const time_since_bpm = beats_since_bpm * duration<double>{60.0 / bpm.bpm};
@@ -458,8 +456,9 @@ inline auto build_bpm_changes(span<BeatRelBPM const> bpms) -> vector<BPMChange>
 
 	auto cursor = 0ns;
 	auto y_cursor = 0.0;
-	transform(bpms | views::pairwise, back_inserter(result), [&](auto const& bpm_pair) {
-		auto [prev_bpm, bpm] = bpm_pair;
+	for (auto idx: irange(1zu, bpms.size())) {
+		auto const& bpm = bpms[idx];
+		auto const& prev_bpm = bpms[idx - 1];
 		auto const beats_elapsed = bpm.position - prev_bpm.position;
 		auto const time_elapsed = duration_cast<nanoseconds>(beats_elapsed * duration<double>{60.0 / prev_bpm.bpm});
 		cursor += time_elapsed;
@@ -470,8 +469,8 @@ inline auto build_bpm_changes(span<BeatRelBPM const> bpms) -> vector<BPMChange>
 			.y_pos = y_cursor,
 			.scroll_speed = bpm.scroll_speed,
 		};
-		return bpm_change;
-	});
+		result.emplace_back(bpm_change);
+	}
 
 	return result;
 }
@@ -483,7 +482,8 @@ inline void build_lanes(Chart& chart, span<AbsNote const> notes)
 	for (auto const& note: notes)
 		lane_builders[+note.lane].add_note(note);
 
-	for (auto [idx, lane]: chart.lanes | views::enumerate) {
+	for (auto idx: irange(0zu, chart.lanes.size())) {
+		auto& lane = chart.lanes[idx];
 		auto const is_bgm = idx == +Chart::LaneType::BGM;
 		auto const is_measure_line = idx == +Chart::LaneType::MeasureLine;
 		lane = lane_builders[idx].build(!is_bgm);
@@ -535,10 +535,10 @@ inline void calculate_note_metrics(Chart::Lanes const& lanes, Metrics& metrics)
 	metrics.note_count = fold_left(lanes, 0u, [](auto acc, auto const& lane) {
 		return acc + (lane.playable? lane.notes.size() : 0);
 	});
-	metrics.chart_duration = fold_left(lanes |
-		views::filter([](auto const& lane) { return !lane.notes.empty() && lane.playable; }) |
-		views::transform([](auto const& lane) -> Note const& { return lane.notes.back(); }),
-		0ns, [](auto acc, Note const& last_note) {
+	metrics.chart_duration = fold_left(lanes,
+		0ns, [](auto acc, Lane const& lane) {
+			if (lane.notes.empty() || !lane.playable) return 0ns;
+			auto const& last_note = lane.notes.back();
 			auto note_end = last_note.timestamp;
 			if (last_note.type_is<Note::LN>()) note_end += last_note.params<Note::LN>().length;
 			return max(acc, note_end);
@@ -557,7 +557,7 @@ void calculate_audio_metrics(Cursor&& cursor, Metrics& metrics, Func&& progress)
 
 	auto processing = true;
 	while (processing) {
-		for (auto _: views::iota(0zu, BufferSize)) {
+		for (auto _: irange(0zu, BufferSize)) {
 			auto& sample = buffer.emplace_back();
 			processing = !cursor.advance_one_sample([&](auto new_sample) {
 				sample.left += new_sample.left;
@@ -577,17 +577,6 @@ void calculate_audio_metrics(Cursor&& cursor, Metrics& metrics, Func&& progress)
 	r128::cleanup(ctx);
 }
 
-inline auto notes_around(span<Note const> notes, nanoseconds cursor, nanoseconds window)
-{
-	auto const from = cursor - window;
-	auto const to = cursor + window;
-	return notes | views::drop_while([=](auto const& note) {
-		return note.timestamp < from;
-	}) | views::take_while([=](auto const& note) {
-		return note.timestamp <= to;
-	});
-}
-
 template<callable<void(threads::ChartLoadProgress::Type)> Func>
 auto calculate_density_distribution(Chart::Lanes const& lanes, nanoseconds chart_duration,
 	nanoseconds resolution, nanoseconds window, Func&& progress) -> Density
@@ -604,13 +593,18 @@ auto calculate_density_distribution(Chart::Lanes const& lanes, nanoseconds chart
 
 	auto const ProgressFreq = static_cast<uint32>(floor(1s / window));
 	auto until_progress_update = 0u;
-	for (auto [cursor, key, scratch, ln]: views::zip(
-		views::iota(0u) | views::transform([&](auto i) { return i * resolution; }),
-		result.key_density, result.scratch_density, result.ln_density)) {
-		for (auto [lane, type]: views::zip(lanes,
-			views::iota(0u) | views::transform([](auto i) { return Chart::LaneType{i}; }))) {
+	for (auto idx: irange(0zu, result.key_density.size())) {
+		auto const cursor = idx * resolution;
+		auto& key = result.key_density[idx];
+		auto& scratch = result.scratch_density[idx];
+		auto& ln = result.ln_density[idx];
+		for (auto l_idx: irange(0zu, lanes.size())) {
+			auto const& lane = lanes[idx];
+			auto const type = Chart::LaneType{l_idx};
 			if (!lane.playable) continue;
-			for (Note const& note: notes_around(lane.notes, cursor, window)) {
+			for (Note const& note: lane.notes) {
+				if (note.timestamp < cursor - window) continue;
+				if (note.timestamp > cursor + window) break;
 				auto& target = [&]() -> float& {
 					if (type == Chart::LaneType::P1_KeyS || type == Chart::LaneType::P2_KeyS) return scratch;
 					if (note.type_is<Note::LN>()) return ln;
@@ -660,7 +654,8 @@ inline void calculate_bb(Chart& chart)
 
 	for (auto const& lane: chart.lanes) {
 		if (!lane.audible) continue;
-		for (auto [idx, note]: lane.notes | views::enumerate) {
+		for (auto idx: irange(0zu, lane.notes.size())) {
+			auto const& note = lane.notes[idx];
 			if (chart.wav_slots[note.wav_slot].empty()) continue;
 			// Register note audio in the structure
 			auto const wav_len = dev::Audio::samples_to_ns(chart.wav_slots[note.wav_slot].size());
@@ -670,8 +665,8 @@ inline void calculate_bb(Chart& chart)
 			auto const end = next_note_start + wav_len;
 			auto const first_window = clamp<usize>(start / SlotBB::WindowSize, 0zu, chart.slot_bb.windows.size() - 1);
 			auto const last_window = clamp<usize>(end / SlotBB::WindowSize + 1, 0zu, chart.slot_bb.windows.size() - 1);
-			for (auto& window: views::iota(first_window, last_window + 1) |
-				views::transform([&](auto i) -> auto& { return chart.slot_bb.windows[i]; })) {
+			for (auto w_idx: irange(first_window, last_window + 1)) {
+				auto& window = chart.slot_bb.windows[w_idx];
 				if (contains(window, note.wav_slot)) continue;
 				if (window.size() == window.capacity()) {
 					WARN("Unable to add sample slot to bounding box; reached limit of {}", SlotBB::MaxSlots);
@@ -732,9 +727,10 @@ auto chart_from_ir(IR const& ir, Func&& file_loader, Func2&& progress) -> shared
 
 	// Enqueue and execute file requests for used slots
 	auto requests = io::BulkRequest{domain};
-	for (auto const& [needed, request, wav_slot]: views::zip(needed_slots, file_references.wav, chart->wav_slots)) {
-		if (!needed || request.empty()) continue;
-		requests.enqueue<io::AudioCodec>(wav_slot, request, AudioExtensions, false);
+	for (auto idx: irange(0zu, needed_slots.size())) {
+		auto const request = string_view{file_references.wav[idx]};
+		if (!needed_slots[idx] || request.empty()) continue;
+		requests.enqueue<io::AudioCodec>(chart->wav_slots[idx], request, AudioExtensions, false);
 	}
 	file_loader(requests);
 

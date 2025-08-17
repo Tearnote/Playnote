@@ -125,7 +125,8 @@ inline void Playfield::enqueue(Renderer::Queue& queue)
 	auto x_advance = position.x();
 	for (auto const& field: fields) {
 		auto field_x_advance = 0;
-		for (auto [idx, lane]: field | views::enumerate) {
+		for (auto idx: irange(0zu, field.size())) {
+			auto const& lane = field[idx];
 			enqueue_lane(queue, {x_advance + field_x_advance, position.y()}, length, lane, idx != 0);
 			field_x_advance += lane_width(lane.visual) + (idx != field.size() - 1? LaneSeparatorWidth : 0);
 		}

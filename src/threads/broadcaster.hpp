@@ -80,9 +80,11 @@ void Broadcaster::make_shout(Args&&... args)
 {
 	using Type = remove_cvref_t<T>;
 	ASSUME(endpoint_id != -1zu);
-	for (auto [idx, in_channel]: channels | views::enumerate) {
+	for (auto idx: irange(0zu, channels.size())) {
 		if (endpoint_id == idx) continue;
+		auto& in_channel = channels[idx];
 		if (!in_channel.contains(typeid(Type))) continue;
+		TRACE("Making shout of type {} from endpoint #{}", typeid(Type).name(), endpoint_id);
 		(*static_pointer_cast<channel<Type>>(in_channel[typeid(Type)])) << T{forward<Args>(args)...};
 	}
 }
