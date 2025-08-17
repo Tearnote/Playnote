@@ -13,6 +13,9 @@ Initializes audio and submits buffers for playback, filled with audio from regis
 #include "logger.hpp"
 #include "lib/signalsmith.hpp"
 #include "lib/pipewire.hpp"
+#ifdef _WIN32
+#include "lib/wasapi.hpp"
+#endif
 
 namespace playnote::dev {
 
@@ -110,6 +113,7 @@ inline Audio::Audio() {
 	while (sampling_rate == 0) yield();
 	limiter.emplace(sampling_rate, 1ms, 10ms, 100ms);
 #else
+	lib::wasapi::init();
 	sampling_rate = 44100;
 #endif
 }
@@ -119,6 +123,8 @@ inline Audio::~Audio()
 #ifndef _WIN32
 	lib::pw::destroy_stream(loop, stream);
 	lib::pw::destroy_thread_loop(loop);
+#else
+	lib::wasapi::cleanup();
 #endif
 }
 
