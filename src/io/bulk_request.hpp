@@ -7,7 +7,7 @@ A mechanism to request multiple files at once, to be fulfilled later on all at o
 */
 
 #pragma once
-#include <execution>
+#include <future>
 #include "preamble.hpp"
 #include "logger.hpp"
 #include "io/file.hpp"
@@ -50,7 +50,12 @@ public:
 		// Process each request for matches in the file list
 		auto matches = vector<fs::path>{};
 		matches.reserve(file_list.size());
-		for (auto [idx, request]: requests | views::enumerate) {
+		struct LoadJob {
+			usize request_idx;
+			fs::path match;
+		};
+		auto jobs = vector<LoadJob>{};
+		jobs.reserve(file_list.size());
 			auto match = find_if(file_list, [&](auto const& path) {
 				auto path_str = path.string();
 
@@ -74,23 +79,29 @@ public:
 				WARN("Unable to load \"{}\": File not found", request.resource);
 				continue;
 			}
-			matches.emplace_back(domain / *match);
-			TRACE("Found \"{}\", reading at \"{}\"", request.resource, matches.back());
+			jobs.emplace_back(LoadJob{
+				.request_idx = idx,
+				.match = domain / *match,
+			});
+			TRACE("Found \"{}\", reading at \"{}\"", request.resource, jobs.back().match);
 		}
 
-		auto jobs = views::zip(requests, matches);
 		auto completed = atomic{0zu};
-		std::for_each(std::execution::par, jobs.begin(), jobs.end(), [&](auto&& pair) {
-			auto const& [request, match] = pair;
-			try {
-				auto const raw = io::read_file(match);
-				request.processor(raw.contents);
-			} catch (exception const& e) {
-				WARN("Failed to load \"{}\": {}", match, e.what());
-			}
-			auto completed_inc = completed.fetch_add(1) + 1;
-			load_progress(completed_inc, requests.size());
-		});
+		auto futures = vector<std::future<void>>{};
+		for (auto const& job: jobs) {
+			futures.emplace_back(std::async(std::launch::async, [&, job] {
+				auto const& request = requests[job.request_idx];
+				try {
+					auto const raw = io::read_file(job.match);
+					request.processor(raw.contents);
+				} catch (exception const& e) {
+					WARN("Failed to load \"{}\": {}", job.match, e.what());
+				}
+				auto completed_inc = completed.fetch_add(1) + 1;
+				load_progress(completed_inc, requests.size());
+			}));
+		};
+		for (auto& f: futures) f.get();
 		INFO("Finished reading files from \"{}\"", domain);
 	}
 

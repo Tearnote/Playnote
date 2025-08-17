@@ -75,7 +75,6 @@ target_link_libraries(Playnote PRIVATE quill)
 target_link_libraries(Playnote PRIVATE glfw)
 target_link_libraries(Playnote PRIVATE volk)
 target_link_libraries(Playnote PRIVATE ICU::i18n)
-target_link_libraries(Playnote PRIVATE TBB::tbb)
 target_link_libraries(Playnote PRIVATE ICU::uc)
 target_link_libraries(Playnote PRIVATE mio::mio)
 target_link_libraries(Playnote PRIVATE vuk)
@@ -83,7 +82,6 @@ if(WIN32)
 	target_link_libraries(Playnote PRIVATE winmm)
 endif()
 target_compile_definitions(imgui PUBLIC "IMGUI_USER_CONFIG=\"${PROJECT_SOURCE_DIR}/src/lib/imconfig.h\"")
-target_compile_definitions(Playnote PRIVATE _LIBCPP_ENABLE_PARALLEL_ALGORITHMS) # Enable std::execution in Clang
 
 # Assets and other artifacts
 
