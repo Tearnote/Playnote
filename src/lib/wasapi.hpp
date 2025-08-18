@@ -18,9 +18,16 @@ namespace playnote::lib::wasapi {
 
 struct Context {
 	uint32 sampling_rate;
+	uint32 buffer_size;
 	IAudioClient* client;
+	IAudioRenderClient* renderer;
 	jthread buffer_thread;
 	shared_ptr<atomic<bool>> running_signal;
+};
+
+struct Sample {
+	float left;
+	float right;
 };
 
 inline void ret_check(HRESULT hr, string_view message = "WASAPI error")
@@ -50,10 +57,10 @@ inline auto init(ProcessCallback on_process, T* userdata) -> Context
 	auto* enumerator = static_cast<IMMDeviceEnumerator*>(nullptr);
 	ret_check(CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr, CLSCTX_ALL, __uuidof(IMMDeviceEnumerator),
 		reinterpret_cast<void**>(&enumerator)));
-	auto device = static_cast<IMMDevice*>(nullptr);
+	auto* device = static_cast<IMMDevice*>(nullptr);
 	ret_check(enumerator->GetDefaultAudioEndpoint(eRender, eMultimedia, &device));
 	enumerator->Release();
-	auto client = static_cast<IAudioClient*>(nullptr);
+	auto* client = static_cast<IAudioClient*>(nullptr);
 	ret_check(device->Activate(__uuidof(IAudioClient), CLSCTX_ALL, nullptr, reinterpret_cast<void**>(&client)));
 	device->Release();
 
@@ -78,7 +85,18 @@ inline auto init(ProcessCallback on_process, T* userdata) -> Context
 		to_reference_time(5ms), 0, reinterpret_cast<WAVEFORMATEX*>(&f32), nullptr));
 	auto buffer_event = ptr_check(CreateEvent(nullptr, false, false, nullptr));
 	ret_check(client->SetEventHandle(buffer_event));
+	auto buffer_size = uint32{0};
+	ret_check(client->GetBufferSize(&buffer_size));
+	auto* renderer = static_cast<IAudioRenderClient*>(nullptr);
+	ret_check(client->GetService(__uuidof(IAudioRenderClient), reinterpret_cast<void**>(&renderer)));
 	auto running_signal = make_shared<atomic<bool>>(true);
+
+	// Prefill first buffer
+	auto* buffer = static_cast<Sample*>(nullptr);
+	ret_check(renderer->GetBuffer(buffer_size, reinterpret_cast<BYTE**>(&buffer)));
+	auto buffer_span = span{buffer, buffer_size};
+	fill(buffer_span, Sample{0.0f, 0.0f});
+	ret_check(renderer->ReleaseBuffer(buffer_size, 0));
 
 	auto buffer_thread = jthread{[=]() {
 		auto rtprio_taskid = 0ul;
@@ -100,7 +118,9 @@ inline auto init(ProcessCallback on_process, T* userdata) -> Context
 
 	return Context{
 		.sampling_rate = f32.Format.nSamplesPerSec,
+		.buffer_size = buffer_size,
 		.client = client,
+		.renderer = renderer,
 		.buffer_thread = move(buffer_thread),
 		.running_signal = move(running_signal),
 	};
