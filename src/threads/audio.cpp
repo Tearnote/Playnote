@@ -57,11 +57,11 @@ static void run_audio(Broadcaster& broadcaster, dev::Window& window, dev::Audio&
 	broadcaster.make_shout<ChartLoadProgress>(ChartLoadProgress::Building{chart_path});
 	auto const bms_chart = chart_from_ir(bms_ir, [&](auto& requests) {
 		requests.process([&](usize loaded, usize total) {
-			/*broadcaster.make_shout<ChartLoadProgress>(ChartLoadProgress::LoadingFiles{
+			broadcaster.make_shout<ChartLoadProgress>(ChartLoadProgress::LoadingFiles{
 				.chart_path = chart_path,
 				.loaded = loaded,
 				.total = total,
-			});*/
+			});
 		});
 	}, [&](ChartLoadProgress::Type progress) {
 		visit(visitor {

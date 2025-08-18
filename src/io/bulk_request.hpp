@@ -86,7 +86,7 @@ public:
 			TRACE("Found \"{}\", reading at \"{}\"", request.resource, jobs.back().match);
 		}
 
-		auto completed = atomic{0zu};
+		auto completions = channel<usize>{};
 		auto futures = vector<std::future<void>>{};
 		for (auto const& job: jobs) {
 			futures.emplace_back(std::async(std::launch::async, [&, job] {
@@ -94,14 +94,21 @@ public:
 				try {
 					auto const raw = io::read_file(job.match);
 					request.processor(raw.contents);
+					completions << job.request_idx;
 				} catch (exception const& e) {
 					WARN("Failed to load \"{}\": {}", job.match, e.what());
+					completions << -1zu;
 				}
-				auto completed_inc = completed.fetch_add(1) + 1;
-				load_progress(completed_inc, requests.size());
 			}));
 		};
-		for (auto& f: futures) f.get();
+		auto completion_count = 0zu;
+		auto const JobCount = jobs.size();
+		auto completed = -1zu;
+		while (completions.read(completed)) {
+			completion_count += 1;
+			load_progress(completion_count, JobCount);
+			if (completion_count >= JobCount) break;
+		}
 		INFO("Finished reading files from \"{}\"", domain);
 	}
 

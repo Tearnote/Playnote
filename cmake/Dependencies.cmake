@@ -80,7 +80,7 @@ target_link_libraries(vuk PRIVATE volk)
 
 FetchContent_Declare(cpp-channels # Threaded data sharing
 	GIT_REPOSITORY https://github.com/andreiavrammsd/cpp-channel
-	GIT_TAG v0.8.3
+	GIT_TAG v1.3.1
 )
 FetchContent_MakeAvailable(cpp-channels)
 
