@@ -33,14 +33,14 @@ struct DecoderOutput_t {
 
 // Helper functions for error handling
 
-static auto check_ret(int ret) -> int
+static auto ret_check(int ret) -> int
 {
 	if (ret < 0) throw runtime_error_fmt("ffmpeg error: {}", av_err2str(ret));
 	return ret;
 }
 
 template<typename T>
-static auto check_ptr(T* ptr) -> T*
+static auto ptr_check(T* ptr) -> T*
 {
 	if (!ptr) throw runtime_error_fmt("ffmpeg error: {}", av_err2str(errno));
 	return ptr;
@@ -105,18 +105,18 @@ auto decode_file_buffer(span<byte const> file_contents) -> DecoderOutput
 
 	auto file_buffer = SeekBuffer{ .buffer = file_contents, .cursor = 0 };
 	auto io_buffer = AVBuffer{av_malloc(PageSize)};
-	auto io = AVIO{check_ptr(avio_alloc_context(static_cast<unsigned char*>(io_buffer.get()), PageSize, 0,
+	auto io = AVIO{ptr_check(avio_alloc_context(static_cast<unsigned char*>(io_buffer.get()), PageSize, 0,
 		&file_buffer, &av_io_read, &av_io_write, &av_io_seek))};
 	io_buffer.release(); // AVIOContext takes control over the buffer from now on
-	auto format = AVFormat{check_ptr(avformat_alloc_context())};
+	auto format = AVFormat{ptr_check(avformat_alloc_context())};
 	format->pb = io.get();
 
 	auto* format_rw = format.get();
 	format.release(); // avformat_open_input frees it on failure
-	check_ret(avformat_open_input(&format_rw, "", nullptr, nullptr));
+	ret_check(avformat_open_input(&format_rw, "", nullptr, nullptr));
 	format.reset(format_rw); // No failure; take back control
 
-	check_ret(avformat_find_stream_info(format.get(), nullptr));
+	ret_check(avformat_find_stream_info(format.get(), nullptr));
 	auto stream_id = -1;
 	for (auto const i: irange(0u, format->nb_streams)) {
 		if (format->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_AUDIO) {
@@ -127,11 +127,11 @@ auto decode_file_buffer(span<byte const> file_contents) -> DecoderOutput
 	if (stream_id == -1) throw runtime_error{"No audio stream found"};
 	auto* stream = format->streams[stream_id];
 
-	auto* codec = check_ptr(avcodec_find_decoder(stream->codecpar->codec_id));
-	auto codec_ctx = AVCodec{check_ptr(avcodec_alloc_context3(codec))};
-	check_ret(avcodec_parameters_to_context(codec_ctx.get(), stream->codecpar));
+	auto* codec = ptr_check(avcodec_find_decoder(stream->codecpar->codec_id));
+	auto codec_ctx = AVCodec{ptr_check(avcodec_alloc_context3(codec))};
+	ret_check(avcodec_parameters_to_context(codec_ctx.get(), stream->codecpar));
 	codec_ctx->pkt_timebase = stream->time_base; // Fix "Could not update timestamps for discarded samples."
-	check_ret(avcodec_open2(codec_ctx.get(), codec, nullptr));
+	ret_check(avcodec_open2(codec_ctx.get(), codec, nullptr));
 
 	auto result = new DecoderOutput_t{
 		.sample_format = codec_ctx->sample_fmt,
@@ -159,14 +159,14 @@ auto decode_file_buffer(span<byte const> file_contents) -> DecoderOutput
 		if (ret == AVERROR_EOF)
 			flushing = true;
 		else
-			check_ret(ret);
-		check_ret(avcodec_send_packet(codec_ctx.get(), flushing? nullptr : &packet));
+			ret_check(ret);
+		ret_check(avcodec_send_packet(codec_ctx.get(), flushing? nullptr : &packet));
 		av_packet_unref(&packet);
 
 		while (true) {
 			auto const ret = avcodec_receive_frame(codec_ctx.get(), &frame);
 			if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) break;
-			check_ret(ret);
+			ret_check(ret);
 
 			auto const frame_bytes = frame.nb_samples * bytes_per_sample * samples_per_frame;
 			if (cursor + frame_bytes > byte_size_estimate) {
@@ -198,14 +198,14 @@ auto resample_buffer(DecoderOutput&& input, uint32 sampling_rate) -> vector<pw::
 {
 	auto* swr = static_cast<SwrContext*>(nullptr);
 	constexpr auto channel_layout = (AVChannelLayout)AV_CHANNEL_LAYOUT_STEREO;
-	check_ret(swr_alloc_set_opts2(&swr,
+	ret_check(swr_alloc_set_opts2(&swr,
 		&channel_layout, AV_SAMPLE_FMT_FLT, static_cast<int>(sampling_rate),
 		&input->channel_layout, input->sample_format, static_cast<int>(input->sample_rate),
 		0, nullptr));
-	check_ret(av_opt_set_int(swr, "resampler", SWR_ENGINE_SOXR, 0));
-	check_ret(swr_init(swr));
+	ret_check(av_opt_set_int(swr, "resampler", SWR_ENGINE_SOXR, 0));
+	ret_check(swr_init(swr));
 
-	auto max_out_samples = check_ret(swr_get_out_samples(swr, static_cast<int>(input->sample_count)));
+	auto max_out_samples = ret_check(swr_get_out_samples(swr, static_cast<int>(input->sample_count)));
 	auto output = vector<pw::Sample>{};
 	output.resize(max_out_samples);
 	auto in_ptrs = vector<uint8_t const*>{};
@@ -213,8 +213,8 @@ auto resample_buffer(DecoderOutput&& input, uint32 sampling_rate) -> vector<pw::
 	for (auto const& vec: input->data)
 		in_ptrs.push_back(reinterpret_cast<uint8_t const*>(vec.data()));
 	auto* out_ptr = reinterpret_cast<uint8_t*>(output.data());
-	auto out_samples = check_ret(swr_convert(swr, &out_ptr, output.size(), in_ptrs.data(), input->sample_count));
-	out_samples += check_ret(swr_convert(swr, &out_ptr, output.size(), nullptr, 0)); // Flush final samples
+	auto out_samples = ret_check(swr_convert(swr, &out_ptr, output.size(), in_ptrs.data(), input->sample_count));
+	out_samples += ret_check(swr_convert(swr, &out_ptr, output.size(), nullptr, 0)); // Flush final samples
 	ASSERT(max_out_samples >= out_samples);
 	output.resize(out_samples);
 
