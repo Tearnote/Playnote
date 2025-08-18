@@ -7,7 +7,6 @@ A mechanism to request multiple files at once, to be fulfilled later on all at o
 */
 
 #pragma once
-#include <future>
 #include "preamble.hpp"
 #include "logger.hpp"
 #include "io/file.hpp"
@@ -87,9 +86,14 @@ public:
 		}
 
 		auto completions = channel<usize>{};
-		auto futures = vector<std::future<void>>{};
-		for (auto const& job: jobs) {
-			futures.emplace_back(std::async(std::launch::async, [&, job] {
+		auto job_idx = atomic<usize>{0};
+
+		auto worker = [&] {
+			while (true) {
+				auto const current_job_idx = job_idx.fetch_add(1);
+				if (current_job_idx >= jobs.size()) break;
+
+				auto const& job = jobs[current_job_idx];
 				auto const& request = requests[job.request_idx];
 				try {
 					auto const raw = io::read_file(job.match);
@@ -99,8 +103,15 @@ public:
 					WARN("Failed to load \"{}\": {}", job.match, e.what());
 					completions << -1zu;
 				}
-			}));
+			}
 		};
+
+		auto const WorkerCount = jthread::hardware_concurrency();
+		auto workers = vector<jthread>{};
+		workers.reserve(WorkerCount);
+		for (auto i: irange(0u, WorkerCount))
+			workers.emplace_back(worker);
+
 		auto completion_count = 0zu;
 		auto const JobCount = jobs.size();
 		auto completed = -1zu;
