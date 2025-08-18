@@ -82,8 +82,8 @@ private:
 
 	optional<lib::dsp::Limiter> limiter;
 
-#ifndef _WIN32
 	static void on_process(void*);
+#ifndef _WIN32
 	static void on_param_changed(void*, uint32_t, lib::pw::SPAPod);
 #endif
 };
@@ -115,7 +115,7 @@ inline Audio::Audio() {
 	while (sampling_rate == 0) yield();
 	limiter.emplace(sampling_rate, 1ms, 10ms, 100ms);
 #else
-	context = lib::wasapi::init();
+	context = lib::wasapi::init(&on_process, this);
 	sampling_rate = context.sampling_rate;
 #endif
 }
@@ -130,10 +130,10 @@ inline Audio::~Audio()
 #endif
 }
 
-#ifndef _WIN32
 inline void Audio::on_process(void* userdata)
 {
 	auto& self = *static_cast<Audio*>(userdata);
+#ifndef _WIN32
 	auto& stream = self.stream;
 	// Mutexes are bad in realtime context, but this should only block during startup/shutdown
 	// and loadings.
@@ -159,8 +159,10 @@ inline void Audio::on_process(void* userdata)
 	}
 
 	lib::pw::enqueue_buffer(stream, request);
+#endif
 }
 
+#ifndef _WIN32
 inline void Audio::on_param_changed(void*, uint32_t id, lib::pw::SPAPod param)
 {
 	auto const new_sampling_rate = lib::pw::get_sampling_rate_from_param(id, param);

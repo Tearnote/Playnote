@@ -41,7 +41,10 @@ auto to_reference_time(duration<T, U> time) -> REFERENCE_TIME
 	return duration_cast<nanoseconds>(time).count() / 100;
 }
 
-inline auto init() -> Context
+using ProcessCallback = void(*)(void*);
+
+template<typename T>
+inline auto init(ProcessCallback on_process, T* userdata) -> Context
 {
 	ret_check(CoInitializeEx(nullptr, COINIT_MULTITHREADED), "Failed to initialize COM");
 	auto* enumerator = static_cast<IMMDeviceEnumerator*>(nullptr);
@@ -83,7 +86,12 @@ inline auto init() -> Context
 		ret_check(client->Start());
 
 		while (running_signal->load()) {
-			;
+			if (auto ret = WaitForSingleObject(buffer_event, 2000); ret != WAIT_OBJECT_0) {
+				running_signal->store(false);
+				break;
+			}
+
+			on_process(userdata);
 		}
 
 		client->Stop();
