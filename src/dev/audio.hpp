@@ -73,6 +73,8 @@ private:
 #ifndef _WIN32
 	lib::pw::ThreadLoop loop;
 	lib::pw::Stream stream;
+#else
+	lib::wasapi::Context context;
 #endif
 
 	unordered_map<void*, GeneratorOps> generators;
@@ -113,8 +115,8 @@ inline Audio::Audio() {
 	while (sampling_rate == 0) yield();
 	limiter.emplace(sampling_rate, 1ms, 10ms, 100ms);
 #else
-	lib::wasapi::init();
-	sampling_rate = 44100;
+	context = lib::wasapi::init();
+	sampling_rate = context.sampling_rate;
 #endif
 }
 
@@ -124,7 +126,7 @@ inline Audio::~Audio()
 	lib::pw::destroy_stream(loop, stream);
 	lib::pw::destroy_thread_loop(loop);
 #else
-	lib::wasapi::cleanup();
+	lib::wasapi::cleanup(move(context));
 #endif
 }
 

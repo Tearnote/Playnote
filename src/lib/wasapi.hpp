@@ -11,13 +11,28 @@ WASAPI wrapper for Windows audio support.
 #include <mmdeviceapi.h>
 #include <audioclient.h>
 #include <combaseapi.h>
+#include <avrt.h>
 #include "preamble.hpp"
 
 namespace playnote::lib::wasapi {
 
+struct Context {
+	uint32 sampling_rate;
+	IAudioClient* client;
+	jthread buffer_thread;
+	shared_ptr<atomic<bool>> running_signal;
+};
+
 inline void ret_check(HRESULT hr, string_view message = "WASAPI error")
 {
 	if (FAILED(hr)) throw system_error_fmt("{}: {}", message, hr);
+}
+
+template<typename T>
+static auto ptr_check(T* ptr) -> T*
+{
+	if (!ptr) throw runtime_error_fmt("WASAPI error: {}", GetLastError());
+	return ptr;
 }
 
 template<typename T, typename U>
@@ -26,7 +41,7 @@ auto to_reference_time(duration<T, U> time) -> REFERENCE_TIME
 	return duration_cast<nanoseconds>(time).count() / 100;
 }
 
-inline void init()
+inline auto init() -> Context
 {
 	ret_check(CoInitializeEx(nullptr, COINIT_MULTITHREADED), "Failed to initialize COM");
 	auto* enumerator = static_cast<IMMDeviceEnumerator*>(nullptr);
@@ -58,12 +73,36 @@ inline void init()
 	CoTaskMemFree(mix_format);
 	ret_check(client->Initialize(AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
 		to_reference_time(5ms), 0, reinterpret_cast<WAVEFORMATEX*>(&f32), nullptr));
+	auto buffer_event = ptr_check(CreateEvent(nullptr, false, false, nullptr));
+	ret_check(client->SetEventHandle(buffer_event));
+	auto running_signal = make_shared<atomic<bool>>(true);
 
-	client->Release();
+	auto buffer_thread = jthread{[=]() {
+		auto rtprio_taskid = 0ul;
+		auto rtprio = ptr_check(AvSetMmThreadCharacteristics(TEXT("Pro Audio"), &rtprio_taskid));
+		ret_check(client->Start());
+
+		while (running_signal->load()) {
+			;
+		}
+
+		client->Stop();
+		AvRevertMmThreadCharacteristics(rtprio);
+	}};
+
+	return Context{
+		.sampling_rate = f32.Format.nSamplesPerSec,
+		.client = client,
+		.buffer_thread = move(buffer_thread),
+		.running_signal = move(running_signal),
+	};
 }
 
-inline void cleanup() noexcept
+inline void cleanup(Context&& ctx) noexcept
 {
+	ctx.running_signal->store(false);
+	ctx.buffer_thread.join();
+	ctx.client->Release();
 	CoUninitialize();
 }
 
