@@ -13,8 +13,11 @@ WASAPI wrapper for Windows audio support.
 #include <combaseapi.h>
 #include <avrt.h>
 #include "preamble.hpp"
+#include "lib/pipewire.hpp"
 
 namespace playnote::lib::wasapi {
+
+using pw::Sample;
 
 struct Context {
 	uint32 sampling_rate;
@@ -25,14 +28,12 @@ struct Context {
 	shared_ptr<atomic<bool>> running_signal;
 };
 
-struct Sample {
-	float left;
-	float right;
-};
-
 inline void ret_check(HRESULT hr, string_view message = "WASAPI error")
 {
-	if (FAILED(hr)) throw system_error_fmt("{}: {}", message, hr);
+	if (FAILED(hr)) {
+		CRIT("{}: {}", message, hr);
+		throw system_error_fmt("{}: {}", message, hr);
+	}
 }
 
 template<typename T>
@@ -51,7 +52,7 @@ auto to_reference_time(duration<T, U> time) -> REFERENCE_TIME
 using ProcessCallback = void(*)(void*);
 
 template<typename T>
-inline auto init(ProcessCallback on_process, T* userdata) -> Context
+auto init(ProcessCallback on_process, T* userdata) -> Context
 {
 	ret_check(CoInitializeEx(nullptr, COINIT_MULTITHREADED), "Failed to initialize COM");
 	auto* enumerator = static_cast<IMMDeviceEnumerator*>(nullptr);
@@ -130,8 +131,24 @@ inline void cleanup(Context&& ctx) noexcept
 {
 	ctx.running_signal->store(false);
 	ctx.buffer_thread.join();
+	ctx.renderer->Release();
 	ctx.client->Release();
 	CoUninitialize();
+}
+
+inline auto dequeue_buffer(Context& ctx) -> span<Sample>
+{
+	auto padding = uint32{0};
+	ret_check(ctx.client->GetCurrentPadding(&padding));
+	auto const actual_size = ctx.buffer_size - padding;
+	auto* buffer = static_cast<Sample*>(nullptr);
+	ret_check(ctx.renderer->GetBuffer(actual_size, reinterpret_cast<BYTE**>(&buffer)));
+	return {buffer, actual_size};
+}
+
+inline void enqueue_buffer(Context& ctx, span<Sample> buffer)
+{
+	ret_check(ctx.renderer->ReleaseBuffer(buffer.size(), 0));
 }
 
 }

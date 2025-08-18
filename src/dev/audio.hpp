@@ -113,11 +113,11 @@ inline Audio::Audio() {
 	stream = lib::pw::create_stream(loop, AppTitle, Latency, &on_process, &on_param_changed, this);
 	lib::pw::start_thread_loop(loop);
 	while (sampling_rate == 0) yield();
-	limiter.emplace(sampling_rate, 1ms, 10ms, 100ms);
 #else
 	context = lib::wasapi::init(&on_process, this);
 	sampling_rate = context.sampling_rate;
 #endif
+	limiter.emplace(sampling_rate, 1ms, 10ms, 100ms);
 }
 
 inline Audio::~Audio()
@@ -133,19 +133,21 @@ inline Audio::~Audio()
 inline void Audio::on_process(void* userdata)
 {
 	auto& self = *static_cast<Audio*>(userdata);
-#ifndef _WIN32
-	auto& stream = self.stream;
 	// Mutexes are bad in realtime context, but this should only block during startup/shutdown
 	// and loadings.
 	auto lock = lock_guard{self.generator_lock};
 
+#ifndef _WIN32
+	auto& stream = self.stream;
 	auto buffer_opt = lib::pw::dequeue_buffer(stream);
 	if (!buffer_opt) return;
 	auto& [buffer, request] = buffer_opt.value();
+#else
+	auto buffer = lib::wasapi::dequeue_buffer(self.context);
+#endif
 
 	for (auto const& generator: self.generators)
 		generator.second.begin_buffer();
-
 	for (auto& dest: buffer) {
 		auto next = lib::pw::Sample{};
 		for (auto const& generator: self.generators) {
@@ -157,8 +159,10 @@ inline void Audio::on_process(void* userdata)
 		if (!self.limiter) continue;
 		dest = self.limiter->process(next);
 	}
-
+#ifndef _WIN32
 	lib::pw::enqueue_buffer(stream, request);
+#else
+	lib::wasapi::enqueue_buffer(self.context, buffer);
 #endif
 }
 
