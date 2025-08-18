@@ -80,6 +80,7 @@ target_link_libraries(Playnote PRIVATE mio::mio)
 target_link_libraries(Playnote PRIVATE vuk)
 if(WIN32)
 	target_link_libraries(Playnote PRIVATE winmm)
+	target_link_libraries(Playnote PRIVATE ksuser)
 endif()
 target_compile_definitions(imgui PUBLIC "IMGUI_USER_CONFIG=\"${PROJECT_SOURCE_DIR}/src/lib/imconfig.h\"")
 
