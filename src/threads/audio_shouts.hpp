@@ -8,7 +8,7 @@ Shouts that can be spawned by the audio thread.
 
 #pragma once
 #include "preamble.hpp"
-#include "bms/audio_player.hpp"
+#include "audio/player.hpp"
 
 namespace playnote::threads {
 
@@ -34,7 +34,7 @@ struct ChartLoadProgress {
 	};
 	struct Finished {
 		fs::path chart_path;
-		weak_ptr<bms::AudioPlayer const> player;
+		weak_ptr<audio::Player const> player;
 	};
 	struct Failed {
 		fs::path chart_path;

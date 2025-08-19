@@ -18,7 +18,7 @@ Implementation file for threads/render.hpp.
 #include "dev/os.hpp"
 #include "gfx/playfield.hpp"
 #include "gfx/renderer.hpp"
-#include "bms/audio_player.hpp"
+#include "audio/player.hpp"
 #include "bms/cursor.hpp"
 #include "bms/chart.hpp"
 #include "threads/render_shouts.hpp"
@@ -81,7 +81,7 @@ struct LoadingToast {
 	optional<string> progress_text;
 };
 
-template<callable<void(shared_ptr<bms::AudioPlayer const>)> Func>
+template<callable<void(shared_ptr<audio::Player const>)> Func>
 void receive_loading_shouts(Broadcaster& broadcaster, optional<LoadingToast>& loading_toast, Func&& on_finish)
 {
 	broadcaster.receive_all<ChartLoadProgress>([&](auto&& recv) {
@@ -149,7 +149,7 @@ static void enqueue_loading_toast(LoadingToast const& toast)
 
 static void run_render(Broadcaster& broadcaster, dev::Window const& window, gfx::Renderer& renderer)
 {
-	auto player = shared_ptr<bms::AudioPlayer const>{};
+	auto player = shared_ptr<audio::Player const>{};
 	auto playfield = optional<gfx::Playfield>{};
 	auto loading_toast = optional<LoadingToast>{};
 	auto scroll_speed = 2.0f;

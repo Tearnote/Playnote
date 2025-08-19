@@ -15,7 +15,7 @@ Implementation file for threads/audio.hpp.
 #include "dev/audio.hpp"
 #include "dev/os.hpp"
 #include "io/file.hpp"
-#include "bms/audio_player.hpp"
+#include "audio/player.hpp"
 #include "bms/build.hpp"
 #include "bms/ir.hpp"
 #include "threads/render_shouts.hpp"
@@ -71,7 +71,7 @@ static void run_audio(Broadcaster& broadcaster, dev::Window& window, dev::Audio&
 		}, progress);
 		broadcaster.make_shout<ChartLoadProgress>(move(progress));
 	});
-	auto bms_player = make_shared<bms::AudioPlayer>(window.get_glfw(), audio);
+	auto bms_player = make_shared<audio::Player>(window.get_glfw(), audio);
 	bms_player->play(*bms_chart);
 	broadcaster.make_shout<ChartLoadProgress>(ChartLoadProgress::Finished{
 		.chart_path = chart_path,
