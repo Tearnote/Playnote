@@ -11,18 +11,18 @@ A cursor wrapper that sends audio samples to the audio device.
 #include "assert.hpp"
 #include "logger.hpp"
 #include "dev/window.hpp"
-#include "dev/audio.hpp"
+#include "audio/mixer.hpp"
 #include "bms/cursor.hpp"
 #include "bms/chart.hpp"
 
 namespace playnote::audio {
 
-class Player: public dev::Generator {
+class Player: public Generator {
 public:
 	// Create the audio player with no cursor attached. Will begin to immediately generate blank
 	// samples.
-	explicit Player(dev::GLFW const& glfw, dev::Audio& audio): glfw{glfw}, audio{audio} { audio.add_generator(*this); }
-	~Player() { audio.remove_generator(*this); }
+	explicit Player(dev::GLFW const& glfw, Mixer& mixer): glfw{glfw}, mixer{mixer} { mixer.add_generator(*this); }
+	~Player() { mixer.remove_generator(*this); }
 
 	// Attach a chart to the player. A new cursor will be created for it.
 	void play(bms::Chart const&, bool paused = false);
@@ -58,7 +58,7 @@ public:
 
 private:
 	dev::GLFW const& glfw;
-	dev::Audio& audio;
+	Mixer& mixer;
 	optional<bms::Cursor> cursor;
 	atomic<bool> paused = true;
 	float gain;

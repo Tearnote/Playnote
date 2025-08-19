@@ -12,10 +12,10 @@ Implementation file for threads/audio.hpp.
 #include "assert.hpp"
 #include "logger.hpp"
 #include "dev/window.hpp"
-#include "dev/audio.hpp"
 #include "dev/os.hpp"
 #include "io/file.hpp"
 #include "audio/player.hpp"
+#include "audio/mixer.hpp"
 #include "bms/build.hpp"
 #include "bms/ir.hpp"
 #include "threads/render_shouts.hpp"
@@ -34,7 +34,7 @@ static auto load_bms(bms::IRCompiler& compiler, fs::path const& path) -> bms::IR
 	return ir;
 }
 
-static void run_audio(Broadcaster& broadcaster, dev::Window& window, dev::Audio& audio)
+static void run_audio(Broadcaster& broadcaster, dev::Window& window, audio::Mixer& mixer)
 {
 	auto chart_path = fs::path{};
 	broadcaster.await<ChartLoadRequest>(
@@ -71,7 +71,7 @@ static void run_audio(Broadcaster& broadcaster, dev::Window& window, dev::Audio&
 		}, progress);
 		broadcaster.make_shout<ChartLoadProgress>(move(progress));
 	});
-	auto bms_player = make_shared<audio::Player>(window.get_glfw(), audio);
+	auto bms_player = make_shared<audio::Player>(window.get_glfw(), mixer);
 	bms_player->play(*bms_chart);
 	broadcaster.make_shout<ChartLoadProgress>(ChartLoadProgress::Finished{
 		.chart_path = chart_path,
@@ -104,8 +104,8 @@ try {
 	broadcaster.subscribe<PlayerControl>();
 	broadcaster.subscribe<ChartLoadRequest>();
 	barriers.startup.arrive_and_wait();
-	auto audio = dev::Audio{};
-	run_audio(broadcaster, window, audio);
+	auto mixer = audio::Mixer{};
+	run_audio(broadcaster, window, mixer);
 	barriers.shutdown.arrive_and_wait();
 }
 catch (exception const& e) {

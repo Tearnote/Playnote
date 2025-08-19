@@ -11,7 +11,6 @@ Initializes audio and submits buffers for playback, filled with audio from regis
 #include "assert.hpp"
 #include "config.hpp"
 #include "logger.hpp"
-#include "lib/signalsmith.hpp"
 #include "lib/pipewire.hpp"
 #ifdef _WIN32
 #include "lib/wasapi.hpp"
@@ -22,19 +21,13 @@ namespace playnote::dev {
 // A single audio sample.
 using Sample = lib::pw::Sample;
 
-// A trait for a type that can serve as an audio generator.
-class Generator {
-public:
-	auto next_sample() -> Sample = delete;
-	void begin_buffer() = delete;
-};
-
 class Audio {
 public:
 	static constexpr auto ChannelCount = 2zu;
 	static constexpr auto Latency = 128zu;
 
-	Audio();
+	template<callable<void(span<Sample>)> Func>
+	explicit Audio(Func&& generator);
 	~Audio();
 
 	// Return current sampling rate. The value is only valid while an Audio instance exists.
@@ -46,26 +39,12 @@ public:
 	// Convert a duration to a number of full audio samples.
 	[[nodiscard]] static auto ns_to_samples(nanoseconds) -> isize;
 
-	// Register an audio generator. A generator is any object that implements the member function
-	// auto next_sample() -> Sample.
-	template<implements<Generator> T>
-	void add_generator(T& generator);
-
-	// Unregister an audio generator. Make sure to unregister a generator before destroying it.
-	template<implements<Generator> T>
-	void remove_generator(T& generator);
-
 	Audio(Audio const&) = delete;
 	auto operator=(Audio const&) -> Audio& = delete;
 	Audio(Audio&&) = delete;
 	auto operator=(Audio&&) -> Audio& = delete;
 
 private:
-	struct GeneratorOps {
-		function<void()> begin_buffer;
-		function<Sample()> next_sample;
-	};
-
 	InstanceLimit<Audio, 1> instance_limit;
 
 	static inline atomic<uint32> sampling_rate = 0;
@@ -77,10 +56,7 @@ private:
 	lib::wasapi::Context context;
 #endif
 
-	unordered_map<void*, GeneratorOps> generators;
-	mutex generator_lock;
-
-	optional<lib::dsp::Limiter> limiter;
+	function<void(span<Sample>)> generator;
 
 	static void on_process(void*);
 #ifndef _WIN32
@@ -88,23 +64,10 @@ private:
 #endif
 };
 
-template<implements<Generator> T>
-void Audio::add_generator(T& generator) {
-	auto lock = lock_guard{generator_lock};
-	generators.emplace(&generator, GeneratorOps{
-		[&]() { generator.begin_buffer(); },
-		[&]() { return generator.next_sample(); },
-	});
-}
-
-template<implements<Generator> T>
-void Audio::remove_generator(T& generator)
+template<callable<void(span<Sample>)> Func>
+Audio::Audio(Func&& generator):
+	generator{generator}
 {
-	auto lock = lock_guard{generator_lock};
-	generators.erase(&generator);
-}
-
-inline Audio::Audio() {
 #ifndef _WIN32
 	lib::pw::init();
 	DEBUG("Using libpipewire {}", lib::pw::get_version());
@@ -117,7 +80,6 @@ inline Audio::Audio() {
 	context = lib::wasapi::init(true, &on_process, this);
 	sampling_rate.store(context.sampling_rate);
 #endif
-	limiter.emplace(sampling_rate, 1ms, 10ms, 100ms);
 	DEBUG("Audio device sample rate: {} Hz", sampling_rate.load());
 }
 
@@ -134,9 +96,6 @@ inline Audio::~Audio()
 inline void Audio::on_process(void* userdata)
 {
 	auto& self = *static_cast<Audio*>(userdata);
-	// Mutexes are bad in realtime context, but this should only block during startup/shutdown
-	// and loadings.
-	auto lock = lock_guard{self.generator_lock};
 
 #ifndef _WIN32
 	auto& stream = self.stream;
@@ -147,19 +106,8 @@ inline void Audio::on_process(void* userdata)
 	auto buffer = lib::wasapi::dequeue_buffer(self.context);
 #endif
 
-	for (auto const& generator: self.generators)
-		generator.second.begin_buffer();
-	for (auto& dest: buffer) {
-		auto next = lib::pw::Sample{};
-		for (auto const& generator: self.generators) {
-			auto const sample = generator.second.next_sample();
-			next.left += sample.left;
-			next.right += sample.right;
-		}
+	self.generator(buffer);
 
-		if (!self.limiter) continue;
-		dest = self.limiter->process(next);
-	}
 #ifndef _WIN32
 	lib::pw::enqueue_buffer(stream, request);
 #else
