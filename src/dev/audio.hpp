@@ -114,7 +114,7 @@ inline Audio::Audio() {
 	lib::pw::start_thread_loop(loop);
 	while (sampling_rate == 0) yield();
 #else
-	context = lib::wasapi::init(&on_process, this);
+	context = lib::wasapi::init(true, &on_process, this);
 	sampling_rate = context.sampling_rate;
 #endif
 	limiter.emplace(sampling_rate, 1ms, 10ms, 100ms);
@@ -163,7 +163,7 @@ inline void Audio::on_process(void* userdata)
 #ifndef _WIN32
 	lib::pw::enqueue_buffer(stream, request);
 #else
-	lib::wasapi::enqueue_buffer(self.context, buffer);
+	lib::wasapi::enqueue_buffer(self.context);
 #endif
 }
 
