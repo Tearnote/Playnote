@@ -57,7 +57,7 @@ private:
 
 	function<void(span<Sample>)> generator;
 
-	static void on_process(void*);
+	void on_process(span<Sample> buffer);
 };
 
 template<callable<void(span<Sample>)> Func>
@@ -65,7 +65,7 @@ Audio::Audio(Func&& generator):
 	generator{generator}
 {
 #ifndef _WIN32
-	context = lib::pw::init(AppTitle, Latency, &on_process, this);
+	context = lib::pw::init(AppTitle, Latency, [this](auto buffer) { on_process(buffer); });
 #else
 	context = lib::wasapi::init(true, &on_process, this);
 #endif
@@ -81,25 +81,13 @@ inline Audio::~Audio()
 #endif
 }
 
-inline void Audio::on_process(void* userdata)
+inline void Audio::on_process(span<Sample> buffer)
 {
-	auto* context = static_cast<lib::pw::Context_t*>(userdata);
-
-#ifndef _WIN32
-	auto& stream = context->stream;
-	auto buffer_opt = lib::pw::dequeue_buffer(context);
-	if (!buffer_opt) return;
-	auto& [buffer, request] = buffer_opt.value();
-#else
+#ifdef _WIN32
 	auto buffer = lib::wasapi::dequeue_buffer(self.context);
 #endif
-
-	auto& self = *static_cast<Audio*>(context->user_ptr);
-	self.generator(buffer);
-
-#ifndef _WIN32
-	lib::pw::enqueue_buffer(context, request);
-#else
+	generator(buffer);
+#ifdef _WIN32
 	lib::wasapi::enqueue_buffer(self.context);
 #endif
 }

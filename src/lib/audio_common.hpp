@@ -12,6 +12,8 @@ Definitions used by every audio backend.
 
 namespace playnote::lib {
 
+inline constexpr auto ChannelCount = 2zu;
+
 // A single audio sample (frame).
 struct Sample {
 	float left;

@@ -27,27 +27,15 @@ struct Context_t {
 	AudioProperties properties;
 	pw_thread_loop* loop;
 	Stream_t* stream;
-	void* user_ptr;
+	function<void(span<Sample>)> processor;
 };
 using Context = unique_ptr<Context_t>;
 
-using ProcessCallback = void(*)(void*);
-
 // Initialize PipeWire and open an audio stream.
 // Throws system_error on failure.
-auto init(string_view stream_name, uint32 buffer_size, ProcessCallback on_process, void* user_ptr) -> Context;
+auto init(string_view stream_name, uint32 buffer_size, function<void(span<Sample>)>&& processor) -> Context;
 
 // Clean up PipeWire and associated objects.
 void cleanup(Context&& context);
-
-using BufferRequest = pw_buffer*;
-
-// Retrieve a buffer request from the queue. If return value is nullopt, a buffer is unavailable,
-// and there is nothing to do. Otherwise, return value is the buffer which needs to be filled
-// to its full size, and the request object to submit back when finished.
-[[nodiscard]] auto dequeue_buffer(Context_t*) -> optional<pair<span<Sample>, BufferRequest>>;
-
-// Submit a fulfilled buffer request.
-void enqueue_buffer(Context_t*, BufferRequest);
 
 }

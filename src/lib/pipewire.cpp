@@ -17,6 +17,11 @@ Implementation file for lib/pipewire.hpp.
 
 namespace playnote::lib::pw {
 
+struct Stream_t {
+	pw_stream* stream;
+	pw_stream_events events;
+};
+
 // Helper functions for error handling
 
 template<typename T>
@@ -31,6 +36,30 @@ static void ret_check(int ret, string_view message = "libpipewire error")
 	if (ret < 0) throw system_error_fmt("{}", message);
 }
 
+static void on_process(void* data)
+{
+	auto* context = static_cast<Context_t*>(data);
+
+	auto* buffer_outer = pw_stream_dequeue_buffer(context->stream->stream);
+	if (!buffer_outer) return;
+	auto* buffer = buffer_outer->buffer;
+	auto* output = buffer->datas[0].data;
+	if (!output) return;
+
+	constexpr auto Stride = sizeof(float) * ChannelCount;
+	auto const max_frames = buffer->datas[0].maxsize / Stride;
+	auto const frames = min(max_frames, buffer_outer->requested);
+
+	buffer->datas[0].chunk->offset = 0;
+	buffer->datas[0].chunk->stride = Stride;
+	buffer->datas[0].chunk->size = frames * Stride;
+	fill(span{static_cast<byte*>(output), frames * Stride}, static_cast<byte>(0));
+
+	context->processor(span{static_cast<Sample*>(output), frames});
+
+	pw_stream_queue_buffer(context->stream->stream, buffer_outer);
+}
+
 static void on_param_changed(void* data, uint32_t id, spa_pod const* param)
 {
 	if (!param || id != SPA_PARAM_Format) return;
@@ -42,13 +71,7 @@ static void on_param_changed(void* data, uint32_t id, spa_pod const* param)
 	context->properties.sampling_rate = audio_info.info.raw.rate;
 }
 
-struct Stream_t {
-	pw_stream* stream;
-	pw_stream_events events;
-};
-
-[[nodiscard]] auto init(string_view stream_name, uint32 buffer_size, ProcessCallback on_process,
-	void* user_ptr) -> Context
+[[nodiscard]] auto init(string_view stream_name, uint32 buffer_size, function<void(span<Sample>)>&& processor) -> Context
 {
 	auto context = make_unique<Context_t>();
 	pw_init(nullptr, nullptr);
@@ -90,7 +113,7 @@ struct Stream_t {
 		},
 		.loop = loop,
 		.stream = stream,
-		.user_ptr = user_ptr,
+		.processor = move(processor),
 	};
 	pw_thread_loop_start(loop);
 	while (context->properties.sampling_rate == 0) yield();
@@ -104,31 +127,6 @@ void cleanup(Context&& context)
 	pw_thread_loop_unlock(context->loop);
 	delete context->stream;
 	pw_thread_loop_destroy(context->loop);
-}
-
-[[nodiscard]] auto dequeue_buffer(Context_t* ctx) -> optional<pair<span<Sample>, BufferRequest>>
-{
-	auto* buffer_outer = pw_stream_dequeue_buffer(ctx->stream->stream);
-	if (!buffer_outer) return nullopt;
-	auto* buffer = buffer_outer->buffer;
-	auto* output = buffer->datas[0].data;
-	if (!output) return nullopt;
-
-	constexpr auto Stride = sizeof(float) * 2 /* channel count */;
-	auto const max_frames = buffer->datas[0].maxsize / Stride;
-	auto const frames = min(max_frames, buffer_outer->requested);
-
-	buffer->datas[0].chunk->offset = 0;
-	buffer->datas[0].chunk->stride = Stride;
-	buffer->datas[0].chunk->size = frames * Stride;
-	fill(span{static_cast<byte*>(output), frames * Stride}, static_cast<byte>(0));
-
-	return make_pair(span{static_cast<Sample*>(output), frames}, buffer_outer);
-}
-
-void enqueue_buffer(Context_t* ctx, BufferRequest request)
-{
-	pw_stream_queue_buffer(ctx->stream->stream, request);
 }
 
 }
