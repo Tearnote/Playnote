@@ -18,6 +18,7 @@ using std::max;
 using std::floor;
 using std::ceil;
 using std::trunc;
+using std::lround;
 using std::abs;
 using std::pow;
 using std::exp;

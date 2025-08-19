@@ -15,6 +15,7 @@ WASAPI wrapper for Windows audio support.
 #include <combaseapi.h>
 #include <avrt.h>
 #include "preamble.hpp"
+#include "logger.hpp"
 #include "lib/audio_common.hpp"
 
 namespace playnote::lib::wasapi {
