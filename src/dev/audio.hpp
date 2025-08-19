@@ -3,7 +3,7 @@ This software is dual-licensed. For more details, please consult LICENSE.txt.
 Copyright (c) 2025 Tearnote (Hubert Maraszek)
 
 dev/audio.hpp:
-Initializes audio and submits buffers for playback, filled with audio from registered generators.
+Abstraction over the available audio backends.
 */
 
 #pragma once
@@ -11,15 +11,17 @@ Initializes audio and submits buffers for playback, filled with audio from regis
 #include "assert.hpp"
 #include "config.hpp"
 #include "logger.hpp"
-#include "lib/pipewire.hpp"
+#include "lib/audio_common.hpp"
 #ifdef _WIN32
 #include "lib/wasapi.hpp"
+#else
+#include "lib/pipewire.hpp"
 #endif
 
 namespace playnote::dev {
 
 // A single audio sample.
-using Sample = lib::pw::Sample;
+using Sample = lib::Sample;
 
 class Audio {
 public:
@@ -31,7 +33,7 @@ public:
 	~Audio();
 
 	// Return current sampling rate. The value is only valid while an Audio instance exists.
-	[[nodiscard]] static auto get_sampling_rate() -> uint32 { return ASSERT_VAL(sampling_rate); }
+	[[nodiscard]] static auto get_sampling_rate() -> uint32 { return ASSERT_VAL(sampling_rate.load()); }
 
 	// Convert a count of samples to their duration.
 	[[nodiscard]] static auto samples_to_ns(isize) -> nanoseconds;

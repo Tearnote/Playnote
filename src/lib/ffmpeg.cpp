@@ -18,7 +18,7 @@ extern "C" {
 #include "preamble.hpp"
 #include "assert.hpp"
 #include "logger.hpp"
-#include "lib/pipewire.hpp"
+#include "lib/audio_common.hpp"
 
 namespace playnote::lib::ffmpeg {
 
@@ -194,7 +194,7 @@ auto decode_file_buffer(span<byte const> file_contents) -> DecoderOutput
 	return result;
 }
 
-auto resample_buffer(DecoderOutput&& input, uint32 sampling_rate) -> vector<pw::Sample>
+auto resample_buffer(DecoderOutput&& input, uint32 sampling_rate) -> vector<Sample>
 {
 	auto* swr = static_cast<SwrContext*>(nullptr);
 	constexpr auto channel_layout = (AVChannelLayout)AV_CHANNEL_LAYOUT_STEREO;
@@ -206,7 +206,7 @@ auto resample_buffer(DecoderOutput&& input, uint32 sampling_rate) -> vector<pw::
 	ret_check(swr_init(swr));
 
 	auto max_out_samples = ret_check(swr_get_out_samples(swr, static_cast<int>(input->sample_count)));
-	auto output = vector<pw::Sample>{};
+	auto output = vector<Sample>{};
 	output.resize(max_out_samples);
 	auto in_ptrs = vector<uint8_t const*>{};
 	in_ptrs.reserve(input->data.size());
@@ -223,7 +223,7 @@ auto resample_buffer(DecoderOutput&& input, uint32 sampling_rate) -> vector<pw::
 	return output;
 }
 
-auto decode_and_resample_file_buffer(span<byte const> file_contents, uint32 sampling_rate) -> vector<pw::Sample>
+auto decode_and_resample_file_buffer(span<byte const> file_contents, uint32 sampling_rate) -> vector<Sample>
 {
 	auto decoder_output = decode_file_buffer(file_contents);
 	auto result = resample_buffer(move(decoder_output), sampling_rate);

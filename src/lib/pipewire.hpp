@@ -8,6 +8,7 @@ Wrapper for libpipewire client library for Linux audio support.
 
 #pragma once
 #include "preamble.hpp"
+#include "lib/audio_common.hpp"
 
 // Forward declarations
 
@@ -79,12 +80,6 @@ void destroy_stream(ThreadLoop loop, Stream stream) noexcept;
 
 // Return the playback progress of the stream.
 auto get_stream_time(Stream const& stream) noexcept -> nanoseconds;
-
-// A single audio sample (frame).
-struct Sample {
-	float left;
-	float right;
-};
 
 using BufferRequest = pw_buffer*;
 

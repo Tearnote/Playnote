@@ -15,18 +15,9 @@ WASAPI wrapper for Windows audio support.
 #include <combaseapi.h>
 #include <avrt.h>
 #include "preamble.hpp"
-#include "lib/pipewire.hpp"
+#include "lib/audio_common.hpp"
 
 namespace playnote::lib::wasapi {
-
-using pw::Sample;
-
-enum class SampleFormat {
-	Unknown,
-	Float32,
-	Int16,
-	Int24,
-};
 
 struct Context {
 	bool exclusive_mode;

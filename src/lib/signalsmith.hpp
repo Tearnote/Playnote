@@ -10,7 +10,7 @@ Wrapper for signalsmith-basics, a DSP library.
 #include "signalsmith-basics/limiter.h"
 #include "preamble.hpp"
 #include "assert.hpp"
-#include "lib/pipewire.hpp"
+#include "lib/audio_common.hpp"
 
 namespace playnote::lib::dsp {
 
@@ -21,7 +21,7 @@ public:
 	Limiter(uint32 sampling_rate, milliseconds attack, milliseconds hold, milliseconds release);
 
 	// Process a single sample.
-	auto process(pw::Sample in) noexcept -> pw::Sample;
+	auto process(Sample in) noexcept -> Sample;
 
 private:
 	signalsmith::basics::LimiterDouble limiter;
@@ -39,9 +39,9 @@ inline Limiter::Limiter(uint32 sampling_rate, milliseconds attack, milliseconds 
 	ASSUME(limiter.configure(sampling_rate, 1, 2, 2));
 }
 
-inline auto Limiter::process(pw::Sample in) noexcept -> pw::Sample
+inline auto Limiter::process(Sample in) noexcept -> Sample
 {
-	auto out = pw::Sample{};
+	auto out = Sample{};
 	auto in_buf = to_array({to_array({in.left}), to_array({in.right})});
 	auto out_buf = decltype(in_buf){};
 	limiter.process(in_buf, out_buf, 1);

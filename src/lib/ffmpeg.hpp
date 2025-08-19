@@ -8,7 +8,7 @@ Wrapper for libav/libswresample audio file decoding.
 
 #pragma once
 #include "preamble.hpp"
-#include "lib/pipewire.hpp"
+#include "lib/audio_common.hpp"
 
 namespace playnote::lib::ffmpeg {
 
@@ -23,10 +23,10 @@ auto decode_file_buffer(span<byte const> file_contents) -> DecoderOutput;
 
 // Resample decoded audio to a known format.
 // Throws runtime_error if ffmpeg throws.
-auto resample_buffer(DecoderOutput&& input, uint32 sampling_rate) -> vector<pw::Sample>;
+auto resample_buffer(DecoderOutput&& input, uint32 sampling_rate) -> vector<Sample>;
 
 // Perform both decoding and resampling in one step.
 // Throws runtime_error if ffmpeg throws.
-auto decode_and_resample_file_buffer(span<byte const> file_contents, uint32 sampling_rate) -> vector<pw::Sample>;
+auto decode_and_resample_file_buffer(span<byte const> file_contents, uint32 sampling_rate) -> vector<Sample>;
 
 }

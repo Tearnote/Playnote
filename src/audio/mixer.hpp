@@ -82,7 +82,7 @@ inline void Mixer::mix(span<dev::Sample> buffer)
 	for (auto const& generator: generators)
 		generator.second.begin_buffer();
 	for (auto& dest: buffer) {
-		auto next = lib::pw::Sample{};
+		auto next = dev::Sample{};
 		for (auto const& generator: generators) {
 			auto const sample = generator.second.next_sample();
 			next.left += sample.left;

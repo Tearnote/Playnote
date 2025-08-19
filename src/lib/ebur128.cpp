@@ -10,7 +10,7 @@ Implementation file for lib/ebur128.hpp.
 
 #include "ebur128.h"
 #include "preamble.hpp"
-#include "lib/pipewire.hpp"
+#include "lib/audio_common.hpp"
 
 namespace playnote::lib::ebur128 {
 
@@ -37,7 +37,7 @@ auto init(uint32 sampling_rate) -> Context
 
 void cleanup(Context ctx) noexcept { ebur128_destroy(reinterpret_cast<ebur128_state**>(&ctx)); }
 
-void add_frames(Context ctx, span<pw::Sample const> frames)
+void add_frames(Context ctx, span<Sample const> frames)
 {
 	ret_check(ebur128_add_frames_float(ctx, reinterpret_cast<float const*>(frames.data()), frames.size()));
 }

@@ -8,7 +8,7 @@ Wrapper for libebur128 psychoacoustic audio volume analysis.
 
 #pragma once
 #include "preamble.hpp"
-#include "lib/pipewire.hpp"
+#include "lib/audio_common.hpp"
 
 namespace playnote::lib::ebur128 {
 
@@ -25,7 +25,7 @@ void cleanup(Context ctx) noexcept;
 
 // Process audio frames. They can all be added at once, or in chunks to save memory.
 // Throws if libebur128 throws.
-void add_frames(Context ctx, span<pw::Sample const> frames);
+void add_frames(Context ctx, span<Sample const> frames);
 
 // After all frames were added, call this to get the loudness of the entire audio in LUFS
 // (Loudness Units relative to Full Scale).
