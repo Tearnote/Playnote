@@ -118,6 +118,7 @@ inline Audio::Audio() {
 	sampling_rate = context.sampling_rate;
 #endif
 	limiter.emplace(sampling_rate, 1ms, 10ms, 100ms);
+	DEBUG("Audio device sample rate: {} Hz", sampling_rate.load());
 }
 
 inline Audio::~Audio()

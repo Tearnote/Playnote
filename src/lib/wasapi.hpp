@@ -95,6 +95,7 @@ auto init(ProcessCallback on_process, T* userdata) -> Context
 	ret_check(client->SetEventHandle(buffer_event));
 	auto buffer_size = uint32{0};
 	ret_check(client->GetBufferSize(&buffer_size));
+	DEBUG("WASAPI buffer size: {} samples", buffer_size);
 	auto* renderer = static_cast<IAudioRenderClient*>(nullptr);
 	ret_check(client->GetService(__uuidof(IAudioRenderClient), reinterpret_cast<void**>(&renderer)));
 	auto running_signal = make_shared<atomic<bool>>(true);
@@ -124,6 +125,7 @@ auto init(ProcessCallback on_process, T* userdata) -> Context
 		AvRevertMmThreadCharacteristics(rtprio);
 	}};
 
+	INFO("WASAPI client initialized");
 	return Context{
 		.sampling_rate = f32.Format.nSamplesPerSec,
 		.buffer_size = buffer_size,
@@ -141,6 +143,7 @@ inline void cleanup(Context&& ctx) noexcept
 	ctx.renderer->Release();
 	ctx.client->Release();
 	CoUninitialize();
+	INFO("WASAPI client cleaned up");
 }
 
 inline auto dequeue_buffer(Context& ctx) -> span<Sample>
