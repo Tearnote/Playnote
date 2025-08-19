@@ -14,7 +14,7 @@ and their hardcoded values.
 namespace playnote {
 
 inline constexpr auto AppTitle = "Playnote";
-inline constexpr auto AppVersion = to_array({0u, 0u, 0u});
+inline constexpr auto AppVersion = to_array({0u, 0u, 3u});
 
 // Make sure BUILD_TYPE is specified
 #define BUILD_DEBUG 0
