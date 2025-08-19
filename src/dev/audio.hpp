@@ -112,10 +112,10 @@ inline Audio::Audio() {
 	loop = lib::pw::create_thread_loop();
 	stream = lib::pw::create_stream(loop, AppTitle, Latency, &on_process, &on_param_changed, this);
 	lib::pw::start_thread_loop(loop);
-	while (sampling_rate == 0) yield();
+	while (sampling_rate.load() == 0) yield();
 #else
 	context = lib::wasapi::init(true, &on_process, this);
-	sampling_rate = context.sampling_rate;
+	sampling_rate.store(context.sampling_rate);
 #endif
 	limiter.emplace(sampling_rate, 1ms, 10ms, 100ms);
 	DEBUG("Audio device sample rate: {} Hz", sampling_rate.load());
@@ -172,23 +172,25 @@ inline void Audio::on_param_changed(void*, uint32_t id, lib::pw::SPAPod param)
 {
 	auto const new_sampling_rate = lib::pw::get_sampling_rate_from_param(id, param);
 	if (!new_sampling_rate) return;
-	sampling_rate = *new_sampling_rate;
+	sampling_rate.store(*new_sampling_rate);
 }
 #endif
 
 inline auto Audio::samples_to_ns(isize samples) -> nanoseconds
 {
-	ASSERT(sampling_rate > 0);
-	auto const ns_per_sample = duration_cast<nanoseconds>(duration<double>{1.0 / sampling_rate});
-	auto const whole_seconds = samples / sampling_rate;
-	auto const remainder = samples % sampling_rate;
+	auto const rate = sampling_rate.load();
+	ASSERT(rate > 0);
+	auto const ns_per_sample = duration_cast<nanoseconds>(duration<double>{1.0 / rate});
+	auto const whole_seconds = samples / rate;
+	auto const remainder = samples % rate;
 	return 1s * whole_seconds + ns_per_sample * remainder;
 }
 
 inline auto Audio::ns_to_samples(nanoseconds ns) -> isize
 {
-	ASSERT(sampling_rate > 0);
-	auto const ns_per_sample = duration_cast<nanoseconds>(duration<double>{1.0 / sampling_rate});
+	auto const rate = sampling_rate.load();
+	ASSERT(rate > 0);
+	auto const ns_per_sample = duration_cast<nanoseconds>(duration<double>{1.0 / rate});
 	return ns / ns_per_sample;
 }
 
