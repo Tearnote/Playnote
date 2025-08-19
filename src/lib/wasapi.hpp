@@ -61,8 +61,8 @@ auto init(ProcessCallback on_process, T* userdata) -> Context
 	auto* device = static_cast<IMMDevice*>(nullptr);
 	ret_check(enumerator->GetDefaultAudioEndpoint(eRender, eMultimedia, &device));
 	enumerator->Release();
-	auto* client = static_cast<IAudioClient*>(nullptr);
-	ret_check(device->Activate(__uuidof(IAudioClient), CLSCTX_ALL, nullptr, reinterpret_cast<void**>(&client)));
+	auto* client = static_cast<IAudioClient3*>(nullptr);
+	ret_check(device->Activate(__uuidof(IAudioClient3), CLSCTX_ALL, nullptr, reinterpret_cast<void**>(&client)));
 	device->Release();
 
 	auto* mix_format = static_cast<WAVEFORMATEX*>(nullptr);
@@ -82,8 +82,15 @@ auto init(ProcessCallback on_process, T* userdata) -> Context
 		.SubFormat = KSDATAFORMAT_SUBTYPE_IEEE_FLOAT,
 	};
 	CoTaskMemFree(mix_format);
-	ret_check(client->Initialize(AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
-		to_reference_time(5ms), 0, reinterpret_cast<WAVEFORMATEX*>(&f32), nullptr));
+
+	auto default_period = uint32{0};
+	auto fundamental_period = uint32{0};
+	auto min_period = uint32{0};
+	auto max_period = uint32{0};
+	ret_check(client->GetSharedModeEnginePeriod(reinterpret_cast<WAVEFORMATEX*>(&f32),
+		&default_period, &fundamental_period, &min_period, &max_period));
+	ret_check(client->InitializeSharedAudioStream(AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
+		min_period, reinterpret_cast<WAVEFORMATEX*>(&f32), nullptr));
 	auto buffer_event = ptr_check(CreateEvent(nullptr, false, false, nullptr));
 	ret_check(client->SetEventHandle(buffer_event));
 	auto buffer_size = uint32{0};
