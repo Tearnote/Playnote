@@ -23,47 +23,31 @@ namespace playnote::lib::pw {
 
 struct Stream_t;
 
-struct Context {
+struct Context_t {
 	AudioProperties properties;
 	pw_thread_loop* loop;
 	Stream_t* stream;
+	void* user_ptr;
 };
+using Context = unique_ptr<Context_t>;
 
-using SPAPod = spa_pod const*;
 using ProcessCallback = void(*)(void*);
-using ParamChangedCallback = void(*)(void*, uint32_t, SPAPod);
-
-namespace detail {
-
-auto init_raw(string_view stream_name, uint32 buffer_size,
-	ProcessCallback on_process, ParamChangedCallback on_param_changed, void* user_ptr) -> Context;
-
-}
 
 // Initialize PipeWire and open an audio stream.
 // Throws system_error on failure.
-template<typename T = void>
-[[nodiscard]] auto init(string_view stream_name, uint32 buffer_size, ProcessCallback on_process,
-	ParamChangedCallback on_param_changed, T* user_ptr = nullptr) -> Context
-{
-	return detail::init_raw(stream_name, buffer_size, on_process, on_param_changed, user_ptr);
-}
+auto init(string_view stream_name, uint32 buffer_size, ProcessCallback on_process, void* user_ptr) -> Context;
 
 // Clean up PipeWire and associated objects.
 void cleanup(Context&& context);
-
-// Helper function to extract a new sampling rate that was set for the stream. If the event is about
-// something else, returns nullopt.
-auto get_sampling_rate_from_param(uint32_t id, spa_pod const* param) -> optional<uint32>;
 
 using BufferRequest = pw_buffer*;
 
 // Retrieve a buffer request from the queue. If return value is nullopt, a buffer is unavailable,
 // and there is nothing to do. Otherwise, return value is the buffer which needs to be filled
 // to its full size, and the request object to submit back when finished.
-[[nodiscard]] auto dequeue_buffer(Context&) -> optional<pair<span<Sample>, BufferRequest>>;
+[[nodiscard]] auto dequeue_buffer(Context_t*) -> optional<pair<span<Sample>, BufferRequest>>;
 
 // Submit a fulfilled buffer request.
-void enqueue_buffer(Context&, BufferRequest);
+void enqueue_buffer(Context_t*, BufferRequest);
 
 }

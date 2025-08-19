@@ -31,16 +31,15 @@ static void ret_check(int ret, string_view message = "libpipewire error")
 	if (ret < 0) throw system_error_fmt("{}", message);
 }
 
-[[nodiscard]] auto get_version() -> string_view { return ASSERT_VAL(pw_get_library_version()); }
-
-auto get_sampling_rate_from_param(uint32_t id, spa_pod const* param) -> optional<uint32>
+static void on_param_changed(void* data, uint32_t id, spa_pod const* param)
 {
-	if (!param || id != SPA_PARAM_Format) return nullopt;
+	if (!param || id != SPA_PARAM_Format) return;
 	auto audio_info = spa_audio_info{};
 	ret_check(spa_format_parse(param, &audio_info.media_type, &audio_info.media_subtype) < 0);
-	if (audio_info.media_type != SPA_MEDIA_TYPE_audio || audio_info.media_subtype != SPA_MEDIA_SUBTYPE_raw) return nullopt;
+	if (audio_info.media_type != SPA_MEDIA_TYPE_audio || audio_info.media_subtype != SPA_MEDIA_SUBTYPE_raw) return;
 	spa_format_audio_raw_parse(param, &audio_info.info.raw);
-	return audio_info.info.raw.rate;
+	auto* context = static_cast<Context_t*>(data);
+	context->properties.sampling_rate = audio_info.info.raw.rate;
 }
 
 struct Stream_t {
@@ -48,11 +47,10 @@ struct Stream_t {
 	pw_stream_events events;
 };
 
-namespace detail {
-
-[[nodiscard]] auto init_raw(string_view stream_name, uint32 buffer_size, ProcessCallback on_process,
-	ParamChangedCallback on_param_changed, void* user_ptr) -> Context
+[[nodiscard]] auto init(string_view stream_name, uint32 buffer_size, ProcessCallback on_process,
+	void* user_ptr) -> Context
 {
+	auto context = make_unique<Context_t>();
 	pw_init(nullptr, nullptr);
 	auto loop = ptr_check(pw_thread_loop_new(nullptr, nullptr));
 
@@ -70,7 +68,7 @@ namespace detail {
 			PW_KEY_MEDIA_ROLE, "Game",
 			PW_KEY_NODE_FORCE_QUANTUM, format("{}", buffer_size).c_str(),
 		nullptr),
-		&stream->events, user_ptr);
+		&stream->events, context.get());
 
 	auto params = array<spa_pod const*, 1>{};
 	auto buffer = array<uint8, 1024>{};
@@ -84,9 +82,7 @@ namespace detail {
 		static_cast<pw_stream_flags>(PW_STREAM_FLAG_AUTOCONNECT | PW_STREAM_FLAG_MAP_BUFFERS | PW_STREAM_FLAG_RT_PROCESS),
 		params.data(), 1));
 
-	pw_thread_loop_start(loop);
-
-	return Context{
+	*context = Context_t{
 		.properties = AudioProperties{
 			.sampling_rate = 0, // Unknown for now
 			.sample_format = SampleFormat::Float32,
@@ -94,23 +90,25 @@ namespace detail {
 		},
 		.loop = loop,
 		.stream = stream,
+		.user_ptr = user_ptr,
 	};
-}
-
+	pw_thread_loop_start(loop);
+	while (context->properties.sampling_rate == 0) yield();
+	return context;
 }
 
 void cleanup(Context&& context)
 {
-	pw_thread_loop_lock(context.loop);
-	pw_stream_destroy(context.stream->stream);
-	pw_thread_loop_unlock(context.loop);
-	delete context.stream;
-	pw_thread_loop_destroy(context.loop);
+	pw_thread_loop_lock(context->loop);
+	pw_stream_destroy(context->stream->stream);
+	pw_thread_loop_unlock(context->loop);
+	delete context->stream;
+	pw_thread_loop_destroy(context->loop);
 }
 
-[[nodiscard]] auto dequeue_buffer(Context& ctx) -> optional<pair<span<Sample>, BufferRequest>>
+[[nodiscard]] auto dequeue_buffer(Context_t* ctx) -> optional<pair<span<Sample>, BufferRequest>>
 {
-	auto* buffer_outer = pw_stream_dequeue_buffer(ctx.stream->stream);
+	auto* buffer_outer = pw_stream_dequeue_buffer(ctx->stream->stream);
 	if (!buffer_outer) return nullopt;
 	auto* buffer = buffer_outer->buffer;
 	auto* output = buffer->datas[0].data;
@@ -128,9 +126,9 @@ void cleanup(Context&& context)
 	return make_pair(span{static_cast<Sample*>(output), frames}, buffer_outer);
 }
 
-void enqueue_buffer(Context& ctx, BufferRequest request)
+void enqueue_buffer(Context_t* ctx, BufferRequest request)
 {
-	pw_stream_queue_buffer(ctx.stream->stream, request);
+	pw_stream_queue_buffer(ctx->stream->stream, request);
 }
 
 }
