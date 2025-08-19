@@ -31,22 +31,7 @@ static void ret_check(int ret, string_view message = "libpipewire error")
 	if (ret < 0) throw system_error_fmt("{}", message);
 }
 
-void init() { pw_init(nullptr, nullptr); }
-
 [[nodiscard]] auto get_version() -> string_view { return ASSERT_VAL(pw_get_library_version()); }
-
-[[nodiscard]] auto create_thread_loop() -> ThreadLoop
-{
-	return ptr_check(pw_thread_loop_new(nullptr, nullptr));
-}
-
-void destroy_thread_loop(ThreadLoop loop) noexcept { pw_thread_loop_destroy(loop); }
-
-void start_thread_loop(ThreadLoop loop) { pw_thread_loop_start(loop); }
-
-void lock_thread_loop(ThreadLoop loop) { pw_thread_loop_lock(loop); }
-
-void unlock_thread_loop(ThreadLoop loop) { pw_thread_loop_unlock(loop); }
 
 auto get_sampling_rate_from_param(uint32_t id, spa_pod const* param) -> optional<uint32>
 {
@@ -65,24 +50,27 @@ struct Stream_t {
 
 namespace detail {
 
-[[nodiscard]] auto create_stream_raw(ThreadLoop loop, string_view name, uint32 latency,
-	ProcessCallback on_process, ParamChangedCallback on_param_changed, void* user_ptr) -> Stream
+[[nodiscard]] auto init_raw(string_view stream_name, uint32 buffer_size, ProcessCallback on_process,
+	ParamChangedCallback on_param_changed, void* user_ptr) -> Context
 {
-	auto const result = new Stream_t;
-	result->events = pw_stream_events{
+	pw_init(nullptr, nullptr);
+	auto loop = ptr_check(pw_thread_loop_new(nullptr, nullptr));
+
+	auto const stream = new Stream_t{};
+	stream->events = pw_stream_events{
 		.version = PW_VERSION_STREAM_EVENTS,
 		.param_changed = on_param_changed,
 		.process = on_process,
 	};
-	result->stream = pw_stream_new_simple(
-		pw_thread_loop_get_loop(loop), string{name}.c_str(),
+	stream->stream = pw_stream_new_simple(
+		pw_thread_loop_get_loop(loop), string{stream_name}.c_str(),
 		pw_properties_new(
 			PW_KEY_MEDIA_TYPE, "Audio",
 			PW_KEY_MEDIA_CATEGORY, "Playback",
 			PW_KEY_MEDIA_ROLE, "Game",
-			PW_KEY_NODE_FORCE_QUANTUM, format("{}", latency).c_str(),
+			PW_KEY_NODE_FORCE_QUANTUM, format("{}", buffer_size).c_str(),
 		nullptr),
-		&result->events, user_ptr);
+		&stream->events, user_ptr);
 
 	auto params = array<spa_pod const*, 1>{};
 	auto buffer = array<uint8, 1024>{};
@@ -92,31 +80,37 @@ namespace detail {
 		.channels = 2,
 	};
 	params[0] = spa_format_audio_raw_build(&builder, SPA_PARAM_EnumFormat, &audio_info);
-	ret_check(pw_stream_connect(result->stream, PW_DIRECTION_OUTPUT, PW_ID_ANY,
+	ret_check(pw_stream_connect(stream->stream, PW_DIRECTION_OUTPUT, PW_ID_ANY,
 		static_cast<pw_stream_flags>(PW_STREAM_FLAG_AUTOCONNECT | PW_STREAM_FLAG_MAP_BUFFERS | PW_STREAM_FLAG_RT_PROCESS),
 		params.data(), 1));
 
-	return result;
+	pw_thread_loop_start(loop);
+
+	return Context{
+		.properties = AudioProperties{
+			.sampling_rate = 0, // Unknown for now
+			.sample_format = SampleFormat::Float32,
+			.buffer_size = buffer_size,
+		},
+		.loop = loop,
+		.stream = stream,
+	};
 }
 
 }
 
-void destroy_stream(ThreadLoop loop, Stream stream) noexcept
+void cleanup(Context&& context)
 {
-	pw_thread_loop_lock(loop);
-	pw_stream_destroy(stream->stream);
-	pw_thread_loop_unlock(loop);
-	delete stream;
+	pw_thread_loop_lock(context.loop);
+	pw_stream_destroy(context.stream->stream);
+	pw_thread_loop_unlock(context.loop);
+	delete context.stream;
+	pw_thread_loop_destroy(context.loop);
 }
 
-auto get_stream_time(Stream const& stream) noexcept -> nanoseconds
+[[nodiscard]] auto dequeue_buffer(Context& ctx) -> optional<pair<span<Sample>, BufferRequest>>
 {
-	return nanoseconds{pw_stream_get_nsec(stream->stream)};
-}
-
-[[nodiscard]] auto dequeue_buffer(Stream& stream) -> optional<pair<span<Sample>, BufferRequest>>
-{
-	auto* buffer_outer = pw_stream_dequeue_buffer(stream->stream);
+	auto* buffer_outer = pw_stream_dequeue_buffer(ctx.stream->stream);
 	if (!buffer_outer) return nullopt;
 	auto* buffer = buffer_outer->buffer;
 	auto* output = buffer->datas[0].data;
@@ -134,9 +128,9 @@ auto get_stream_time(Stream const& stream) noexcept -> nanoseconds
 	return make_pair(span{static_cast<Sample*>(output), frames}, buffer_outer);
 }
 
-void enqueue_buffer(Stream& stream, BufferRequest request)
+void enqueue_buffer(Context& ctx, BufferRequest request)
 {
-	pw_stream_queue_buffer(stream->stream, request);
+	pw_stream_queue_buffer(ctx.stream->stream, request);
 }
 
 }

@@ -33,7 +33,7 @@ public:
 	~Audio();
 
 	// Return current sampling rate. The value is only valid while an Audio instance exists.
-	[[nodiscard]] static auto get_sampling_rate() -> uint32 { return ASSERT_VAL(sampling_rate.load()); }
+	[[nodiscard]] static auto get_sampling_rate() -> uint32 { return ASSERT_VAL(context.properties.sampling_rate); }
 
 	// Convert a count of samples to their duration.
 	[[nodiscard]] static auto samples_to_ns(isize) -> nanoseconds;
@@ -49,13 +49,10 @@ public:
 private:
 	InstanceLimit<Audio, 1> instance_limit;
 
-	static inline atomic<uint32> sampling_rate = 0;
-
 #ifndef _WIN32
-	lib::pw::ThreadLoop loop;
-	lib::pw::Stream stream;
+	static inline lib::pw::Context context;
 #else
-	lib::wasapi::Context context;
+	static inline lib::wasapi::Context context;
 #endif
 
 	function<void(span<Sample>)> generator;
@@ -71,25 +68,19 @@ Audio::Audio(Func&& generator):
 	generator{generator}
 {
 #ifndef _WIN32
-	lib::pw::init();
-	DEBUG("Using libpipewire {}", lib::pw::get_version());
-
-	loop = lib::pw::create_thread_loop();
-	stream = lib::pw::create_stream(loop, AppTitle, Latency, &on_process, &on_param_changed, this);
-	lib::pw::start_thread_loop(loop);
-	while (sampling_rate.load() == 0) yield();
+	context = lib::pw::init(AppTitle, Latency, &on_process, &on_param_changed, this);
+	while (context.properties.sampling_rate == 0) yield();
 #else
 	context = lib::wasapi::init(true, &on_process, this);
 	sampling_rate.store(context.sampling_rate);
 #endif
-	DEBUG("Audio device sample rate: {} Hz", sampling_rate.load());
+	DEBUG("Audio device sample rate: {} Hz", context.properties.sampling_rate);
 }
 
 inline Audio::~Audio()
 {
 #ifndef _WIN32
-	lib::pw::destroy_stream(loop, stream);
-	lib::pw::destroy_thread_loop(loop);
+	lib::pw::cleanup(move(context));
 #else
 	lib::wasapi::cleanup(move(context));
 #endif
@@ -100,8 +91,8 @@ inline void Audio::on_process(void* userdata)
 	auto& self = *static_cast<Audio*>(userdata);
 
 #ifndef _WIN32
-	auto& stream = self.stream;
-	auto buffer_opt = lib::pw::dequeue_buffer(stream);
+	auto& stream = self.context.stream;
+	auto buffer_opt = lib::pw::dequeue_buffer(self.context);
 	if (!buffer_opt) return;
 	auto& [buffer, request] = buffer_opt.value();
 #else
@@ -111,7 +102,7 @@ inline void Audio::on_process(void* userdata)
 	self.generator(buffer);
 
 #ifndef _WIN32
-	lib::pw::enqueue_buffer(stream, request);
+	lib::pw::enqueue_buffer(self.context, request);
 #else
 	lib::wasapi::enqueue_buffer(self.context);
 #endif
@@ -122,13 +113,13 @@ inline void Audio::on_param_changed(void*, uint32_t id, lib::pw::SPAPod param)
 {
 	auto const new_sampling_rate = lib::pw::get_sampling_rate_from_param(id, param);
 	if (!new_sampling_rate) return;
-	sampling_rate.store(*new_sampling_rate);
+	context.properties.sampling_rate = *new_sampling_rate;
 }
 #endif
 
 inline auto Audio::samples_to_ns(isize samples) -> nanoseconds
 {
-	auto const rate = sampling_rate.load();
+	auto const rate = context.properties.sampling_rate;
 	ASSERT(rate > 0);
 	auto const ns_per_sample = duration_cast<nanoseconds>(duration<double>{1.0 / rate});
 	auto const whole_seconds = samples / rate;
@@ -138,7 +129,7 @@ inline auto Audio::samples_to_ns(isize samples) -> nanoseconds
 
 inline auto Audio::ns_to_samples(nanoseconds ns) -> isize
 {
-	auto const rate = sampling_rate.load();
+	auto const rate = context.properties.sampling_rate;
 	ASSERT(rate > 0);
 	auto const ns_per_sample = duration_cast<nanoseconds>(duration<double>{1.0 / rate});
 	return ns / ns_per_sample;

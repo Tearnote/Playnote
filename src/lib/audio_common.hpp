@@ -26,4 +26,10 @@ enum class SampleFormat {
 	Int24,   // 24-bit signed integer (stored in a 32-bit signed integer, aligned to most significant bits)
 };
 
+struct AudioProperties {
+	uint32 sampling_rate;
+	SampleFormat sample_format;
+	uint32 buffer_size;
+};
+
 }
