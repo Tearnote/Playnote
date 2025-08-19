@@ -13,7 +13,7 @@ Construction of a chart from an IR.
 #include "lib/ebur128.hpp"
 #include "dev/audio.hpp"
 #include "io/bulk_request.hpp"
-#include "io/audio_codec.hpp"
+#include "audio/codec.hpp"
 #include "bms/cursor.hpp"
 #include "bms/chart.hpp"
 #include "bms/ir.hpp"
@@ -730,7 +730,7 @@ auto chart_from_ir(IR const& ir, Func&& file_loader, Func2&& progress) -> shared
 	for (auto idx: irange(0zu, needed_slots.size())) {
 		auto const request = string_view{file_references.wav[idx]};
 		if (!needed_slots[idx] || request.empty()) continue;
-		requests.enqueue<io::AudioCodec>(chart->wav_slots[idx], request, AudioExtensions, false);
+		requests.enqueue<audio::Codec>(chart->wav_slots[idx], request, AudioExtensions, false);
 	}
 	file_loader(requests);
 
