@@ -14,7 +14,6 @@ Implementation file for threads/render.hpp.
 #include "lib/imgui.hpp"
 #include "dev/window.hpp"
 #include "dev/audio.hpp"
-#include "dev/gpu.hpp"
 #include "dev/os.hpp"
 #include "gfx/playfield.hpp"
 #include "gfx/renderer.hpp"
@@ -187,8 +186,7 @@ try {
 	broadcaster.register_as_endpoint();
 	broadcaster.subscribe<ChartLoadProgress>();
 	barriers.startup.arrive_and_wait();
-	auto gpu = dev::GPU{window};
-	auto renderer = gfx::Renderer{gpu};
+	auto renderer = gfx::Renderer{window};
 	run_render(broadcaster, window, renderer);
 	barriers.shutdown.arrive_and_wait();
 }

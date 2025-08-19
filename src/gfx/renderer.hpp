@@ -3,12 +3,13 @@ This software is dual-licensed. For more details, please consult LICENSE.txt.
 Copyright (c) 2025 Tearnote (Hubert Maraszek)
 
 gfx/renderer.hpp:
-A renderer of primitives.
+Wrapper over a GPU instance that provides rendering of primitives.
 */
 
 #pragma once
 #include "preamble.hpp"
 #include "lib/vuk.hpp"
+#include "dev/window.hpp"
 #include "dev/gpu.hpp"
 #include "gfx/imgui.hpp"
 
@@ -40,7 +41,7 @@ public:
 		unordered_map<id, Layer> layers;
 	};
 
-	explicit Renderer(dev::GPU& gpu);
+	explicit Renderer(dev::Window&);
 
 	// Provide a queue to the function argument, and then draw contents of the queue to the screen.
 	// Each call will wait block until the next frame begins.
@@ -49,14 +50,14 @@ public:
 	void frame(initializer_list<id> layer_order, Func&&);
 
 private:
-	dev::GPU& gpu;
+	dev::GPU gpu;
 	Imgui imgui;
 
 	[[nodiscard]] auto draw_rects(lib::vuk::Allocator&, lib::vuk::ManagedImage&&, span<Rect const>) -> lib::vuk::ManagedImage;
 };
 
-inline Renderer::Renderer(dev::GPU& gpu):
-	gpu{gpu},
+inline Renderer::Renderer(dev::Window& window):
+	gpu{window},
 	imgui{gpu}
 {
 	constexpr auto rects_vert_src = to_array<uint32>({
