@@ -38,7 +38,6 @@ add_executable(Playnote
 	src/lib/ffmpeg.cpp
 	src/lib/vulkan.cpp
 	src/lib/thread.cpp
-	src/lib/wasapi.cpp
 	src/lib/debug.cpp
 	src/lib/imgui.cpp
 	src/lib/glfw.cpp
@@ -51,6 +50,8 @@ add_executable(Playnote
 )
 if(UNIX)
 	target_sources(Playnote PRIVATE src/lib/pipewire.cpp)
+else()
+	target_sources(Playnote PRIVATE src/lib/wasapi.cpp)
 endif()
 target_precompile_headers(Playnote PRIVATE src/preamble.hpp)
 target_include_directories(Playnote PRIVATE src) # All includes start from src as root
