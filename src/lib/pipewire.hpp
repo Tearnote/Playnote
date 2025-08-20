@@ -13,9 +13,6 @@ Wrapper for libpipewire client library for Linux audio support.
 // Forward declarations
 
 struct pw_thread_loop;
-struct pw_stream;
-struct spa_pod;
-struct pw_buffer;
 
 namespace playnote::lib::pw {
 
@@ -23,6 +20,7 @@ namespace playnote::lib::pw {
 
 struct Stream_t;
 
+// Context object for PipeWire internal state.
 struct Context_t {
 	AudioProperties properties;
 	pw_thread_loop* loop;
@@ -31,7 +29,8 @@ struct Context_t {
 };
 using Context = unique_ptr<Context_t>;
 
-// Initialize PipeWire and open an audio stream.
+// Initialize PipeWire and open an audio stream. processor function will be called in a separate
+// thread with a buffer of samples to fill. A Context is returned and must be passed to cleanup().
 // Throws system_error on failure.
 auto init(string_view stream_name, uint32 buffer_size, function<void(span<Sample>)>&& processor) -> Context;
 
