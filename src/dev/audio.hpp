@@ -23,9 +23,10 @@ namespace playnote::dev {
 // A single audio sample.
 using Sample = lib::Sample;
 
+using lib::ChannelCount;
+
 class Audio {
 public:
-	static constexpr auto ChannelCount = 2zu;
 	static constexpr auto Latency = 128zu;
 
 	template<callable<void(span<Sample>)> Func>
@@ -57,7 +58,7 @@ private:
 
 	function<void(span<Sample>)> generator;
 
-	void on_process(span<Sample> buffer);
+	void on_process(span<Sample> buffer) const { generator(buffer); }
 };
 
 template<callable<void(span<Sample>)> Func>
@@ -67,7 +68,7 @@ Audio::Audio(Func&& generator):
 #ifndef _WIN32
 	context = lib::pw::init(AppTitle, Latency, [this](auto buffer) { on_process(buffer); });
 #else
-	context = lib::wasapi::init(true, &on_process, this);
+	context = lib::wasapi::init(true, [this](auto buffer) { on_process(buffer); });
 #endif
 	DEBUG("Audio device sample rate: {} Hz", context->properties.sampling_rate);
 }
@@ -78,17 +79,6 @@ inline Audio::~Audio()
 	lib::pw::cleanup(move(context));
 #else
 	lib::wasapi::cleanup(move(context));
-#endif
-}
-
-inline void Audio::on_process(span<Sample> buffer)
-{
-#ifdef _WIN32
-	auto buffer = lib::wasapi::dequeue_buffer(self.context);
-#endif
-	generator(buffer);
-#ifdef _WIN32
-	lib::wasapi::enqueue_buffer(self.context);
 #endif
 }
 

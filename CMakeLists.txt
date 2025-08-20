@@ -38,6 +38,7 @@ add_executable(Playnote
 	src/lib/ffmpeg.cpp
 	src/lib/vulkan.cpp
 	src/lib/thread.cpp
+	src/lib/wasapi.cpp
 	src/lib/debug.cpp
 	src/lib/imgui.cpp
 	src/lib/glfw.cpp
