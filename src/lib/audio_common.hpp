@@ -34,4 +34,11 @@ struct AudioProperties {
 	uint32 buffer_size;
 };
 
+inline auto audio_latency(AudioProperties const& props) -> nanoseconds
+{
+	return duration_cast<nanoseconds>(
+		duration<double>{
+			static_cast<double>(props.buffer_size) / static_cast<double>(props.sampling_rate)});
+}
+
 }

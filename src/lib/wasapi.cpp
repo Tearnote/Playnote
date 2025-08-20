@@ -213,7 +213,6 @@ auto init(bool exclusive_mode, function<void(span<Sample>)>&& processor) -> Cont
 		auto default_period = REFERENCE_TIME{0};
 		auto min_period = REFERENCE_TIME{0};
 		ret_check(client->GetDevicePeriod(&default_period, &min_period));
-		TRACE("default period: {}ns, min_period: {}ns", default_period * 100, min_period * 100);
 		auto hr = client->Initialize(AUDCLNT_SHAREMODE_EXCLUSIVE, AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
 			min_period, min_period, reinterpret_cast<WAVEFORMATEX*>(&format), nullptr);
 		if (hr == AUDCLNT_E_BUFFER_SIZE_NOT_ALIGNED) {
@@ -233,7 +232,6 @@ auto init(bool exclusive_mode, function<void(span<Sample>)>&& processor) -> Cont
 	ret_check(client->SetEventHandle(buffer_event));
 	auto buffer_size = uint32{0};
 	ret_check(client->GetBufferSize(&buffer_size));
-	DEBUG("WASAPI buffer size: {} samples", buffer_size);
 	auto* renderer = static_cast<IAudioRenderClient*>(nullptr);
 	ret_check(client->GetService(__uuidof(IAudioRenderClient), reinterpret_cast<void**>(&renderer)));
 	auto running_signal = make_shared<atomic<bool>>(true);

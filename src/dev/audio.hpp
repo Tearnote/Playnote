@@ -70,7 +70,9 @@ Audio::Audio(Func&& generator):
 #else
 	context = lib::wasapi::init(true, [this](auto buffer) { on_process(buffer); });
 #endif
-	DEBUG("Audio device sample rate: {} Hz", context->properties.sampling_rate);
+	INFO("Audio device properties: sample rate: {}Hz, latency: {}ms",
+		context->properties.sampling_rate,
+		duration_cast<milliseconds>(lib::audio_latency(context->properties)).count());
 }
 
 inline Audio::~Audio()
