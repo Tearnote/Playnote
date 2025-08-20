@@ -20,11 +20,13 @@ Implementation file for lib/wasapi.hpp.
 
 namespace playnote::lib::wasapi {
 
+// Helper functions for error handling
+
 static void ret_check(HRESULT hr, string_view message = "WASAPI error")
 {
 	if (FAILED(hr)) {
 		CRIT("{}: {}", message, hr);
-		throw system_error_fmt("{}: {}", message, hr);
+		throw runtime_error_fmt("{}: {}", message, hr);
 	}
 }
 
@@ -35,12 +37,16 @@ static auto ptr_check(T* ptr) -> T*
 	return ptr;
 }
 
+// Any duration -> REFERENCE_TIME
 template<typename T, typename U>
 static auto to_reference_time(duration<T, U> time) -> REFERENCE_TIME
 {
 	return duration_cast<nanoseconds>(time).count() / 100;
 }
 
+// Function executed in the realtime audio thread.
+// Raises its own priority, begins sample processing, and calls the user function every time
+// a buffer is signalled to be ready.
 static void buffer_thread(Context_t* ctx, HANDLE buffer_event)
 {
 	auto rtprio_taskid = 0ul;

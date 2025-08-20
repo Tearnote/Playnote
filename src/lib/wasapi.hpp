@@ -17,6 +17,7 @@ struct IAudioRenderClient;
 
 namespace playnote::lib::wasapi {
 
+// Context object for WASAPI internal state.
 struct Context_t {
 	AudioProperties properties;
 	bool exclusive_mode;
@@ -28,8 +29,12 @@ struct Context_t {
 };
 using Context = unique_ptr<Context_t>;
 
+// Initialize WASAPI and open an audio stream. processor function will be called in a separate
+// thread with a buffer of samples to fill. A Context is returned and must be passed to cleanup().
+// Throws runtime_error on failure.
 auto init(bool exclusive_mode, function<void(span<Sample>)>&& processor) -> Context;
 
+// Clean up WASAPI and associated objects.
 void cleanup(Context&& ctx) noexcept;
 
 }
