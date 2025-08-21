@@ -40,28 +40,27 @@ void attach_console()
 #ifdef _WIN32
 	AllocConsole();
 
-	std::freopen("CONOUT$", "w", stdout);
-	std::freopen("CONOUT$", "w", stderr);
-
-	auto fdOut = _open_osfhandle(reinterpret_cast<intptr_t>(GetStdHandle(STD_OUTPUT_HANDLE)), _O_WRONLY | _O_BINARY);
-	auto fdErr = _open_osfhandle(reinterpret_cast<intptr_t>(GetStdHandle(STD_ERROR_HANDLE)), _O_WRONLY | _O_BINARY);
-
-	if (fdOut) {
-		_dup2(fdOut, 1);
-		_close(fdOut);
-		SetStdHandle(STD_OUTPUT_HANDLE, reinterpret_cast<HANDLE>(_get_osfhandle(1)));
-	}
-	if (fdErr) {
-		_dup2(fdErr, 2);
-		_close(fdErr);
-		SetStdHandle(STD_ERROR_HANDLE, reinterpret_cast<HANDLE>(_get_osfhandle(2)));
+	if (_fileno(stdout) == -2) {
+		auto fd_stdout = _open_osfhandle(reinterpret_cast<intptr_t>(GetStdHandle(STD_ERROR_HANDLE)), _O_WRONLY | _O_BINARY);
+		if (fd_stdout) {
+			_dup2(fd_stdout, 1);
+			_close(fd_stdout);
+			SetStdHandle(STD_ERROR_HANDLE, reinterpret_cast<HANDLE>(_get_osfhandle(1)));
+		}
+		std::freopen("CONOUT$", "w", stdout);
+		std::setvbuf(stderr, nullptr, _IONBF, 0);
 	}
 
-	_dup2(_fileno(fdopen(1, "wb")), _fileno(stdout));
-	_dup2(_fileno(fdopen(2, "wb")), _fileno(stderr));
-
-	std::setvbuf(stdout, nullptr, _IONBF, 0);
-	std::setvbuf(stderr, nullptr, _IONBF, 0);
+	if (_fileno(stderr) == -2) {
+		auto fd_stderr = _open_osfhandle(reinterpret_cast<intptr_t>(GetStdHandle(STD_ERROR_HANDLE)), _O_WRONLY | _O_BINARY);
+		if (fd_stderr) {
+			_dup2(fd_stderr, 2);
+			_close(fd_stderr);
+			SetStdHandle(STD_ERROR_HANDLE, reinterpret_cast<HANDLE>(_get_osfhandle(2)));
+		}
+		std::freopen("CONOUT$", "w", stderr);
+		std::setvbuf(stderr, nullptr, _IONBF, 0);
+	}
 
 	// Set console encoding to UTF-8
 	SetConsoleOutputCP(65001);
