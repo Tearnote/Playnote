@@ -44,6 +44,16 @@ static auto to_reference_time(duration<T, U> time) -> REFERENCE_TIME
 	return duration_cast<nanoseconds>(time).count() / 100;
 }
 
+struct Int16Sample {
+	int16 left;
+	int16 right;
+};
+
+struct Int24Sample {
+	int32 left;
+	int32 right;
+};
+
 // Function executed in the realtime audio thread.
 // Raises its own priority, begins sample processing, and calls the user function every time
 // a buffer is signalled to be ready.
@@ -75,14 +85,6 @@ static void buffer_thread(Context_t* ctx, HANDLE buffer_event)
 
 		ctx->processor(client_buffer);
 
-		struct Int16Sample {
-			int16 left;
-			int16 right;
-		};
-		struct Int24Sample {
-			int32 left;
-			int32 right;
-		};
 		switch (ctx->properties.sample_format) {
 		case SampleFormat::Float32:
 			copy(client_buffer, reinterpret_cast<Sample*>(buffer));
@@ -237,11 +239,25 @@ auto init(bool exclusive_mode, function<void(span<Sample>)>&& processor) -> Cont
 	auto running_signal = make_shared<atomic<bool>>(true);
 
 	// Prefill first buffer
-	auto* buffer = static_cast<Sample*>(nullptr);
-	ret_check(renderer->GetBuffer(buffer_size, reinterpret_cast<BYTE**>(&buffer)));
-	auto buffer_span = span{buffer, buffer_size};
-	fill(buffer_span, Sample{0.0f, 0.0f});
-	ret_check(renderer->ReleaseBuffer(buffer_size, 0));
+	if (sample_format == SampleFormat::Int16) {
+		auto* buffer = static_cast<Int16Sample*>(nullptr);
+		ret_check(renderer->GetBuffer(buffer_size, reinterpret_cast<BYTE**>(&buffer)));
+		auto buffer_span = span{buffer, buffer_size};
+		fill(buffer_span, Int16Sample{0, 0});
+		ret_check(renderer->ReleaseBuffer(buffer_size, 0));
+	} else if (sample_format == SampleFormat::Int24) {
+		auto* buffer = static_cast<Int24Sample*>(nullptr);
+		ret_check(renderer->GetBuffer(buffer_size, reinterpret_cast<BYTE**>(&buffer)));
+		auto buffer_span = span{buffer, buffer_size};
+		fill(buffer_span, Int24Sample{0, 0});
+		ret_check(renderer->ReleaseBuffer(buffer_size, 0));
+	} else {
+		auto* buffer = static_cast<Sample*>(nullptr);
+		ret_check(renderer->GetBuffer(buffer_size, reinterpret_cast<BYTE**>(&buffer)));
+		auto buffer_span = span{buffer, buffer_size};
+		fill(buffer_span, Sample{0.0f, 0.0f});
+		ret_check(renderer->ReleaseBuffer(buffer_size, 0));
+	}
 
 	*ctx = Context_t{
 		.properties = AudioProperties{
