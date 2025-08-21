@@ -92,8 +92,8 @@ static void buffer_thread(Context_t* ctx, HANDLE buffer_event)
 		case SampleFormat::Int16:
 			transform(client_buffer, reinterpret_cast<Int16Sample*>(buffer), [](auto const& sample) {
 				return Int16Sample{
-					.left = static_cast<int16>(lround(sample.left * 0x7FFF) & 0xFFFF),
-					.right = static_cast<int16>(lround(sample.right * 0x7FFF) & 0xFFFF),
+					.left = static_cast<int16>(lround(sample.left * 0x7FFF)),
+					.right = static_cast<int16>(lround(sample.right * 0x7FFF)),
 				};
 			});
 			break;
