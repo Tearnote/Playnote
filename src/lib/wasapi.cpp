@@ -168,7 +168,7 @@ auto init(bool exclusive_mode, function<void(span<Sample>)>&& processor) -> Cont
 			.nChannels = 2,
 			.nSamplesPerSec = mix_format->nSamplesPerSec,
 			.nAvgBytesPerSec = mix_format->nSamplesPerSec * (16 / 8 * 2),
-			.nBlockAlign = 8,
+			.nBlockAlign = 4,
 			.wBitsPerSample = 16,
 			.cbSize = sizeof(WAVEFORMATEXTENSIBLE) - sizeof(WAVEFORMATEX),
 		},
