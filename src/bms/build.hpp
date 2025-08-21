@@ -504,7 +504,7 @@ inline void build_lanes(Chart& chart, span<AbsNote const> notes)
 inline auto determine_playstyle(Chart::Lanes const& lanes) -> Playstyle
 {
 	using enum Chart::LaneType;
-	auto lanes_used = array<bool, lanes.size()>{};
+	auto lanes_used = array<bool, +Size>{};
 	transform(lanes, lanes_used.begin(), [](auto const& lane) { return !lane.notes.empty(); });
 
 	if (lanes_used[+P2_Key6] ||
