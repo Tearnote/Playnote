@@ -1,0 +1,44 @@
+{
+  "name" : "playnote",
+  "version-string" : "1.0.0",
+  "builtin-baseline" : "e24f21eb8f1d84ef56ef7703afa36c372cc6f4ce",
+  "dependencies" : [ {
+    "name" : "openssl",
+    "version>=" : "3.5.2"
+  }, {
+    "name" : "icu",
+    "version>=" : "74.2#6"
+  }, {
+    "name" : "glfw3",
+    "version>=" : "3.4#1"
+  }, {
+    "name" : "boost-range",
+    "version>=" : "1.88.0"
+  }, {
+    "name" : "boost-container",
+    "version>=" : "1.88.0"
+  }, {
+    "name" : "boost-unordered",
+    "version>=" : "1.88.0"
+  }, {
+    "name" : "boost-rational",
+    "version>=" : "1.88.0"
+  }, {
+    "name" : "boost-algorithm",
+    "version>=" : "1.88.0"
+  }, {
+    "name" : "boost-lexical-cast",
+    "version>=" : "1.88.0"
+  }, {
+    "name" : "boost-scope",
+    "version>=" : "1.88.0"
+  }, {
+    "name" : "ffmpeg",
+    "version>=" : "7.1.1#4",
+    "default-features": false,
+    "features": [
+      "avcodec", "avformat", "swresample",
+      "aom", "mp3lame", "openh264", "opus", "soxr", "theora", "vorbis", "vpx"
+    ]
+  } ]
+}

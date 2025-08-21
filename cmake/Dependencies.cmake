@@ -6,7 +6,9 @@
 
 include_guard()
 
-find_package(PkgConfig REQUIRED)
+if(UNIX)
+	find_package(PkgConfig REQUIRED)
+endif()
 include(FetchContent)
 
 # Local dependencies
@@ -21,10 +23,14 @@ find_package(ICU REQUIRED # Charset detection and conversion
 find_package(glfw3 3.4 REQUIRED) # Windowing support
 find_package(Boost REQUIRED # Rational numbers, improved containers, string algorithms, resource wrapper
 	COMPONENTS container)
-pkg_search_module(libswresample REQUIRED IMPORTED_TARGET libswresample) # Sample rate conversion
-pkg_search_module(libavformat REQUIRED IMPORTED_TARGET libavformat) # Audio file demuxing
-pkg_search_module(libavcodec REQUIRED IMPORTED_TARGET libavcodec) # Audio file decoding
-pkg_search_module(libavutil REQUIRED IMPORTED_TARGET libavutil) # FFmpeg utilities
+if(UNIX)
+	pkg_search_module(libswresample REQUIRED IMPORTED_TARGET libswresample) # Sample rate conversion
+	pkg_search_module(libavformat REQUIRED IMPORTED_TARGET libavformat) # Audio file demuxing
+	pkg_search_module(libavcodec REQUIRED IMPORTED_TARGET libavcodec) # Audio file decoding
+	pkg_search_module(libavutil REQUIRED IMPORTED_TARGET libavutil) # FFmpeg utilities
+else()
+	find_package(FFMPEG REQUIRED)
+endif()
 
 if(UNIX)
 	pkg_search_module(PipeWire REQUIRED IMPORTED_TARGET libpipewire-0.3) # Low latency Linux audio
@@ -74,7 +80,9 @@ FetchContent_Declare(vuk # Vulkan rendergraph
 	GIT_TAG f24c0316ad0a1eaa27685cec9fbef34273bc68be
 )
 FetchContent_MakeAvailable(vuk)
-target_compile_options(vuk PRIVATE -g0) # Work around bug in Embed module
+if(UNIX)
+	target_compile_options(vuk PRIVATE -g0) # Work around bug in Embed module
+endif()
 target_compile_definitions(vuk PUBLIC VUK_CUSTOM_VULKAN_HEADER=<volk.h>)
 target_link_libraries(vuk PRIVATE volk)
 
@@ -98,6 +106,9 @@ check_include_file(sys/queue.h HAVE_SYS_QUEUE_H)
 if(NOT HAVE_SYS_QUEUE_H)
 	target_include_directories(ebur128 PRIVATE ${ebur128_SOURCE_DIR}/ebur128/queue)
 endif()
+if(WIN32)
+	target_compile_definitions(ebur128 PRIVATE _USE_MATH_DEFINES)
+endif()
 
 FetchContent_Declare(imgui # Debug controls
 	GIT_REPOSITORY https://github.com/ocornut/imgui
@@ -114,6 +125,7 @@ add_library(imgui
 )
 target_include_directories(imgui PUBLIC "${imgui_SOURCE_DIR}")
 target_link_libraries(imgui PUBLIC libassert::assert)
+target_link_libraries(imgui PUBLIC glfw)
 
 FetchContent_Declare(implot # Debug plot drawing
 	GIT_REPOSITORY https://github.com/epezent/implot
