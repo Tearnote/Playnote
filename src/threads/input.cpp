@@ -23,7 +23,7 @@ static void run_input(Broadcaster& broadcaster, dev::Window& window, fs::path co
 	window.register_key_callback([&](dev::Window::KeyCode keycode, bool state) {
 		broadcaster.shout(KeyInput{
 			.timestamp = glfw.get_time(),
-			.keycode = keycode,
+			.code = keycode,
 			.state = state,
 		});
 	});

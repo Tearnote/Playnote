@@ -15,8 +15,9 @@ namespace playnote::threads {
 using ChartLoadRequest = fs::path;
 
 struct KeyInput {
+	using Code = dev::Window::KeyCode;
 	nanoseconds timestamp;
-	dev::Window::KeyCode keycode;
+	Code code;
 	bool state;
 };
 

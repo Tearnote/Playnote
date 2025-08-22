@@ -17,6 +17,7 @@ Implementation file for threads/audio.hpp.
 #include "audio/player.hpp"
 #include "audio/mixer.hpp"
 #include "bms/build.hpp"
+#include "bms/input.hpp"
 #include "bms/ir.hpp"
 #include "threads/render_shouts.hpp"
 #include "threads/audio_shouts.hpp"
@@ -77,6 +78,7 @@ static void run_audio(Broadcaster& broadcaster, dev::Window& window, audio::Mixe
 		.chart_path = chart_path,
 		.player = weak_ptr{bms_player},
 	});
+	auto mapper = bms::Mapper{};
 
 	while (!window.is_closing()) {
 		broadcaster.receive_all<PlayerControl>([&](auto ev) {
@@ -93,6 +95,11 @@ static void run_audio(Broadcaster& broadcaster, dev::Window& window, audio::Mixe
 			default: PANIC();
 			}
 		});
+		broadcaster.receive_all<KeyInput>([&](auto ev) {
+			auto input = mapper.from_key(ev, *bms_player);
+			if (!input) return;
+			TRACE("Player input: lane {}, action {}", +input->lane, input->state);
+		});
 		yield();
 	}
 }
@@ -103,6 +110,7 @@ try {
 	broadcaster.register_as_endpoint();
 	broadcaster.subscribe<PlayerControl>();
 	broadcaster.subscribe<ChartLoadRequest>();
+	broadcaster.subscribe<KeyInput>();
 	barriers.startup.arrive_and_wait();
 	auto mixer = audio::Mixer{};
 	run_audio(broadcaster, window, mixer);
