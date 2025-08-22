@@ -36,6 +36,9 @@ public:
 	// Return current sampling rate. The value is only valid while an Audio instance exists.
 	[[nodiscard]] static auto get_sampling_rate() -> uint32 { return ASSERT_VAL(context->properties.sampling_rate); }
 
+	// Return current latency of the audio device.
+	[[nodiscard]] static auto get_latency() -> nanoseconds { return samples_to_ns(context->properties.buffer_size); }
+
 	// Convert a count of samples to their duration.
 	[[nodiscard]] static auto samples_to_ns(isize) -> nanoseconds;
 

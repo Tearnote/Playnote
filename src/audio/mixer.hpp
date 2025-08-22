@@ -34,6 +34,10 @@ public:
 	template<implements<Generator> T>
 	void remove_generator(T& generator);
 
+	// Return current latency of the mixer, which includes both the audio device latency
+	// and the latency of any active effects.
+	[[nodiscard]] static auto get_latency() -> nanoseconds { return dev::Audio::get_latency() + 1ms; }
+
 private:
 	dev::Audio audio;
 
