@@ -12,6 +12,7 @@ Implementation file for threads/audio.hpp.
 #include "logger.hpp"
 #include "dev/window.hpp"
 #include "dev/os.hpp"
+#include "threads/input_shouts.hpp"
 #include "threads/broadcaster.hpp"
 
 namespace playnote::threads {
@@ -19,6 +20,13 @@ namespace playnote::threads {
 static void run_input(Broadcaster& broadcaster, dev::Window& window, fs::path const& song_request)
 {
 	auto& glfw = window.get_glfw();
+	window.register_key_callback([&](dev::Window::KeyCode keycode, bool state) {
+		broadcaster.shout(KeyInput{
+			.timestamp = glfw.get_time(),
+			.keycode = keycode,
+			.state = state,
+		});
+	});
 	broadcaster.shout(song_request);
 	while (!window.is_closing()) {
 		glfw.poll();

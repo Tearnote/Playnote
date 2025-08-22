@@ -8,9 +8,16 @@ Shouts that can be spawned by the input thread. Typically messages from the OS m
 
 #pragma once
 #include "preamble.hpp"
+#include "dev/window.hpp"
 
 namespace playnote::threads {
 
 using ChartLoadRequest = fs::path;
+
+struct KeyInput {
+	nanoseconds timestamp;
+	dev::Window::KeyCode keycode;
+	bool state;
+};
 
 }
