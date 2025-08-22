@@ -51,8 +51,9 @@ public:
 private:
 	struct LaneProgress {
 		usize next_note; // Index of the earliest note that hasn't been judged yet
+		usize active_slot; // Index of the WAV slot that will be triggred on player input
 		bool ln_active; // Is it currently in the middle of an LN?
-		void restart() { next_note = 0; ln_active = false; }
+		void restart() { *this = {}; }
 	};
 	struct WavSlotProgress {
 		static constexpr auto Stopped = -1zu; // Special value for stopped playback
@@ -108,6 +109,7 @@ auto Cursor::advance_one_sample(Func&& func, bool use_bb) -> bool
 		if (progress_ns >= note.timestamp) {
 			if (note.type_is<Note::Simple>() || (note.type_is<Note::LN>() && progress_ns >= note.timestamp + note.params<Note::LN>().length)) {
 				progress.next_note += 1;
+				progress.active_slot = note.wav_slot;
 				if (lane.playable) notes_judged += 1;
 				if (note.type_is<Note::LN>()) {
 					progress.ln_active = false;

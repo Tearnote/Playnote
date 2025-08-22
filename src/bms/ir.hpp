@@ -378,7 +378,7 @@ inline void IRCompiler::register_header_handlers()
 	header_handlers.emplace("WAV",          &IRCompiler::parse_header_wav);
 
 	// Critical unimplemented headers
-	// (if a file uses one of these, there is no chance for the BMS to play even remotely correctly)
+	// (if a file uses one of these, there is no chance for the BMS to be played correctly)
 	header_handlers.emplace("SCROLL",       &IRCompiler::parse_header_unimplemented_critical); // beatoraja extension, needs research, especially for negative values
 	header_handlers.emplace("WAVCMD",       &IRCompiler::parse_header_unimplemented_critical);
 	header_handlers.emplace("EXWAV",        &IRCompiler::parse_header_unimplemented_critical); // Underspecified, and likely unimplementable
@@ -493,16 +493,16 @@ inline void IRCompiler::register_channel_handlers()
 		channel_handlers.emplace(string{"4"} + static_cast<char>('0' + i), &IRCompiler::parse_channel_unimplemented);
 	for (auto const i: irange(0zu, 26zu)) // ^
 		channel_handlers.emplace(string{"4"} + static_cast<char>('A' + i), &IRCompiler::parse_channel_unimplemented);
-	for (auto const i: irange(1zu, 10zu)) // P1 mines
-		channel_handlers.emplace(string{"D"} + static_cast<char>('0' + i), &IRCompiler::parse_channel_unimplemented);
-	for (auto const i: irange(1zu, 10zu)) // P2 mines
-		channel_handlers.emplace(string{"E"} + static_cast<char>('0' + i), &IRCompiler::parse_channel_unimplemented);
 
 	// Critical unimplemented channels
-	// (if a file uses one of these, there is no chance for the BMS to play even remotely correctly)
+	// (if a file uses one of these, there is no chance for the BMS to the played correctly)
 	channel_handlers.emplace("09" /* Stop                */, &IRCompiler::parse_channel_unimplemented_critical);
 	channel_handlers.emplace("97" /* BGM volume          */, &IRCompiler::parse_channel_unimplemented_critical);
 	channel_handlers.emplace("98" /* Key volume          */, &IRCompiler::parse_channel_unimplemented_critical);
+	for (auto const i: irange(1zu, 10zu)) // P1 mines
+		channel_handlers.emplace(string{"D"} + static_cast<char>('0' + i), &IRCompiler::parse_channel_unimplemented_critical);
+	for (auto const i: irange(1zu, 10zu)) // P2 mines
+		channel_handlers.emplace(string{"E"} + static_cast<char>('0' + i), &IRCompiler::parse_channel_unimplemented_critical);
 
 	// Unsupported channels
 	channel_handlers.emplace("A0" /* Judge               */, &IRCompiler::parse_channel_ignored);
