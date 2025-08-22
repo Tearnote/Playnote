@@ -622,6 +622,21 @@ auto calculate_density_distribution(Chart::Lanes const& lanes, nanoseconds chart
 			progress(threads::ChartLoadProgress::DensityCalculation{ .progress = cursor });
 		}
 	}
+
+	// Average NPS: actually Root Mean Square of the middle 50% of the dataset
+	auto overall_density = vector<float>{};
+	overall_density.reserve(result.key_density.size());
+	for (auto idx: irange(0zu, result.key_density.size()))
+		overall_density.emplace_back(result.key_density[idx] + result.scratch_density[idx] + result.ln_density[idx]);
+	sort(overall_density);
+	auto quarter_size = overall_density.size() / 4;
+	auto density_mid50 = span{overall_density.begin() + quarter_size, overall_density.end() - quarter_size};
+	auto rms = 0.0;
+	for (auto idx: irange(0zu, density_mid50.size()))
+		rms += density_mid50[idx] * density_mid50[idx] / density_mid50.size();
+	result.average_nps = sqrt(rms);
+	TRACE("Average NPS: {}", result.average_nps);
+
 	return result;
 }
 
