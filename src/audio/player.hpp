@@ -34,6 +34,9 @@ public:
 	// right now. This is a best guess estimate based on time elapsed since the last audio buffer.
 	[[nodiscard]] auto get_audio_cursor() const -> bms::Cursor;
 
+	// Convert an absolute timestamp to one relative to the chart's start time.
+	[[nodiscard]] auto chart_relative_timestamp(nanoseconds) const -> nanoseconds;
+
 	// Detach the cursor, stopping all playback.
 	void stop() { paused = true; cursor.reset(); }
 
@@ -86,6 +89,11 @@ inline auto Player::get_audio_cursor() const -> bms::Cursor
 	auto result = bms::Cursor{*cursor};
 	result.fast_forward(clamp(elapsed_samples, 0z, static_cast<isize>(dev::Audio::Latency)));
 	return result;
+}
+
+inline auto Player::chart_relative_timestamp(nanoseconds time) const -> nanoseconds
+{
+	return time - timer_slop;
 }
 
 inline void Player::begin_buffer()

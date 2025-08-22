@@ -29,7 +29,7 @@ public:
 inline auto Mapper::from_key(threads::KeyInput const& key, audio::Player const& player) -> optional<Input>
 {
 	auto result = Input{
-		.timestamp = key.timestamp,
+		.timestamp = player.chart_relative_timestamp(key.timestamp),
 		.state = key.state,
 	};
 	switch (key.code) {
