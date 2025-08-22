@@ -633,9 +633,8 @@ auto calculate_density_distribution(Chart::Lanes const& lanes, nanoseconds chart
 	auto density_mid50 = span{overall_density.begin() + quarter_size, overall_density.end() - quarter_size};
 	auto rms = 0.0;
 	for (auto idx: irange(0zu, density_mid50.size()))
-		rms += density_mid50[idx] * density_mid50[idx] / density_mid50.size();
-	result.average_nps = sqrt(rms);
-	TRACE("Average NPS: {}", result.average_nps);
+		rms += density_mid50[idx] * density_mid50[idx] * density_mid50[idx] * density_mid50[idx] / density_mid50.size();
+	result.average_nps = sqrt(sqrt(rms));
 
 	return result;
 }
