@@ -636,6 +636,14 @@ auto calculate_density_distribution(Chart::Lanes const& lanes, nanoseconds chart
 		rms += density_mid50[idx] * density_mid50[idx] * density_mid50[idx] * density_mid50[idx] / density_mid50.size();
 	result.average_nps = sqrt(sqrt(rms));
 
+	// Peak NPS: RMS of the 98th percentile
+	auto fiftieth_size = overall_density.size() / 50;
+	auto density_top2 = span{overall_density.end() - fiftieth_size, overall_density.end()};
+	auto peak_rms = 0.0;
+	for (auto idx: irange(0zu, density_top2.size()))
+		peak_rms += density_top2[idx] * density_top2[idx] * density_top2[idx] * density_top2[idx] / density_top2.size();
+	result.peak_nps = sqrt(sqrt(peak_rms));
+
 	return result;
 }
 

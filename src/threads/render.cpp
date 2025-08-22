@@ -56,7 +56,8 @@ static void show_metrics(bms::Cursor const& cursor, bms::Metrics const& metrics)
 		{"Key", metrics.density.key_density, {1.0f, 1.0f, 1.0f, 1.0f}},
 	}, {
 		{lib::imgui::PlotMarker::Type::Vertical, static_cast<float>(cursor.get_progress_ns() / 125ms), {1.0f, 0.0f, 0.0f, 1.0f}},
-		{lib::imgui::PlotMarker::Type::Horizontal, metrics.density.average_nps, {0.0f, 0.0f, 1.0f, 1.0f}}
+		{lib::imgui::PlotMarker::Type::Horizontal, metrics.density.average_nps, {0.0f, 0.0f, 1.0f, 1.0f}},
+		{lib::imgui::PlotMarker::Type::Horizontal, metrics.density.peak_nps, {1.0f, 0.0f, 1.0f, 1.0f}}
 	}, 120, true);
 }
 
