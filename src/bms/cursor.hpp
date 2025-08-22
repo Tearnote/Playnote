@@ -9,6 +9,7 @@ Representation of a moment in chart's playback.
 #pragma once
 #include "preamble.hpp"
 #include "assert.hpp"
+#include "bms/chart.hpp"
 #include "dev/audio.hpp"
 #include "bms/chart.hpp"
 
@@ -79,6 +80,12 @@ inline Cursor::Cursor(Chart const& chart):
 	chart{chart.shared_from_this()}
 {
 	wav_slot_progress.resize(chart.wav_slots.size());
+	for (auto idx: irange(0zu, +Chart::LaneType::Size)) {
+		auto const& lane = chart.lanes[idx];
+		auto& progress = lane_progress[idx];
+		if (lane.notes.empty()) continue;
+		progress.active_slot = lane.notes[0].wav_slot;
+	}
 }
 
 inline void Cursor::restart()
