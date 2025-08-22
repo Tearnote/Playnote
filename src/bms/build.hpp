@@ -591,6 +591,31 @@ auto calculate_density_distribution(Chart::Lanes const& lanes, nanoseconds chart
 	result.scratch_density.resize(points);
 	result.ln_density.resize(points);
 
+	// Collect all playable notes
+	auto notes_keys = vector<Note>{};
+	auto notes_scr = vector<Note>{};
+	auto note_total = fold_left(lanes, 0u, [](auto sum, auto const& lane) { return sum + lane.playable? lane.notes.size() : 0; });
+	notes_keys.reserve(note_total);
+	notes_scr.reserve(note_total);
+	for (auto idx: irange(0zu, lanes.size())) {
+		auto const& lane = lanes[idx];
+		if (!lane.playable) continue;
+		auto const type = Chart::LaneType{idx};
+		auto& dest = type == Chart::LaneType::P1_KeyS || type == Chart::LaneType::P2_KeyS? notes_scr : notes_keys;
+		for (auto const& note: lane.notes) {
+			if (note.type_is<Note::LN>()) {
+				dest.emplace_back(note);
+				auto ln_end = note;
+				ln_end.timestamp += ln_end.params<Note::LN>().length;
+				dest.emplace_back(ln_end);
+			} else {
+				dest.emplace_back(note);
+			}
+		}
+	}
+	sort(notes_keys, [](auto const& left, auto const& right) { return left.timestamp < right.timestamp; });
+	sort(notes_scr, [](auto const& left, auto const& right) { return left.timestamp < right.timestamp; });
+
 	auto const ProgressFreq = static_cast<uint32>(floor(1s / window));
 	auto until_progress_update = 0u;
 	for (auto idx: irange(0zu, result.key_density.size())) {
@@ -598,22 +623,23 @@ auto calculate_density_distribution(Chart::Lanes const& lanes, nanoseconds chart
 		auto& key = result.key_density[idx];
 		auto& scratch = result.scratch_density[idx];
 		auto& ln = result.ln_density[idx];
-		for (auto l_idx: irange(0zu, lanes.size())) {
-			auto const& lane = lanes[l_idx];
-			auto const type = Chart::LaneType{l_idx};
-			if (!lane.playable) continue;
-			for (Note const& note: lane.notes) {
-				if (note.timestamp < cursor - window) continue;
-				if (note.timestamp > cursor + window) break;
-				auto& target = [&]() -> float& {
-					if (type == Chart::LaneType::P1_KeyS || type == Chart::LaneType::P2_KeyS) return scratch;
-					if (note.type_is<Note::LN>()) return ln;
-					return key;
-				}();
-				auto const delta = note.timestamp - cursor;
-				auto const delta_scaled = ratio(delta, window) * Bandwidth; // now within [-Bandwidth, Bandwidth]
-				target += exp(-pow(delta_scaled, 2.0f) / 2.0f) * GaussianScale; // Gaussian filter
-			}
+		for (auto const& note: notes_keys) {
+			if (note.timestamp < cursor - window) continue;
+			if (note.timestamp > cursor + window) break;
+			auto& target = [&]() -> float& {
+				if (note.type_is<Note::LN>()) return ln;
+				return key;
+			}();
+			auto const delta = note.timestamp - cursor;
+			auto const delta_scaled = ratio(delta, window) * Bandwidth; // now within [-Bandwidth, Bandwidth]
+			target += exp(-pow(delta_scaled, 2.0f) / 2.0f) * GaussianScale; // Gaussian filter
+		}
+		for (auto const& note: notes_scr) {
+			if (note.timestamp < cursor - window) continue;
+			if (note.timestamp > cursor + window) break;
+			auto const delta = note.timestamp - cursor;
+			auto const delta_scaled = ratio(delta, window) * Bandwidth; // now within [-Bandwidth, Bandwidth]
+			scratch += exp(-pow(delta_scaled, 2.0f) / 2.0f) * GaussianScale; // Gaussian filter
 		}
 
 		until_progress_update += 1;
