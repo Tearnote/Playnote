@@ -14,6 +14,7 @@ A cursor wrapper that sends audio samples to the audio device.
 #include "audio/mixer.hpp"
 #include "bms/cursor.hpp"
 #include "bms/chart.hpp"
+#include "bms/input.hpp"
 
 namespace playnote::audio {
 
@@ -26,6 +27,9 @@ public:
 
 	// Attach a chart to the player. A new cursor will be created for it.
 	void play(bms::Chart const&, bool autoplay, bool paused = false);
+
+	// Register a player input to be processed when its timestamp arrives.
+	void enqueue_input(bms::Input input);
 
 	// Return the currently playing chart. Requires that a chart is attached.
 	[[nodiscard]] auto get_chart() const -> bms::Chart const& { return cursor->get_chart(); }
@@ -75,6 +79,13 @@ inline void Player::play(bms::Chart const& chart, bool autoplay, bool paused)
 	ASSERT(gain > 0);
 	timer_slop = glfw.get_time();
 	this->paused = paused;
+}
+
+inline void Player::enqueue_input(bms::Input input)
+{
+	if (!cursor) return;
+	input.timestamp = chart_relative_timestamp(input.timestamp) + Mixer::get_latency();
+	TRACE("Input on lane {}, {}ms in the future", +input.lane, (input.timestamp - cursor->get_progress_ns()).count() / 1'000'000);
 }
 
 inline auto Player::get_audio_cursor() const -> bms::Cursor

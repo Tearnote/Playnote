@@ -99,7 +99,6 @@ static void run_audio(Broadcaster& broadcaster, dev::Window& window, audio::Mixe
 			}
 		});
 		broadcaster.receive_all<KeyInput>([&](auto ev) {
-			ev.timestamp = bms_player->chart_relative_timestamp(ev.timestamp);
 			auto input = mapper.from_key(ev);
 			if (!input) return;
 			bms_player->enqueue_input(*input);
