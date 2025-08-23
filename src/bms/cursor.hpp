@@ -115,8 +115,8 @@ auto Cursor::advance_one_sample(Func&& func, bool use_bb) -> bool
 		auto& progress = lane_progress[idx];
 		auto const& note = lane.notes[progress.next_note];
 		if (progress.next_note >= lane.notes.size()) continue;
+		// Autoplay either all or just unplayable notes, depending on autoplay enabled/disabled
 		if (progress_ns >= note.timestamp) {
-			// Autoplay
 			if ((autoplay || !lane.playable) &&
 				(note.type_is<Note::Simple>() || (note.type_is<Note::LN>() && progress_ns >= note.timestamp + note.params<Note::LN>().length))) {
 				progress.next_note += 1;
