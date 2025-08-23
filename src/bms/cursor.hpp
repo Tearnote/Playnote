@@ -31,6 +31,16 @@ public:
 		bool state;
 	};
 
+	struct Judgments {
+		usize pgreat;
+		usize great;
+		usize good;
+		usize bad;
+		usize poor;
+		usize early;
+		usize late;
+	};
+
 	// Create a cursor for the given chart. The chart's lifetime will be extended by the cursor's.
 	explicit Cursor(Chart const& chart, bool autoplay);
 
@@ -45,6 +55,9 @@ public:
 
 	// Return the number of playable notes that were already judged.
 	[[nodiscard]] auto get_judged_notes() const -> usize { return notes_judged; }
+
+	// Return the note judgments.
+	[[nodiscard]] auto get_judgments() const -> Judgments { return judgments; }
 
 	// Seek the cursor to the beginning of the chart.
 	void restart();
@@ -80,6 +93,7 @@ private:
 	usize notes_judged = 0zu;
 	array<LaneProgress, +Chart::LaneType::Size> lane_progress = {};
 	vector<WavSlotProgress> wav_slot_progress;
+	Judgments judgments;
 
 	void trigger_lane_input(Chart::LaneType lane, bool state);
 };
@@ -98,12 +112,7 @@ inline Cursor::Cursor(Chart const& chart, bool autoplay):
 	autoplay{autoplay}
 {
 	wav_slot_progress.resize(chart.wav_slots.size());
-	for (auto idx: irange(0zu, +Chart::LaneType::Size)) {
-		auto const& lane = chart.lanes[idx];
-		auto& progress = lane_progress[idx];
-		if (lane.notes.empty()) continue;
-		progress.active_slot = lane.notes[0].wav_slot;
-	}
+	restart();
 }
 
 inline void Cursor::restart()
@@ -112,6 +121,14 @@ inline void Cursor::restart()
 	notes_judged = 0zu;
 	for (auto& lane: lane_progress) lane.restart();
 	for (auto& slot: wav_slot_progress) slot.playback_pos = WavSlotProgress::Stopped;
+	judgments = {};
+
+	for (auto idx: irange(0zu, +Chart::LaneType::Size)) {
+		auto const& lane = chart->lanes[idx];
+		auto& progress = lane_progress[idx];
+		if (lane.notes.empty()) continue;
+		progress.active_slot = lane.notes[0].wav_slot;
+	}
 }
 
 inline void Cursor::fast_forward(usize samples)

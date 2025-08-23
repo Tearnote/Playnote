@@ -77,6 +77,21 @@ static void show_scroll_speed_controls(float& scroll_speed)
 	lib::imgui::input_float("Scroll speed", scroll_speed, 0.25f, 1.0f, "%.2f");
 }
 
+static void show_judgments(bms::Cursor::Judgments judgments)
+{
+	lib::imgui::text("PGREAT: {}", judgments.pgreat);
+	lib::imgui::text(" GREAT: {}", judgments.great);
+	lib::imgui::text("  GOOD: {}", judgments.good);
+	lib::imgui::text("   BAD: {}", judgments.bad);
+	lib::imgui::text("  POOR: {}", judgments.poor);
+}
+
+static void show_earlylate(bms::Cursor::Judgments judgments)
+{
+	lib::imgui::text(" Early: {}", judgments.early);
+	lib::imgui::text("  Late: {}", judgments.late);
+}
+
 struct LoadingToast {
 	fs::path path;
 	string phase;
@@ -178,6 +193,14 @@ static void run_render(Broadcaster& broadcaster, dev::Window const& window, gfx:
 				show_scroll_speed_controls(scroll_speed);
 				playfield->notes_from_cursor(cursor, scroll_speed);
 				playfield->enqueue(queue);
+				lib::imgui::end_window();
+
+				lib::imgui::begin_window("judgements", {860, 436}, 120, true);
+				show_judgments(cursor.get_judgments());
+				lib::imgui::end_window();
+
+				lib::imgui::begin_window("earlylate", {860, 558}, 120, true);
+				show_earlylate(cursor.get_judgments());
 				lib::imgui::end_window();
 			}
 		});
