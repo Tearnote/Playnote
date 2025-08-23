@@ -26,6 +26,17 @@ public:
 	static constexpr auto MashPoorWindow = 500'000'000ns;
 	static constexpr auto LNEarlyRelease = 100'000'000ns;
 
+	enum class Rank {
+		AAA,
+		AA,
+		A,
+		B,
+		C,
+		D,
+		E,
+		F,
+	};
+
 	// An immediate player input to the cursor's current position.
 	struct LaneInput {
 		Chart::LaneType lane;
@@ -59,6 +70,18 @@ public:
 
 	// Return the note judgments.
 	[[nodiscard]] auto get_judgments() const -> Judgments { return judgments; }
+
+	// Return current combo.
+	[[nodiscard]] auto get_combo() const -> usize { return combo; }
+
+	// Return current score.
+	[[nodiscard]] auto get_score() const -> usize { return score; }
+
+	// Return accuracy rank.
+	[[nodiscard]] auto get_rank() const -> Rank;
+
+	// Return accuracy rank as string.
+	[[nodiscard]] auto get_rank_str() const -> string_view;
 
 	// Seek the cursor to the beginning of the chart.
 	void restart();
@@ -95,6 +118,8 @@ private:
 	array<LaneProgress, +Chart::LaneType::Size> lane_progress = {};
 	vector<WavSlotProgress> wav_slot_progress;
 	Judgments judgments;
+	usize combo;
+	usize score;
 
 	void trigger_lane_input(Chart::LaneType lane, bool state);
 };
@@ -116,6 +141,35 @@ inline Cursor::Cursor(Chart const& chart, bool autoplay):
 	restart();
 }
 
+inline auto Cursor::get_rank() const -> Rank
+{
+	if (notes_judged == 0) return Rank::AAA;
+	auto const acc = static_cast<double>(score) / static_cast<double>(notes_judged * 2);
+	if (acc >= 8.0 / 9.0) return Rank::AAA;
+	if (acc >= 7.0 / 9.0) return Rank::AA;
+	if (acc >= 6.0 / 9.0) return Rank::A;
+	if (acc >= 5.0 / 9.0) return Rank::B;
+	if (acc >= 4.0 / 9.0) return Rank::C;
+	if (acc >= 3.0 / 9.0) return Rank::D;
+	if (acc >= 2.0 / 9.0) return Rank::E;
+	return Rank::F;
+}
+
+inline auto Cursor::get_rank_str() const -> string_view
+{
+	switch (get_rank()) {
+	case Rank::AAA: return "AAA";
+	case Rank::AA: return "AA";
+	case Rank::A: return "A";
+	case Rank::B: return "B";
+	case Rank::C: return "C";
+	case Rank::D: return "D";
+	case Rank::E: return "E";
+	case Rank::F: return "F";
+	}
+	return "?";
+}
+
 inline void Cursor::restart()
 {
 	sample_progress = 0zu;
@@ -123,6 +177,8 @@ inline void Cursor::restart()
 	for (auto& lane: lane_progress) lane.restart();
 	for (auto& slot: wav_slot_progress) slot.playback_pos = WavSlotProgress::Stopped;
 	judgments = {};
+	combo = 0;
+	score = 0;
 
 	for (auto idx: irange(0zu, +Chart::LaneType::Size)) {
 		auto const& lane = chart->lanes[idx];
@@ -157,14 +213,20 @@ inline void Cursor::trigger_lane_input(Chart::LaneType lane_type, bool state)
 				if (lane.playable) {
 					if (abs_timing <= PGreatWindow) {
 						judgments.pgreat += 1;
+						combo += 1;
+						score += 2;
 					} else {
 						// The note will now add an early or late
 						if (abs_timing <= GreatWindow) {
 							judgments.great += 1;
+							combo += 1;
+							score += 1;
 						} else if (abs_timing <= GoodWindow) {
 							judgments.good += 1;
+							combo += 1;
 						} else {
 							judgments.bad += 1;
+							combo = 0;
 						}
 						if (timing < 0ns)
 							judgments.late += 1;
@@ -189,10 +251,13 @@ inline void Cursor::trigger_lane_input(Chart::LaneType lane_type, bool state)
 		auto const& note = lane.notes[progress.next_note];
 		if (note.type_is<Note::LN>()) {
 			if (lane.playable) {
-				if (note.timestamp + note.params<Note::LN>().length > get_progress_ns())
+				if (note.timestamp + note.params<Note::LN>().length > get_progress_ns()) {
 					judgments.poor += 1;
-				else
+					combo = 0;
+				} else {
 					judgments.pgreat += 1;
+					combo += 1;
+				}
 			}
 			if (lane.playable) notes_judged += 1;
 			progress.next_note += 1;
@@ -247,6 +312,7 @@ auto Cursor::advance_one_sample(Func&& func, span<LaneInput const> inputs, bool 
 			progress.next_note += 1;
 			judgments.poor += 1;
 			notes_judged += 1;
+			combo = 0;
 			if (progress.next_note >= lane.notes.size())
 				progress.active_slot = lane.notes[progress.next_note].wav_slot;
 		}

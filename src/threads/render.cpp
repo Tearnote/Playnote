@@ -92,6 +92,13 @@ static void show_earlylate(bms::Cursor::Judgments judgments)
 	lib::imgui::text("  Late: {}", judgments.late);
 }
 
+static void show_results(bms::Cursor const& cursor)
+{
+	lib::imgui::text("Score: {}", cursor.get_score());
+	lib::imgui::text("Combo: {}", cursor.get_combo());
+	lib::imgui::text(" Rank: {}", cursor.get_rank_str());
+}
+
 struct LoadingToast {
 	fs::path path;
 	string phase;
@@ -201,6 +208,10 @@ static void run_render(Broadcaster& broadcaster, dev::Window const& window, gfx:
 
 				lib::imgui::begin_window("earlylate", {860, 558}, 120, true);
 				show_earlylate(cursor.get_judgments());
+				lib::imgui::end_window();
+
+				lib::imgui::begin_window("results", {988, 436}, 120, true);
+				show_results(cursor);
 				lib::imgui::end_window();
 			}
 		});
