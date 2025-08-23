@@ -24,6 +24,7 @@ public:
 	static constexpr auto     GoodWindow = 116'670'000ns;
 	static constexpr auto      BadWindow = 250'000'000ns;
 	static constexpr auto MashPoorWindow = 500'000'000ns;
+	static constexpr auto LNEarlyRelease = 100'000'000ns;
 
 	// An immediate player input to the cursor's current position.
 	struct LaneInput {
@@ -141,21 +142,58 @@ inline void Cursor::trigger_lane_input(Chart::LaneType lane_type, bool state)
 	auto const& lane = chart->lanes[+lane_type];
 	auto& progress = lane_progress[+lane_type];
 
-	// Judge next note
+	// Judge press
 	if (state && progress.next_note < lane.notes.size()) {
 		auto const& note = lane.notes[progress.next_note];
-		progress.active_slot = note.wav_slot;
-		if (!note.type_is<Note::LN>()) {
-			if (lane.playable) notes_judged += 1;
-			progress.next_note += 1;
-		} else {
-			progress.ln_active = true;
+		auto const timing = note.timestamp - get_progress_ns(); // +: in the future, -: in the past
+
+		if (timing <= MashPoorWindow) {
+			if (timing > BadWindow && lane.playable) {
+				// Mashpoor
+				judgments.poor += 1;
+			} else {
+				// The note will now be removed by any judgment
+				auto const abs_timing = abs(timing);
+				if (lane.playable) {
+					if (abs_timing <= PGreatWindow) {
+						judgments.pgreat += 1;
+					} else {
+						// The note will now add an early or late
+						if (abs_timing <= GreatWindow) {
+							judgments.great += 1;
+						} else if (abs_timing <= GoodWindow) {
+							judgments.good += 1;
+						} else {
+							judgments.bad += 1;
+						}
+						if (timing < 0ns)
+							judgments.late += 1;
+						else
+							judgments.early += 1;
+					}
+				}
+				if (!note.type_is<Note::LN>()) {
+					if (lane.playable) notes_judged += 1;
+					progress.next_note += 1;
+				} else {
+					progress.ln_active = true;
+				}
+				progress.active_slot = note.wav_slot;
+			}
 		}
+
 	}
 
+	// Judge release
 	if (!state && progress.ln_active && progress.next_note < lane.notes.size()) {
 		auto const& note = lane.notes[progress.next_note];
 		if (note.type_is<Note::LN>()) {
+			if (lane.playable) {
+				if (note.timestamp + note.params<Note::LN>().length > get_progress_ns())
+					judgments.poor += 1;
+				else
+					judgments.pgreat += 1;
+			}
 			if (lane.playable) notes_judged += 1;
 			progress.next_note += 1;
 			progress.ln_active = false;
@@ -205,7 +243,7 @@ auto Cursor::advance_one_sample(Func&& func, span<LaneInput const> inputs, bool 
 		auto& progress = lane_progress[idx];
 		if (progress.next_note >= lane.notes.size()) continue;
 		auto const& note = lane.notes[progress.next_note];
-		if (progress_ns - note.timestamp > BadWindow && !progress.ln_active) {
+		if (progress_ns - note.timestamp > BadWindow && !progress.ln_active) { // LNs are only advanced by being released
 			progress.next_note += 1;
 			judgments.poor += 1;
 			notes_judged += 1;
