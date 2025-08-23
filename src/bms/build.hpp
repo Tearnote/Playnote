@@ -562,7 +562,7 @@ void calculate_audio_metrics(Cursor&& cursor, Metrics& metrics, Func&& progress)
 			processing = !cursor.advance_one_sample([&](auto new_sample) {
 				sample.left += new_sample.left;
 				sample.right += new_sample.right;
-			}, false);
+			}, {}, false);
 			if (!processing) break;
 		}
 

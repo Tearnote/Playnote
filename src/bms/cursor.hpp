@@ -19,6 +19,12 @@ namespace playnote::bms {
 // and audio playback progress.
 class Cursor {
 public:
+	// An immediate player input to the cursor's current position.
+	struct LaneInput {
+		Chart::LaneType lane;
+		bool state;
+	};
+
 	// Create a cursor for the given chart. The chart's lifetime will be extended by the cursor's.
 	explicit Cursor(Chart const& chart, bool autoplay);
 
@@ -38,9 +44,11 @@ public:
 	void restart();
 
 	// Progress by one audio sample, calling the provided function once for every active
-	// sound playback.
+	// sound playback. inputs contains any inputs that should be processed at the current cursor
+	// position. use_bb controls if the bounding box should be used to speed up the lookup.
 	template<callable<void(dev::Sample)> Func>
-	auto advance_one_sample(Func&& func = [](dev::Sample){}, bool use_bb = true) -> bool;
+	auto advance_one_sample(Func&& func = [](dev::Sample){}, span<LaneInput const> inputs = {},
+		bool use_bb = true) -> bool;
 
 	// Progress by the given number of samples, without generating any audio.
 	void fast_forward(usize samples);
@@ -137,7 +145,7 @@ inline void Cursor::trigger_lane_input(Chart::LaneType lane_type, bool state)
 }
 
 template<callable<void(dev::Sample)> Func>
-auto Cursor::advance_one_sample(Func&& func, bool use_bb) -> bool
+auto Cursor::advance_one_sample(Func&& func, span<LaneInput const> inputs, bool use_bb) -> bool
 {
 	auto chart_ended = (notes_judged >= chart->metrics.note_count);
 	sample_progress += 1;
@@ -157,6 +165,11 @@ auto Cursor::advance_one_sample(Func&& func, bool use_bb) -> bool
 			if (note.type_is<Note::LN>() && progress_ns >= note.timestamp + note.params<Note::LN>().length)
 				trigger_lane_input(Chart::LaneType{idx}, false);
 		}
+	}
+
+	if (!autoplay && !inputs.empty()) {
+		for (auto const& input: inputs)
+			trigger_lane_input(input.lane, input.state);
 	}
 
 	auto play_slot = [&](vector<dev::Sample> const& slot, WavSlotProgress& progress) {
