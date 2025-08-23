@@ -68,6 +68,8 @@ static void show_playback_controls(Broadcaster& broadcaster)
 	if (lib::imgui::button("Pause")) broadcaster.shout(PlayerControl::Pause);
 	lib::imgui::same_line();
 	if (lib::imgui::button("Restart")) broadcaster.shout(PlayerControl::Restart);
+	lib::imgui::same_line();
+	if (lib::imgui::button("Autoplay")) broadcaster.shout(PlayerControl::Autoplay);
 }
 
 static void show_scroll_speed_controls(float& scroll_speed)

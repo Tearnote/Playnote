@@ -15,6 +15,7 @@ enum class PlayerControl {
 	Play,
 	Pause,
 	Restart,
+	Autoplay,
 };
 
 }

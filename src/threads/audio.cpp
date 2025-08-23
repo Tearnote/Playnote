@@ -90,6 +90,9 @@ static void run_audio(Broadcaster& broadcaster, dev::Window& window, audio::Mixe
 				bms_player->pause();
 				break;
 			case PlayerControl::Restart:
+				bms_player->play(*bms_chart, false);
+				break;
+			case PlayerControl::Autoplay:
 				bms_player->play(*bms_chart, true);
 				break;
 			default: PANIC();
