@@ -70,6 +70,7 @@ private:
 	atomic<bool> paused = true;
 	float gain;
 	nanoseconds timer_slop;
+	vector<bms::Input> inputs;
 };
 
 inline void Player::play(bms::Chart const& chart, bool autoplay, bool paused)
@@ -85,7 +86,7 @@ inline void Player::enqueue_input(bms::Input input)
 {
 	if (!cursor) return;
 	input.timestamp = chart_relative_timestamp(input.timestamp) + Mixer::get_latency();
-	TRACE("Input on lane {}, {}ms in the future", +input.lane, (input.timestamp - cursor->get_progress_ns()).count() / 1'000'000);
+	inputs.emplace_back(input);
 }
 
 inline auto Player::get_audio_cursor() const -> bms::Cursor
@@ -120,15 +121,30 @@ inline void Player::begin_buffer()
 
 inline auto Player::next_sample() -> dev::Sample
 {
+	static auto new_inputs = vector<bms::Cursor::LaneInput>{};
 	if (paused) {
 		timer_slop += dev::Audio::samples_to_ns(1);
 		return {};
 	}
+
+	new_inputs.clear();
+	auto removed = remove_if(inputs, [&](auto const& input) {
+		if (input.timestamp <= cursor->get_progress_ns()) {
+			new_inputs.emplace_back(bms::Cursor::LaneInput{
+				.lane = input.lane,
+				.state = input.state,
+			});
+			return true;
+		}
+		return false;
+	});
+	inputs.erase(removed.begin(), removed.end());
+
 	auto sample_mix = dev::Sample{};
 	cursor->advance_one_sample([&](dev::Sample sample) {
 		sample_mix.left += sample.left * gain;
 		sample_mix.right += sample.right * gain;
-	});
+	}, new_inputs);
 	return sample_mix;
 }
 
