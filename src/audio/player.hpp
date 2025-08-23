@@ -80,14 +80,14 @@ inline void Player::play(bms::Chart const& chart, bool autoplay, bool paused)
 inline auto Player::get_audio_cursor() const -> bms::Cursor
 {
 	auto const buffer_start_progress =
-		cursor->get_progress() > dev::Audio::Latency?
-		cursor->get_progress() - dev::Audio::Latency :
-		0zu;
-	auto const last_buffer_start = timer_slop + dev::Audio::samples_to_ns(buffer_start_progress);
+		cursor->get_progress_ns() > Mixer::get_latency()?
+		cursor->get_progress_ns() - Mixer::get_latency() :
+		0ns;
+	auto const last_buffer_start = timer_slop + buffer_start_progress;
 	auto const elapsed = glfw.get_time() - last_buffer_start;
 	auto const elapsed_samples = dev::Audio::ns_to_samples(elapsed);
 	auto result = bms::Cursor{*cursor};
-	result.fast_forward(clamp(elapsed_samples, 0z, static_cast<isize>(dev::Audio::Latency)));
+	result.fast_forward(clamp(elapsed_samples, 0z, dev::Audio::ns_to_samples(Mixer::get_latency())));
 	return result;
 }
 

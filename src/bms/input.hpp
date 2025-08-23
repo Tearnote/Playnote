@@ -8,7 +8,6 @@ A timestamped BMS chart input, and conversion to it via a predefined mapping.
 
 #pragma once
 #include "preamble.hpp"
-#include "audio/player.hpp"
 #include "bms/chart.hpp"
 #include "threads/input_shouts.hpp"
 
@@ -23,13 +22,13 @@ struct Input {
 
 class Mapper {
 public:
-	[[nodiscard]] auto from_key(threads::KeyInput const&, audio::Player const&) -> optional<Input>;
+	[[nodiscard]] auto from_key(threads::KeyInput const&) -> optional<Input>;
 };
 
-inline auto Mapper::from_key(threads::KeyInput const& key, audio::Player const& player) -> optional<Input>
+inline auto Mapper::from_key(threads::KeyInput const& key) -> optional<Input>
 {
 	auto result = Input{
-		.timestamp = player.chart_relative_timestamp(key.timestamp),
+		.timestamp = key.timestamp,
 		.state = key.state,
 	};
 	switch (key.code) {

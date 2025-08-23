@@ -99,9 +99,10 @@ static void run_audio(Broadcaster& broadcaster, dev::Window& window, audio::Mixe
 			}
 		});
 		broadcaster.receive_all<KeyInput>([&](auto ev) {
-			auto input = mapper.from_key(ev, *bms_player);
+			ev.timestamp = bms_player->chart_relative_timestamp(ev.timestamp);
+			auto input = mapper.from_key(ev);
 			if (!input) return;
-			TRACE("Player input at {}ms: lane {}, action {}", input->timestamp.count() / 1000000, +input->lane, input->state);
+			bms_player->enqueue_input(*input);
 		});
 		yield();
 	}
