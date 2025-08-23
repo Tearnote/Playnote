@@ -130,6 +130,8 @@ inline auto Player::next_sample() -> dev::Sample
 	new_inputs.clear();
 	auto removed = remove_if(inputs, [&](auto const& input) {
 		if (input.timestamp <= cursor->get_progress_ns()) {
+			if (cursor->get_progress_ns() - input.timestamp > 5ms)
+				WARN("Input event timestamp more than 5ms in the past");
 			new_inputs.emplace_back(bms::Cursor::LaneInput{
 				.lane = input.lane,
 				.state = input.state,
