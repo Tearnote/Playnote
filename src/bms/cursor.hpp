@@ -19,6 +19,12 @@ namespace playnote::bms {
 // and audio playback progress.
 class Cursor {
 public:
+	static constexpr auto   PGreatWindow =  16'670'000ns;
+	static constexpr auto    GreatWindow =  33'330'000ns;
+	static constexpr auto     GoodWindow = 116'670'000ns;
+	static constexpr auto      BadWindow = 250'000'000ns;
+	static constexpr auto MashPoorWindow = 500'000'000ns;
+
 	// An immediate player input to the cursor's current position.
 	struct LaneInput {
 		Chart::LaneType lane;
@@ -151,6 +157,8 @@ auto Cursor::advance_one_sample(Func&& func, span<LaneInput const> inputs, bool 
 	sample_progress += 1;
 	auto const progress_ns = dev::Audio::samples_to_ns(sample_progress);
 	ASSUME(chart->lanes.size() == lane_progress.size());
+
+	// Trigger inputs if unplayable or autoplay
 	for (auto idx: irange(0zu, chart->lanes.size())) {
 		auto const& lane = chart->lanes[idx];
 		auto& progress = lane_progress[idx];
@@ -167,11 +175,28 @@ auto Cursor::advance_one_sample(Func&& func, span<LaneInput const> inputs, bool 
 		}
 	}
 
+	// Trigger manual inputs
 	if (!autoplay && !inputs.empty()) {
 		for (auto const& input: inputs)
 			trigger_lane_input(input.lane, input.state);
 	}
 
+	// Detect missed notes
+	for (auto idx: irange(0zu, chart->lanes.size())) {
+		auto const& lane = chart->lanes[idx];
+		if (!lane.playable) continue;
+		auto& progress = lane_progress[idx];
+		if (progress.next_note >= lane.notes.size()) continue;
+		auto const& note = lane.notes[progress.next_note];
+		if (progress_ns - note.timestamp > BadWindow) {
+			progress.next_note += 1;
+			notes_judged += 1;
+			if (progress.next_note >= lane.notes.size())
+				progress.active_slot = lane.notes[progress.next_note].wav_slot;
+		}
+	}
+
+	// Function to progress audio playback of a sample in a slot
 	auto play_slot = [&](vector<dev::Sample> const& slot, WavSlotProgress& progress) {
 		if (progress.playback_pos == WavSlotProgress::Stopped) return;
 		auto const result = slot[progress.playback_pos];
@@ -182,6 +207,7 @@ auto Cursor::advance_one_sample(Func&& func, span<LaneInput const> inputs, bool 
 		chart_ended = false;
 	};
 
+	// Advance sample playback
 	if (use_bb) {
 		auto window_id = clamp<usize>(progress_ns / SlotBB::WindowSize, 0zu, chart->slot_bb.windows.size() - 1);
 		auto const& window = chart->slot_bb.windows[window_id];
