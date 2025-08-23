@@ -291,7 +291,7 @@ inline void Playfield::enqueue_lane(Renderer::Queue& queue, ivec2 position, int3
 		{width, length},
 		lane_background_color(lane.visual)});
 	for (auto const& note: lane.notes) {
-		if (note.y_pos < 0.0f) continue;
+		if (note.y_pos + note.ln_height < 0.0f) continue;
 		auto const y_pos_clipped = max(0.0f, note.y_pos);
 		auto const ln_overflow = max(0.0f, -note.y_pos);
 		auto const ln_height_clipped = note.ln_height - ln_overflow;

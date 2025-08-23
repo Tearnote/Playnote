@@ -66,6 +66,8 @@ private:
 	usize notes_judged = 0zu;
 	array<LaneProgress, +Chart::LaneType::Size> lane_progress = {};
 	vector<WavSlotProgress> wav_slot_progress;
+
+	void trigger_lane_input(Chart::LaneType lane, bool state);
 };
 
 [[nodiscard]] inline auto get_bpm_section(nanoseconds timestamp, span<BPMChange const> bpm_changes) -> BPMChange const&
@@ -103,6 +105,37 @@ inline void Cursor::fast_forward(usize samples)
 	for (auto const i: irange(0zu, samples)) advance_one_sample([](dev::Sample){});
 }
 
+inline void Cursor::trigger_lane_input(Chart::LaneType lane_type, bool state)
+{
+	auto const& lane = chart->lanes[+lane_type];
+	auto& progress = lane_progress[+lane_type];
+
+	// Judge next note
+	if (state && progress.next_note < lane.notes.size()) {
+		auto const& note = lane.notes[progress.next_note];
+		progress.active_slot = note.wav_slot;
+		if (!note.type_is<Note::LN>()) {
+			if (lane.playable) notes_judged += 1;
+			progress.next_note += 1;
+		} else {
+			progress.ln_active = true;
+		}
+	}
+
+	if (!state && progress.ln_active && progress.next_note < lane.notes.size()) {
+		auto const& note = lane.notes[progress.next_note];
+		if (note.type_is<Note::LN>()) {
+			if (lane.playable) notes_judged += 1;
+			progress.next_note += 1;
+			progress.ln_active = false;
+		}
+	}
+
+	// Trigger associated sample
+	if (state && lane.audible && !chart->wav_slots[progress.active_slot].empty())
+		wav_slot_progress[progress.active_slot].playback_pos = 0;
+}
+
 template<callable<void(dev::Sample)> Func>
 auto Cursor::advance_one_sample(Func&& func, bool use_bb) -> bool
 {
@@ -113,26 +146,16 @@ auto Cursor::advance_one_sample(Func&& func, bool use_bb) -> bool
 	for (auto idx: irange(0zu, chart->lanes.size())) {
 		auto const& lane = chart->lanes[idx];
 		auto& progress = lane_progress[idx];
-		auto const& note = lane.notes[progress.next_note];
 		if (progress.next_note >= lane.notes.size()) continue;
-		// Autoplay either all or just unplayable notes, depending on autoplay enabled/disabled
-		if (progress_ns >= note.timestamp) {
-			if ((autoplay || !lane.playable) &&
-				(note.type_is<Note::Simple>() || (note.type_is<Note::LN>() && progress_ns >= note.timestamp + note.params<Note::LN>().length))) {
-				progress.next_note += 1;
-				progress.active_slot = note.wav_slot;
-				if (lane.playable) notes_judged += 1;
-				if (note.type_is<Note::LN>()) {
-					progress.ln_active = false;
-					continue;
-				}
+		auto const& note = lane.notes[progress.next_note];
+		if (autoplay || !lane.playable) {
+			if (progress_ns >= note.timestamp && !progress.ln_active) {
+				trigger_lane_input(Chart::LaneType{idx}, true);
+				if (!note.type_is<Note::LN>())
+					trigger_lane_input(Chart::LaneType{idx}, false);
 			}
-			if (!lane.audible) continue; // We still mark the note triggered, but that's it
-			if (chart->wav_slots[note.wav_slot].empty()) continue;
-			if (note.type_is<Note::Simple>() || (note.type_is<Note::LN>() && !progress.ln_active)) {
-				wav_slot_progress[note.wav_slot].playback_pos = 0;
-				if (note.type_is<Note::LN>()) progress.ln_active = true;
-			}
+			if (note.type_is<Note::LN>() && progress_ns >= note.timestamp + note.params<Note::LN>().length)
+				trigger_lane_input(Chart::LaneType{idx}, false);
 		}
 	}
 
