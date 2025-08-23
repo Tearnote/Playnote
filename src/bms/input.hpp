@@ -23,7 +23,7 @@ struct Input {
 
 class Mapper {
 public:
-	auto from_key(threads::KeyInput const&, audio::Player const&) -> optional<Input>;
+	[[nodiscard]] auto from_key(threads::KeyInput const&, audio::Player const&) -> optional<Input>;
 };
 
 inline auto Mapper::from_key(threads::KeyInput const& key, audio::Player const& player) -> optional<Input>

@@ -691,7 +691,7 @@ void calculate_metrics(Chart& chart, Func&& progress)
 {
 	chart.metrics.playstyle = determine_playstyle(chart.lanes);
 	calculate_note_metrics(chart.lanes, chart.metrics);
-	calculate_audio_metrics(Cursor{chart}, chart.metrics, progress);
+	calculate_audio_metrics(Cursor{chart, true}, chart.metrics, progress);
 	chart.metrics.density = calculate_density_distribution(chart.lanes, chart.metrics.chart_duration, 125ms, 2s, progress);
 	chart.metrics.features = calculate_features(chart);
 }

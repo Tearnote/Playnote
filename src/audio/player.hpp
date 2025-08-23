@@ -25,7 +25,7 @@ public:
 	~Player() { mixer.remove_generator(*this); }
 
 	// Attach a chart to the player. A new cursor will be created for it.
-	void play(bms::Chart const&, bool paused = false);
+	void play(bms::Chart const&, bool autoplay, bool paused = false);
 
 	// Return the currently playing chart. Requires that a chart is attached.
 	[[nodiscard]] auto get_chart() const -> bms::Chart const& { return cursor->get_chart(); }
@@ -68,9 +68,9 @@ private:
 	nanoseconds timer_slop;
 };
 
-inline void Player::play(bms::Chart const& chart, bool paused)
+inline void Player::play(bms::Chart const& chart, bool autoplay, bool paused)
 {
-	cursor.emplace(chart);
+	cursor.emplace(chart, autoplay);
 	gain = chart.metrics.gain;
 	ASSERT(gain > 0);
 	timer_slop = glfw.get_time();

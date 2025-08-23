@@ -20,7 +20,7 @@ namespace playnote::bms {
 class Cursor {
 public:
 	// Create a cursor for the given chart. The chart's lifetime will be extended by the cursor's.
-	explicit Cursor(Chart const& chart);
+	explicit Cursor(Chart const& chart, bool autoplay);
 
 	// Return the chart the cursor is attached to.
 	[[nodiscard]] auto get_chart() const -> Chart const& { return *chart; }
@@ -61,6 +61,7 @@ private:
 		usize playback_pos = Stopped; // Samples played so far
 	};
 	shared_ptr<Chart const> chart;
+	bool autoplay;
 	usize sample_progress = 0zu;
 	usize notes_judged = 0zu;
 	array<LaneProgress, +Chart::LaneType::Size> lane_progress = {};
@@ -76,8 +77,9 @@ private:
 	return *bpm_section.begin();
 }
 
-inline Cursor::Cursor(Chart const& chart):
-	chart{chart.shared_from_this()}
+inline Cursor::Cursor(Chart const& chart, bool autoplay):
+	chart{chart.shared_from_this()},
+	autoplay{autoplay}
 {
 	wav_slot_progress.resize(chart.wav_slots.size());
 	for (auto idx: irange(0zu, +Chart::LaneType::Size)) {
@@ -111,10 +113,12 @@ auto Cursor::advance_one_sample(Func&& func, bool use_bb) -> bool
 	for (auto idx: irange(0zu, chart->lanes.size())) {
 		auto const& lane = chart->lanes[idx];
 		auto& progress = lane_progress[idx];
-		if (progress.next_note >= lane.notes.size()) continue;
 		auto const& note = lane.notes[progress.next_note];
+		if (progress.next_note >= lane.notes.size()) continue;
 		if (progress_ns >= note.timestamp) {
-			if (note.type_is<Note::Simple>() || (note.type_is<Note::LN>() && progress_ns >= note.timestamp + note.params<Note::LN>().length)) {
+			// Autoplay
+			if ((autoplay || !lane.playable) &&
+				(note.type_is<Note::Simple>() || (note.type_is<Note::LN>() && progress_ns >= note.timestamp + note.params<Note::LN>().length))) {
 				progress.next_note += 1;
 				progress.active_slot = note.wav_slot;
 				if (lane.playable) notes_judged += 1;
