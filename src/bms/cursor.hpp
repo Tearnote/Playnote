@@ -79,7 +79,7 @@ public:
 private:
 	struct LaneProgress {
 		usize next_note; // Index of the earliest note that hasn't been judged yet
-		usize active_slot; // Index of the WAV slot that will be triggred on player input
+		usize active_slot; // Index of the WAV slot that will be triggered on player input
 		bool ln_active; // Is it currently in the middle of an LN?
 		void restart() { *this = {}; }
 	};
@@ -89,8 +89,8 @@ private:
 	};
 	shared_ptr<Chart const> chart;
 	bool autoplay;
-	usize sample_progress = 0zu;
-	usize notes_judged = 0zu;
+	usize sample_progress;
+	usize notes_judged;
 	array<LaneProgress, +Chart::LaneType::Size> lane_progress = {};
 	vector<WavSlotProgress> wav_slot_progress;
 	Judgments judgments;
@@ -205,8 +205,9 @@ auto Cursor::advance_one_sample(Func&& func, span<LaneInput const> inputs, bool 
 		auto& progress = lane_progress[idx];
 		if (progress.next_note >= lane.notes.size()) continue;
 		auto const& note = lane.notes[progress.next_note];
-		if (progress_ns - note.timestamp > BadWindow) {
+		if (progress_ns - note.timestamp > BadWindow && !progress.ln_active) {
 			progress.next_note += 1;
+			judgments.poor += 1;
 			notes_judged += 1;
 			if (progress.next_note >= lane.notes.size())
 				progress.active_slot = lane.notes[progress.next_note].wav_slot;
