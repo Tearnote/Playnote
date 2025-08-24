@@ -69,7 +69,7 @@ private:
 	optional<bms::Cursor> cursor;
 	atomic<bool> paused = true;
 	float gain;
-	nanoseconds timer_slop;
+	nanoseconds timer_slop; // Chart start time according to the CPU timer. Adjusted over time to maintain sync
 	vector<bms::Input> inputs;
 };
 

@@ -24,7 +24,7 @@ public:
 	static constexpr auto     GoodWindow = 116'670'000ns;
 	static constexpr auto      BadWindow = 250'000'000ns;
 	static constexpr auto MashPoorWindow = 500'000'000ns;
-	static constexpr auto LNEarlyRelease = 100'000'000ns;
+	static constexpr auto LNEarlyRelease = 100'000'000ns; // How early can an LN be released and still count as a PGreat
 
 	enum class Rank {
 		AAA,
@@ -43,12 +43,14 @@ public:
 		bool state;
 	};
 
-	struct Judgments {
+	// Totals of each judgment type.
+	struct JudgmentCounts {
 		usize pgreat;
 		usize great;
 		usize good;
 		usize bad;
 		usize poor;
+		// Bad to Great timing indicators for the player's benefit
 		usize early;
 		usize late;
 	};
@@ -69,7 +71,7 @@ public:
 	[[nodiscard]] auto get_judged_notes() const -> usize { return notes_judged; }
 
 	// Return the note judgments.
-	[[nodiscard]] auto get_judgments() const -> Judgments { return judgments; }
+	[[nodiscard]] auto get_judgments() const -> JudgmentCounts { return judgment_counts; }
 
 	// Return current combo.
 	[[nodiscard]] auto get_combo() const -> usize { return combo; }
@@ -117,7 +119,7 @@ private:
 	usize notes_judged;
 	array<LaneProgress, +Chart::LaneType::Size> lane_progress = {};
 	vector<WavSlotProgress> wav_slot_progress;
-	Judgments judgments;
+	JudgmentCounts judgment_counts;
 	usize combo;
 	usize score;
 
@@ -176,7 +178,7 @@ inline void Cursor::restart()
 	notes_judged = 0zu;
 	for (auto& lane: lane_progress) lane.restart();
 	for (auto& slot: wav_slot_progress) slot.playback_pos = WavSlotProgress::Stopped;
-	judgments = {};
+	judgment_counts = {};
 	combo = 0;
 	score = 0;
 
@@ -206,32 +208,32 @@ inline void Cursor::trigger_lane_input(Chart::LaneType lane_type, bool state)
 		if (timing <= MashPoorWindow) {
 			if (timing > BadWindow && lane.playable) {
 				// Mashpoor
-				judgments.poor += 1;
+				judgment_counts.poor += 1;
 			} else {
 				// The note will now be removed by any judgment
 				auto const abs_timing = abs(timing);
 				if (lane.playable) {
 					if (abs_timing <= PGreatWindow) {
-						judgments.pgreat += 1;
+						judgment_counts.pgreat += 1;
 						combo += 1;
 						score += 2;
 					} else {
 						// The note will now add an early or late
 						if (abs_timing <= GreatWindow) {
-							judgments.great += 1;
+							judgment_counts.great += 1;
 							combo += 1;
 							score += 1;
 						} else if (abs_timing <= GoodWindow) {
-							judgments.good += 1;
+							judgment_counts.good += 1;
 							combo += 1;
 						} else {
-							judgments.bad += 1;
+							judgment_counts.bad += 1;
 							combo = 0;
 						}
 						if (timing < 0ns)
-							judgments.late += 1;
+							judgment_counts.late += 1;
 						else
-							judgments.early += 1;
+							judgment_counts.early += 1;
 					}
 				}
 				if (!note.type_is<Note::LN>()) {
@@ -252,10 +254,10 @@ inline void Cursor::trigger_lane_input(Chart::LaneType lane_type, bool state)
 		if (note.type_is<Note::LN>()) {
 			if (lane.playable) {
 				if (note.timestamp + note.params<Note::LN>().length > get_progress_ns()) {
-					judgments.poor += 1;
+					judgment_counts.poor += 1;
 					combo = 0;
 				} else {
-					judgments.pgreat += 1;
+					judgment_counts.pgreat += 1;
 					combo += 1;
 				}
 			}
@@ -310,7 +312,7 @@ auto Cursor::advance_one_sample(Func&& func, span<LaneInput const> inputs, bool 
 		auto const& note = lane.notes[progress.next_note];
 		if (progress_ns - note.timestamp > BadWindow && !progress.ln_active) { // LNs are only advanced by being released
 			progress.next_note += 1;
-			judgments.poor += 1;
+			judgment_counts.poor += 1;
 			notes_judged += 1;
 			combo = 0;
 			if (progress.next_note >= lane.notes.size())

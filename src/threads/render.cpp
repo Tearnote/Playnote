@@ -77,7 +77,7 @@ static void show_scroll_speed_controls(float& scroll_speed)
 	lib::imgui::input_float("Scroll speed", scroll_speed, 0.25f, 1.0f, "%.2f");
 }
 
-static void show_judgments(bms::Cursor::Judgments judgments)
+static void show_judgments(bms::Cursor::JudgmentCounts judgments)
 {
 	lib::imgui::text("PGREAT: {}", judgments.pgreat);
 	lib::imgui::text(" GREAT: {}", judgments.great);
@@ -86,7 +86,7 @@ static void show_judgments(bms::Cursor::Judgments judgments)
 	lib::imgui::text("  POOR: {}", judgments.poor);
 }
 
-static void show_earlylate(bms::Cursor::Judgments judgments)
+static void show_earlylate(bms::Cursor::JudgmentCounts judgments)
 {
 	lib::imgui::text(" Early: {}", judgments.early);
 	lib::imgui::text("  Late: {}", judgments.late);
