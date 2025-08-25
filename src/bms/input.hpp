@@ -32,15 +32,23 @@ inline auto Mapper::from_key(threads::KeyInput const& key) -> optional<Input>
 		.state = key.state,
 	};
 	switch (key.code) {
-	case threads::KeyInput::Code::Q: result.lane = Chart::LaneType::P1_Key1; break;
-	case threads::KeyInput::Code::Two: result.lane = Chart::LaneType::P1_Key2; break;
-	case threads::KeyInput::Code::W: result.lane = Chart::LaneType::P1_Key3; break;
-	case threads::KeyInput::Code::Three: result.lane = Chart::LaneType::P1_Key4; break;
-	case threads::KeyInput::Code::E: result.lane = Chart::LaneType::P1_Key5; break;
-	case threads::KeyInput::Code::Four: result.lane = Chart::LaneType::P1_Key6; break;
-	case threads::KeyInput::Code::R: result.lane = Chart::LaneType::P1_Key7; break;
+	case threads::KeyInput::Code::Q:
+	case threads::KeyInput::Code::A: result.lane = Chart::LaneType::P1_Key1; break;
+	case threads::KeyInput::Code::Two:
+	case threads::KeyInput::Code::S: result.lane = Chart::LaneType::P1_Key2; break;
+	case threads::KeyInput::Code::W:
+	case threads::KeyInput::Code::D: result.lane = Chart::LaneType::P1_Key3; break;
+	case threads::KeyInput::Code::Three:
+	case threads::KeyInput::Code::Space: result.lane = Chart::LaneType::P1_Key4; break;
+	case threads::KeyInput::Code::E:
+	case threads::KeyInput::Code::J: result.lane = Chart::LaneType::P1_Key5; break;
+	case threads::KeyInput::Code::Four:
+	case threads::KeyInput::Code::K: result.lane = Chart::LaneType::P1_Key6; break;
+	case threads::KeyInput::Code::R:
+	case threads::KeyInput::Code::L: result.lane = Chart::LaneType::P1_Key7; break;
 	case threads::KeyInput::Code::Tab:
-	case threads::KeyInput::Code::One: result.lane = Chart::LaneType::P1_KeyS; break;
+	case threads::KeyInput::Code::One:
+	case threads::KeyInput::Code::LeftShift: result.lane = Chart::LaneType::P1_KeyS; break;
 	case threads::KeyInput::Code::O: result.lane = Chart::LaneType::P2_Key1; break;
 	case threads::KeyInput::Code::Zero: result.lane = Chart::LaneType::P2_Key2; break;
 	case threads::KeyInput::Code::P: result.lane = Chart::LaneType::P2_Key3; break;
