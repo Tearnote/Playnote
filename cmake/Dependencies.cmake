@@ -13,6 +13,7 @@ include(FetchContent)
 
 # Local dependencies
 
+find_package(LibArchive REQUIRED) # Archive read/write support
 find_package(OpenSSL REQUIRED) # MD5 hash
 find_package(Vulkan REQUIRED # GPU API
 	COMPONENTS glslc glslangValidator # Shader compiler
