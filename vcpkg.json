@@ -35,10 +35,12 @@
   }, {
     "name" : "ffmpeg",
     "version>=" : "7.1.1#4",
-    "default-features": false,
-    "features": [
-      "avcodec", "avformat", "swresample",
-      "aom", "mp3lame", "openh264", "opus", "soxr", "theora", "vorbis", "vpx"
-    ]
+    "default-features" : false,
+    "features" : [ "avcodec", "avformat", "swresample", "aom", "mp3lame", "openh264", "opus", "soxr", "theora", "vorbis", "vpx" ]
+  }, {
+    "name" : "libarchive",
+    "version>=" : "3.8.1",
+    "default-features" : false,
+    "features" : [ "bzip2", "lz4", "lzma", "lzo", "zstd" ]
   } ]
 }
