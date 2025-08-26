@@ -123,9 +123,17 @@ auto init(bool exclusive_mode, function<void(span<Sample>)>&& processor) -> Cont
 	ret_check(enumerator->GetDefaultAudioEndpoint(eRender, eMultimedia, &device), "Failed to retrieve default audio device");
 	enumerator->Release();
 
+	auto* client = static_cast<IAudioClient3*>(nullptr);
+	ret_check(device->Activate(__uuidof(IAudioClient3), CLSCTX_ALL, nullptr, reinterpret_cast<void**>(&client)), "Failed to retrieve IAudioClient3 interface");
+
 	auto sample_format = SampleFormat{};
+	auto sample_rate = 0u;
 	if (!exclusive_mode) {
 		sample_format = SampleFormat::Float32;
+		auto* mix_format = static_cast<WAVEFORMATEX*>(nullptr);
+		ret_check(client->GetMixFormat(&mix_format), "Failed to retrieve shared mixer format");
+		sample_rate = mix_format->nSamplesPerSec;
+		CoTaskMemFree(mix_format);
 	} else {
 		auto* properties = static_cast<IPropertyStore*>(nullptr);
 		ret_check(device->OpenPropertyStore(STGM_READ, &properties), "Failed to open property store");
@@ -140,19 +148,15 @@ auto init(bool exclusive_mode, function<void(span<Sample>)>&& processor) -> Cont
 		else if (exclusive_format->SubFormat == KSDATAFORMAT_SUBTYPE_PCM && exclusive_format->Samples.wValidBitsPerSample == 24)
 			sample_format = SampleFormat::Int24;
 		else throw runtime_error{"Unknown WASAPI exclusive mode device-native sample format"};
+		sample_rate = exclusive_format->Format.nSamplesPerSec;
 	}
 
-	auto* client = static_cast<IAudioClient3*>(nullptr);
-	ret_check(device->Activate(__uuidof(IAudioClient3), CLSCTX_ALL, nullptr, reinterpret_cast<void**>(&client)), "Failed to retrieve IAudioClient3 interface");
-
-	auto* mix_format = static_cast<WAVEFORMATEX*>(nullptr);
-	ret_check(client->GetMixFormat(&mix_format), "Failed to retrieve shared mixer format");
 	auto f32 = WAVEFORMATEXTENSIBLE{
 		.Format = WAVEFORMATEX{
 			.wFormatTag = WAVE_FORMAT_EXTENSIBLE,
 			.nChannels = 2,
-			.nSamplesPerSec = mix_format->nSamplesPerSec,
-			.nAvgBytesPerSec = mix_format->nSamplesPerSec * (32 / 8 * 2),
+			.nSamplesPerSec = sample_rate,
+			.nAvgBytesPerSec = sample_rate * (32 / 8 * 2),
 			.nBlockAlign = 8,
 			.wBitsPerSample = 32,
 			.cbSize = sizeof(WAVEFORMATEXTENSIBLE) - sizeof(WAVEFORMATEX),
@@ -165,8 +169,8 @@ auto init(bool exclusive_mode, function<void(span<Sample>)>&& processor) -> Cont
 		.Format = WAVEFORMATEX{
 			.wFormatTag = WAVE_FORMAT_EXTENSIBLE,
 			.nChannels = 2,
-			.nSamplesPerSec = mix_format->nSamplesPerSec,
-			.nAvgBytesPerSec = mix_format->nSamplesPerSec * (16 / 8 * 2),
+			.nSamplesPerSec = sample_rate,
+			.nAvgBytesPerSec = sample_rate * (16 / 8 * 2),
 			.nBlockAlign = 4,
 			.wBitsPerSample = 16,
 			.cbSize = sizeof(WAVEFORMATEXTENSIBLE) - sizeof(WAVEFORMATEX),
@@ -179,8 +183,8 @@ auto init(bool exclusive_mode, function<void(span<Sample>)>&& processor) -> Cont
 		.Format = WAVEFORMATEX{
 			.wFormatTag = WAVE_FORMAT_EXTENSIBLE,
 			.nChannels = 2,
-			.nSamplesPerSec = mix_format->nSamplesPerSec,
-			.nAvgBytesPerSec = mix_format->nSamplesPerSec * (32 / 8 * 2),
+			.nSamplesPerSec = sample_rate,
+			.nAvgBytesPerSec = sample_rate * (32 / 8 * 2),
 			.nBlockAlign = 8,
 			.wBitsPerSample = 32,
 			.cbSize = sizeof(WAVEFORMATEXTENSIBLE) - sizeof(WAVEFORMATEX),
@@ -197,7 +201,6 @@ auto init(bool exclusive_mode, function<void(span<Sample>)>&& processor) -> Cont
 		default: throw logic_error{"Unknown WASAPI sample format"};
 		}
 	}();
-	CoTaskMemFree(mix_format);
 
 	if (!exclusive_mode) {
 		auto default_period = uint32{0};
