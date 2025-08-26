@@ -31,6 +31,7 @@ else()
 	add_compile_options("/arch:AVX2;/fp:fast")
 	add_compile_options("/EHsc;/GR")
 	add_compile_options("$<IF:$<CONFIG:Debug>,/Od;/GS,/O2;/GS->")
+	add_link_options("/MANIFEST:EMBED;/MANIFESTINPUT:${PROJECT_SOURCE_DIR}/Playnote.manifest")
 endif()
 # Communicate build type to the project
 add_compile_definitions("BUILD_TYPE=$<$<CONFIG:Debug>:BUILD_DEBUG>$<$<CONFIG:RelWithDebInfo>:BUILD_RELDEB>$<$<CONFIG:Release>:BUILD_RELEASE>")
@@ -56,9 +57,11 @@ add_executable(Playnote
 	src/main.cpp
 )
 if(UNIX)
-	target_sources(Playnote PRIVATE src/lib/pipewire.cpp)
+	target_sources(Playnote PRIVATE
+		src/lib/pipewire.cpp)
 else()
-	target_sources(Playnote PRIVATE src/lib/wasapi.cpp)
+	target_sources(Playnote PRIVATE
+		src/lib/wasapi.cpp)
 endif()
 target_precompile_headers(Playnote PRIVATE src/preamble.hpp)
 target_include_directories(Playnote PRIVATE src) # All includes start from src as root
