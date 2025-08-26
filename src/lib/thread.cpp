@@ -20,6 +20,7 @@ Implementation file for lib/thread.hpp.
 #include <pthread.h>
 #endif
 #include "preamble.hpp"
+#include "config.hpp"
 
 namespace playnote::lib::thread {
 
@@ -49,6 +50,13 @@ void end_scheduler_period([[maybe_unused]] milliseconds period) noexcept
 {
 #ifdef _WIN32
 	timeEndPeriod(period.count());
+#endif
+}
+
+void block_with_message(string_view message)
+{
+#ifdef _WIN32
+	MessageBox(nullptr, string{message}.c_str(), AppTitle, MB_OK);
 #endif
 }
 

@@ -47,7 +47,7 @@ template <typename... Args>
 void syserror(format_string<Args...> fmt, Args&&... args)
 {
 #ifdef _WIN32
-	// TODO
+	lib::thread::block_with_message(format(fmt, forward<Args>(args)...));
 #else
 	print(stderr, fmt, forward<Args>(args)...);
 #endif

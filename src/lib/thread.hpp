@@ -24,4 +24,8 @@ void begin_scheduler_period([[maybe_unused]] milliseconds period);
 // End a previously started thread scheduler period. Failure is ignored.
 void end_scheduler_period([[maybe_unused]] milliseconds period) noexcept;
 
+// Block the current thread with a user-visible message box. Intended for early critical errors.
+// Windows-only; on Linux use stderr output, as the console is always available there.
+void block_with_message(string_view message);
+
 }
