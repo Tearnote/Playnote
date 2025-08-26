@@ -9,7 +9,7 @@ Various OS-specific utilities.
 #pragma once
 #include "preamble.hpp"
 #include "config.hpp"
-#include "lib/thread.hpp"
+#include "lib/os.hpp"
 
 namespace playnote::dev {
 
@@ -20,10 +20,10 @@ public:
 	explicit SchedulerPeriod(milliseconds period):
 		period{period}
 	{
-		lib::thread::begin_scheduler_period(period);
+		lib::os::begin_scheduler_period(period);
 	}
 
-	~SchedulerPeriod() noexcept { lib::thread::end_scheduler_period(period); }
+	~SchedulerPeriod() noexcept { lib::os::end_scheduler_period(period); }
 
 	SchedulerPeriod(SchedulerPeriod const&) = delete;
 	auto operator=(SchedulerPeriod const&) -> SchedulerPeriod& = delete;
@@ -38,7 +38,7 @@ private:
 inline void name_current_thread(string_view name)
 {
 	if constexpr (!ThreadNamesEnabled) return;
-	lib::thread::name_current(name);
+	lib::os::name_current_thread(name);
 }
 
 // Communicate a critical pre-init error to the user.
@@ -47,7 +47,7 @@ template <typename... Args>
 void syserror(format_string<Args...> fmt, Args&&... args)
 {
 #ifdef _WIN32
-	lib::thread::block_with_message(format(fmt, forward<Args>(args)...));
+	lib::os::block_with_message(format(fmt, forward<Args>(args)...));
 #else
 	print(stderr, fmt, forward<Args>(args)...);
 #endif

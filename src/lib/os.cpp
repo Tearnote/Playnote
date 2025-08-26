@@ -6,7 +6,7 @@ lib/thread.cpp:
 Implementation file for lib/thread.hpp.
 */
 
-#include "lib/thread.hpp"
+#include "lib/os.hpp"
 
 #ifdef _WIN32
 #ifndef NOMINMAX
@@ -16,13 +16,14 @@ Implementation file for lib/thread.hpp.
 #undef WIN32_LEAN_AND_MEAN
 #endif
 #include <Windows.h>
+#include <shellapi.h>
 #else
 #include <pthread.h>
 #endif
 #include "preamble.hpp"
 #include "config.hpp"
 
-namespace playnote::lib::thread {
+namespace playnote::lib::os {
 
 void name_current(string_view name)
 {

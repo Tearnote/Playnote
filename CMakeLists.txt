@@ -44,12 +44,12 @@ add_executable(Playnote
 	src/lib/openssl.cpp
 	src/lib/ffmpeg.cpp
 	src/lib/vulkan.cpp
-	src/lib/thread.cpp
 	src/lib/debug.cpp
 	src/lib/imgui.cpp
 	src/lib/glfw.cpp
 	src/lib/icu.cpp
 	src/lib/vuk.cpp
+	src/lib/os.cpp
 	src/threads/render.cpp
 	src/threads/audio.cpp
 	src/threads/input.cpp

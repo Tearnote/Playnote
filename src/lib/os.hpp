@@ -2,18 +2,18 @@
 This software is dual-licensed. For more details, please consult LICENSE.txt.
 Copyright (c) 2025 Tearnote (Hubert Maraszek)
 
-lib/thread.hpp:
-Wrapper for OS-specific thread handling functions not provided by STL.
+lib/os.hpp:
+Wrapper for OS-specific functions not provided by STL.
 */
 
 #pragma once
 #include "preamble.hpp"
 
-namespace playnote::lib::thread {
+namespace playnote::lib::os {
 
 // Set current thread name in the OS scheduler, which can help with debugging.
 // Throws runtime_error on failure.
-void name_current(string_view name);
+void name_current_thread(string_view name);
 
 // Set the thread scheduler period to at most the provided value. This can increase the resolution
 // of thread sleep and yield. Pair with a matching callto end_thread_scheduler_period
