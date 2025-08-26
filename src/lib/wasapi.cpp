@@ -24,16 +24,13 @@ namespace playnote::lib::wasapi {
 
 static void ret_check(HRESULT hr, string_view message = "WASAPI error")
 {
-	if (FAILED(hr)) {
-		CRIT("{}: {}", message, hr);
-		throw runtime_error_fmt("{}: {}", message, hr);
-	}
+	if (FAILED(hr)) throw runtime_error_fmt("{}: {:#x}", message, hr);
 }
 
 template<typename T>
 static auto ptr_check(T* ptr) -> T*
 {
-	if (!ptr) throw runtime_error_fmt("WASAPI error: {}", GetLastError());
+	if (!ptr) throw runtime_error_fmt("WASAPI error: {:#x}", GetLastError());
 	return ptr;
 }
 
@@ -61,7 +58,7 @@ static void buffer_thread(Context_t* ctx, HANDLE buffer_event)
 {
 	auto rtprio_taskid = 0ul;
 	auto rtprio = ptr_check(AvSetMmThreadCharacteristics(TEXT("Pro Audio"), &rtprio_taskid));
-	ret_check(ctx->client->Start());
+	ret_check(ctx->client->Start(), "Failed to start WASAPI stream");
 	auto client_buffer = vector<Sample>{};
 
 	while (ctx->running_signal->load()) {
@@ -73,13 +70,13 @@ static void buffer_thread(Context_t* ctx, HANDLE buffer_event)
 		auto padding = uint32{0};
 		auto actual_size = uint32{0};
 		if (!ctx->exclusive_mode) {
-			ret_check(ctx->client->GetCurrentPadding(&padding));
+			ret_check(ctx->client->GetCurrentPadding(&padding), "Failed to retrieve buffer padding");
 			actual_size = ctx->properties.buffer_size - padding;
 		} else {
 			actual_size = ctx->properties.buffer_size;
 		}
 		auto* buffer = static_cast<byte*>(nullptr);
-		ret_check(ctx->renderer->GetBuffer(actual_size, reinterpret_cast<BYTE**>(&buffer)));
+		ret_check(ctx->renderer->GetBuffer(actual_size, reinterpret_cast<BYTE**>(&buffer)), "Failed to retrieve WASAPI buffer");
 		client_buffer.resize(actual_size);
 		fill(client_buffer, Sample{});
 
@@ -107,7 +104,7 @@ static void buffer_thread(Context_t* ctx, HANDLE buffer_event)
 			break;
 		default: throw logic_error{"Unknown WASAPI sample format"};
 		}
-		ret_check(ctx->renderer->ReleaseBuffer(client_buffer.size(), 0));
+		ret_check(ctx->renderer->ReleaseBuffer(client_buffer.size(), 0), "Failed to release WASAPI buffer");
 	}
 
 	ctx->client->Stop();
@@ -121,9 +118,9 @@ auto init(bool exclusive_mode, function<void(span<Sample>)>&& processor) -> Cont
 	ret_check(CoInitializeEx(nullptr, COINIT_MULTITHREADED), "Failed to initialize COM");
 	auto* enumerator = static_cast<IMMDeviceEnumerator*>(nullptr);
 	ret_check(CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr, CLSCTX_ALL, __uuidof(IMMDeviceEnumerator),
-		reinterpret_cast<void**>(&enumerator)));
+		reinterpret_cast<void**>(&enumerator)), "Failed to retrieve IMMDevice interface");
 	auto* device = static_cast<IMMDevice*>(nullptr);
-	ret_check(enumerator->GetDefaultAudioEndpoint(eRender, eMultimedia, &device));
+	ret_check(enumerator->GetDefaultAudioEndpoint(eRender, eMultimedia, &device), "Failed to retrieve default audio device");
 	enumerator->Release();
 
 	auto sample_format = SampleFormat{};
@@ -131,10 +128,10 @@ auto init(bool exclusive_mode, function<void(span<Sample>)>&& processor) -> Cont
 		sample_format = SampleFormat::Float32;
 	} else {
 		auto* properties = static_cast<IPropertyStore*>(nullptr);
-		ret_check(device->OpenPropertyStore(STGM_READ, &properties));
+		ret_check(device->OpenPropertyStore(STGM_READ, &properties), "Failed to open property store");
 		auto format_prop = PROPVARIANT{};
 		PropVariantInit(&format_prop);
-		ret_check(properties->GetValue(PKEY_AudioEngine_DeviceFormat, &format_prop));
+		ret_check(properties->GetValue(PKEY_AudioEngine_DeviceFormat, &format_prop), "Failed to retrieve audio device preferred format");
 		auto* exclusive_format = reinterpret_cast<WAVEFORMATEXTENSIBLE*>(format_prop.blob.pBlobData);
 		if (exclusive_format->SubFormat == KSDATAFORMAT_SUBTYPE_IEEE_FLOAT && exclusive_format->Samples.wValidBitsPerSample == 32)
 			sample_format = SampleFormat::Float32;
@@ -146,10 +143,10 @@ auto init(bool exclusive_mode, function<void(span<Sample>)>&& processor) -> Cont
 	}
 
 	auto* client = static_cast<IAudioClient3*>(nullptr);
-	ret_check(device->Activate(__uuidof(IAudioClient3), CLSCTX_ALL, nullptr, reinterpret_cast<void**>(&client)));
+	ret_check(device->Activate(__uuidof(IAudioClient3), CLSCTX_ALL, nullptr, reinterpret_cast<void**>(&client)), "Failed to retrieve IAudioClient3 interface");
 
 	auto* mix_format = static_cast<WAVEFORMATEX*>(nullptr);
-	ret_check(client->GetMixFormat(&mix_format));
+	ret_check(client->GetMixFormat(&mix_format), "Failed to retrieve shared mixer format");
 	auto f32 = WAVEFORMATEXTENSIBLE{
 		.Format = WAVEFORMATEX{
 			.wFormatTag = WAVE_FORMAT_EXTENSIBLE,
@@ -208,55 +205,55 @@ auto init(bool exclusive_mode, function<void(span<Sample>)>&& processor) -> Cont
 		auto min_period = uint32{0};
 		auto max_period = uint32{0};
 		ret_check(client->GetSharedModeEnginePeriod(reinterpret_cast<WAVEFORMATEX*>(&format),
-			&default_period, &fundamental_period, &min_period, &max_period));
+			&default_period, &fundamental_period, &min_period, &max_period), "Failed to retrieve shared mode engine period");
 		ret_check(client->InitializeSharedAudioStream(AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
-			min_period, reinterpret_cast<WAVEFORMATEX*>(&format), nullptr));
+			min_period, reinterpret_cast<WAVEFORMATEX*>(&format), nullptr), "Failed to initialize WASAPI audio stream");
 	} else {
 		auto default_period = REFERENCE_TIME{0};
 		auto min_period = REFERENCE_TIME{0};
-		ret_check(client->GetDevicePeriod(&default_period, &min_period));
+		ret_check(client->GetDevicePeriod(&default_period, &min_period), "Failed to retrieve audio device period");
 		auto hr = client->Initialize(AUDCLNT_SHAREMODE_EXCLUSIVE, AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
 			min_period, min_period, reinterpret_cast<WAVEFORMATEX*>(&format), nullptr);
 		if (hr == AUDCLNT_E_BUFFER_SIZE_NOT_ALIGNED) {
 			auto buffer_size = uint32{};
-			ret_check(client->GetBufferSize(&buffer_size));
+			ret_check(client->GetBufferSize(&buffer_size), "Failed to retrieve audio buffer size");
 			auto period = static_cast<REFERENCE_TIME>((10000.0 * 1000 / format.Format.nSamplesPerSec * buffer_size) + 0.5);
 			client->Release();
-			ret_check(device->Activate(__uuidof(IAudioClient3), CLSCTX_ALL, nullptr, reinterpret_cast<void**>(&client)));
+			ret_check(device->Activate(__uuidof(IAudioClient3), CLSCTX_ALL, nullptr, reinterpret_cast<void**>(&client)), "Failed to re-retrieve IAudioClient3 interface");
 			ret_check(client->Initialize(AUDCLNT_SHAREMODE_EXCLUSIVE, AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
-				period, period, reinterpret_cast<WAVEFORMATEX*>(&format), nullptr));
+				period, period, reinterpret_cast<WAVEFORMATEX*>(&format), nullptr), "Failed to re-initialize WASAPI audio stream");
 		} else {
-			ret_check(hr);
+			ret_check(hr, "Failed to initialize WASAPI audio stream");
 		}
 	}
 	device->Release();
 	auto buffer_event = ptr_check(CreateEvent(nullptr, false, false, nullptr));
-	ret_check(client->SetEventHandle(buffer_event));
+	ret_check(client->SetEventHandle(buffer_event), "Failed to set WASAPI buffer callback");
 	auto buffer_size = uint32{0};
-	ret_check(client->GetBufferSize(&buffer_size));
+	ret_check(client->GetBufferSize(&buffer_size), "Failed to retrieve audio buffer size");
 	auto* renderer = static_cast<IAudioRenderClient*>(nullptr);
-	ret_check(client->GetService(__uuidof(IAudioRenderClient), reinterpret_cast<void**>(&renderer)));
+	ret_check(client->GetService(__uuidof(IAudioRenderClient), reinterpret_cast<void**>(&renderer)), "Failed to retrieve IAudioRenderClient interface");
 	auto running_signal = make_shared<atomic<bool>>(true);
 
 	// Prefill first buffer
 	if (sample_format == SampleFormat::Int16) {
 		auto* buffer = static_cast<Int16Sample*>(nullptr);
-		ret_check(renderer->GetBuffer(buffer_size, reinterpret_cast<BYTE**>(&buffer)));
+		ret_check(renderer->GetBuffer(buffer_size, reinterpret_cast<BYTE**>(&buffer)), "Failed to retrieve WASAPI buffer");
 		auto buffer_span = span{buffer, buffer_size};
 		fill(buffer_span, Int16Sample{0, 0});
-		ret_check(renderer->ReleaseBuffer(buffer_size, 0));
+		ret_check(renderer->ReleaseBuffer(buffer_size, 0), "Failed to release WASAPI buffer");
 	} else if (sample_format == SampleFormat::Int24) {
 		auto* buffer = static_cast<Int24Sample*>(nullptr);
-		ret_check(renderer->GetBuffer(buffer_size, reinterpret_cast<BYTE**>(&buffer)));
+		ret_check(renderer->GetBuffer(buffer_size, reinterpret_cast<BYTE**>(&buffer)), "Failed to retrieve WASAPI buffer");
 		auto buffer_span = span{buffer, buffer_size};
 		fill(buffer_span, Int24Sample{0, 0});
-		ret_check(renderer->ReleaseBuffer(buffer_size, 0));
+		ret_check(renderer->ReleaseBuffer(buffer_size, 0), "Failed to release WASAPI buffer");
 	} else {
 		auto* buffer = static_cast<Sample*>(nullptr);
-		ret_check(renderer->GetBuffer(buffer_size, reinterpret_cast<BYTE**>(&buffer)));
+		ret_check(renderer->GetBuffer(buffer_size, reinterpret_cast<BYTE**>(&buffer)), "Failed to retrieve WASAPI buffer");
 		auto buffer_span = span{buffer, buffer_size};
 		fill(buffer_span, Sample{0.0f, 0.0f});
-		ret_check(renderer->ReleaseBuffer(buffer_size, 0));
+		ret_check(renderer->ReleaseBuffer(buffer_size, 0), "Failed to release WASAPI buffer");
 	}
 
 	*ctx = Context_t{
