@@ -117,7 +117,7 @@ inline void Playfield::notes_from_cursor(bms::Cursor const& cursor, float scroll
 		}
 		auto const ln_height = note.type_is<bms::Note::LN>()? note.params<bms::Note::LN>().height / max_distance : 0.0f;
 		get_lane(type).notes.emplace_back(y_pos, ln_height);
-	});
+	}, true);
 }
 
 inline void Playfield::enqueue(Renderer::Queue& queue)
