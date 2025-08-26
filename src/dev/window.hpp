@@ -63,6 +63,9 @@ public:
 	// Size of the window's framebuffer.
 	[[nodiscard]] auto size() const -> uvec2;
 
+	// Scale factor of the window, useful for converting pixel coordinates.
+	[[nodiscard]] auto scale() const -> float;
+
 	// Run the provided function on any keyboard key press/release.
 	// Function is provided with the keycode and key state (true for press, false for release).
 	void register_key_callback(function<void(KeyCode, bool)>&& func)
@@ -162,6 +165,11 @@ inline Window::Window(GLFW& glfw, string_view title, uvec2 size):
 inline auto Window::size() const -> uvec2
 {
 	return lib::glfw::get_window_framebuffer_size(window_handle.get());
+}
+
+inline auto Window::scale() const -> float
+{
+	return lib::glfw::get_window_content_scale(window_handle.get());
 }
 
 inline auto Window::create_surface(lib::vk::Instance const& instance) -> lib::vk::Surface

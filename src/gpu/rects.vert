@@ -21,10 +21,10 @@ layout(binding = 0, std430) restrict readonly buffer Rects {
 
 layout (constant_id = 0) const uint ViewportWidth = 0;
 layout (constant_id = 1) const uint ViewportHeight = 0;
+layout (constant_id = 2) const float WindowScale = 0.0;
 const uvec2 ViewportSize = uvec2(ViewportWidth, ViewportHeight);
 
 layout(location = 0) out vec4 f_color;
-
 
 void main() {
 	int instance = gl_VertexIndex / 6;
@@ -42,6 +42,7 @@ void main() {
 		case 5: offset = vec2(1, 1); break;
 	}
 	vec2 pos = vec2(rect.pos + rect.size * offset);
+	pos *= WindowScale;
 	pos += vec2(0.5); // Half pixel offset to center the vertex on the pixel
 	pos /= vec2(ViewportSize); // from 0.0 to 1.0
 	pos = pos * 2.0 - 1.0; // from -1.0 to 1.0 (clip space)

@@ -249,6 +249,10 @@ void set_window_mouse_button_handler(Window window, Func&& func)
 // Throws runtime_error on failure.
 [[nodiscard]] auto get_window_framebuffer_size(Window window) -> uvec2;
 
+// Return the scale of the display's content.
+// Throws runtime_error on failure.
+[[nodiscard]] auto get_window_content_scale(Window window) -> float;
+
 // Create a Vulkan surface for the window.
 // Throws runtime_error on failure.
 [[nodiscard]] auto create_window_surface(Window window, vk::Instance instance) -> vk::Surface;

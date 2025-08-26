@@ -123,6 +123,16 @@ catch (runtime_error const&) {}
 	return uvec2{static_cast<uint32>(w), static_cast<uint32>(h)};
 }
 
+auto get_window_content_scale(Window window) -> float
+{
+	auto xscale = 0.0f;
+	auto yscale = 0.0f;
+	glfwGetWindowContentScale(window, &xscale, &yscale);
+	ASSERT(xscale == yscale);
+	ASSERT(xscale > 0.0f);
+	return xscale;
+}
+
 [[nodiscard]] auto create_window_surface(Window window, vk::Instance instance) -> vk::Surface
 {
 	auto result = VkSurfaceKHR{nullptr};

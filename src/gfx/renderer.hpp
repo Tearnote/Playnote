@@ -93,12 +93,13 @@ inline auto Renderer::draw_rects(lib::vuk::Allocator& allocator, lib::vuk::Manag
 {
 	auto rects_buf = lib::vuk::create_scratch_buffer(allocator, span{rects});
 	auto pass = lib::vuk::make_pass("rects",
-		[window_size = gpu.get_window().size(), rects_buf, rects_count = rects.size()]
+		[window_size = gpu.get_window().size(), window_scale = gpu.get_window().scale(), rects_buf, rects_count = rects.size()]
 		(lib::vuk::CommandBuffer& cmd, VUK_IA(lib::vuk::Access::eColorWrite) target) {
 		lib::vuk::set_cmd_defaults(cmd)
 			.bind_graphics_pipeline("rects")
 			.bind_buffer(0, 0, rects_buf)
 			.specialize_constants(0, window_size.x()).specialize_constants(1, window_size.y())
+			.specialize_constants(2, window_scale)
 			.draw(6 * rects_count, 1, 0, 0);
 		return target;
 	});
