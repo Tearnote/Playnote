@@ -22,7 +22,15 @@ using namespace playnote; // Can't namespace main()
 
 auto parse_arguments(int argc, char** argv) -> fs::path
 {
-	ASSERT(argc == 2, "Expected one argument: song path");
+	constexpr auto usage_str = "Usage: playnote <BMS file path>";
+	if (argc <= 1) {
+		dev::syserror("{}", usage_str);
+		exit(EXIT_SUCCESS);
+	}
+	if (argc > 2) {
+		dev::syserror("Invalid number of arguments: expected 1, received {}\n{}", argc - 1, usage_str);
+		exit(EXIT_FAILURE);
+	}
 	return fs::path{argv[1]};
 }
 

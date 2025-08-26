@@ -28,6 +28,7 @@ using std::string;
 using std::string_view;
 using std::literals::operator""s;
 using std::literals::operator""sv;
+using fmtquill::format_string;
 using fmtquill::format;
 using fmtquill::print;
 using boost::trim;

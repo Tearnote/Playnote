@@ -41,4 +41,16 @@ inline void name_current_thread(string_view name)
 	lib::thread::name_current(name);
 }
 
+// Communicate a critical pre-init error to the user.
+// Shows a message box on Windows, and prints to stderr on Linux.
+template <typename... Args>
+void syserror(format_string<Args...> fmt, Args&&... args)
+{
+#ifdef _WIN32
+	// TODO
+#else
+	print(stderr, fmt, forward<Args>(args)...);
+#endif
+}
+
 }
