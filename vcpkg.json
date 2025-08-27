@@ -42,5 +42,11 @@
     "version>=" : "3.8.1",
     "default-features" : false,
     "features" : [ "bzip2", "lz4", "lzma", "lzo", "zstd" ]
+  }, {
+    "name" : "vulkan-headers",
+    "version>=" : "1.4.309.0"
+  }, {
+    "name" : "shaderc",
+    "version>=" : "2025.2"
   } ]
 }

@@ -15,9 +15,14 @@ include(FetchContent)
 
 find_package(LibArchive REQUIRED) # Archive read/write support
 find_package(OpenSSL REQUIRED) # MD5 hash
-find_package(Vulkan REQUIRED # GPU API
-	COMPONENTS glslc glslangValidator # Shader compiler
-)
+if(WIN32)
+	find_package(VulkanHeaders REQUIRED)
+	find_package(unofficial-shaderc REQUIRED)
+else()
+	find_package(Vulkan REQUIRED # GPU API
+		COMPONENTS glslc # Shader compiler
+	)
+endif()
 find_package(ICU REQUIRED # Charset detection and conversion
 	COMPONENTS uc i18n
 )
@@ -64,7 +69,7 @@ FetchContent_Declare(volk # Vulkan loader
 )
 FetchContent_MakeAvailable(volk)
 target_compile_definitions(volk PUBLIC VK_NO_PROTOTYPES)
-target_include_directories(volk PUBLIC ${Vulkan_INCLUDE_DIRS})
+target_link_libraries(volk PUBLIC Vulkan::Headers)
 
 FetchContent_Declare(vk-bootstrap # Vulkan initialization
 	GIT_REPOSITORY https://github.com/charles-lunarg/vk-bootstrap
@@ -73,6 +78,7 @@ FetchContent_Declare(vk-bootstrap # Vulkan initialization
 FetchContent_MakeAvailable(vk-bootstrap)
 
 set(VUK_LINK_TO_LOADER OFF CACHE BOOL "" FORCE)
+set(VUK_USE_VULKAN_SDK OFF CACHE BOOL "" FORCE)
 set(VUK_USE_SHADERC OFF CACHE BOOL "" FORCE)
 set(VUK_EXTRA_IMGUI OFF CACHE BOOL "" FORCE)
 set(VUK_EXTRA_INIT OFF CACHE BOOL "" FORCE)
