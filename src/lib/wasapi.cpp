@@ -57,7 +57,7 @@ struct Int24Sample {
 static void buffer_thread(Context_t* ctx, HANDLE buffer_event)
 {
 	auto rtprio_taskid = 0ul;
-	auto rtprio = ptr_check(AvSetMmThreadCharacteristics(TEXT("Pro Audio"), &rtprio_taskid));
+	auto rtprio = ptr_check(AvSetMmThreadCharacteristicsA("Pro Audio", &rtprio_taskid));
 	ret_check(ctx->client->Start(), "Failed to start WASAPI stream");
 	auto client_buffer = vector<Sample>{};
 

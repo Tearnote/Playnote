@@ -63,7 +63,7 @@ void attach_console()
 	}
 
 	// Set console encoding to UTF-8
-	SetConsoleOutputCP(65001);
+	SetConsoleOutputCP(CP_UTF8);
 
 	// Enable ANSI color code support
 	auto out = GetStdHandle(STD_OUTPUT_HANDLE);

@@ -28,7 +28,7 @@ namespace playnote::lib::os {
 void name_current_thread(string_view name)
 {
 #ifdef _WIN32
-	auto const lname = std::wstring{name.begin(), name.end()};
+	auto const lname = std::wstring{name.begin(), name.end()}; // No reencoding; not expecting non-ASCII here
 	auto const err = SetThreadDescription(GetCurrentThread(), lname.c_str());
 	if (FAILED(err))
 		throw runtime_error_fmt("Failed to set thread name: error {}", err);
@@ -57,7 +57,7 @@ void end_scheduler_period([[maybe_unused]] milliseconds period) noexcept
 void block_with_message(string_view message)
 {
 #ifdef _WIN32
-	MessageBox(nullptr, string{message}.c_str(), AppTitle, MB_OK);
+	MessageBoxA(nullptr, string{message}.c_str(), AppTitle, MB_OK);
 #endif
 }
 
