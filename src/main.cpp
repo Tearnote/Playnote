@@ -51,8 +51,16 @@ auto run(fs::path const& song_request) -> int
 	return EXIT_SUCCESS;
 }
 
+#ifndef _WIN32
 auto main(int argc, char** argv) -> int
+#else
+auto WinMain(HINSTANCE, HINSTANCE, LPSTR, int) -> int
+#endif
 try {
+#ifdef _WIN32
+	auto const argc = __argc;
+	auto** argv = __argv;
+#endif
 	lib::dbg::set_assert_handler();
 	if constexpr (BuildType == Build::Debug) lib::dbg::attach_console();
 	auto logger_stub = globals::logger.provide(LogfilePath, LogLevelGlobal);

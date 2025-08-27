@@ -40,7 +40,7 @@ include(cmake/Dependencies.cmake)
 
 # Main target
 
-add_executable(Playnote
+add_executable(Playnote WIN32
 	src/lib/ebur128.cpp
 	src/lib/openssl.cpp
 	src/lib/ffmpeg.cpp
