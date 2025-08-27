@@ -18,6 +18,8 @@ set(SHADER_SOURCES
 
 if(WIN32)
 	find_program(GLSLC glslc REQUIRED)
+else()
+	set(GLSLC ${Vulkan_GLSLC_EXECUTABLE})
 endif()
 
 foreach(SHADER_PATH ${SHADER_SOURCES})

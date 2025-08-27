@@ -54,7 +54,7 @@ void end_scheduler_period([[maybe_unused]] milliseconds period) noexcept
 #endif
 }
 
-void block_with_message(string_view message)
+void block_with_message([[maybe_unused]] string_view message)
 {
 #ifdef _WIN32
 	MessageBoxA(nullptr, string{message}.c_str(), AppTitle, MB_OK);
