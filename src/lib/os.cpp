@@ -25,7 +25,7 @@ Implementation file for lib/thread.hpp.
 
 namespace playnote::lib::os {
 
-void name_current(string_view name)
+void name_current_thread(string_view name)
 {
 #ifdef _WIN32
 	auto const lname = std::wstring{name.begin(), name.end()};
