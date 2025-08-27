@@ -16,6 +16,11 @@ Wrapper for the Quill threaded async logging library.
 #include "preamble.hpp"
 #include "assert.hpp"
 
+// Workaround for compiler warning on Windows
+#ifdef ERROR
+#undef ERROR
+#endif
+
 #define TRACE(...) LOG_TRACE_L1(globals::logger->global, __VA_ARGS__)
 #define DEBUG(...) LOG_DEBUG(globals::logger->global, __VA_ARGS__)
 #define INFO(...) LOG_INFO(globals::logger->global, __VA_ARGS__)
