@@ -9,9 +9,9 @@ Imports for string and text IO.
 #pragma once
 #include <string_view>
 #include <filesystem>
-#include <ranges>
 #include <string>
 #include <boost/algorithm/string/case_conv.hpp>
+#include <boost/algorithm/string/predicate.hpp>
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/lexical_cast.hpp>
@@ -32,11 +32,13 @@ using std::literals::operator""sv;
 using fmtquill::format_string;
 using fmtquill::format;
 using fmtquill::print;
+using boost::iequals;
 using boost::trim;
 using boost::trim_copy;
 using boost::replace_all;
 using boost::to_upper;
 using boost::to_lower;
+using boost::to_lower_copy;
 using boost::lexical_cast;
 using boost::bad_lexical_cast;
 

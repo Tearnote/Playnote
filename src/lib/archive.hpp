@@ -68,7 +68,7 @@ void for_each_entry(Archive archive, Func&& func)
 		auto const ret = archive_read_next_header(archive, &entry);
 		if (ret == ARCHIVE_EOF) break;
 		ret_check(ret, archive);
-		if (!func(archive_entry_pathname(entry))) break;
+		if (!func(string_view{archive_entry_pathname(entry)})) break;
 	}
 }
 

@@ -26,12 +26,12 @@ public:
 	// Open a song folder or archive.
 	explicit Song(fs::path domain);
 
-	// Load a specific BMS file from the song.
+	// Load a specific BMS file from the song. Case-insensitive.
 	// This is potentially slow, as it might need to parse the domain until the file is found.
 	[[nodiscard]] auto load_bms(string_view filename) const -> vector<byte>;
 
 	// Execute the provided function for every file in the song. The function is expected to examine
-	// each file and load its contents if necessary.
+	// each file and load its contents if necessary. Filename case is maintained.
 	template<callable<void(FileRef)> Func>
 	void for_each_file(Func&&);
 
@@ -41,7 +41,10 @@ private:
 		Archive,
 	};
 	fs::path domain;
+	string prefix;
 	DomainType type;
+
+	auto remove_prefix(string_view) const -> string_view;
 };
 
 inline auto Song::FileRef::load() -> vector<byte>
@@ -61,6 +64,32 @@ inline Song::Song(fs::path domain):
 		type = DomainType::Archive;
 	else
 		type = DomainType::Folder;
+
+	if (type == DomainType::Archive) {
+		// Iterate through the archive to find the BMS file with the shortest prefix.
+		constexpr auto BmsExtensions = to_array({".bms", ".bme", ".bml", ".pms"});
+		auto shortest_prefix = string{};
+		auto shortest_prefix_parts = -1zu;
+		auto archive_file = read_file(this->domain);
+		auto archive = lib::archive::open_read(archive_file.contents);
+		lib::archive::for_each_entry(archive, [&](auto pathname) {
+			auto const path = fs::path{pathname};
+			auto const ext = path.extension().string();
+			if (find_if(BmsExtensions, [&](auto const& e) { return iequals(e, ext); }) != BmsExtensions.end()) {
+				auto const parts = distance(path.begin(), path.end());
+				if (parts < shortest_prefix_parts) {
+					shortest_prefix = path.parent_path().string();
+					shortest_prefix_parts = parts;
+				}
+			}
+			return true;
+		});
+		lib::archive::close_read(move(archive));
+
+		if (shortest_prefix_parts == -1zu)
+			throw runtime_error_fmt("No BMS files found in archive \"{}\"", this->domain);
+		prefix = shortest_prefix;
+	}
 }
 
 inline auto Song::load_bms(string_view filename) const -> vector<byte>
@@ -71,7 +100,8 @@ inline auto Song::load_bms(string_view filename) const -> vector<byte>
 
 		auto result = vector<byte>{};
 		lib::archive::for_each_entry(archive, [&](auto pathname) {
-			if (pathname != filename) return true;
+			pathname = remove_prefix(pathname);
+			if (!iequals(pathname, filename)) return true;
 			result = lib::archive::read_data(archive);
 			return false;
 		});
@@ -85,6 +115,16 @@ inline auto Song::load_bms(string_view filename) const -> vector<byte>
 	}
 }
 
+inline auto Song::remove_prefix(string_view str) const -> string_view
+{
+	if (str.starts_with(prefix)) {
+		str = str.substr(prefix.size());
+		while (str.starts_with("/"))
+			str = str.substr(1);
+	}
+	return str;
+}
+
 template<callable<void(Song::FileRef)> Func>
 void Song::for_each_file(Func&& func)
 {
@@ -93,6 +133,7 @@ void Song::for_each_file(Func&& func)
 		auto archive = lib::archive::open_read(archive_file.contents);
 
 		lib::archive::for_each_entry(archive, [&](auto pathname) {
+			pathname = remove_prefix(pathname);
 			func(FileRef{
 				.filename = pathname,
 				.song = *this,

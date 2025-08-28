@@ -49,6 +49,7 @@ using std::ranges::fold_left;
 using std::ranges::for_each;
 using std::ranges::any_of;
 
+using std::distance;
 using std::function;
 using std::invoke;
 

@@ -798,19 +798,18 @@ auto chart_from_ir(IR const& ir, io::Song& song, Func&& progress) -> shared_ptr<
 	auto jobs = vector<Job>{};
 	jobs.reserve(requests.size());
 	song.for_each_file([&](auto file_ref) {
-		auto filename = string{file_ref.filename};
-		to_lower(filename);
+		auto filename = fs::path{file_ref.filename};
 
 		// Handle extension matching
-		for (auto ext: AudioExtensions) {
-			if (filename.ends_with(ext)) {
-				filename.resize(filename.size() - ext.size());
-				while (filename.ends_with('.')) filename.pop_back();
-			}
-		}
+		auto ext = filename.extension().string();
+		if (find_if(AudioExtensions, [&](auto const& e) { return iequals(e, ext); }))
+			filename = filename.replace_extension();
+		auto filename_str = filename.string();
+		while (filename_str.ends_with("."))
+			filename_str.pop_back();
 
 		// Check if we need the file
-		auto match = find_if(requests, [&](auto const& req) { return req.filename == filename; });
+		auto match = find_if(requests, [&](auto const& req) { return iequals(req.filename, filename_str); });
 		if (match == requests.end()) return;
 
 		jobs.emplace_back(Job{
