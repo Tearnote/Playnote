@@ -11,9 +11,9 @@ Construction of a chart from an IR.
 #include "assert.hpp"
 #include "logger.hpp"
 #include "lib/ebur128.hpp"
+#include "lib/ffmpeg.hpp"
 #include "dev/audio.hpp"
 #include "io/song.hpp"
-#include "audio/codec.hpp"
 #include "bms/cursor.hpp"
 #include "bms/chart.hpp"
 #include "bms/ir.hpp"
@@ -830,7 +830,7 @@ auto chart_from_ir(IR const& ir, io::Song& song, Func&& progress) -> shared_ptr<
 
 			auto const& job = jobs[current_job_idx];
 			try {
-				job.slot = move(audio::Codec::process(job.file));
+				job.slot = move(lib::ffmpeg::decode_and_resample_file_buffer(job.file, dev::Audio::get_sampling_rate()));
 				completions << current_job_idx;
 			} catch (exception const& e) {
 				WARN("Failed to load \"{}\": {}", job.filename, e.what());
