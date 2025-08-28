@@ -766,7 +766,7 @@ auto calculate_density_distribution(Chart::Lanes const& lanes, nanoseconds chart
 	auto fiftieth_size = overall_density.size() / 50;
 	auto density_top2 = span{overall_density.end() - fiftieth_size, overall_density.end()};
 	auto peak_rms = fold_left(density_top2, 0.0,
-		[&](auto acc, auto val) { return acc + val * val * val * val / density_mid50.size(); });
+		[&](auto acc, auto val) { return acc + val * val * val * val / density_top2.size(); });
 	result.peak_nps = sqrt(sqrt(peak_rms));
 
 	return result;
