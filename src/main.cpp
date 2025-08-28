@@ -23,16 +23,29 @@ using namespace playnote; // Can't namespace main()
 
 auto parse_arguments(int argc, char** argv) -> threads::ChartRequest
 {
-	constexpr auto usage_str = "Usage: playnote <BMS file path>";
-	if (argc <= 1) {
+	auto const actual_args = argc - 1;
+	constexpr auto usage_str = "Usage:\nplaynote <BMS file path>\nor\nplaynote <archive path> <BMS file name>";
+	if (actual_args == 0) {
 		dev::syserror("{}", usage_str);
 		exit(EXIT_SUCCESS);
 	}
-	if (argc > 2) {
-		dev::syserror("Invalid number of arguments: expected 1, received {}\n{}", argc - 1, usage_str);
+	if (actual_args > 2) {
+		dev::syserror("Invalid number of arguments: expected 1 or 2, received {}\n\n{}", actual_args, usage_str);
 		exit(EXIT_FAILURE);
 	}
-	return {fs::path{argv[1]}};
+
+	if (actual_args == 2) {
+		return threads::ChartRequest{
+			.domain = fs::path{argv[1]},
+			.filename = argv[2],
+		};
+	}
+	// 1 arg, split into location and filename
+	auto const path = fs::path{argv[1]};
+	return threads::ChartRequest{
+		.domain = path.parent_path(),
+		.filename = path.filename().string(),
+	};
 }
 
 auto run(threads::ChartRequest const& song_request) -> int

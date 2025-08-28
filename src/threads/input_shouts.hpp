@@ -14,7 +14,8 @@ namespace playnote::threads {
 
 // A request for a chart to be loaded and played.
 struct ChartRequest {
-	fs::path path;
+	fs::path domain;
+	string filename;
 };
 
 // A player keyboard input event.

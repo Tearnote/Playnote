@@ -37,37 +37,37 @@ static auto load_bms(bms::IRCompiler& compiler, fs::path const& path) -> bms::IR
 
 static void run_audio(Broadcaster& broadcaster, dev::Window& window, audio::Mixer& mixer)
 {
-	auto chart_path = fs::path{};
+	auto request = ChartRequest{};
 	broadcaster.await<ChartRequest>(
-		[&](auto&& request) { chart_path = request.path; },
+		[&](auto&& req) { request = move(req); },
 		[]() { yield(); });
 
-	broadcaster.make_shout<ChartLoadProgress>(ChartLoadProgress::CompilingIR{chart_path});
+	broadcaster.make_shout<ChartLoadProgress>(ChartLoadProgress::CompilingIR{request.filename});
 	auto bms_compiler = bms::IRCompiler{};
 	auto try_bms_ir = optional<bms::IR>{};
 	try {
-		try_bms_ir.emplace(load_bms(bms_compiler, chart_path));
+		try_bms_ir.emplace(load_bms(bms_compiler, request.domain / request.filename));
 	} catch (exception const& e) {
 		broadcaster.make_shout<ChartLoadProgress>(ChartLoadProgress::Failed{
-			.chart_path = chart_path,
+			.chart_path = request.filename,
 			.message = e.what(),
 		});
 		return;
 	}
 	auto bms_ir = move(*try_bms_ir);
-	broadcaster.make_shout<ChartLoadProgress>(ChartLoadProgress::Building{chart_path});
+	broadcaster.make_shout<ChartLoadProgress>(ChartLoadProgress::Building{request.filename});
 	auto const bms_chart = chart_from_ir(bms_ir, [&](auto& requests) {
 		requests.process([&](usize loaded, usize total) {
 			broadcaster.make_shout<ChartLoadProgress>(ChartLoadProgress::LoadingFiles{
-				.chart_path = chart_path,
+				.chart_path = request.filename,
 				.loaded = loaded,
 				.total = total,
 			});
 		});
 	}, [&](ChartLoadProgress::Type progress) {
 		visit(visitor {
-			[&](ChartLoadProgress::Measuring& msg) { msg.chart_path = chart_path; },
-			[&](ChartLoadProgress::DensityCalculation& msg) { msg.chart_path = chart_path; },
+			[&](ChartLoadProgress::Measuring& msg) { msg.chart_path = request.filename; },
+			[&](ChartLoadProgress::DensityCalculation& msg) { msg.chart_path = request.filename; },
 			[](auto&&){}
 		}, progress);
 		broadcaster.make_shout<ChartLoadProgress>(move(progress));
@@ -75,7 +75,7 @@ static void run_audio(Broadcaster& broadcaster, dev::Window& window, audio::Mixe
 	auto bms_player = make_shared<audio::Player>(window.get_glfw(), mixer);
 	bms_player->play(*bms_chart, false);
 	broadcaster.make_shout<ChartLoadProgress>(ChartLoadProgress::Finished{
-		.chart_path = chart_path,
+		.chart_path = request.filename,
 		.player = weak_ptr{bms_player},
 	});
 	auto mapper = bms::Mapper{};
