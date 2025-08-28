@@ -1,0 +1,34 @@
+/*
+This software is dual-licensed. For more details, please consult LICENSE.txt.
+Copyright (c) 2025 Tearnote (Hubert Maraszek)
+
+io/song.hpp:
+Abstraction of a song folder or archive.
+*/
+
+#pragma once
+#include "preamble.hpp"
+#include "io/file.hpp"
+
+namespace playnote::io {
+
+class Song {
+public:
+	// Open a song folder or archive.
+	explicit Song(fs::path const& domain): domain{domain} {}
+
+	// Load a specific BMS file from the song.
+	// This is potentially slow, as it might need to parse the domain until the file is found.
+	auto load_bms(fs::path const& path) const -> vector<byte>;
+
+private:
+	fs::path domain;
+};
+
+inline auto Song::load_bms(fs::path const& path) const -> vector<byte>
+{
+	auto file = read_file(domain / path);
+	return vector<byte>{file.contents.begin(), file.contents.end()};
+}
+
+}

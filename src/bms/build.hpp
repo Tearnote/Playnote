@@ -734,7 +734,7 @@ inline void calculate_bb(Chart& chart)
 // Generate a Chart from an IR. Requires a function to handle the loading of a bulk request.
 // The provided function must block until the bulk request is complete.
 template<callable<void(io::BulkRequest&)> Func, callable<void(threads::ChartLoadProgress::Type)> Func2>
-auto chart_from_ir(IR const& ir, Func&& file_loader, Func2&& progress) -> shared_ptr<Chart const>
+auto chart_from_ir(IR const& ir, fs::path const& domain, Func&& file_loader, Func2&& progress) -> shared_ptr<Chart const>
 {
 	static constexpr auto AudioExtensions = {"wav"sv, "ogg"sv, "mp3"sv, "flac"sv, "opus"sv};
 
@@ -744,7 +744,6 @@ auto chart_from_ir(IR const& ir, Func&& file_loader, Func2&& progress) -> shared
 	auto measure_lengths = vector<double>{};
 	auto file_references = FileReferences{};
 
-	auto const domain = ir.get_path().parent_path();
 	measure_lengths.reserve(256); // Arbitrary; enough for most charts
 	chart->wav_slots.resize(ir.get_wav_slot_count());
 	file_references.wav.clear();

@@ -13,7 +13,7 @@ Implementation file for threads/audio.hpp.
 #include "logger.hpp"
 #include "dev/window.hpp"
 #include "dev/os.hpp"
-#include "io/file.hpp"
+#include "io/song.hpp"
 #include "audio/player.hpp"
 #include "audio/mixer.hpp"
 #include "bms/build.hpp"
@@ -26,12 +26,12 @@ Implementation file for threads/audio.hpp.
 
 namespace playnote::threads {
 
-static auto load_bms(bms::IRCompiler& compiler, fs::path const& path) -> bms::IR
+static auto load_bms(bms::IRCompiler& compiler, io::Song const& song, string_view filename) -> bms::IR
 {
-	INFO("Loading BMS file \"{}\"", path.string());
-	auto const file = io::read_file(path);
-	auto ir = compiler.compile(path, file.contents);
-	INFO("Loaded BMS file \"{}\" successfully", path.string());
+	INFO("Loading BMS file \"{}\"", filename);
+	auto const file = song.load_bms(filename);
+	auto ir = compiler.compile(filename, file);
+	INFO("Loaded BMS file \"{}\" successfully", filename);
 	return ir;
 }
 
@@ -42,11 +42,12 @@ static void run_audio(Broadcaster& broadcaster, dev::Window& window, audio::Mixe
 		[&](auto&& req) { request = move(req); },
 		[]() { yield(); });
 
+	auto song = io::Song{request.domain};
 	broadcaster.make_shout<ChartLoadProgress>(ChartLoadProgress::CompilingIR{request.filename});
 	auto bms_compiler = bms::IRCompiler{};
 	auto try_bms_ir = optional<bms::IR>{};
 	try {
-		try_bms_ir.emplace(load_bms(bms_compiler, request.domain / request.filename));
+		try_bms_ir.emplace(load_bms(bms_compiler, song, request.filename));
 	} catch (exception const& e) {
 		broadcaster.make_shout<ChartLoadProgress>(ChartLoadProgress::Failed{
 			.chart_path = request.filename,
@@ -56,7 +57,7 @@ static void run_audio(Broadcaster& broadcaster, dev::Window& window, audio::Mixe
 	}
 	auto bms_ir = move(*try_bms_ir);
 	broadcaster.make_shout<ChartLoadProgress>(ChartLoadProgress::Building{request.filename});
-	auto const bms_chart = chart_from_ir(bms_ir, [&](auto& requests) {
+	auto const bms_chart = chart_from_ir(bms_ir, request.domain, [&](auto& requests) {
 		requests.process([&](usize loaded, usize total) {
 			broadcaster.make_shout<ChartLoadProgress>(ChartLoadProgress::LoadingFiles{
 				.chart_path = request.filename,

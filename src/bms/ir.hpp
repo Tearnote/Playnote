@@ -157,7 +157,7 @@ public:
 	void each_channel_event(Func&& func) const { for (auto const& event: channel_events) func(event); }
 
 	// Return the full path of the BMS file that the IR was generated from.
-	[[nodiscard]] auto get_path() const -> fs::path const& { return path; }
+	[[nodiscard]] auto get_path() const -> fs::path const& { return filename; }
 
 	// Get the total number of WAV slots referenced by the headers and channels.
 	[[nodiscard]] auto get_wav_slot_count() const -> usize { return wav_slot_count; }
@@ -170,7 +170,7 @@ private:
 	unique_ptr<pmr::monotonic_buffer_resource> buffer_resource; // unique_ptr makes it moveable
 	pmr::polymorphic_allocator<byte> allocator;
 
-	fs::path path;
+	string filename;
 	array<byte, 16> md5;
 	pmr::vector<HeaderEvent> header_events;
 	pmr::vector<ChannelEvent> channel_events;
@@ -205,11 +205,10 @@ public:
 	// Initializes internal mappings. Reuse the instance to compile multiple BMS files, if possible.
 	IRCompiler();
 
-	// Generate IR from an unmodified BMS file. The path is not accessed; it is later used
-	// at runtime as a base location of dependent assets.
+	// Generate IR from raw BMS file contents.
 	// Throws runtime_error if the BMS uses unsupported commands or channels that are known
 	// to be required for a semblance of correct playback.
-	auto compile(fs::path const& path, span<byte const> bms_file_contents) -> IR;
+	auto compile(string_view filename, span<byte const> bms_file_contents) -> IR;
 
 private:
 	// A BMS channel command can contain multiple notes; we split them up into these.
@@ -319,14 +318,14 @@ inline IRCompiler::IRCompiler()
 	register_channel_handlers();
 }
 
-inline auto IRCompiler::compile(fs::path const& path, span<byte const> bms_file_contents) -> IR
+inline auto IRCompiler::compile(string_view filename, span<byte const> bms_file_contents) -> IR
 {
-	INFO_AS(cat, "Compiling BMS file \"{}\"", path.string());
+	INFO_AS(cat, "Compiling BMS file \"{}\"", filename);
 	auto ir = IR{};
 	auto maps = SlotMappings{};
 
 	// Fill in original metadata to maintain a link from the IR back to the BMS file
-	ir.path = path;
+	ir.filename = filename;
 	ir.md5 = lib::openssl::md5(bms_file_contents);
 
 	// Parse file and process the commands
