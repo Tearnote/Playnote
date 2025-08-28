@@ -47,14 +47,15 @@ public:
 		}
 
 		// Process each request for matches in the file list
+		auto matches = vector<fs::path>{};
+		matches.reserve(file_list.size());
 		struct LoadJob {
 			usize request_idx;
 			fs::path match;
 		};
 		auto jobs = vector<LoadJob>{};
 		jobs.reserve(file_list.size());
-		for (auto idx: irange(0zu, requests.size())) {
-			auto const& request = requests[idx];
+		for (auto [idx, request]: views::enumerate(requests)) {
 			auto match = find_if(file_list, [&](auto const& path) {
 				auto path_str = path.string();
 
@@ -109,7 +110,7 @@ public:
 		auto const WorkerCount = jthread::hardware_concurrency();
 		auto workers = vector<jthread>{};
 		workers.reserve(WorkerCount);
-		for (auto i: irange(0u, WorkerCount))
+		for (auto _: views::iota(0u, WorkerCount))
 			workers.emplace_back(worker);
 
 		auto completion_count = 0zu;

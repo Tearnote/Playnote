@@ -79,9 +79,9 @@ void Renderer::frame(initializer_list<id> layer_order, Func&& func)
 	gpu.frame([&, this](auto& allocator, auto&& target) -> lib::vuk::ManagedImage {
 		auto next = lib::vuk::clear_image(move(target), {0.0f, 0.0f, 0.0f, 1.0f});
 
-		for (auto id: layer_order) {
-			if (!queue.layers.contains(id)) continue;
-			auto const& layer = queue.layers.at(id);
+		for (auto const& layer: layer_order |
+			views::filter([&](auto id) { return queue.layers.contains(id); }) |
+			views::transform([&](auto id) -> Queue::Layer const& { return queue.layers.at(id); })) {
 			auto result = draw_rects(allocator, move(next), layer.rects);
 			next = move(result);
 		}

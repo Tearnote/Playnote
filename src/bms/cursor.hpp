@@ -123,7 +123,7 @@ private:
 	usize combo;
 	usize score;
 
-	void trigger_lane_input(Chart::LaneType lane, bool state);
+	void trigger_lane_input(Lane const&, LaneProgress&, bool state);
 };
 
 [[nodiscard]] inline auto get_bpm_section(nanoseconds timestamp, span<BPMChange const> bpm_changes) -> BPMChange const&
@@ -183,9 +183,7 @@ inline void Cursor::restart()
 	combo = 0;
 	score = 0;
 
-	for (auto idx: irange(0zu, +Chart::LaneType::Size)) {
-		auto const& lane = chart->lanes[idx];
-		auto& progress = lane_progress[idx];
+	for (auto [lane, progress]: views::zip(chart->lanes, lane_progress)) {
 		if (lane.notes.empty()) continue;
 		progress.active_slot = lane.notes[0].wav_slot;
 	}
@@ -193,14 +191,11 @@ inline void Cursor::restart()
 
 inline void Cursor::fast_forward(usize samples)
 {
-	for (auto const i: irange(0zu, samples)) advance_one_sample([](dev::Sample){});
+	for (auto const i: views::iota(0zu, samples)) advance_one_sample([](dev::Sample){});
 }
 
-inline void Cursor::trigger_lane_input(Chart::LaneType lane_type, bool state)
+inline void Cursor::trigger_lane_input(Lane const& lane, LaneProgress& progress, bool state)
 {
-	auto const& lane = chart->lanes[+lane_type];
-	auto& progress = lane_progress[+lane_type];
-
 	// Judge press
 	if (state && progress.next_note < lane.notes.size()) {
 		auto const& note = lane.notes[progress.next_note];
@@ -279,36 +274,31 @@ auto Cursor::advance_one_sample(Func&& func, span<LaneInput const> inputs, bool 
 	auto chart_ended = (notes_judged >= chart->metrics.note_count);
 	sample_progress += 1;
 	auto const progress_ns = dev::Audio::samples_to_ns(sample_progress);
-	ASSUME(chart->lanes.size() == lane_progress.size());
 
 	// Trigger inputs if unplayable or autoplay
-	for (auto idx: irange(0zu, chart->lanes.size())) {
-		auto const& lane = chart->lanes[idx];
-		auto& progress = lane_progress[idx];
-		if (progress.next_note >= lane.notes.size()) continue;
-		auto const& note = lane.notes[progress.next_note];
+	for (auto [lane, progress]: views::zip(chart->lanes, lane_progress) |
+		views::filter([](auto const& view) { return get<1>(view).next_note < get<0>(view).notes.size(); })) {
+		Note const& note = lane.notes[progress.next_note];
 		if (autoplay || !lane.playable) {
 			if (progress_ns >= note.timestamp && !progress.ln_active) {
-				trigger_lane_input(Chart::LaneType{idx}, true);
+				trigger_lane_input(lane, progress, true);
 				if (!note.type_is<Note::LN>())
-					trigger_lane_input(Chart::LaneType{idx}, false);
+					trigger_lane_input(lane, progress, false);
 			}
 			if (note.type_is<Note::LN>() && progress_ns >= note.timestamp + note.params<Note::LN>().length)
-				trigger_lane_input(Chart::LaneType{idx}, false);
+				trigger_lane_input(lane, progress, false);
 		}
 	}
 
 	// Trigger manual inputs
 	if (!autoplay && !inputs.empty()) {
 		for (auto const& input: inputs)
-			trigger_lane_input(input.lane, input.state);
+			trigger_lane_input(chart->lanes[+input.lane], lane_progress[+input.lane], input.state);
 	}
 
 	// Detect missed notes
-	for (auto idx: irange(0zu, chart->lanes.size())) {
-		auto const& lane = chart->lanes[idx];
-		if (!lane.playable) continue;
-		auto& progress = lane_progress[idx];
+	for (auto [lane, progress]: views::zip(chart->lanes, lane_progress) |
+		views::filter([](auto const& view) { return get<0>(view).playable; })) {
 		if (progress.next_note >= lane.notes.size()) continue;
 		auto const& note = lane.notes[progress.next_note];
 		if (progress_ns - note.timestamp > BadWindow && !progress.ln_active) { // LNs are only advanced by being released
@@ -342,9 +332,9 @@ auto Cursor::advance_one_sample(Func&& func, span<LaneInput const> inputs, bool 
 			play_slot(slot, progress);
 		}
 	} else {
-		ASSUME(chart->wav_slots.size() == wav_slot_progress.size());
-		for (auto idx: irange(0zu, chart->wav_slots.size()))
-			play_slot(chart->wav_slots[idx], wav_slot_progress[idx]);
+		for (auto [slot, progress]: views::zip(chart->wav_slots, wav_slot_progress)) {
+			play_slot(slot, progress);
+		}
 	}
 
 	return chart_ended;
@@ -360,11 +350,8 @@ void Cursor::upcoming_notes(float max_units, Func&& func, bool adjust_for_latenc
 	auto const beat_duration = duration<double>{60.0 / chart->bpm};
 	auto const bpm_ratio = bpm_section.bpm / chart->bpm_changes[0].bpm;
 	auto const current_y = bpm_section.y_pos + section_progress / beat_duration * bpm_ratio * bpm_section.scroll_speed;
-	ASSUME(chart->lanes.size() == lane_progress.size());
-	for (auto idx: irange(0zu, chart->lanes.size())) {
-		auto const& lane = chart->lanes[idx];
-		if (!lane.visible) continue;
-		auto& progress = lane_progress[idx];
+	for (auto [idx, lane, progress]: views::zip(views::iota(0zu), chart->lanes, lane_progress) |
+		views::filter([](auto const& tuple) { return get<1>(tuple).visible; })) {
 		for (auto const& note: span{lane.notes.begin() + progress.next_note, lane.notes.size() - progress.next_note}) {
 			auto const distance = note.y_pos - current_y;
 			if (distance > max_units) break;

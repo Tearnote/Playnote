@@ -80,9 +80,8 @@ void Broadcaster::make_shout(Args&&... args)
 {
 	using Type = remove_cvref_t<T>;
 	ASSUME(endpoint_id != -1zu);
-	for (auto idx: irange(0zu, channels.size())) {
+	for (auto [idx, in_channel]: channels | views::enumerate) {
 		if (endpoint_id == idx) continue;
-		auto& in_channel = channels[idx];
 		if (!in_channel.contains(typeid(Type))) continue;
 		(*static_pointer_cast<channel<Type>>(in_channel[typeid(Type)])) << T{forward<Args>(args)...};
 	}

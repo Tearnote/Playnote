@@ -118,7 +118,7 @@ auto decode_file_buffer(span<byte const> file_contents) -> DecoderOutput
 
 	ret_check(avformat_find_stream_info(format.get(), nullptr));
 	auto stream_id = -1;
-	for (auto const i: irange(0u, format->nb_streams)) {
+	for (auto const i: views::iota(0u, format->nb_streams)) {
 		if (format->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_AUDIO) {
 			stream_id = i;
 			break;
@@ -145,7 +145,7 @@ auto decode_file_buffer(span<byte const> file_contents) -> DecoderOutput
 	auto const sample_count_estimate = stream->duration;
 	auto byte_size_estimate = samples_per_frame * sample_count_estimate * bytes_per_sample;
 	byte_size_estimate += 4096; // Overallocate slightly to avoid realloc on underestimation
-	for (auto i: irange(0u, planes)) {
+	for (auto i: views::iota(0u, planes)) {
 		result->data.emplace_back();
 		result->data.back().resize(byte_size_estimate);
 	}
@@ -176,7 +176,7 @@ auto decode_file_buffer(span<byte const> file_contents) -> DecoderOutput
 					vec.resize(byte_size_estimate);
 			}
 
-			for (auto i: irange(0u, planes)) {
+			for (auto i: views::iota(0u, planes)) {
 				ASSERT(frame.data[i]);
 				copy(span{reinterpret_cast<byte*>(frame.data[i]), static_cast<usize>(frame_bytes)},
 					result->data[i].begin() + cursor);

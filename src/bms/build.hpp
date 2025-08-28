@@ -171,21 +171,19 @@ inline void LaneBuilder::convert_ln(vector<AbsNote>& ln_ends, vector<Note>& resu
 		WARN("Unpaired LN end found; chart is most likely invalid");
 		ln_ends.pop_back();
 	}
-	for (auto idx: irange(0zu, ln_ends.size(), 2)) {
-		auto const& begin = ln_ends[idx];
-		auto const& end = ln_ends[idx + 1];
-		auto const ln_length = end.position.timestamp - begin.position.timestamp;
-		auto const ln_height = end.position.y_pos - begin.position.y_pos;
-		result.emplace_back(Note{
+	transform(ln_ends | views::chunk(2), back_inserter(result), [&](auto ends) {
+		auto const ln_length = ends[1].position.timestamp - ends[0].position.timestamp;
+		auto const ln_height = ends[1].position.y_pos - ends[0].position.y_pos;
+		return Note{
 			.type = Note::LN{
 				.length = ln_length,
 				.height = static_cast<float>(ln_height),
 			},
-			.timestamp = begin.position.timestamp,
-			.y_pos = begin.position.y_pos,
-			.wav_slot = begin.wav_slot,
-		});
-	};
+			.timestamp = ends[0].position.timestamp,
+			.y_pos = ends[0].position.y_pos,
+			.wav_slot = ends[0].wav_slot,
+		};
+	});
 }
 
 inline void LaneBuilder::sort_and_deduplicate(vector<Note>& result, bool deduplicate)
@@ -415,12 +413,11 @@ inline auto beat_rel_notes_to_abs(span<BeatRelNote const> notes, span<BeatRelBPM
 	auto result = vector<AbsNote>{};
 	result.reserve(notes.size());
 	transform(notes, back_inserter(result), [&](BeatRelNote const& note) {
-		auto bpm_section = find_last_if(beat_rel_bpms, [&](auto const& bpm) {
-			return note.position >= bpm.position;
+		auto bpm_section = find_last_if(views::zip(beat_rel_bpms, bpm_changes), [&](auto const& view) {
+			return note.position >= get<0>(view).position;
 		});
 		ASSERT(!bpm_section.empty());
-		auto const& beat_rel_bpm = *bpm_section.begin();
-		auto const& bpm = bpm_changes[distance(beat_rel_bpms.begin(), bpm_section.begin())];
+		auto [beat_rel_bpm, bpm] = *bpm_section.begin();
 
 		auto const beats_since_bpm = note.position - beat_rel_bpm.position;
 		auto const time_since_bpm = beats_since_bpm * duration<double>{60.0 / bpm.bpm};
@@ -456,9 +453,8 @@ inline auto build_bpm_changes(span<BeatRelBPM const> bpms) -> vector<BPMChange>
 
 	auto cursor = 0ns;
 	auto y_cursor = 0.0;
-	for (auto idx: irange(1zu, bpms.size())) {
-		auto const& bpm = bpms[idx];
-		auto const& prev_bpm = bpms[idx - 1];
+	transform(bpms | views::pairwise, back_inserter(result), [&](auto const& bpm_pair) {
+		auto [prev_bpm, bpm] = bpm_pair;
 		auto const beats_elapsed = bpm.position - prev_bpm.position;
 		auto const time_elapsed = duration_cast<nanoseconds>(beats_elapsed * duration<double>{60.0 / prev_bpm.bpm});
 		cursor += time_elapsed;
@@ -469,8 +465,8 @@ inline auto build_bpm_changes(span<BeatRelBPM const> bpms) -> vector<BPMChange>
 			.y_pos = y_cursor,
 			.scroll_speed = bpm.scroll_speed,
 		};
-		result.emplace_back(bpm_change);
-	}
+		return bpm_change;
+	});
 
 	return result;
 }
@@ -482,8 +478,7 @@ inline void build_lanes(Chart& chart, span<AbsNote const> notes)
 	for (auto const& note: notes)
 		lane_builders[+note.lane].add_note(note);
 
-	for (auto idx: irange(0zu, chart.lanes.size())) {
-		auto& lane = chart.lanes[idx];
+	for (auto [idx, lane]: chart.lanes | views::enumerate) {
 		auto const is_bgm = idx == +Chart::LaneType::BGM;
 		auto const is_measure_line = idx == +Chart::LaneType::MeasureLine;
 		lane = lane_builders[idx].build(!is_bgm);
@@ -535,10 +530,10 @@ inline void calculate_note_metrics(Chart::Lanes const& lanes, Metrics& metrics)
 	metrics.note_count = fold_left(lanes, 0u, [](auto acc, auto const& lane) {
 		return acc + (lane.playable? lane.notes.size() : 0);
 	});
-	metrics.chart_duration = fold_left(lanes,
-		0ns, [](auto acc, Lane const& lane) {
-			if (lane.notes.empty() || !lane.playable) return acc;
-			auto const& last_note = lane.notes.back();
+	metrics.chart_duration = fold_left(lanes |
+		views::filter([](auto const& lane) { return !lane.notes.empty() && lane.playable; }) |
+		views::transform([](auto const& lane) -> Note const& { return lane.notes.back(); }),
+		0ns, [](auto acc, Note const& last_note) {
 			auto note_end = last_note.timestamp;
 			if (last_note.type_is<Note::LN>()) note_end += last_note.params<Note::LN>().length;
 			return max(acc, note_end);
@@ -557,7 +552,7 @@ void calculate_audio_metrics(Cursor&& cursor, Metrics& metrics, Func&& progress)
 
 	auto processing = true;
 	while (processing) {
-		for (auto _: irange(0zu, BufferSize)) {
+		for (auto _: views::iota(0zu, BufferSize)) {
 			auto& sample = buffer.emplace_back();
 			processing = !cursor.advance_one_sample([&](auto new_sample) {
 				sample.left += new_sample.left;
@@ -575,6 +570,17 @@ void calculate_audio_metrics(Cursor&& cursor, Metrics& metrics, Func&& progress)
 	metrics.gain = lufs_to_gain(metrics.loudness);
 	metrics.audio_duration = cursor.get_progress_ns();
 	r128::cleanup(ctx);
+}
+
+inline auto notes_around(span<Note const> notes, nanoseconds cursor, nanoseconds window)
+{
+	auto const from = cursor - window;
+	auto const to = cursor + window;
+	return notes | views::drop_while([=](auto const& note) {
+		return note.timestamp < from;
+	}) | views::take_while([=](auto const& note) {
+		return note.timestamp <= to;
+	});
 }
 
 template<callable<void(threads::ChartLoadProgress::Type)> Func>
@@ -597,12 +603,12 @@ auto calculate_density_distribution(Chart::Lanes const& lanes, nanoseconds chart
 	auto note_total = fold_left(lanes, 0u, [](auto sum, auto const& lane) { return sum + lane.playable? lane.notes.size() : 0; });
 	notes_keys.reserve(note_total);
 	notes_scr.reserve(note_total);
-	for (auto idx: irange(0zu, lanes.size())) {
-		auto const& lane = lanes[idx];
-		if (!lane.playable) continue;
-		auto const type = Chart::LaneType{idx};
+	for (auto [type, lane]: views::zip(
+		views::iota(0u) | views::transform([](auto const idx) { return Chart::LaneType{idx}; }),
+		lanes) |
+		views::filter([](auto const& view) { return get<1>(view).playable; })) {
 		auto& dest = type == Chart::LaneType::P1_KeyS || type == Chart::LaneType::P2_KeyS? notes_scr : notes_keys;
-		for (auto const& note: lane.notes) {
+		for (Note const& note: lane.notes) {
 			if (note.type_is<Note::LN>()) {
 				dest.emplace_back(note);
 				auto ln_end = note;
@@ -618,28 +624,27 @@ auto calculate_density_distribution(Chart::Lanes const& lanes, nanoseconds chart
 
 	auto const ProgressFreq = static_cast<uint32>(floor(1s / window));
 	auto until_progress_update = 0u;
-	for (auto idx: irange(0zu, result.key_density.size())) {
-		auto const cursor = static_cast<isize>(idx) * resolution;
-		auto& key = result.key_density[idx];
-		auto& scratch = result.scratch_density[idx];
-		auto& ln = result.ln_density[idx];
-		for (auto const& note: notes_keys) {
-			if (note.timestamp < cursor - window) continue;
-			if (note.timestamp > cursor + window) break;
-			auto& target = [&]() -> float& {
-				if (note.type_is<Note::LN>()) return ln;
-				return key;
-			}();
-			auto const delta = note.timestamp - cursor;
-			auto const delta_scaled = ratio(delta, window) * Bandwidth; // now within [-Bandwidth, Bandwidth]
-			target += exp(-pow(delta_scaled, 2.0f) / 2.0f) * GaussianScale; // Gaussian filter
-		}
-		for (auto const& note: notes_scr) {
-			if (note.timestamp < cursor - window) continue;
-			if (note.timestamp > cursor + window) break;
-			auto const delta = note.timestamp - cursor;
-			auto const delta_scaled = ratio(delta, window) * Bandwidth; // now within [-Bandwidth, Bandwidth]
-			scratch += exp(-pow(delta_scaled, 2.0f) / 2.0f) * GaussianScale; // Gaussian filter
+	for (auto [cursor, key, scratch, ln]: views::zip(
+		views::iota(0u) | views::transform([&](auto i) { return i * resolution; }),
+		result.key_density, result.scratch_density, result.ln_density)) {
+		for (auto [lane, type]: views::zip(lanes, views::iota(0u) |
+			views::transform([](auto i) { return Chart::LaneType{i}; }))) {
+			if (!lane.playable) continue;
+			for (Note const& note: notes_around(notes_keys, cursor, window)) {
+				auto& target = [&]() -> float& {
+					if (type == Chart::LaneType::P1_KeyS || type == Chart::LaneType::P2_KeyS) return scratch;
+					if (note.type_is<Note::LN>()) return ln;
+					return key;
+				}();
+				auto const delta = note.timestamp - cursor;
+				auto const delta_scaled = ratio(delta, window) * Bandwidth; // now within [-Bandwidth, Bandwidth]
+				target += exp(-pow(delta_scaled, 2.0f) / 2.0f) * GaussianScale; // Gaussian filter
+			}
+			for (Note const& note: notes_around(notes_scr, cursor, window)) {
+				auto const delta = note.timestamp - cursor;
+				auto const delta_scaled = ratio(delta, window) * Bandwidth; // now within [-Bandwidth, Bandwidth]
+				scratch += exp(-pow(delta_scaled, 2.0f) / 2.0f) * GaussianScale; // Gaussian filter
+			}
 		}
 
 		until_progress_update += 1;
@@ -652,22 +657,20 @@ auto calculate_density_distribution(Chart::Lanes const& lanes, nanoseconds chart
 	// Average NPS: actually Root Mean Square of the middle 50% of the dataset
 	auto overall_density = vector<float>{};
 	overall_density.reserve(result.key_density.size());
-	for (auto idx: irange(0zu, result.key_density.size()))
-		overall_density.emplace_back(result.key_density[idx] + result.scratch_density[idx] + result.ln_density[idx]);
+	transform(views::zip(result.key_density, result.scratch_density, result.ln_density), back_inserter(overall_density),
+		[](auto const& view) { return get<0>(view) + get<1>(view) + get<2>(view); });
 	sort(overall_density);
 	auto quarter_size = overall_density.size() / 4;
 	auto density_mid50 = span{overall_density.begin() + quarter_size, overall_density.end() - quarter_size};
-	auto rms = 0.0;
-	for (auto idx: irange(0zu, density_mid50.size()))
-		rms += density_mid50[idx] * density_mid50[idx] * density_mid50[idx] * density_mid50[idx] / density_mid50.size();
+	auto rms = fold_left(density_mid50, 0.0,
+		[&](auto acc, auto val) { return acc + val * val * val * val / density_mid50.size(); });
 	result.average_nps = sqrt(sqrt(rms));
 
 	// Peak NPS: RMS of the 98th percentile
 	auto fiftieth_size = overall_density.size() / 50;
 	auto density_top2 = span{overall_density.end() - fiftieth_size, overall_density.end()};
-	auto peak_rms = 0.0;
-	for (auto idx: irange(0zu, density_top2.size()))
-		peak_rms += density_top2[idx] * density_top2[idx] * density_top2[idx] * density_top2[idx] / density_top2.size();
+	auto peak_rms = fold_left(density_top2, 0.0,
+		[&](auto acc, auto val) { return acc + val * val * val * val / density_mid50.size(); });
 	result.peak_nps = sqrt(sqrt(peak_rms));
 
 	return result;
@@ -702,8 +705,7 @@ inline void calculate_bb(Chart& chart)
 
 	for (auto const& lane: chart.lanes) {
 		if (!lane.audible) continue;
-		for (auto idx: irange(0zu, lane.notes.size())) {
-			auto const& note = lane.notes[idx];
+		for (auto [idx, note]: lane.notes | views::enumerate) {
 			if (chart.wav_slots[note.wav_slot].empty()) continue;
 			// Register note audio in the structure
 			auto const wav_len = dev::Audio::samples_to_ns(chart.wav_slots[note.wav_slot].size());
@@ -713,8 +715,8 @@ inline void calculate_bb(Chart& chart)
 			auto const end = next_note_start + wav_len;
 			auto const first_window = clamp<usize>(start / SlotBB::WindowSize, 0zu, chart.slot_bb.windows.size() - 1);
 			auto const last_window = clamp<usize>(end / SlotBB::WindowSize + 1, 0zu, chart.slot_bb.windows.size() - 1);
-			for (auto w_idx: irange(first_window, last_window + 1)) {
-				auto& window = chart.slot_bb.windows[w_idx];
+			for (auto& window: views::iota(first_window, last_window + 1) |
+				views::transform([&](auto i) -> auto& { return chart.slot_bb.windows[i]; })) {
 				if (contains(window, note.wav_slot)) continue;
 				if (window.size() == window.capacity()) {
 					WARN("Unable to add sample slot to bounding box; reached limit of {}", SlotBB::MaxSlots);
@@ -774,10 +776,9 @@ auto chart_from_ir(IR const& ir, fs::path const& domain, Func&& file_loader, Fun
 
 	// Enqueue and execute file requests for used slots
 	auto requests = io::BulkRequest{domain};
-	for (auto idx: irange(0zu, needed_slots.size())) {
-		auto const request = string_view{file_references.wav[idx]};
-		if (!needed_slots[idx] || request.empty()) continue;
-		requests.enqueue<audio::Codec>(chart->wav_slots[idx], request, AudioExtensions, false);
+	for (auto const& [needed, request, wav_slot]: views::zip(needed_slots, file_references.wav, chart->wav_slots)) {
+		if (!needed || request.empty()) continue;
+		requests.enqueue<audio::Codec>(wav_slot, request, AudioExtensions, false);
 	}
 	file_loader(requests);
 
