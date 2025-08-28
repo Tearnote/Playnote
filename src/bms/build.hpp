@@ -488,6 +488,102 @@ inline void build_lanes(Chart& chart, span<AbsNote const> notes)
 	}
 }
 
+template<callable<void(threads::ChartLoadProgress::Type)> Func>
+void load_files(Chart& chart, io::Song& song, FileReferences const& references, Func&& progress)
+{
+	static constexpr auto AudioExtensions = {"wav"sv, "ogg"sv, "mp3"sv, "flac"sv, "opus"sv};
+
+	// Mark used slots
+	auto needed_slots = vector<bool>{};
+	needed_slots.resize(chart.wav_slots.size(), false);
+	for (auto const& lane: chart.lanes) {
+		for (auto const& note: lane.notes) {
+			needed_slots[note.wav_slot] = true;
+		}
+	}
+
+	// Enqueue file requests for used slots
+	struct Request {
+		string_view filename;
+		Chart::WavSlot& slot;
+	};
+	auto requests = vector<Request>{};
+	requests.reserve(references.wav.size());
+	for (auto [needed, request, slot]: views::zip(needed_slots, references.wav, chart.wav_slots) |
+		views::filter([](auto const& view) { return get<0>(view) && !get<1>(view).empty(); })) {
+		requests.emplace_back(Request{
+			.filename = request,
+			.slot = slot,
+		});
+	}
+
+	// Load all required samples from disk
+	struct Job {
+		string_view filename;
+		vector<byte> file;
+		Chart::WavSlot& slot;
+	};
+	auto jobs = vector<Job>{};
+	jobs.reserve(requests.size());
+	song.for_each_file([&](auto file_ref) {
+		auto filename = fs::path{file_ref.filename};
+
+		// Handle extension matching
+		auto ext = filename.extension().string();
+		if (find_if(AudioExtensions, [&](auto const& e) { return iequals(e, ext); }))
+			filename = filename.replace_extension();
+		auto filename_str = filename.string();
+		while (filename_str.ends_with("."))
+			filename_str.pop_back();
+
+		// Check if we need the file
+		auto match = find_if(requests, [&](auto const& req) { return iequals(req.filename, filename_str); });
+		if (match == requests.end()) return;
+
+		jobs.emplace_back(Job{
+			.filename = match->filename,
+			.file = move(file_ref.load()),
+			.slot = match->slot,
+		});
+	});
+
+	// Decode and resample sample files in a thread pool
+	auto completions = channel<usize>{};
+	auto job_idx = atomic<usize>{0};
+	auto worker = [&] {
+		while (true) {
+			auto const current_job_idx = job_idx.fetch_add(1);
+			if (current_job_idx >= jobs.size()) break;
+
+			auto const& job = jobs[current_job_idx];
+			try {
+				job.slot = move(lib::ffmpeg::decode_and_resample_file_buffer(job.file, dev::Audio::get_sampling_rate()));
+				completions << current_job_idx;
+			} catch (exception const& e) {
+				WARN("Failed to load \"{}\": {}", job.filename, e.what());
+				completions << -1zu;
+			}
+		}
+	};
+	auto const WorkerCount = jthread::hardware_concurrency();
+	auto workers = vector<jthread>{};
+	workers.reserve(WorkerCount);
+	for (auto _: views::iota(0u, WorkerCount))
+		workers.emplace_back(worker);
+
+	auto completion_count = 0zu;
+	auto const JobCount = jobs.size();
+	auto completed = -1zu;
+	while (completions.read(completed)) {
+		completion_count += 1;
+		progress(threads::ChartLoadProgress::LoadingFiles{
+			.loaded = completion_count,
+			.total = JobCount,
+		});
+		if (completion_count >= JobCount) break;
+	}
+}
+
 [[nodiscard]] inline auto lufs_to_gain(double lufs) -> float
 {
 	constexpr auto LufsTarget = -14.0;
@@ -738,8 +834,6 @@ inline void calculate_bb(Chart& chart)
 template<callable<void(threads::ChartLoadProgress::Type)> Func>
 auto chart_from_ir(IR const& ir, io::Song& song, Func&& progress) -> shared_ptr<Chart const>
 {
-	static constexpr auto AudioExtensions = {"wav"sv, "ogg"sv, "mp3"sv, "flac"sv, "opus"sv};
-
 	auto chart = make_shared<Chart>();
 	auto measure_rel_notes = vector<MeasureRelNote>{};
 	auto measure_rel_bpms = vector<MeasureRelBPM>{};
@@ -764,97 +858,7 @@ auto chart_from_ir(IR const& ir, io::Song& song, Func&& progress) -> shared_ptr<
 	auto const abs_notes = beat_rel_notes_to_abs(beat_rel_notes, beat_rel_bpms, chart->bpm_changes);
 	build_lanes(*chart, abs_notes);
 
-	auto needed_slots = vector<bool>{};
-	needed_slots.resize(chart->wav_slots.size(), false);
-
-	// Mark used slots
-	for (auto const& lane: chart->lanes) {
-		for (auto const& note: lane.notes) {
-			needed_slots[note.wav_slot] = true;
-		}
-	}
-
-	// Enqueue file requests for used slots
-	struct Request {
-		string_view filename;
-		Chart::WavSlot& slot;
-	};
-	auto requests = vector<Request>{};
-	requests.reserve(file_references.wav.size());
-	for (auto [needed, request, slot]: views::zip(needed_slots, file_references.wav, chart->wav_slots) |
-		views::filter([](auto const& view) { return get<0>(view) && !get<1>(view).empty(); })) {
-		requests.emplace_back(Request{
-			.filename = request,
-			.slot = slot,
-		});
-	}
-
-	// Load all required samples from disk
-	struct Job {
-		string_view filename;
-		vector<byte> file;
-		Chart::WavSlot& slot;
-	};
-	auto jobs = vector<Job>{};
-	jobs.reserve(requests.size());
-	song.for_each_file([&](auto file_ref) {
-		auto filename = fs::path{file_ref.filename};
-
-		// Handle extension matching
-		auto ext = filename.extension().string();
-		if (find_if(AudioExtensions, [&](auto const& e) { return iequals(e, ext); }))
-			filename = filename.replace_extension();
-		auto filename_str = filename.string();
-		while (filename_str.ends_with("."))
-			filename_str.pop_back();
-
-		// Check if we need the file
-		auto match = find_if(requests, [&](auto const& req) { return iequals(req.filename, filename_str); });
-		if (match == requests.end()) return;
-
-		jobs.emplace_back(Job{
-			.filename = match->filename,
-			.file = move(file_ref.load()),
-			.slot = match->slot,
-		});
-	});
-
-	// Decode and resample sample files in a thread pool
-	auto completions = channel<usize>{};
-	auto job_idx = atomic<usize>{0};
-	auto worker = [&] {
-		while (true) {
-			auto const current_job_idx = job_idx.fetch_add(1);
-			if (current_job_idx >= jobs.size()) break;
-
-			auto const& job = jobs[current_job_idx];
-			try {
-				job.slot = move(lib::ffmpeg::decode_and_resample_file_buffer(job.file, dev::Audio::get_sampling_rate()));
-				completions << current_job_idx;
-			} catch (exception const& e) {
-				WARN("Failed to load \"{}\": {}", job.filename, e.what());
-				completions << -1zu;
-			}
-		}
-	};
-	auto const WorkerCount = jthread::hardware_concurrency();
-	auto workers = vector<jthread>{};
-	workers.reserve(WorkerCount);
-	for (auto _: views::iota(0u, WorkerCount))
-		workers.emplace_back(worker);
-
-	auto completion_count = 0zu;
-	auto const JobCount = jobs.size();
-	auto completed = -1zu;
-	while (completions.read(completed)) {
-		completion_count += 1;
-		progress(threads::ChartLoadProgress::LoadingFiles{
-			.loaded = completion_count,
-			.total = JobCount,
-		});
-		if (completion_count >= JobCount) break;
-	}
-
+	load_files(*chart, song, file_references, progress);
 	// Metrics require a fully loaded chart
 	calculate_metrics(*chart, progress);
 	calculate_bb(*chart);

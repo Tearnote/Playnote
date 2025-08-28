@@ -31,7 +31,7 @@ public:
 	[[nodiscard]] auto load_bms(string_view filename) const -> vector<byte>;
 
 	// Execute the provided function for every file in the song. The function is expected to examine
-	// each file and load its contents if necessary. Filename case is maintained.
+	// each file and load its contents if necessary.
 	template<callable<void(FileRef)> Func>
 	void for_each_file(Func&&);
 
