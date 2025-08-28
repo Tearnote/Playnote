@@ -8,7 +8,6 @@ A file codec to decode the audio format and convert sample rate.
 
 #pragma once
 #include "preamble.hpp"
-#include "assert.hpp"
 #include "lib/ffmpeg.hpp"
 #include "dev/audio.hpp"
 
@@ -24,7 +23,6 @@ public:
 inline auto Codec::process(span<byte const> raw) -> Output
 {
 	auto const sampling_rate = dev::Audio::get_sampling_rate();
-	ASSERT(sampling_rate != 0);
 	return lib::ffmpeg::decode_and_resample_file_buffer(raw, sampling_rate);
 }
 

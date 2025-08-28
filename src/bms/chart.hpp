@@ -148,12 +148,13 @@ struct Chart: enable_shared_from_this<Chart> {
 		Size,
 	};
 	using Lanes = array<Lane, +LaneType::Size>;
+	using WavSlot = vector<dev::Sample>;
 
 	Metadata metadata;
 	Metrics metrics;
 	Lanes lanes;
 	vector<BPMChange> bpm_changes; // Sorted from earliest
-	vector<vector<dev::Sample>> wav_slots;
+	vector<WavSlot> wav_slots;
 	SlotBB slot_bb;
 	float bpm = 130.0f; // BMS spec default
 };
