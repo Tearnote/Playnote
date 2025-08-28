@@ -38,8 +38,8 @@ static auto load_bms(bms::IRCompiler& compiler, fs::path const& path) -> bms::IR
 static void run_audio(Broadcaster& broadcaster, dev::Window& window, audio::Mixer& mixer)
 {
 	auto chart_path = fs::path{};
-	broadcaster.await<ChartLoadRequest>(
-		[&](auto&& path) { chart_path = path; },
+	broadcaster.await<ChartRequest>(
+		[&](auto&& request) { chart_path = request.path; },
 		[]() { yield(); });
 
 	broadcaster.make_shout<ChartLoadProgress>(ChartLoadProgress::CompilingIR{chart_path});
@@ -112,7 +112,7 @@ try {
 	dev::name_current_thread("audio");
 	broadcaster.register_as_endpoint();
 	broadcaster.subscribe<PlayerControl>();
-	broadcaster.subscribe<ChartLoadRequest>();
+	broadcaster.subscribe<ChartRequest>();
 	broadcaster.subscribe<KeyInput>();
 	barriers.startup.arrive_and_wait();
 	auto mixer = audio::Mixer{};

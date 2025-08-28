@@ -10,11 +10,12 @@ Only the process's main thread can be the input thread.
 #pragma once
 #include "preamble.hpp"
 #include "dev/window.hpp"
+#include "threads/input_shouts.hpp"
 #include "threads/broadcaster.hpp"
 
 namespace playnote::threads {
 
 // Input thread entry point.
-void input(Broadcaster& broadcaster, Barriers<3>& barriers, dev::Window& window, fs::path const& song_request);
+void input(Broadcaster&, Barriers<3>&, dev::Window&, ChartRequest const&);
 
 }

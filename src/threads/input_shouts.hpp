@@ -12,13 +12,17 @@ Shouts that can be spawned by the input thread. Typically messages from the OS m
 
 namespace playnote::threads {
 
-using ChartLoadRequest = fs::path;
+// A request for a chart to be loaded and played.
+struct ChartRequest {
+	fs::path path;
+};
 
+// A player keyboard input event.
 struct KeyInput {
 	using Code = dev::Window::KeyCode;
-	nanoseconds timestamp;
+	nanoseconds timestamp; // Time since application start
 	Code code;
-	bool state;
+	bool state; // true = pressed, false = released
 };
 
 }

@@ -13,6 +13,7 @@ Entry point. Initializes basic facilities, spawns threads.
 #include "lib/debug.hpp"
 #include "dev/window.hpp"
 #include "dev/os.hpp"
+#include "threads/input_shouts.hpp"
 #include "threads/broadcaster.hpp"
 #include "threads/render.hpp"
 #include "threads/audio.hpp"
@@ -20,7 +21,7 @@ Entry point. Initializes basic facilities, spawns threads.
 
 using namespace playnote; // Can't namespace main()
 
-auto parse_arguments(int argc, char** argv) -> fs::path
+auto parse_arguments(int argc, char** argv) -> threads::ChartRequest
 {
 	constexpr auto usage_str = "Usage: playnote <BMS file path>";
 	if (argc <= 1) {
@@ -31,10 +32,10 @@ auto parse_arguments(int argc, char** argv) -> fs::path
 		dev::syserror("Invalid number of arguments: expected 1, received {}\n{}", argc - 1, usage_str);
 		exit(EXIT_FAILURE);
 	}
-	return fs::path{argv[1]};
+	return {fs::path{argv[1]}};
 }
 
-auto run(fs::path const& song_request) -> int
+auto run(threads::ChartRequest const& song_request) -> int
 {
 	auto const scheduler_period = dev::SchedulerPeriod{1ms};
 	auto glfw = dev::GLFW{};
@@ -73,6 +74,6 @@ catch (exception const& e) {
 	if (globals::logger)
 		CRIT("Uncaught exception: {}", e.what());
 	else
-		print(stderr, "Uncaught exception: {}", e.what());
+		dev::syserror("Uncaught exception: {}", e.what());
 	return EXIT_FAILURE;
 }
