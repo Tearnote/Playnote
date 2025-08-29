@@ -101,17 +101,18 @@ inline constexpr auto LogfilePath = "playnote-reldeb.log"sv;
 inline constexpr auto LogfilePath = "playnote.log"sv;
 #endif
 
+// Config file location
+inline constexpr auto ConfigPath = "config.toml"sv;
+
 // Global runtime configuration, kept in sync with the config file.
 class Config {
 public:
 	using Value = variant<int32, double, bool, string>;
 	struct Entry {
-		string_view category;
-		string_view name;
+		string category;
+		string name;
 		Value value;
 	};
-
-	static constexpr auto ConfigFile = "config.toml";
 
 	// Create the config object, with entries at their default values.
 	Config() { create_defaults(); }

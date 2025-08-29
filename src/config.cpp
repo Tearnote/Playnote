@@ -8,13 +8,18 @@ Implementation file for config.hpp.
 
 #include "config.hpp"
 
+#include <toml.hpp>
 #include "preamble.hpp"
+#include "logger.hpp"
+#include "io/file.hpp"
 
 namespace playnote {
 
 Config::~Config() noexcept
-{
-	//TODO
+try {
+	save_to_file();
+} catch (exception const& e) {
+	ERROR("Failed to flush config to file: {}", e.what());
 }
 
 void Config::load_from_file()
@@ -24,7 +29,13 @@ void Config::load_from_file()
 
 void Config::save_to_file() const
 {
-	//TODO
+	auto toml_data = toml::table{};
+	for (auto const& entry: entries) {
+		auto& category = toml_data[entry.category];
+		visit([&](auto const& v) { category[entry.name] = v; }, entry.value);
+	}
+	auto output = toml::format(toml::value{toml_data});
+	io::write_file(ConfigPath, {reinterpret_cast<byte*>(output.data()), output.size()});
 }
 
 void Config::set_entry(Entry&& entry)

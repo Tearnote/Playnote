@@ -7,6 +7,7 @@ Raw file I/O utilities.
 */
 
 #pragma once
+#include <fstream>
 #include "preamble.hpp"
 #include "lib/mio.hpp"
 
@@ -37,6 +38,15 @@ inline auto read_file(fs::path const& path) -> ReadFile
 	};
 	file.contents = {file.map.data(), file.map.size()}; // Can't refer to .map in the same initializer
 	return file;
+}
+
+// Write provided contents to a file, overwriting if it already exists.
+inline void write_file(fs::path const& path, span<byte const> contents)
+{
+	auto file = std::ofstream{};
+	file.exceptions(std::ios::failbit | std::ios::badbit);
+	file.open(path, std::ios::binary | std::ios::trunc);
+	file.write(reinterpret_cast<char const*>(contents.data()), contents.size());
 }
 
 }
