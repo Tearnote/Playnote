@@ -151,3 +151,9 @@ FetchContent_Declare(signalsmith-basics # Audio processing
 	GIT_TAG 1.0.1
 )
 FetchContent_MakeAvailable(signalsmith-basics)
+
+FetchContent_Declare(toml11 # TOML config parsing and generation
+	GIT_REPOSITORY https://github.com/ToruNiina/toml11
+	GIT_TAG v4.4.0
+)
+FetchContent_MakeAvailable(toml11)
