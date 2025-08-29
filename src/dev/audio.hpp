@@ -27,8 +27,6 @@ using lib::ChannelCount;
 
 class Audio {
 public:
-	static constexpr auto Latency = 128zu;
-
 	template<callable<void(span<Sample>)> Func>
 	explicit Audio(Func&& generator);
 	~Audio();
@@ -69,9 +67,11 @@ Audio::Audio(Func&& generator):
 	generator{generator}
 {
 #ifndef _WIN32
-	context = lib::pw::init(AppTitle, Latency, [this](auto buffer) { on_process(buffer); });
+	context = lib::pw::init(AppTitle, globals::config->get_entry<int>("audio", "pipewire_buffer"),
+		[this](auto buffer) { on_process(buffer); });
 #else
-	context = lib::wasapi::init(true, [this](auto buffer) { on_process(buffer); });
+	context = lib::wasapi::init(globals::config->get_entry<bool>("audio", "wasapi_exclusive"),
+		[this](auto buffer) { on_process(buffer); });
 #endif
 	INFO("Audio device properties: sample rate: {}Hz, latency: {}ms",
 		context->properties.sampling_rate,
