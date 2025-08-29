@@ -785,6 +785,26 @@ inline auto calculate_features(Chart const& chart) -> Features
 	return result;
 }
 
+inline auto calculate_bpm_range(Chart const& chart) -> BPMRange
+{
+	auto bpm_distribution = unordered_map<float, nanoseconds>{};
+	auto update = [&](float bpm, nanoseconds duration) {
+		bpm_distribution.try_emplace(bpm, 0ns);
+		bpm_distribution[bpm] += duration;
+	};
+
+	for (auto [current, next]: chart.bpm_changes | views::pairwise)
+		update(current.bpm, next.position - current.position);
+	// Last one has no pairing; duration is until the end of the chart
+	update(chart.bpm_changes.back().bpm, chart.metrics.chart_duration - chart.bpm_changes.back().position);
+
+	auto result = BPMRange{};
+	result.min = *min_element(bpm_distribution | views::keys);
+	result.max = *max_element(bpm_distribution | views::keys);
+	result.main = max_element(bpm_distribution, [](auto const& left, auto const& right) { return left.second < right.second; })->first;
+	return result;
+}
+
 template<callable<void(threads::ChartLoadProgress::Type)> Func>
 void calculate_metrics(Chart& chart, Func&& progress)
 {
@@ -793,6 +813,7 @@ void calculate_metrics(Chart& chart, Func&& progress)
 	calculate_audio_metrics(Cursor{chart, true}, chart.metrics, progress);
 	chart.metrics.density = calculate_density_distribution(chart.lanes, chart.metrics.chart_duration, 125ms, 2s, progress);
 	chart.metrics.features = calculate_features(chart);
+	chart.metrics.bpm = calculate_bpm_range(chart);
 }
 
 inline void calculate_bb(Chart& chart)

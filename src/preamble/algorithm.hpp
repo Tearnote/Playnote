@@ -21,6 +21,7 @@ namespace views {
 	using std::ranges::views::chunk;
 	using std::ranges::views::filter;
 	using std::ranges::views::enumerate;
+	using std::ranges::views::keys;
 	using std::ranges::views::values;
 	using std::ranges::views::pairwise;
 	using std::ranges::views::take;
@@ -48,6 +49,8 @@ using std::ranges::remove_if;
 using std::ranges::fold_left;
 using std::ranges::for_each;
 using std::ranges::any_of;
+using std::ranges::min_element;
+using std::ranges::max_element;
 
 using std::distance;
 using std::function;

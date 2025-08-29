@@ -50,6 +50,10 @@ static void show_metrics(bms::Cursor const& cursor, bms::Metrics const& metrics)
 	auto const audio_duration = ns_to_minsec(metrics.audio_duration);
 	lib::imgui::text("Progress: {} / {} ({})", progress, chart_duration, audio_duration);
 	lib::imgui::text("Notes: {} / {}", cursor.get_judged_notes(), metrics.note_count);
+	if (metrics.bpm.main == metrics.bpm.min && metrics.bpm.main == metrics.bpm.max)
+		lib::imgui::text("BPM: {}", metrics.bpm.main);
+	else
+		lib::imgui::text("BPM: {} - {} ({})", metrics.bpm.min, metrics.bpm.max, metrics.bpm.main);
 	lib::imgui::plot("Note density", {
 		{"Scratch", metrics.density.scratch_density, {1.0f, 0.1f, 0.1f, 1.0f}},
 		{"LN", metrics.density.ln_density, {0.1f, 0.1f, 1.0f, 1.0f}},

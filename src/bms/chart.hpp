@@ -104,6 +104,13 @@ struct Features {
 	bool has_soflan; // Are there scroll speed changes?
 };
 
+// Summary of a chart's BPM range.
+struct BPMRange {
+	float min;
+	float max;
+	float main; // The most common BPM; the mode
+};
+
 // Data about a chart calculated from its contents.
 struct Metrics {
 	Playstyle playstyle;
@@ -114,6 +121,7 @@ struct Metrics {
 	float gain; // Amplitude ratio to normalize loudness to -14 LUFS reference
 	Density density;
 	Features features;
+	BPMRange bpm;
 };
 
 // Bounding box acceleration structure for reachable WAV slots.
