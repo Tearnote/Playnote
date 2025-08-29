@@ -798,10 +798,12 @@ inline auto calculate_bpm_range(Chart const& chart) -> BPMRange
 	// Last one has no pairing; duration is until the end of the chart
 	update(chart.bpm_changes.back().bpm, chart.metrics.chart_duration - chart.bpm_changes.back().position);
 
-	auto result = BPMRange{};
-	result.min = *min_element(bpm_distribution | views::keys);
-	result.max = *max_element(bpm_distribution | views::keys);
-	result.main = max_element(bpm_distribution, [](auto const& left, auto const& right) { return left.second < right.second; })->first;
+	auto result = BPMRange{
+		.min = *min_element(bpm_distribution | views::keys),
+		.max = *max_element(bpm_distribution | views::keys),
+		.main = max_element(bpm_distribution, [](auto const& left, auto const& right) { return left.second < right.second; })->first,
+	};
+	result.scroll_adjustment = 120.0f / result.main;
 	return result;
 }
 

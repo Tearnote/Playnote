@@ -108,6 +108,7 @@ inline void Playfield::notes_from_cursor(bms::Cursor const& cursor, float scroll
 	measure_lines.clear();
 
 	scroll_speed /= 4.0f; // 1 beat -> 1 standard measure
+	scroll_speed *= cursor.get_chart().metrics.bpm.scroll_adjustment;
 	auto const max_distance = 1.0f / scroll_speed;
 	cursor.upcoming_notes(max_distance, [&](bms::Note const& note, auto type, auto distance) {
 		auto const y_pos = distance / max_distance;

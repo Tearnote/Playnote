@@ -181,7 +181,7 @@ static void run_render(Broadcaster& broadcaster, dev::Window const& window, gfx:
 	auto player = shared_ptr<audio::Player const>{};
 	auto playfield = optional<gfx::Playfield>{};
 	auto loading_toast = optional<LoadingToast>{};
-	auto scroll_speed = 2.0f;
+	auto scroll_speed = 3.0f;
 
 	while (!window.is_closing()) {
 		receive_loading_shouts(broadcaster, loading_toast, [&](auto finished_player) {

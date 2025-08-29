@@ -109,6 +109,7 @@ struct BPMRange {
 	float min;
 	float max;
 	float main; // The most common BPM; the mode
+	float scroll_adjustment; // Scroll speed multiplier to normalize the chart to 120 BPM
 };
 
 // Data about a chart calculated from its contents.
