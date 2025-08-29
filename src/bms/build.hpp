@@ -700,7 +700,7 @@ auto calculate_density_distribution(Chart::Lanes const& lanes, nanoseconds chart
 	notes_keys.reserve(note_total);
 	notes_scr.reserve(note_total);
 	for (auto [type, lane]: views::zip(
-		views::iota(0u) | views::transform([](auto const idx) { return Chart::LaneType{idx}; }),
+		views::iota(0u) | views::transform([](auto idx) { return Chart::LaneType{idx}; }),
 		lanes) |
 		views::filter([](auto const& view) { return get<1>(view).playable; })) {
 		auto& dest = type == Chart::LaneType::P1_KeyS || type == Chart::LaneType::P2_KeyS? notes_scr : notes_keys;
@@ -723,24 +723,19 @@ auto calculate_density_distribution(Chart::Lanes const& lanes, nanoseconds chart
 	for (auto [cursor, key, scratch, ln]: views::zip(
 		views::iota(0u) | views::transform([&](auto i) { return i * resolution; }),
 		result.key_density, result.scratch_density, result.ln_density)) {
-		for (auto [lane, type]: views::zip(lanes, views::iota(0u) |
-			views::transform([](auto i) { return Chart::LaneType{i}; }))) {
-			if (!lane.playable) continue;
-			for (Note const& note: notes_around(notes_keys, cursor, window)) {
-				auto& target = [&]() -> float& {
-					if (type == Chart::LaneType::P1_KeyS || type == Chart::LaneType::P2_KeyS) return scratch;
-					if (note.type_is<Note::LN>()) return ln;
-					return key;
-				}();
-				auto const delta = note.timestamp - cursor;
-				auto const delta_scaled = ratio(delta, window) * Bandwidth; // now within [-Bandwidth, Bandwidth]
-				target += exp(-pow(delta_scaled, 2.0f) / 2.0f) * GaussianScale; // Gaussian filter
-			}
-			for (Note const& note: notes_around(notes_scr, cursor, window)) {
-				auto const delta = note.timestamp - cursor;
-				auto const delta_scaled = ratio(delta, window) * Bandwidth; // now within [-Bandwidth, Bandwidth]
-				scratch += exp(-pow(delta_scaled, 2.0f) / 2.0f) * GaussianScale; // Gaussian filter
-			}
+		for (Note const& note: notes_around(notes_keys, cursor, window)) {
+			auto& target = [&]() -> float& {
+				if (note.type_is<Note::LN>()) return ln;
+				return key;
+			}();
+			auto const delta = note.timestamp - cursor;
+			auto const delta_scaled = ratio(delta, window) * Bandwidth; // now within [-Bandwidth, Bandwidth]
+			target += exp(-pow(delta_scaled, 2.0f) / 2.0f) * GaussianScale; // Gaussian filter
+		}
+		for (Note const& note: notes_around(notes_scr, cursor, window)) {
+			auto const delta = note.timestamp - cursor;
+			auto const delta_scaled = ratio(delta, window) * Bandwidth; // now within [-Bandwidth, Bandwidth]
+			scratch += exp(-pow(delta_scaled, 2.0f) / 2.0f) * GaussianScale; // Gaussian filter
 		}
 
 		until_progress_update += 1;

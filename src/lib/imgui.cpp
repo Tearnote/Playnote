@@ -281,17 +281,17 @@ void plot(char const* label,
 			auto const& value_ref = *static_cast<ValueRef*>(userdata);
 			return {
 				static_cast<double>(idx),
-				fold_left(value_ref.values | views::take(value_ref.idx + 1), 0.0f,
-					[&](float sum, auto const& value) { return sum + value.data[idx]; })
+				fold_left(value_ref.values | views::take(value_ref.idx + 1), 0.0,
+					[&](auto sum, auto const& value) { return sum + value.data[idx]; })
 			};
 		};
 	}();
 
 	for (auto [idx, value]: views::zip(views::iota(0zu), values) | views::reverse) {
 		auto const implot_color = ImVec4{value.color.r(), value.color.g(), value.color.b(), value.color.a()};
+		auto ref = ValueRef{values, idx};
 		ImPlot::SetNextLineStyle(implot_color);
 		ImPlot::SetNextFillStyle(implot_color, 0.5f);
-		auto ref = ValueRef{values, idx};
 		ImPlot::PlotLineG(value.name, value_func, &ref, value.data.size(), ImPlotLineFlags_Shaded);
 	}
 	for (auto const& marker: markers) {
