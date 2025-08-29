@@ -3,16 +3,15 @@ This software is dual-licensed. For more details, please consult LICENSE.txt.
 Copyright (c) 2025 Tearnote (Hubert Maraszek)
 
 config.hpp:
-Global game configuration - controls which features are on/off depending on build configuration,
-and their hardcoded values.
+Global game configuration, both compile-time and runtime.
 */
 
 #pragma once
 #include "preamble.hpp"
+#include "service.hpp"
 #include "logger.hpp"
 
 namespace playnote {
-
 inline constexpr auto AppTitle = "Playnote";
 inline constexpr auto AppVersion = to_array({0u, 0u, 3u});
 
@@ -101,5 +100,58 @@ inline constexpr auto LogfilePath = "playnote-reldeb.log"sv;
 #else
 inline constexpr auto LogfilePath = "playnote.log"sv;
 #endif
+
+// Global runtime configuration, kept in sync with the config file.
+class Config {
+public:
+	using Value = variant<int32, double, bool, string>;
+	struct Entry {
+		string_view category;
+		string_view name;
+		Value value;
+	};
+
+	static constexpr auto ConfigFile = "config.toml";
+
+	// Create the config object, with entries at their default values.
+	Config() { create_defaults(); }
+
+	// Overwrite the config file with current entries.
+	~Config() noexcept;
+
+	// Update all entries with values from the config file.
+	void load_from_file();
+
+	// Flush the config to file, overwriting it.
+	void save_to_file() const;
+
+	// Get the value of an entry.
+	template <variant_alternative<Value> T>
+	[[nodiscard]] auto get_entry(string_view category, string_view name) const -> T const&
+	{
+		return get<T>(find_entry(category, name).value);
+	}
+
+	// Set an entry to a new value.
+	void set_entry(Entry&&);
+
+	Config(Config const&) = delete;
+	auto operator=(Config const&) -> Config& = delete;
+	Config(Config&&) = delete;
+	auto operator=(Config&&) -> Config& = delete;
+
+private:
+	vector<Entry> entries;
+
+	[[nodiscard]] auto find_entry(string_view category, string_view name) -> Entry&;
+	[[nodiscard]] auto find_entry(string_view category, string_view name) const -> Entry const&;
+	void create_defaults();
+};
+
+namespace globals {
+
+inline auto config = Service<Config>{};
+
+}
 
 }

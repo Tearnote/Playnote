@@ -78,6 +78,7 @@ try {
 	lib::dbg::set_assert_handler();
 	if constexpr (BuildType == Build::Debug) lib::dbg::attach_console();
 	auto logger_stub = globals::logger.provide(LogfilePath, LogLevelGlobal);
+	auto config_stub = globals::config.provide();
 	auto song_request = parse_arguments(argc, argv);
 	INFO("{} {}.{}.{} starting up", AppTitle, AppVersion[0], AppVersion[1], AppVersion[2]);
 	return run(song_request);
