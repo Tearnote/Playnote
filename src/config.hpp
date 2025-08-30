@@ -149,6 +149,20 @@ private:
 	void create_defaults();
 };
 
+inline void Config::create_defaults()
+{
+	entries.emplace_back(Entry{
+		.category = "audio",
+		.name = "pipewire_buffer",
+		.value = 128,
+	});
+	entries.emplace_back(Entry{
+		.category = "audio",
+		.name = "wasapi_exclusive",
+		.value = true,
+	});
+}
+
 namespace globals {
 
 inline auto config = Service<Config>{};

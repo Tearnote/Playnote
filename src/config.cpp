@@ -25,7 +25,20 @@ try {
 
 void Config::load_from_file()
 {
-	//TODO
+	auto const file = io::read_file(ConfigPath);
+	auto const toml_data = toml::parse(
+		{reinterpret_cast<char const*>(file.contents.data()), file.contents.size()});
+
+	for (auto& entry: entries) {
+		if (!toml_data.contains(entry.category)) continue;
+		auto const& category_table = *toml_data[entry.category].as_table();
+		if (!category_table.contains(entry.name)) continue;
+		visit([&](auto& v) {
+			auto const& toml_entry = category_table[entry.name].value<remove_cvref_t<decltype(v)>>();
+			if (!toml_entry) return;
+			v = *toml_entry;
+		}, entry.value);
+	}
 }
 
 void Config::save_to_file() const
@@ -41,7 +54,7 @@ void Config::save_to_file() const
 	auto file_content = std::stringstream{};
 	file_content << toml_data;
 	auto file_content_view = file_content.view();
-	io::write_file("config.toml",
+	io::write_file(ConfigPath,
 		{reinterpret_cast<byte const*>(file_content_view.data()), file_content_view.size()});
 }
 
@@ -62,20 +75,6 @@ auto Config::find_entry(string_view category, string_view name) const -> Entry c
 	auto iter = find_if(entries, [&](auto const& e) { return e.category == category && e.name == name; });
 	ASSERT(iter != entries.end());
 	return *iter;
-}
-
-void Config::create_defaults()
-{
-	entries.emplace_back(Entry{
-		.category = "audio",
-		.name = "pipewire_buffer",
-		.value = 128,
-	});
-	entries.emplace_back(Entry{
-		.category = "audio",
-		.name = "wasapi_exclusive",
-		.value = true,
-	});
 }
 
 }
