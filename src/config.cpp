@@ -8,7 +8,8 @@ Implementation file for config.hpp.
 
 #include "config.hpp"
 
-#include <toml.hpp>
+#include <toml++/toml.hpp>
+#include <sstream>
 #include "preamble.hpp"
 #include "logger.hpp"
 #include "io/file.hpp"
@@ -31,16 +32,22 @@ void Config::save_to_file() const
 {
 	auto toml_data = toml::table{};
 	for (auto const& entry: entries) {
-		auto& category = toml_data[entry.category];
-		visit([&](auto const& v) { category[entry.name] = v; }, entry.value);
+		if (!toml_data.contains(entry.category))
+			toml_data.insert(entry.category, toml::table{});
+		auto& category_table = *toml_data[entry.category].as_table();
+		visit([&](auto const& v) { category_table.insert_or_assign(entry.name, v); }, entry.value);
 	}
-	auto output = toml::format(toml::value{toml_data});
-	io::write_file(ConfigPath, {reinterpret_cast<byte*>(output.data()), output.size()});
+
+	auto file_content = std::stringstream{};
+	file_content << toml_data;
+	auto file_content_view = file_content.view();
+	io::write_file("config.toml",
+		{reinterpret_cast<byte const*>(file_content_view.data()), file_content_view.size()});
 }
 
 void Config::set_entry(Entry&& entry)
 {
-	//TODO
+	find_entry(entry.category, entry.name).value = move(entry.value);
 }
 
 auto Config::find_entry(string_view category, string_view name) -> Entry&
