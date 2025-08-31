@@ -6,7 +6,7 @@
 
 # Project configuration
 
-cmake_minimum_required(VERSION 3.30)
+cmake_minimum_required(VERSION 3.28)
 project(Playnote
 	VERSION 0.0.3
 	DESCRIPTION "A BMS player hobby project"
