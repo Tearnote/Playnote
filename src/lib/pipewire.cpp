@@ -96,7 +96,7 @@ static void on_param_changed(void* data, uint32_t id, spa_pod const* param)
 	auto params = array<spa_pod const*, 1>{};
 	auto buffer = array<uint8, 1024>{};
 	auto builder = SPA_POD_BUILDER_INIT(buffer.data(), buffer.size());
-	constexpr auto audio_info = spa_audio_info_raw{
+	auto audio_info = spa_audio_info_raw{
 		.format = SPA_AUDIO_FORMAT_F32,
 		.channels = 2,
 	};

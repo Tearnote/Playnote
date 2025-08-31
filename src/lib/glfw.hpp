@@ -77,10 +77,6 @@ template<typename T>
 	return static_cast<T*>(detail::get_window_user_pointer_raw(window));
 }
 
-// Return the Window's title. String is valid until it's changed by another call, or the window
-// is destroyed.
-[[nodiscard]] auto get_window_title(Window window) -> string_view;
-
 enum class KeyCode: int {
 	Space = 32, // GLFW_KEY_SPACE
 	Apostrophe = 39, // GLFW_KEY_APOSTROPHE
