@@ -1,0 +1,35 @@
+name: Windows build
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  BUILD_TYPE: Release
+  VCPKG_TARGET_TRIPLET: x64-windows-static
+
+jobs:
+  windows-build:
+    runs-on: windows-2025
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up vcpkg binary cache
+      uses: actions/cache@v4
+      with:
+        path: ${{github.workspace}}/vcpkg_cache
+        key: vcpkg-${{runner.os}}-${{env.VCPKG_TARGET_TRIPLET}}-${{hashFiles('vcpkg.json')}}
+        restore-keys: |
+          vcpkg-${{runner.os}}-${{env.VCPKG_TARGET_TRIPLET}}-
+
+    - name: Configure CMake
+      shell: cmd
+      run: cmake -B ${{github.workspace}}/build -T ClangCL -DCMAKE_TOOLCHAIN_FILE=%VCPKG_INSTALLATION_ROOT%/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=${{env.VCPKG_TARGET_TRIPLET}}
+      env:
+        VCPKG_BINARY_SOURCES: "clear;files,${{github.workspace}}/vcpkg_cache,readwrite"
+
+    - name: Build
+      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
