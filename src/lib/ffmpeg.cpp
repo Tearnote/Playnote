@@ -22,6 +22,16 @@ extern "C" {
 
 namespace playnote::lib::ffmpeg {
 
+// Fix av_err2str macro making use of C-only features
+#ifdef av_err2str
+#undef av_err2str
+av_always_inline auto av_err2string(int errnum) -> string {
+	char str[AV_ERROR_MAX_STRING_SIZE];
+	return av_make_error_string(str, AV_ERROR_MAX_STRING_SIZE, errnum);
+}
+#define av_err2str(err) av_err2string(err).c_str()
+#endif
+
 struct DecoderOutput_t {
 	vector<vector<byte>> data;
 	usize sample_count;
