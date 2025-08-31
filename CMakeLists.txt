@@ -20,7 +20,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(BUILD_SHARED_LIBS OFF)
 if(UNIX)
-	add_compile_options("-Wall;-Wextra")
+	add_compile_options("-Wall;-Wextra;-Wno-missing-field-initializers")
 	add_compile_options("-march=x86-64-v3;-ffast-math")
 	add_compile_options("-fno-strict-aliasing;$<$<COMPILE_LANGUAGE:CXX>:-fexceptions;-frtti>")
 	add_compile_options("$<$<NOT:$<CONFIG:Release>>:-g>")
