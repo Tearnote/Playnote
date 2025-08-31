@@ -12,7 +12,7 @@ env:
 
 jobs:
   windows-build:
-    runs-on: windows-2022
+    runs-on: windows-2025
 
     steps:
     - uses: actions/checkout@v4
@@ -26,7 +26,8 @@ jobs:
           vcpkg-${{runner.os}}-${{env.VCPKG_TARGET_TRIPLET}}-
 
     - name: Configure CMake
-      run: cmake -B ${{github.workspace}}/build -T ClangCL -DCMAKE_TOOLCHAIN_FILE=${VCPKG_INSTALLATION_ROOT}/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=${{env.VCPKG_TARGET_TRIPLET}}
+      shell: cmd
+      run: cmake -B ${{github.workspace}}/build -T ClangCL -DCMAKE_TOOLCHAIN_FILE=%VCPKG_INSTALLATION_ROOT%/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=${{env.VCPKG_TARGET_TRIPLET}}
       env:
         VCPKG_BINARY_SOURCES: "clear;files,${{github.workspace}}/vcpkg_cache,readwrite"
 
