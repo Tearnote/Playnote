@@ -108,12 +108,6 @@ try {
 }
 catch (runtime_error const&) {}
 
-[[nodiscard]] auto get_window_title(Window window) -> string_view
-{
-	ASSERT(window);
-	return glfwGetWindowTitle(window);
-}
-
 [[nodiscard]] auto get_window_framebuffer_size(Window window) -> uvec2
 {
 	ASSERT(window);
