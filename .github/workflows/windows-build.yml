@@ -26,6 +26,7 @@ jobs:
           vcpkg-${{runner.os}}-${{env.VCPKG_TARGET_TRIPLET}}-
 
     - name: Configure CMake
+      shell: bash
       run: cmake -B ${{github.workspace}}/build -T ClangCL -DCMAKE_TOOLCHAIN_FILE=${VCPKG_INSTALLATION_ROOT}/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=${{env.VCPKG_TARGET_TRIPLET}}
       env:
         VCPKG_BINARY_SOURCES: "clear;files,${{github.workspace}}/vcpkg_cache,readwrite"
