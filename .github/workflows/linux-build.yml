@@ -1,0 +1,27 @@
+name: Linux build
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  BUILD_TYPE: Release
+  CMAKE_GENERATOR: Ninja Multi-Config
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: sudo apt-get update && sudo apt-get install libboost-dev libssl-dev libicu-dev libvulkan-dev glslc libglfw3-dev libavcodec-dev libavformat-dev libswresample-dev libpipewire-0.3-dev
+
+    - name: Configure CMake
+      run: cmake -B ${{github.workspace}}/build -G ${{CMAKE_GENERATOR}}
+
+    - name: Build
+      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
