@@ -76,11 +76,6 @@ static auto av_io_read(void* opaque, uint8_t* buf, int buf_size) -> int
 	return static_cast<int>(bytes_to_read);
 }
 
-static auto av_io_write(void*, uint8_t const*, int) -> int
-{
-	PANIC("ffmpeg attempted to write to a read-only file");
-}
-
 static auto av_io_seek(void* opaque, int64_t offset, int whence) -> int64_t
 {
 	auto& buffer = *static_cast<SeekBuffer*>(opaque);
@@ -116,7 +111,7 @@ auto decode_file_buffer(span<byte const> file_contents) -> DecoderOutput
 	auto file_buffer = SeekBuffer{ .buffer = file_contents, .cursor = 0 };
 	auto io_buffer = AVBuffer{av_malloc(PageSize)};
 	auto io = AVIO{ptr_check(avio_alloc_context(static_cast<unsigned char*>(io_buffer.get()), PageSize, 0,
-		&file_buffer, &av_io_read, &av_io_write, &av_io_seek))};
+		&file_buffer, &av_io_read, nullptr, &av_io_seek))};
 	io_buffer.release(); // AVIOContext takes control over the buffer from now on
 	auto format = AVFormat{ptr_check(avformat_alloc_context())};
 	format->pb = io.get();
