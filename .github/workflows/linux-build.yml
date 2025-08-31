@@ -20,6 +20,12 @@ jobs:
     - name: Install dependencies
       run: sudo apt-get update && sudo apt-get install libboost-dev libboost-container-dev libssl-dev libicu-dev libvulkan-dev glslc libglfw3-dev libavcodec-dev libavformat-dev libswresample-dev libpipewire-0.3-dev libarchive-dev
 
+    - name: Install boost
+      uses: MarkusJx/install-boost@v2
+      id: install-boost
+      with:
+        boost_version: 1.88.0
+
     - name: Configure CMake
       run: cmake -B ${{github.workspace}}/build -G "${{env.CMAKE_GENERATOR}}"
 
