@@ -26,7 +26,7 @@ endif()
 find_package(ICU REQUIRED # Charset detection and conversion
 	COMPONENTS uc i18n
 )
-find_package(glfw3 3.4 REQUIRED) # Windowing support
+find_package(glfw3 REQUIRED) # Windowing support
 find_package(Boost REQUIRED # Rational numbers, improved containers, string algorithms, resource wrapper
 	COMPONENTS container)
 if(UNIX)
