@@ -111,7 +111,7 @@ static void buffer_thread(Context_t* ctx, HANDLE buffer_event)
 	AvRevertMmThreadCharacteristics(rtprio);
 }
 
-auto init(bool exclusive_mode, function<void(span<Sample>)>&& processor) -> Context
+auto init(bool exclusive_mode, function<void(span<Sample>)>&& processor, optional<nanoseconds> latency) -> Context
 {
 	auto ctx = make_unique<Context_t>();
 
@@ -209,22 +209,35 @@ auto init(bool exclusive_mode, function<void(span<Sample>)>&& processor) -> Cont
 		auto max_period = uint32{0};
 		ret_check(client->GetSharedModeEnginePeriod(reinterpret_cast<WAVEFORMATEX*>(&format),
 			&default_period, &fundamental_period, &min_period, &max_period), "Failed to retrieve shared mode engine period");
+		auto period = min_period;
+		if (latency) {
+			auto latency_frames = static_cast<double>(latency->count()) / 1'000'000'000.0 * sample_rate;
+			if (latency_frames < min_period) WARN("Could not set WASAPI latency below the minimum value of {}ms", static_cast<double>(min_period) / sample_rate * 1000.0);
+			else if (latency_frames > max_period) WARN("Could not set WASAPI latency above the maximum value of {}ms", static_cast<double>(max_period) / sample_rate * 1000.0);
+			else period = latency_frames;
+		}
 		ret_check(client->InitializeSharedAudioStream(AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
-			min_period, reinterpret_cast<WAVEFORMATEX*>(&format), nullptr), "Failed to initialize WASAPI audio stream");
+			period, reinterpret_cast<WAVEFORMATEX*>(&format), nullptr), "Failed to initialize WASAPI audio stream");
 	} else {
 		auto default_period = REFERENCE_TIME{0};
 		auto min_period = REFERENCE_TIME{0};
 		ret_check(client->GetDevicePeriod(&default_period, &min_period), "Failed to retrieve audio device period");
+		auto period = min_period;
+		if (latency) {
+			auto latency_rt = to_reference_time(*latency);
+			if (latency_rt < min_period) WARN("Could not set WASAPI latency below the minimum value of {}ms", min_period / 10000);
+			else period = latency_rt;
+		}
 		auto hr = client->Initialize(AUDCLNT_SHAREMODE_EXCLUSIVE, AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
-			min_period, min_period, reinterpret_cast<WAVEFORMATEX*>(&format), nullptr);
+			period, period, reinterpret_cast<WAVEFORMATEX*>(&format), nullptr);
 		if (hr == AUDCLNT_E_BUFFER_SIZE_NOT_ALIGNED) {
 			auto buffer_size = uint32{};
 			ret_check(client->GetBufferSize(&buffer_size), "Failed to retrieve audio buffer size");
-			auto period = static_cast<REFERENCE_TIME>((10000.0 * 1000 / format.Format.nSamplesPerSec * buffer_size) + 0.5);
+			auto new_period = static_cast<REFERENCE_TIME>((10000.0 * 1000 / format.Format.nSamplesPerSec * buffer_size) + 0.5);
 			client->Release();
 			ret_check(device->Activate(__uuidof(IAudioClient3), CLSCTX_ALL, nullptr, reinterpret_cast<void**>(&client)), "Failed to re-retrieve IAudioClient3 interface");
 			ret_check(client->Initialize(AUDCLNT_SHAREMODE_EXCLUSIVE, AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
-				period, period, reinterpret_cast<WAVEFORMATEX*>(&format), nullptr), "Failed to re-initialize WASAPI audio stream");
+				new_period, new_period, reinterpret_cast<WAVEFORMATEX*>(&format), nullptr), "Failed to re-initialize WASAPI audio stream");
 		} else {
 			ret_check(hr, "Failed to initialize WASAPI audio stream");
 		}

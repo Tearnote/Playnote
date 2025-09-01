@@ -149,17 +149,28 @@ private:
 	void create_defaults();
 };
 
+// Consult this function for the list of registered config entries.
 inline void Config::create_defaults()
 {
 	entries.emplace_back(Entry{
-		.category = "audio",
-		.name = "pipewire_buffer",
+		.category = "pipewire",
+		.name = "buffer_size",
 		.value = 128,
 	});
 	entries.emplace_back(Entry{
-		.category = "audio",
-		.name = "wasapi_exclusive",
+		.category = "wasapi",
+		.name = "exclusive_mode",
 		.value = true,
+	});
+	entries.emplace_back(Entry{
+		.category = "wasapi",
+		.name = "use_custom_latency",
+		.value = false,
+	});
+	entries.emplace_back(Entry{
+		.category = "wasapi",
+		.name = "custom_latency",
+		.value = 10,
 	});
 }
 

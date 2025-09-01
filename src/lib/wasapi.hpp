@@ -31,8 +31,9 @@ using Context = unique_ptr<Context_t>;
 
 // Initialize WASAPI and open an audio stream. processor function will be called in a separate
 // thread with a buffer of samples to fill. A Context is returned and must be passed to cleanup().
+// If latency is not specified, the smallest possible latency is used.
 // Throws runtime_error on failure.
-auto init(bool exclusive_mode, function<void(span<Sample>)>&& processor) -> Context;
+auto init(bool exclusive_mode, function<void(span<Sample>)>&& processor, optional<nanoseconds> latency) -> Context;
 
 // Clean up WASAPI and associated objects.
 void cleanup(Context&& ctx) noexcept;

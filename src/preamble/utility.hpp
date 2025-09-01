@@ -25,6 +25,7 @@ namespace playnote {
 
 using std::optional;
 using std::nullopt;
+using std::make_optional;
 using std::variant;
 using std::monostate;
 using std::holds_alternative;

@@ -67,11 +67,13 @@ Audio::Audio(Func&& generator):
 	generator{generator}
 {
 #ifndef _WIN32
-	context = lib::pw::init(AppTitle, globals::config->get_entry<int>("audio", "pipewire_buffer"),
+	context = lib::pw::init(AppTitle, globals::config->get_entry<int>("pipewire", "buffer_size"),
 		[this](auto buffer) { on_process(buffer); });
 #else
-	context = lib::wasapi::init(globals::config->get_entry<bool>("audio", "wasapi_exclusive"),
-		[this](auto buffer) { on_process(buffer); });
+	context = lib::wasapi::init(globals::config->get_entry<bool>("wasapi", "exclusive_mode"),
+		[this](auto buffer) { on_process(buffer); },
+		globals::config->get_entry<bool>("wasapi", "use_custom_latency")?
+			make_optional(milliseconds{globals::config->get_entry<int>("wasapi", "custom_latency")}) : nullopt);
 #endif
 	INFO("Audio device properties: sample rate: {}Hz, latency: {}ms",
 		context->properties.sampling_rate,
