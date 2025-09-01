@@ -25,6 +25,7 @@ try {
 
 void Config::load_from_file()
 {
+	if (!fs::exists(ConfigPath)) return;
 	auto const file = io::read_file(ConfigPath);
 	auto const toml_data = toml::parse(
 		{reinterpret_cast<char const*>(file.contents.data()), file.contents.size()});
