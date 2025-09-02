@@ -339,7 +339,7 @@ template<callable<void(Note const&, Chart::LaneType, float)> Func>
 void Cursor::upcoming_notes(float max_units, Func&& func, nanoseconds offset, bool adjust_for_latency) const
 {
 	auto const latency_adjustment = adjust_for_latency? -audio::Mixer::get_latency() : 0ns;
-	auto const progress_timestamp = dev::Audio::samples_to_ns(sample_progress) + latency_adjustment + offset;
+	auto const progress_timestamp = dev::Audio::samples_to_ns(sample_progress) + latency_adjustment - offset;
 	auto const& bpm_section = get_bpm_section(progress_timestamp, chart->bpm_changes);
 	auto const section_progress = progress_timestamp - bpm_section.position;
 	auto const beat_duration = duration<double>{60.0 / chart->bpm};
