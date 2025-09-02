@@ -27,14 +27,6 @@ jobs:
         boost_version: 1.88.0
         platform_version: 24.04
 
-    - name: Cache FetchContent dependencies
-      uses: actions/cache@v4
-      with:
-        path: ${{github.workspace}}/build/_deps
-        key: deps-${{runner.os}}-${{hashFiles('cmake/Dependencies.cmake', 'cmake/Flags.cmake')}}
-        restore-keys: |
-          deps-${{ runner.os }}-
-
     - name: Configure CMake
       run: cmake -B ${{github.workspace}}/build -G "${{env.CMAKE_GENERATOR}}"
       env:

@@ -17,21 +17,13 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Cache vcpkg binary cache
+    - name: Set up vcpkg binary cache
       uses: actions/cache@v4
       with:
         path: ${{github.workspace}}/vcpkg_cache
         key: vcpkg-${{runner.os}}-${{env.VCPKG_TARGET_TRIPLET}}-${{hashFiles('vcpkg.json')}}
         restore-keys: |
           vcpkg-${{runner.os}}-${{env.VCPKG_TARGET_TRIPLET}}-
-
-    - name: Cache FetchContent dependencies
-      uses: actions/cache@v4
-      with:
-        path: ${{github.workspace}}/build/_deps
-        key: deps-${{runner.os}}-${{hashFiles('cmake/Dependencies.cmake', 'cmake/Flags.cmake')}}
-        restore-keys: |
-          deps-${{ runner.os }}-
 
     - name: Configure CMake
       shell: cmd
