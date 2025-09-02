@@ -265,22 +265,22 @@ inline void Playfield::enqueue_field_border(Renderer::Queue& queue, ivec2 positi
 	queue.enqueue_rect("judgment_line"_id, {
 		{position.x(), position.y() + size.y() - JudgmentLineHeight},
 		{size.x(), JudgmentLineHeight},
-		JudgmentLineColor
+		JudgmentLineColor,
 	});
 	queue.enqueue_rect("frame"_id, {
 		{position.x() - FieldBorderWidth, position.y()},
 		{FieldBorderWidth, size.y() + FieldBorderWidth},
-		FieldBorderColor
+		FieldBorderColor,
 	});
 	queue.enqueue_rect("frame"_id, {
 		{position.x() - FieldBorderWidth, size.y()},
 		{size.x() + FieldBorderWidth * 2, FieldBorderWidth},
-		FieldBorderColor
+		FieldBorderColor,
 	});
 	queue.enqueue_rect("frame"_id, {
 		{position.x() + size.x(), position.y()},
 		{FieldBorderWidth, size.y() + FieldBorderWidth},
-		FieldBorderColor
+		FieldBorderColor,
 	});
 }
 
@@ -324,7 +324,7 @@ inline void Playfield::enqueue_measure_lines(Renderer::Queue& queue, span<float 
 		queue.enqueue_rect("measure"_id, {
 			{position.x(), static_cast<int32>(position.y() + size.y() - ceil(y_pos * size.y()) - MeasureLineHeight)},
 			{size.x(), MeasureLineHeight},
-			MeasureLineColor
+			MeasureLineColor,
 		});
 	}
 }

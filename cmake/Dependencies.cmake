@@ -157,3 +157,9 @@ FetchContent_Declare(tomlplusplus # TOML config file parsing
 	GIT_TAG v3.4.0
 )
 FetchContent_MakeAvailable(tomlplusplus)
+
+FetchContent_Declare(magic_enum
+	GIT_REPOSITORY https://github.com/Neargye/magic_enum
+	GIT_TAG v0.9.7
+)
+FetchContent_MakeAvailable(magic_enum)
