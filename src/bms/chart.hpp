@@ -66,18 +66,6 @@ struct Metadata {
 	string url;
 	string email;
 	Difficulty difficulty = Difficulty::Unknown;
-
-	[[nodiscard]] static auto to_str(Difficulty diff) -> string_view
-	{
-		switch (diff) {
-		case Difficulty::Beginner: return "Beginner";
-		case Difficulty::Normal:   return "Normal";
-		case Difficulty::Hyper:    return "Hyper";
-		case Difficulty::Another:  return "Another";
-		case Difficulty::Insane:   return "Insane";
-		default:                   return "Unknown";
-		}
-	}
 };
 
 enum class Playstyle {

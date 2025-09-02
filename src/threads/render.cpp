@@ -33,7 +33,7 @@ static void show_metadata(bms::Metadata const& meta)
 	lib::imgui::text(meta.artist);
 	if (!meta.subartist.empty()) lib::imgui::text(meta.subartist);
 	lib::imgui::text(meta.genre);
-	lib::imgui::text("Difficulty: {}", bms::Metadata::to_str(meta.difficulty));
+	lib::imgui::text("Difficulty: {}", enum_name(meta.difficulty));
 	if (!meta.url.empty()) lib::imgui::text(meta.url);
 	if (!meta.email.empty()) lib::imgui::text(meta.email);
 }

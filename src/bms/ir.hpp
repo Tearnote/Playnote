@@ -138,8 +138,6 @@ public:
 			BPM,
 			BPMxx,
 		};
-		// Enum value to string, for debug output.
-		[[nodiscard]] static auto to_str(Type) -> string_view;
 
 		NotePosition position;
 		Type type;
@@ -277,30 +275,6 @@ private:
 	void parse_channel_bpm(IR&, SingleChannelCommand&&, SlotMappings&);
 	void parse_channel_bpmxx(IR&, SingleChannelCommand&&, SlotMappings&);
 };
-
-inline auto IR::ChannelEvent::to_str(Type type) -> string_view
-{
-	switch (type) {
-	case Type::BGM:          return "BGM";
-	case Type::Note_P1_Key1: return "Note_P1_Key1";
-	case Type::Note_P1_Key2: return "Note_P1_Key2";
-	case Type::Note_P1_Key3: return "Note_P1_Key3";
-	case Type::Note_P1_Key4: return "Note_P1_Key4";
-	case Type::Note_P1_Key5: return "Note_P1_Key5";
-	case Type::Note_P1_Key6: return "Note_P1_Key6";
-	case Type::Note_P1_Key7: return "Note_P1_Key7";
-	case Type::Note_P1_KeyS: return "Note_P1_KeyS";
-	case Type::Note_P2_Key1: return "Note_P2_Key1";
-	case Type::Note_P2_Key2: return "Note_P2_Key2";
-	case Type::Note_P2_Key3: return "Note_P2_Key3";
-	case Type::Note_P2_Key4: return "Note_P2_Key4";
-	case Type::Note_P2_Key5: return "Note_P2_Key5";
-	case Type::Note_P2_Key6: return "Note_P2_Key6";
-	case Type::Note_P2_Key7: return "Note_P2_Key7";
-	case Type::Note_P2_KeyS: return "Note_P2_KeyS";
-	default: return "";
-	}
-}
 
 inline IR::IR():
 	buffer_resource{make_unique<pmr::monotonic_buffer_resource>()},
@@ -821,7 +795,7 @@ inline void IRCompiler::parse_channel_note(IR& ir, SingleChannelCommand&& cmd, S
 		PANIC();
 	}();
 	auto const slot_id = maps.get_slot_id(maps.wav, cmd.value);
-	TRACE_AS(cat, "L{}: {} {}: {} -> #{}", cmd.line, cmd.position, IR::ChannelEvent::to_str(type), cmd.value, slot_id);
+	TRACE_AS(cat, "L{}: {} {}: {} -> #{}", cmd.line, cmd.position, enum_name(type), cmd.value, slot_id);
 	ir.add_channel_event({ .position = cmd.position, .type = type, .slot = slot_id });
 }
 
@@ -848,7 +822,7 @@ inline void IRCompiler::parse_channel_ln(IR& ir, SingleChannelCommand&& cmd, Slo
 		PANIC();
 	}();
 	auto const slot_id = maps.get_slot_id(maps.wav, cmd.value);
-	TRACE_AS(cat, "L{}: {} {}: {} -> #{} (LN)", cmd.line, cmd.position, IR::ChannelEvent::to_str(type), cmd.value, slot_id);
+	TRACE_AS(cat, "L{}: {} {}: {} -> #{} (LN)", cmd.line, cmd.position, enum_name(type), cmd.value, slot_id);
 	ir.add_channel_event({ .position = cmd.position, .type = type, .slot = slot_id });
 }
 
