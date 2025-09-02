@@ -43,7 +43,7 @@ auto get_raw_instance(Instance instance) noexcept -> RawInstance;
 // A window's surface, as visible for Vulkan as a drawing target.
 using Surface = VkSurfaceKHR_T*;
 
-// Surface creation is handled by lib.window
+// Surface creation is handled by lib/glfw
 
 // Destroy the window's Vulkan surface.
 void destroy_surface(Instance instance, Surface surface) noexcept;
