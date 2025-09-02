@@ -85,6 +85,9 @@ public:
 	// Return accuracy rank as string.
 	[[nodiscard]] auto get_rank_str() const -> string_view;
 
+	// true if a lane is currently being held, false otherwise.
+	[[nodiscard]] auto is_pressed(Chart::LaneType) const -> bool;
+
 	// Seek the cursor to the beginning of the chart.
 	void restart();
 
@@ -106,6 +109,7 @@ private:
 	struct LaneProgress {
 		usize next_note; // Index of the earliest note that hasn't been judged yet
 		usize active_slot; // Index of the WAV slot that will be triggered on player input
+		bool pressed; // Is the player currently pushing the lane's button?
 		bool ln_active; // Is it currently in the middle of an LN?
 		void restart() { *this = {}; }
 	};
@@ -173,6 +177,11 @@ inline auto Cursor::get_rank_str() const -> string_view
 	return "?";
 }
 
+inline auto Cursor::is_pressed(Chart::LaneType type) const -> bool
+{
+	return lane_progress[+type].pressed;
+}
+
 inline void Cursor::restart()
 {
 	sample_progress = 0zu;
@@ -196,6 +205,8 @@ inline void Cursor::fast_forward(usize samples)
 
 inline void Cursor::trigger_lane_input(Lane const& lane, LaneProgress& progress, bool state)
 {
+	if (progress.pressed == state) return;
+
 	// Judge press
 	if (state && progress.next_note < lane.notes.size()) {
 		auto const& note = lane.notes[progress.next_note];
@@ -266,6 +277,8 @@ inline void Cursor::trigger_lane_input(Lane const& lane, LaneProgress& progress,
 	// Trigger associated sample
 	if (state && lane.audible && !chart->wav_slots[progress.active_slot].empty())
 		wav_slot_progress[progress.active_slot].playback_pos = 0;
+
+	progress.pressed = state;
 }
 
 template<callable<void(dev::Sample)> Func>

@@ -24,9 +24,7 @@ public:
 
 	Playfield(ivec2 position, int32 length, bms::Playstyle);
 
-	void notes_from_cursor(bms::Cursor const&, float scroll_speed);
-
-	void enqueue(Renderer::Queue&);
+	void enqueue_from_cursor(Renderer::Queue&, bms::Cursor const&, float scroll_speed);
 
 private:
 	struct Note {
@@ -43,6 +41,7 @@ private:
 		};
 
 		Visual visual;
+		bms::Chart::LaneType type;
 		vector<Note> notes;
 	};
 
@@ -56,6 +55,8 @@ private:
 	static constexpr auto NoteHeight = 13;
 	static constexpr auto MeasureLineHeight = 1;
 	static constexpr auto MeasureLineColor = vec4{0.267f, 0.267f, 0.267f, 1.000f};
+	static constexpr auto LanePressedMargin = 4;
+	static constexpr auto LanePressedColor = vec4{1.000f, 1.000f, 1.000f, 1.000f};
 
 	ivec2 position;
 	int32 length;
@@ -70,7 +71,7 @@ private:
 
 	static auto make_field(bms::Playstyle, Side = Side::Left) -> vector<Lane>;
 	static void enqueue_field_border(Renderer::Queue&, ivec2 position, ivec2 size);
-	static void enqueue_lane(Renderer::Queue&, ivec2 position, int32 length, Lane const&, bool left_border);
+	static void enqueue_lane(Renderer::Queue&, ivec2 position, int32 length, Lane const&, bool left_border, bool pressed);
 	static void enqueue_measure_lines(Renderer::Queue&, span<float const> measure_lines, ivec2 position, ivec2 size);
 };
 
@@ -100,13 +101,14 @@ inline Playfield::Playfield(ivec2 position, int32 length, bms::Playstyle playsty
 	}
 }
 
-inline void Playfield::notes_from_cursor(bms::Cursor const& cursor, float scroll_speed)
+inline void Playfield::enqueue_from_cursor(Renderer::Queue& queue, bms::Cursor const& cursor, float scroll_speed)
 {
 	for (auto& field: fields)
 		for (auto& lane: field)
 			lane.notes.clear();
 	measure_lines.clear();
 
+	// Retrieve visible notes
 	scroll_speed /= 4.0f; // 1 beat -> 1 standard measure
 	scroll_speed *= cursor.get_chart().metrics.bpm.scroll_adjustment;
 	auto const max_distance = 1.0f / scroll_speed;
@@ -119,15 +121,14 @@ inline void Playfield::notes_from_cursor(bms::Cursor const& cursor, float scroll
 		auto const ln_height = note.type_is<bms::Note::LN>()? note.params<bms::Note::LN>().height / max_distance : 0.0f;
 		get_lane(type).notes.emplace_back(y_pos, ln_height);
 	}, true);
-}
 
-inline void Playfield::enqueue(Renderer::Queue& queue)
-{
+	// Enqueue graphics
 	auto x_advance = position.x();
 	for (auto const& field: fields) {
 		auto field_x_advance = 0;
 		for (auto [idx, lane]: field | views::enumerate) {
-			enqueue_lane(queue, {x_advance + field_x_advance, position.y()}, length, lane, idx != 0);
+			enqueue_lane(queue, {x_advance + field_x_advance, position.y()}, length, lane,
+				idx != 0, cursor.is_pressed(lane.type));
 			field_x_advance += lane_width(lane.visual) + (idx != field.size() - 1? LaneSeparatorWidth : 0);
 		}
 		enqueue_measure_lines(queue, measure_lines, {x_advance, position.y()}, {field_x_advance, length});
@@ -216,32 +217,32 @@ inline auto Playfield::make_field(bms::Playstyle playstyle, Side side) -> vector
 	auto result = vector<Lane>{};
 	switch (playstyle) {
 	case bms::Playstyle::_5K:
-		result.emplace_back(Lane::Visual::Scratch);
-		result.emplace_back(Lane::Visual::Odd);
-		result.emplace_back(Lane::Visual::Even);
-		result.emplace_back(Lane::Visual::Odd);
-		result.emplace_back(Lane::Visual::Even);
-		result.emplace_back(Lane::Visual::Odd);
+		result.emplace_back(Lane::Visual::Scratch, bms::Chart::LaneType::P1_KeyS);
+		result.emplace_back(Lane::Visual::Odd, bms::Chart::LaneType::P1_Key1);
+		result.emplace_back(Lane::Visual::Even, bms::Chart::LaneType::P1_Key2);
+		result.emplace_back(Lane::Visual::Odd, bms::Chart::LaneType::P1_Key3);
+		result.emplace_back(Lane::Visual::Even, bms::Chart::LaneType::P1_Key4);
+		result.emplace_back(Lane::Visual::Odd, bms::Chart::LaneType::P1_Key5);
 		return result;
 	case bms::Playstyle::_7K:
 		if (side == Side::Left) {
-			result.emplace_back(Lane::Visual::Scratch);
-			result.emplace_back(Lane::Visual::Odd);
-			result.emplace_back(Lane::Visual::Even);
-			result.emplace_back(Lane::Visual::Odd);
-			result.emplace_back(Lane::Visual::Even);
-			result.emplace_back(Lane::Visual::Odd);
-			result.emplace_back(Lane::Visual::Even);
-			result.emplace_back(Lane::Visual::Odd);
+			result.emplace_back(Lane::Visual::Scratch, bms::Chart::LaneType::P1_KeyS);
+			result.emplace_back(Lane::Visual::Odd, bms::Chart::LaneType::P1_Key1);
+			result.emplace_back(Lane::Visual::Even, bms::Chart::LaneType::P1_Key2);
+			result.emplace_back(Lane::Visual::Odd, bms::Chart::LaneType::P1_Key3);
+			result.emplace_back(Lane::Visual::Even, bms::Chart::LaneType::P1_Key4);
+			result.emplace_back(Lane::Visual::Odd, bms::Chart::LaneType::P1_Key5);
+			result.emplace_back(Lane::Visual::Even, bms::Chart::LaneType::P1_Key6);
+			result.emplace_back(Lane::Visual::Odd, bms::Chart::LaneType::P1_Key7);
 		} else {
-			result.emplace_back(Lane::Visual::Odd);
-			result.emplace_back(Lane::Visual::Even);
-			result.emplace_back(Lane::Visual::Odd);
-			result.emplace_back(Lane::Visual::Even);
-			result.emplace_back(Lane::Visual::Odd);
-			result.emplace_back(Lane::Visual::Even);
-			result.emplace_back(Lane::Visual::Odd);
-			result.emplace_back(Lane::Visual::Scratch);
+			result.emplace_back(Lane::Visual::Odd, bms::Chart::LaneType::P2_Key1);
+			result.emplace_back(Lane::Visual::Even, bms::Chart::LaneType::P2_Key2);
+			result.emplace_back(Lane::Visual::Odd, bms::Chart::LaneType::P2_Key3);
+			result.emplace_back(Lane::Visual::Even, bms::Chart::LaneType::P2_Key4);
+			result.emplace_back(Lane::Visual::Odd, bms::Chart::LaneType::P2_Key5);
+			result.emplace_back(Lane::Visual::Even, bms::Chart::LaneType::P2_Key6);
+			result.emplace_back(Lane::Visual::Odd, bms::Chart::LaneType::P2_Key7);
+			result.emplace_back(Lane::Visual::Scratch, bms::Chart::LaneType::P2_KeyS);
 		}
 		return result;
 	case bms::Playstyle::_9K: // TODO
@@ -283,7 +284,7 @@ inline void Playfield::enqueue_field_border(Renderer::Queue& queue, ivec2 positi
 	});
 }
 
-inline void Playfield::enqueue_lane(Renderer::Queue& queue, ivec2 position, int32 length, Lane const& lane, bool left_border)
+inline void Playfield::enqueue_lane(Renderer::Queue& queue, ivec2 position, int32 length, Lane const& lane, bool left_border, bool pressed)
 {
 	auto const width = lane_width(lane.visual);
 	queue.enqueue_rect("frame"_id, {
@@ -298,14 +299,21 @@ inline void Playfield::enqueue_lane(Renderer::Queue& queue, ivec2 position, int3
 		queue.enqueue_rect("notes"_id, {
 			{position.x(), static_cast<int32>(position.y() + length - ceil((y_pos_clipped + ln_height_clipped) * length) - NoteHeight)},
 			{width, NoteHeight + static_cast<int32>(ceil(ln_height_clipped * length))},
-			lane_note_color(lane.visual)
+			lane_note_color(lane.visual),
 		});
 	}
 	if (left_border) {
 		queue.enqueue_rect("frame"_id, {
 			{position.x() - LaneSeparatorWidth, position.y()},
 			{LaneSeparatorWidth, length - JudgmentLineHeight},
-			LaneSeparatorColor
+			LaneSeparatorColor,
+		});
+	}
+	if (pressed) {
+		queue.enqueue_rect("pressed"_id, {
+			{position.x() + LanePressedMargin, position.y() + length + LanePressedMargin * 2 + FieldBorderWidth},
+			{width - LanePressedMargin * 2, width - LanePressedMargin * 2},
+			LanePressedColor,
 		});
 	}
 }

@@ -188,7 +188,7 @@ static void run_render(Broadcaster& broadcaster, dev::Window const& window, gfx:
 			player = move(finished_player);
 			playfield = gfx::Playfield{{44, 0}, 545, player->get_chart().metrics.playstyle};
 		});
-		renderer.frame({"bg"_id, "frame"_id, "measure"_id, "judgment_line"_id, "notes"_id}, [&](gfx::Renderer::Queue& queue) {
+		renderer.frame({"bg"_id, "frame"_id, "measure"_id, "judgment_line"_id, "notes"_id, "pressed"_id}, [&](gfx::Renderer::Queue& queue) {
 			queue.enqueue_rect("bg"_id, {{0, 0}, {1280, 720}, {0.060f, 0.060f, 0.060f, 1.000f}});
 			if (loading_toast) enqueue_loading_toast(*loading_toast);
 			if (player) {
@@ -202,8 +202,7 @@ static void run_render(Broadcaster& broadcaster, dev::Window const& window, gfx:
 				show_playback_controls(broadcaster);
 				lib::imgui::text("");
 				show_scroll_speed_controls(scroll_speed);
-				playfield->notes_from_cursor(cursor, scroll_speed);
-				playfield->enqueue(queue);
+				playfield->enqueue_from_cursor(queue, cursor, scroll_speed);
 				lib::imgui::end_window();
 
 				lib::imgui::begin_window("judgements", {860, 436}, 120, true);
