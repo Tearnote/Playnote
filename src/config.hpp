@@ -404,6 +404,11 @@ inline void Config::create_defaults()
 		.name = "scroll_speed",
 		.value = 3.0,
 	});
+	entries.emplace_back(Entry{
+		.category = "gameplay",
+		.name = "note_offset",
+		.value = 0,
+	});
 }
 
 namespace globals {

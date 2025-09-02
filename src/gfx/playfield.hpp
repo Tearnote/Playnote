@@ -24,7 +24,7 @@ public:
 
 	Playfield(ivec2 position, int32 length, bms::Playstyle);
 
-	void enqueue_from_cursor(Renderer::Queue&, bms::Cursor const&, float scroll_speed);
+	void enqueue_from_cursor(Renderer::Queue&, bms::Cursor const&, float scroll_speed, nanoseconds offset);
 
 private:
 	struct Note {
@@ -101,7 +101,7 @@ inline Playfield::Playfield(ivec2 position, int32 length, bms::Playstyle playsty
 	}
 }
 
-inline void Playfield::enqueue_from_cursor(Renderer::Queue& queue, bms::Cursor const& cursor, float scroll_speed)
+inline void Playfield::enqueue_from_cursor(Renderer::Queue& queue, bms::Cursor const& cursor, float scroll_speed, nanoseconds offset)
 {
 	for (auto& field: fields)
 		for (auto& lane: field)
@@ -120,7 +120,7 @@ inline void Playfield::enqueue_from_cursor(Renderer::Queue& queue, bms::Cursor c
 		}
 		auto const ln_height = note.type_is<bms::Note::LN>()? note.params<bms::Note::LN>().height / max_distance : 0.0f;
 		get_lane(type).notes.emplace_back(y_pos, ln_height);
-	}, true);
+	}, offset, true);
 
 	// Enqueue graphics
 	auto x_advance = position.x();

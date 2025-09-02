@@ -183,6 +183,7 @@ static void run_render(Broadcaster& broadcaster, dev::Window const& window, gfx:
 	auto playfield = optional<gfx::Playfield>{};
 	auto loading_toast = optional<LoadingToast>{};
 	auto scroll_speed = globals::config->get_entry<double>("gameplay", "scroll_speed");
+	auto offset = milliseconds{globals::config->get_entry<int32>("gameplay", "note_offset")};
 
 	while (!window.is_closing()) {
 		receive_loading_shouts(broadcaster, loading_toast, [&](auto finished_player) {
@@ -203,7 +204,7 @@ static void run_render(Broadcaster& broadcaster, dev::Window const& window, gfx:
 				show_playback_controls(broadcaster);
 				lib::imgui::text("");
 				show_scroll_speed_controls(scroll_speed);
-				playfield->enqueue_from_cursor(queue, cursor, scroll_speed);
+				playfield->enqueue_from_cursor(queue, cursor, scroll_speed, offset);
 				lib::imgui::end_window();
 
 				lib::imgui::begin_window("judgements", {860, 436}, 120, true);
