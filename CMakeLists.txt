@@ -4,42 +4,13 @@
 # CMakeLists.txt:
 # Declares project files and build configuration.
 
-# Project configuration
-
 cmake_minimum_required(VERSION 3.28)
 project(Playnote
 	VERSION 0.0.3
 	DESCRIPTION "A BMS player hobby project"
 	LANGUAGES C CXX)
-set(CMAKE_C_STANDARD 11)
-set(CMAKE_C_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_STANDARD 23)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-# Global build settings
-
-set(BUILD_SHARED_LIBS OFF)
-if(UNIX)
-	add_compile_options("-Wall;-Wextra;-Wno-missing-field-initializers")
-	add_compile_options("-march=x86-64-v3;-ffast-math")
-	add_compile_options("-fno-strict-aliasing;$<$<COMPILE_LANGUAGE:CXX>:-fexceptions;-frtti>")
-	add_compile_options("$<$<NOT:$<CONFIG:Release>>:-g>")
-	add_compile_options("$<$<CONFIG:Release>:-g0>;$<$<NOT:$<CONFIG:Debug>>:-O3>")
-	add_link_options("$<$<NOT:$<CONFIG:Debug>>:-O3>")
-else()
-	set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-	add_compile_options("-Wno-unqualified-std-cast-call;-Wno-nan-infinity-disabled")
-	add_compile_options("/arch:AVX2;/fp:fast")
-	add_compile_options("/EHsc;/GR")
-	add_compile_options("$<IF:$<CONFIG:Debug>,/Od;/GS,/O2;/GS->")
-	add_link_options("/MANIFEST:EMBED;/MANIFESTINPUT:${PROJECT_SOURCE_DIR}/Playnote.manifest")
-endif()
-# Communicate build type to the project
-add_compile_definitions("BUILD_TYPE=$<$<CONFIG:Debug>:BUILD_DEBUG>$<$<CONFIG:RelWithDebInfo>:BUILD_RELDEB>$<$<CONFIG:Release>:BUILD_RELEASE>")
-
+include(cmake/Flags.cmake)
 include(cmake/Dependencies.cmake)
-
-# Main target
 
 add_executable(Playnote WIN32
 	src/lib/ebur128.cpp
@@ -65,8 +36,11 @@ else()
 	target_sources(Playnote PRIVATE
 		src/lib/wasapi.cpp)
 endif()
+
 target_precompile_headers(Playnote PRIVATE src/preamble.hpp)
 target_include_directories(Playnote PRIVATE src) # All includes start from src as root
+# Communicate build type to the project
+target_compile_definitions(Playnote PRIVATE "BUILD_TYPE=$<$<CONFIG:Debug>:BUILD_DEBUG>$<$<CONFIG:RelWithDebInfo>:BUILD_RELDEB>$<$<CONFIG:Release>:BUILD_RELEASE>")
 
 target_link_libraries(Playnote PRIVATE signalsmith-basics)
 target_link_libraries(Playnote PRIVATE tomlplusplus::tomlplusplus)
@@ -103,10 +77,8 @@ else()
 endif()
 target_compile_definitions(imgui PUBLIC "IMGUI_USER_CONFIG=\"${PROJECT_SOURCE_DIR}/src/lib/imconfig.h\"")
 
-# Assets and other artifacts
-
 include(cmake/Shaders.cmake)
 add_dependencies(Playnote Playnote_Shaders)
-target_include_directories(Playnote PUBLIC ${PROJECT_BINARY_DIR}/$<CONFIG>/generated)
+target_include_directories(Playnote PRIVATE ${PROJECT_BINARY_DIR}/$<CONFIG>/generated)
 include(cmake/Assets.cmake)
 add_dependencies(Playnote Playnote_Assets)
