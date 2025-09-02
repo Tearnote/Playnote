@@ -100,7 +100,7 @@ static void show_results(bms::Cursor const& cursor)
 {
 	lib::imgui::text("Score: {}", cursor.get_score());
 	lib::imgui::text("Combo: {}", cursor.get_combo());
-	lib::imgui::text(" Rank: {}", cursor.get_rank_str());
+	lib::imgui::text(" Rank: {}", enum_name(cursor.get_rank()));
 }
 
 struct LoadingToast {

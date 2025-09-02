@@ -82,9 +82,6 @@ public:
 	// Return accuracy rank.
 	[[nodiscard]] auto get_rank() const -> Rank;
 
-	// Return accuracy rank as string.
-	[[nodiscard]] auto get_rank_str() const -> string_view;
-
 	// true if a lane is currently being held, false otherwise.
 	[[nodiscard]] auto is_pressed(Chart::LaneType) const -> bool;
 
@@ -160,21 +157,6 @@ inline auto Cursor::get_rank() const -> Rank
 	if (acc >= 3.0 / 9.0) return Rank::D;
 	if (acc >= 2.0 / 9.0) return Rank::E;
 	return Rank::F;
-}
-
-inline auto Cursor::get_rank_str() const -> string_view
-{
-	switch (get_rank()) {
-	case Rank::AAA: return "AAA";
-	case Rank::AA: return "AA";
-	case Rank::A: return "A";
-	case Rank::B: return "B";
-	case Rank::C: return "C";
-	case Rank::D: return "D";
-	case Rank::E: return "E";
-	case Rank::F: return "F";
-	}
-	return "?";
 }
 
 inline auto Cursor::is_pressed(Chart::LaneType type) const -> bool

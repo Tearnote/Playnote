@@ -19,6 +19,7 @@ Imports and helpers for generic utilities.
 #include <tuple>
 #include <bit>
 #include <boost/scope/unique_resource.hpp>
+#include <magic_enum/magic_enum.hpp>
 #include "preamble/types.hpp"
 
 namespace playnote {
@@ -52,6 +53,8 @@ using boost::scope::unique_resource;
 using std::type_index;
 using std::remove_cvref_t;
 using std::bit_cast;
+using magic_enum::enum_name;
+using magic_enum::enum_cast;
 
 // Constructs a type with overloaded operator()s, for use as a std::variant visitor
 template<typename... Ts>
