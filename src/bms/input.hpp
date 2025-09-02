@@ -8,6 +8,7 @@ A timestamped BMS chart input, and conversion to it via a predefined mapping.
 
 #pragma once
 #include "preamble.hpp"
+#include "config.hpp"
 #include "bms/chart.hpp"
 #include "threads/input_shouts.hpp"
 
@@ -22,45 +23,79 @@ struct Input {
 
 class Mapper {
 public:
-	[[nodiscard]] auto from_key(threads::KeyInput const&) -> optional<Input>;
+	Mapper();
+	[[nodiscard]] auto from_key(threads::KeyInput const&, Playstyle) const -> optional<Input>;
+
+private:
+	array<array<threads::KeyInput::Code, +Chart::LaneType::Size>, +Playstyle::Size> key_bindings;
 };
 
-inline auto Mapper::from_key(threads::KeyInput const& key) -> optional<Input>
+inline Mapper::Mapper()
 {
-	auto result = Input{
+	auto get_key = [](string_view conf) -> threads::KeyInput::Code {
+		auto conf_entry = globals::config->get_entry<string>("controls", conf);
+		return *enum_cast<threads::KeyInput::Code>(conf_entry).or_else([&]() -> optional<threads::KeyInput::Code> {
+			throw runtime_error_fmt("Unknown keycode: {}", conf_entry);
+		});
+	};
+
+	key_bindings[+Playstyle::_5K][+Chart::LaneType::P1_Key1] = get_key("5k_1");
+	key_bindings[+Playstyle::_5K][+Chart::LaneType::P1_Key2] = get_key("5k_2");
+	key_bindings[+Playstyle::_5K][+Chart::LaneType::P1_Key3] = get_key("5k_3");
+	key_bindings[+Playstyle::_5K][+Chart::LaneType::P1_Key4] = get_key("5k_4");
+	key_bindings[+Playstyle::_5K][+Chart::LaneType::P1_Key5] = get_key("5k_5");
+	key_bindings[+Playstyle::_5K][+Chart::LaneType::P1_KeyS] = get_key("5k_s");
+
+	key_bindings[+Playstyle::_7K][+Chart::LaneType::P1_Key1] = get_key("7k_1");
+	key_bindings[+Playstyle::_7K][+Chart::LaneType::P1_Key2] = get_key("7k_2");
+	key_bindings[+Playstyle::_7K][+Chart::LaneType::P1_Key3] = get_key("7k_3");
+	key_bindings[+Playstyle::_7K][+Chart::LaneType::P1_Key4] = get_key("7k_4");
+	key_bindings[+Playstyle::_7K][+Chart::LaneType::P1_Key5] = get_key("7k_5");
+	key_bindings[+Playstyle::_7K][+Chart::LaneType::P1_Key6] = get_key("7k_6");
+	key_bindings[+Playstyle::_7K][+Chart::LaneType::P1_Key7] = get_key("7k_7");
+	key_bindings[+Playstyle::_7K][+Chart::LaneType::P1_KeyS] = get_key("7k_s");
+
+	key_bindings[+Playstyle::_10K][+Chart::LaneType::P1_Key1] = get_key("10k_p1_1");
+	key_bindings[+Playstyle::_10K][+Chart::LaneType::P1_Key2] = get_key("10k_p1_2");
+	key_bindings[+Playstyle::_10K][+Chart::LaneType::P1_Key3] = get_key("10k_p1_3");
+	key_bindings[+Playstyle::_10K][+Chart::LaneType::P1_Key4] = get_key("10k_p1_4");
+	key_bindings[+Playstyle::_10K][+Chart::LaneType::P1_Key5] = get_key("10k_p1_5");
+	key_bindings[+Playstyle::_10K][+Chart::LaneType::P1_KeyS] = get_key("10k_p1_s");
+	key_bindings[+Playstyle::_10K][+Chart::LaneType::P2_Key1] = get_key("10k_p2_1");
+	key_bindings[+Playstyle::_10K][+Chart::LaneType::P2_Key2] = get_key("10k_p2_2");
+	key_bindings[+Playstyle::_10K][+Chart::LaneType::P2_Key3] = get_key("10k_p2_3");
+	key_bindings[+Playstyle::_10K][+Chart::LaneType::P2_Key4] = get_key("10k_p2_4");
+	key_bindings[+Playstyle::_10K][+Chart::LaneType::P2_Key5] = get_key("10k_p2_5");
+	key_bindings[+Playstyle::_10K][+Chart::LaneType::P2_KeyS] = get_key("10k_p2_s");
+
+	key_bindings[+Playstyle::_14K][+Chart::LaneType::P1_Key1] = get_key("14k_p1_1");
+	key_bindings[+Playstyle::_14K][+Chart::LaneType::P1_Key2] = get_key("14k_p1_2");
+	key_bindings[+Playstyle::_14K][+Chart::LaneType::P1_Key3] = get_key("14k_p1_3");
+	key_bindings[+Playstyle::_14K][+Chart::LaneType::P1_Key4] = get_key("14k_p1_4");
+	key_bindings[+Playstyle::_14K][+Chart::LaneType::P1_Key5] = get_key("14k_p1_5");
+	key_bindings[+Playstyle::_14K][+Chart::LaneType::P1_Key6] = get_key("14k_p1_6");
+	key_bindings[+Playstyle::_14K][+Chart::LaneType::P1_Key7] = get_key("14k_p1_7");
+	key_bindings[+Playstyle::_14K][+Chart::LaneType::P1_KeyS] = get_key("14k_p1_s");
+	key_bindings[+Playstyle::_14K][+Chart::LaneType::P2_Key1] = get_key("14k_p2_1");
+	key_bindings[+Playstyle::_14K][+Chart::LaneType::P2_Key2] = get_key("14k_p2_2");
+	key_bindings[+Playstyle::_14K][+Chart::LaneType::P2_Key3] = get_key("14k_p2_3");
+	key_bindings[+Playstyle::_14K][+Chart::LaneType::P2_Key4] = get_key("14k_p2_4");
+	key_bindings[+Playstyle::_14K][+Chart::LaneType::P2_Key5] = get_key("14k_p2_5");
+	key_bindings[+Playstyle::_14K][+Chart::LaneType::P2_Key6] = get_key("14k_p2_6");
+	key_bindings[+Playstyle::_14K][+Chart::LaneType::P2_Key7] = get_key("14k_p2_7");
+	key_bindings[+Playstyle::_14K][+Chart::LaneType::P2_KeyS] = get_key("14k_p2_s");
+}
+
+inline auto Mapper::from_key(threads::KeyInput const& key, Playstyle playstyle) const -> optional<Input>
+{
+	auto const& playstyle_binds = key_bindings[+playstyle];
+	auto match = find(playstyle_binds, key.code);
+	if (match == playstyle_binds.end()) return nullopt;
+	return Input{
 		.timestamp = key.timestamp,
+		.lane = static_cast<Chart::LaneType>(distance(playstyle_binds.begin(), match)),
 		.state = key.state,
 	};
-	switch (key.code) {
-	case threads::KeyInput::Code::Q:
-	case threads::KeyInput::Code::A: result.lane = Chart::LaneType::P1_Key1; break;
-	case threads::KeyInput::Code::Two:
-	case threads::KeyInput::Code::S: result.lane = Chart::LaneType::P1_Key2; break;
-	case threads::KeyInput::Code::W:
-	case threads::KeyInput::Code::D: result.lane = Chart::LaneType::P1_Key3; break;
-	case threads::KeyInput::Code::Three:
-	case threads::KeyInput::Code::Space: result.lane = Chart::LaneType::P1_Key4; break;
-	case threads::KeyInput::Code::E:
-	case threads::KeyInput::Code::J: result.lane = Chart::LaneType::P1_Key5; break;
-	case threads::KeyInput::Code::Four:
-	case threads::KeyInput::Code::K: result.lane = Chart::LaneType::P1_Key6; break;
-	case threads::KeyInput::Code::R:
-	case threads::KeyInput::Code::L: result.lane = Chart::LaneType::P1_Key7; break;
-	case threads::KeyInput::Code::Tab:
-	case threads::KeyInput::Code::One:
-	case threads::KeyInput::Code::LeftShift: result.lane = Chart::LaneType::P1_KeyS; break;
-	case threads::KeyInput::Code::O: result.lane = Chart::LaneType::P2_Key1; break;
-	case threads::KeyInput::Code::Zero: result.lane = Chart::LaneType::P2_Key2; break;
-	case threads::KeyInput::Code::P: result.lane = Chart::LaneType::P2_Key3; break;
-	case threads::KeyInput::Code::Minus: result.lane = Chart::LaneType::P2_Key4; break;
-	case threads::KeyInput::Code::LeftBracket: result.lane = Chart::LaneType::P2_Key5; break;
-	case threads::KeyInput::Code::Equal: result.lane = Chart::LaneType::P2_Key6; break;
-	case threads::KeyInput::Code::RightBracket: result.lane = Chart::LaneType::P2_Key7; break;
-	case threads::KeyInput::Code::Backslash:
-	case threads::KeyInput::Code::Backspace: result.lane = Chart::LaneType::P2_KeyS; break;
-	default: return nullopt;
-	}
-	return result;
 }
 
 }

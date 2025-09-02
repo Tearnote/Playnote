@@ -254,3 +254,10 @@ void set_window_mouse_button_handler(Window window, Func&& func)
 [[nodiscard]] auto create_window_surface(Window window, vk::Instance instance) -> vk::Surface;
 
 }
+
+// magic_enum compatibility
+template<>
+struct magic_enum::customize::enum_range<playnote::lib::glfw::KeyCode> {
+	static constexpr auto min = 32;
+	static constexpr auto max = 348;
+};

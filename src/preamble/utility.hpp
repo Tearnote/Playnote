@@ -19,6 +19,8 @@ Imports and helpers for generic utilities.
 #include <tuple>
 #include <bit>
 #include <boost/scope/unique_resource.hpp>
+#define MAGIC_ENUM_RANGE_MIN -1
+#define MAGIC_ENUM_RANGE_MAX 64
 #include <magic_enum/magic_enum.hpp>
 #include "preamble/types.hpp"
 

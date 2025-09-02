@@ -74,6 +74,7 @@ enum class Playstyle {
 	_9K,
 	_10K,
 	_14K,
+	Size,
 };
 
 // Density functions of a chart's notes, and calculated NPS values.

@@ -39,6 +39,7 @@ using std::ranges::contains;
 using std::ranges::fill;
 using std::ranges::copy;
 using std::ranges::transform;
+using std::ranges::find;
 using std::ranges::find_if;
 using std::ranges::find_last_if;
 using std::ranges::sort;

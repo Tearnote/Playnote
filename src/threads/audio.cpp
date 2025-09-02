@@ -93,7 +93,7 @@ static void run_audio(Broadcaster& broadcaster, dev::Window& window, audio::Mixe
 			}
 		});
 		broadcaster.receive_all<KeyInput>([&](auto ev) {
-			auto input = mapper.from_key(ev);
+			auto input = mapper.from_key(ev, bms_player->get_chart().metrics.playstyle);
 			if (!input) return;
 			bms_player->enqueue_input(*input);
 		});
