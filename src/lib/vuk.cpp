@@ -51,7 +51,7 @@ auto create_runtime(vk::Instance instance, vk::Device device, vk::QueueSet const
 }
 
 [[nodiscard]] auto create_swapchain(Allocator& allocator, vk::Device device, uvec2 size,
-	optional<Swapchain> old) -> Swapchain
+	PresentMode present_mode, optional<Swapchain> old) -> Swapchain
 {
 	auto vkbswapchain_result = vkb::SwapchainBuilder{*device}
 		.set_old_swapchain(old? old->swapchain : VK_NULL_HANDLE)
@@ -64,7 +64,7 @@ auto create_runtime(vk::Instance instance, vk::Device device, vk::QueueSet const
 			.format = VK_FORMAT_B8G8R8A8_UNORM,
 			.colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR,
 		})
-		.set_desired_present_mode(VK_PRESENT_MODE_MAILBOX_KHR)
+		.set_desired_present_mode(static_cast<VkPresentModeKHR>(present_mode))
 		.add_fallback_present_mode(VK_PRESENT_MODE_FIFO_KHR)
 		.set_image_usage_flags(
 			VK_IMAGE_USAGE_TRANSFER_DST_BIT |

@@ -158,7 +158,13 @@ auto inline GPU::create_swapchain(lib::vuk::Allocator& allocator, Device& device
 	optional<lib::vuk::Swapchain> old) const -> lib::vuk::Swapchain
 {
 	auto const recreating = old.has_value();
-	auto swapchain = lib::vuk::create_swapchain(allocator, device.device, size, move(old));
+	auto present_mode_str = globals::config->get_entry<string>("vulkan", "present_mode");
+	auto present_mode = *enum_cast<lib::vuk::PresentMode>(present_mode_str).or_else(
+		[]() -> optional<lib::vuk::PresentMode> {
+			throw runtime_error{"Invalid value for Vulkan present_mode setting"};
+		}
+	);
+	auto swapchain = lib::vuk::create_swapchain(allocator, device.device, size, present_mode, move(old));
 	if (!recreating)
 		DEBUG_AS(cat, "Created swapchain, size {}", size);
 	else
