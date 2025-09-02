@@ -69,7 +69,11 @@ void text(fmtquill::format_string<Args...> fmt, Args&&... args)
 
 // A control for a float variable, with +/- buttons and direct value input via keyboard.
 void input_float(char const* str, float& value,
-	float step = 0.0f, float step_fast = 0.0f, char const* format = "%.3f");
+float step = 0.0f, float step_fast = 0.0f, char const* format = "%.3f");
+
+// A control for a double variable, with +/- buttons and direct value input via keyboard.
+void input_double(char const* str, double& value,
+	double step = 0.0f, double step_fast = 0.0f, char const* format = "%.3f");
 
 // A non-interactive progress bar control. If progress is nullopt, the bar will look intederminate.
 void progress_bar(optional<float> progress, string_view text);

@@ -11,6 +11,7 @@ Implementation file for threads/render.hpp.
 #include "preamble.hpp"
 #include "assert.hpp"
 #include "logger.hpp"
+#include "config.hpp"
 #include "lib/imgui.hpp"
 #include "dev/window.hpp"
 #include "dev/audio.hpp"
@@ -76,9 +77,9 @@ static void show_playback_controls(Broadcaster& broadcaster)
 	if (lib::imgui::button("Autoplay")) broadcaster.shout(PlayerControl::Autoplay);
 }
 
-static void show_scroll_speed_controls(float& scroll_speed)
+static void show_scroll_speed_controls(double& scroll_speed)
 {
-	lib::imgui::input_float("Scroll speed", scroll_speed, 0.25f, 1.0f, "%.2f");
+	lib::imgui::input_double("Scroll speed", scroll_speed, 0.25f, 1.0f, "%.2f");
 }
 
 static void show_judgments(bms::Cursor::JudgmentCounts judgments)
@@ -181,7 +182,7 @@ static void run_render(Broadcaster& broadcaster, dev::Window const& window, gfx:
 	auto player = shared_ptr<audio::Player const>{};
 	auto playfield = optional<gfx::Playfield>{};
 	auto loading_toast = optional<LoadingToast>{};
-	auto scroll_speed = 3.0f;
+	auto scroll_speed = globals::config->get_entry<double>("gameplay", "scroll_speed");
 
 	while (!window.is_closing()) {
 		receive_loading_shouts(broadcaster, loading_toast, [&](auto finished_player) {

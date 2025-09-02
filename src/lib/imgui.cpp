@@ -247,6 +247,12 @@ void input_float(char const* str, float& value, float step, float step_fast,
 	ImGui::InputFloat(str, &value, step, step_fast, format);
 }
 
+void input_double(char const* str, double& value, double step, double step_fast,
+	char const* format)
+{
+	ImGui::InputDouble(str, &value, step, step_fast, format);
+}
+
 void progress_bar(optional<float> progress, string_view text)
 {
 	if (progress)

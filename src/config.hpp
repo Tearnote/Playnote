@@ -398,6 +398,12 @@ inline void Config::create_defaults()
 		.name = "14k_p2_s",
 		.value = "RightShift",
 	});
+
+	entries.emplace_back(Entry{
+		.category = "gameplay",
+		.name = "scroll_speed",
+		.value = 3.0,
+	});
 }
 
 namespace globals {
