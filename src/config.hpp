@@ -172,6 +172,11 @@ inline void Config::create_defaults()
 		.name = "custom_latency",
 		.value = 10,
 	});
+	entries.emplace_back(Entry{
+		.category = "vulkan",
+		.name = "frames_in_flight",
+		.value = 2,
+	});
 }
 
 namespace globals {

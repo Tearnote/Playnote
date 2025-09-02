@@ -22,8 +22,6 @@ using lib::vuk::ManagedImage;
 // RAII encapsulation of GPU state, handling initialization and frame preparation/presentation
 class GPU {
 public:
-	static constexpr auto FramesInFlight = 2u; // 2 or 3, low latency vs smoothness
-
 	explicit GPU(dev::Window&);
 	~GPU() { runtime.wait_idle(); }
 
@@ -177,7 +175,7 @@ inline GPU::GPU(dev::Window& window):
 	physical_device{select_physical_device(instance, surface)},
 	device{cat, physical_device},
 	runtime{lib::vuk::create_runtime(instance.instance, device.device, lib::vk::retrieve_device_queues(device.device))},
-	global_resource{runtime, FramesInFlight},
+	global_resource{runtime, static_cast<uint32>(globals::config->get_entry<int32>("vulkan", "frames_in_flight"))},
 	global_allocator{global_resource},
 	swapchain{create_swapchain(global_allocator, device, window.size())}
 {
