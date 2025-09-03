@@ -103,9 +103,12 @@ static void run_audio(Broadcaster& broadcaster, dev::Window& window, audio::Mixe
 			bms_player->enqueue_input(*input);
 		});
 		broadcaster.receive_all<AxisInput>([&](auto ev) {
-			TRACE("Axis event: {};{} #{} {}", +ev.controller.guid, ev.controller.duplicate,
-				ev.axis, ev.value);
+			auto inputs = mapper.submit_axis_input(ev, bms_player->get_chart().metrics.playstyle);
+			for (auto const& input: inputs) bms_player->enqueue_input(input);
 		});
+		auto inputs = mapper.from_axis_state(window.get_glfw(), bms_player->get_chart().metrics.playstyle);
+		for (auto const& input: inputs) bms_player->enqueue_input(input);
+
 		yield();
 	}
 }

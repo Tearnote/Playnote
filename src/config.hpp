@@ -614,6 +614,37 @@ inline void Config::create_defaults()
 	});
 
 	entries.emplace_back(Entry{
+		.category = "controls",
+		.name = "con_5k_s_analog",
+		.value = "None",
+	});
+	entries.emplace_back(Entry{
+		.category = "controls",
+		.name = "con_7k_s_analog",
+		.value = "None",
+	});
+	entries.emplace_back(Entry{
+		.category = "controls",
+		.name = "con_10k_p1_s_analog",
+		.value = "None",
+	});
+	entries.emplace_back(Entry{
+		.category = "controls",
+		.name = "con_10k_p2_s_analog",
+		.value = "None",
+	});
+	entries.emplace_back(Entry{
+		.category = "controls",
+		.name = "con_14k_p1_s_analog",
+		.value = "None",
+	});
+	entries.emplace_back(Entry{
+		.category = "controls",
+		.name = "con_14k_p2_s_analog",
+		.value = "None",
+	});
+
+	entries.emplace_back(Entry{
 		.category = "gameplay",
 		.name = "scroll_speed",
 		.value = 3.0,
