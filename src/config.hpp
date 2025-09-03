@@ -645,6 +645,17 @@ inline void Config::create_defaults()
 	});
 
 	entries.emplace_back(Entry{
+		.category = "controls",
+		.name = "debounce_duration",
+		.value = 4,
+	});
+	entries.emplace_back(Entry{
+		.category = "controls",
+		.name = "turntable_stop_timeout",
+		.value = 200,
+	});
+
+	entries.emplace_back(Entry{
 		.category = "gameplay",
 		.name = "scroll_speed",
 		.value = 3.0,

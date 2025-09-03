@@ -31,9 +31,6 @@ public:
 	[[nodiscard]] auto from_axis_state(dev::GLFW const& glfw, Playstyle) -> vector<Input>;
 
 private:
-	static constexpr auto DebounceDuration = 4ms;
-	static constexpr auto TurntableStopTimeout = 100ms;
-
 	struct ConBinding {
 		threads::ControllerID controller;
 		uint32 idx;
@@ -188,7 +185,7 @@ inline auto Mapper::from_key(threads::KeyInput const& key, Playstyle playstyle) 
 	auto const lane = static_cast<Chart::LaneType>(distance(playstyle_binds.begin(), match));
 	auto& last = last_input[+playstyle][+lane];
 	auto const since_last = key.timestamp - last;
-	if (since_last <= DebounceDuration) return nullopt;
+	if (since_last <= milliseconds{globals::config->get_entry<int32>("controls", "debounce_duration")}) return nullopt;
 
 	last = key.timestamp;
 	return Input{
@@ -211,7 +208,7 @@ inline auto Mapper::from_button(threads::ButtonInput const& button, Playstyle pl
 	auto const lane = static_cast<Chart::LaneType>(distance(playstyle_binds.begin(), match));
 	auto& last = last_input[+playstyle][+lane];
 	auto const since_last = button.timestamp - last;
-	if (since_last <= DebounceDuration) return nullopt;
+	if (since_last <= milliseconds{globals::config->get_entry<int32>("controls", "debounce_duration")}) return nullopt;
 
 	last = button.timestamp;
 	return Input{
@@ -241,7 +238,7 @@ inline auto Mapper::submit_axis_input(threads::AxisInput const& axis, Playstyle 
 	auto& last = last_input[+playstyle][+lane];
 	auto const since_last = axis.timestamp - last;
 
-	if (current_direction != tt_state.direction && since_last > DebounceDuration) {
+	if (current_direction != tt_state.direction && since_last > milliseconds{globals::config->get_entry<int32>("controls", "debounce_duration")}) {
 		// Changing direction of existing rotation
 		if (tt_state.direction != TurntableState::Direction::None) {
 			inputs.emplace_back(Input{
@@ -279,7 +276,7 @@ inline auto Mapper::from_axis_state(dev::GLFW const& glfw, Playstyle playstyle) 
 		if (tt.direction == TurntableState::Direction::None) continue;
 		auto now = glfw.get_time();
 		auto elapsed = now - tt.last_stopped;
-		if (elapsed <= TurntableStopTimeout) continue;
+		if (elapsed <= milliseconds{globals::config->get_entry<int32>("controls", "turntable_stop_timeout")}) continue;
 
 		inputs.emplace_back(Input{
 			.timestamp = now,
