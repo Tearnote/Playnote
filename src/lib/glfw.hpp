@@ -78,6 +78,7 @@ template<typename T>
 }
 
 enum class KeyCode: int {
+	None = -1, // GLFW_KEY_UNKNOWN
 	Space = 32, // GLFW_KEY_SPACE
 	Apostrophe = 39, // GLFW_KEY_APOSTROPHE
 	Comma = 44, // GLFW_KEY_COMMA
@@ -258,6 +259,6 @@ void set_window_mouse_button_handler(Window window, Func&& func)
 // magic_enum compatibility
 template<>
 struct magic_enum::customize::enum_range<playnote::lib::glfw::KeyCode> {
-	static constexpr auto min = 32;
+	static constexpr auto min = -1;
 	static constexpr auto max = 348;
 };
