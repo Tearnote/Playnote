@@ -42,7 +42,7 @@ private:
 class Window {
 public:
 	using KeyCode = lib::glfw::KeyCode;
-	using KeyAction = lib::glfw::KeyAction;
+	using KeyAction = lib::glfw::Action;
 	using MouseButton = lib::glfw::MouseButton;
 	using MouseButtonAction = lib::glfw::MouseButtonAction;
 

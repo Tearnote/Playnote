@@ -26,4 +26,26 @@ struct KeyInput {
 	bool state; // true = pressed, false = released
 };
 
+// Unique identifier for a controller. Can be persisted between sessions.
+struct ControllerID {
+	id guid; // Hash of the GUID
+	uint32 duplicate; // Initially 0, incremented if a duplicate GUID is found
+};
+
+// A controller button event.
+struct ButtonInput {
+	ControllerID controller;
+	nanoseconds timestamp; // Time since application start
+	uint32 button;
+	bool state;
+};
+
+// A controller axis event.
+struct AxisInput {
+	ControllerID controller;
+	nanoseconds timestamp; // Time since application start
+	uint32 axis;
+	float value;
+};
+
 }

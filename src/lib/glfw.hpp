@@ -201,7 +201,7 @@ enum class KeyCode: int {
 	Menu = 348, // GLFW_KEY_MENU
 };
 
-enum class KeyAction: int {
+enum class Action: int {
 	Release = 0, // GLFW_RELEASE
 	Press = 1, // GLFW_PRESS
 	Repeat = 2, // GLFW_REPEAT

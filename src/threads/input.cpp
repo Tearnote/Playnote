@@ -28,11 +28,13 @@ static void run_input(Broadcaster& broadcaster, dev::Window& window, ChartReques
 			.state = state,
 		});
 	});
-	auto con_dispatcher = dev::ControllerDispatcher{};
+	auto con_dispatcher = dev::ControllerDispatcher{glfw};
 	broadcaster.shout(request);
 	while (!window.is_closing()) {
 		glfw.poll();
-		con_dispatcher.poll([]{});
+		con_dispatcher.poll([&](auto event) {
+			visit([&](auto&& e){ broadcaster.shout(move(e)); }, event);
+		});
 		yield();
 	}
 }

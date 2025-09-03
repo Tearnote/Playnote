@@ -97,6 +97,14 @@ static void run_audio(Broadcaster& broadcaster, dev::Window& window, audio::Mixe
 			if (!input) return;
 			bms_player->enqueue_input(*input);
 		});
+		broadcaster.receive_all<ButtonInput>([&](auto ev) {
+			TRACE("Button event: {};{} #{} {}", +ev.controller.guid, ev.controller.duplicate,
+				ev.button, ev.state? "push" : "release");
+		});
+		broadcaster.receive_all<AxisInput>([&](auto ev) {
+			TRACE("Axis event: {};{} #{} {}", +ev.controller.guid, ev.controller.duplicate,
+				ev.axis, ev.value);
+		});
 		yield();
 	}
 }
@@ -108,6 +116,8 @@ try {
 	broadcaster.subscribe<PlayerControl>();
 	broadcaster.subscribe<ChartRequest>();
 	broadcaster.subscribe<KeyInput>();
+	broadcaster.subscribe<ButtonInput>();
+	broadcaster.subscribe<AxisInput>();
 	barriers.startup.arrive_and_wait();
 	auto mixer = audio::Mixer{};
 	run_audio(broadcaster, window, mixer);
