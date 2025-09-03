@@ -33,6 +33,7 @@ private:
 
 	struct Controller {
 		threads::ControllerID id;
+		string name;
 		vector<bool> buttons;
 		vector<float> axes;
 	};
@@ -90,9 +91,18 @@ void ControllerDispatcher::poll(Func&& func)
 
 inline void ControllerDispatcher::joystick_event_callback(int jid, int event)
 {
-	if (event == GLFW_DISCONNECTED) return;
 	auto& self = *instance;
 	auto& controller = self.controllers[jid];
+	if (event == GLFW_DISCONNECTED) {
+		INFO("Controller disconnected: \"{}\"", controller.name);
+		controller.name.clear();
+		controller.id = {};
+		controller.buttons.clear();
+		controller.axes.clear();
+		return;
+	}
+
+	controller.name = glfwGetJoystickName(jid);
 	auto guid = id{glfwGetJoystickGUID(jid)};
 
 	auto dids_used = array<bool, GLFW_JOYSTICK_LAST + 1>{};
@@ -106,7 +116,7 @@ inline void ControllerDispatcher::joystick_event_callback(int jid, int event)
 	auto button_count = 0;
 	auto const* buttons_ptr = glfwGetJoystickButtons(jid, &button_count);
 	auto buttons = span{buttons_ptr, static_cast<uint32>(button_count)};
-	controller.buttons.clear();
+	ASSERT(controller.buttons.empty());
 	controller.buttons.reserve(button_count);
 	transform(buttons, back_inserter(controller.buttons), [](auto state) {
 		return state == +lib::glfw::Action::Press;
@@ -115,7 +125,7 @@ inline void ControllerDispatcher::joystick_event_callback(int jid, int event)
 	auto axes_count = 0;
 	auto const* axes_ptr = glfwGetJoystickAxes(jid, &axes_count);
 	auto axes = span{axes_ptr, static_cast<uint32>(axes_count)};
-	controller.axes.clear();
+	ASSERT(controller.axes.empty());
 	controller.axes.reserve(axes_count);
 	transform(axes, back_inserter(controller.axes), [](auto value) {
 		return value;
