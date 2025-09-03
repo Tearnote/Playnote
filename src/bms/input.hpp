@@ -31,6 +31,7 @@ public:
 	[[nodiscard]] auto from_axis_state(dev::GLFW const& glfw, Playstyle) -> vector<Input>;
 
 private:
+	static constexpr auto TurntableDeadzone = 0.01f;
 	static constexpr auto TurntableStopTimeout = 250ms;
 
 	struct ConBinding {
@@ -41,6 +42,7 @@ private:
 	struct TurntableState {
 		enum class Direction { CW, CCW, None };
 		float value;
+		float last_press_value;
 		Direction direction;
 		nanoseconds last_stopped;
 	};
@@ -50,6 +52,7 @@ private:
 	array<array<optional<ConBinding>, 2>, +Playstyle::Size> axis_bindings;
 	array<array<TurntableState, 2>, +Playstyle::Size> turntable_states;
 
+	[[nodiscard]] static auto tt_difference(float prev, float curr) -> float;
 	[[nodiscard]] static auto tt_direction(float prev, float curr) -> TurntableState::Direction;
 };
 
@@ -221,7 +224,8 @@ inline auto Mapper::submit_axis_input(threads::AxisInput const& axis, Playstyle 
 	auto lane = tt_idx == 0? Chart::LaneType::P1_KeyS : Chart::LaneType::P2_KeyS;
 	auto current_direction = tt_direction(tt_state.value, axis.value);
 
-	if (current_direction != tt_state.direction) {
+	if (current_direction != tt_state.direction &&
+		abs(tt_difference(tt_state.last_press_value, tt_state.value)) > TurntableDeadzone) {
 		// Changing direction of existing rotation
 		if (tt_state.direction != TurntableState::Direction::None) {
 			inputs.emplace_back(Input{
@@ -237,8 +241,8 @@ inline auto Mapper::submit_axis_input(threads::AxisInput const& axis, Playstyle 
 			.lane = lane,
 			.state = true,
 		});
-//		TRACE("TT input: old {}, new {}, dir {}", tt_state.value, axis.value, enum_name(current_direction));
 		tt_state.direction = current_direction;
+		tt_state.last_press_value = axis.value;
 	}
 	tt_state.value = axis.value;
 	tt_state.last_stopped = axis.timestamp;
@@ -271,12 +275,17 @@ inline auto Mapper::from_axis_state(dev::GLFW const& glfw, Playstyle playstyle) 
 	return inputs;
 }
 
-inline auto Mapper::tt_direction(float prev, float curr) -> TurntableState::Direction
+inline auto Mapper::tt_difference(float prev, float curr) -> float
 {
 	auto diff = curr - prev;
 	if (diff < -1.0f) diff += 2.0f;
 	if (diff > 1.0f) diff -= 2.0f;
-	return diff > 0.0f? TurntableState::Direction::CW : TurntableState::Direction::CCW;
+	return diff;
+}
+
+inline auto Mapper::tt_direction(float prev, float curr) -> TurntableState::Direction
+{
+	return tt_difference(prev, curr) > 0.0f? TurntableState::Direction::CW : TurntableState::Direction::CCW;
 }
 
 }
