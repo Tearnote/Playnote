@@ -187,216 +187,430 @@ inline void Config::create_defaults()
 
 	entries.emplace_back(Entry{
 		.category = "controls",
-		.name = "5k_1",
+		.name = "kb_5k_1",
 		.value = "Z",
 	});
 	entries.emplace_back(Entry{
 		.category = "controls",
-		.name = "5k_2",
+		.name = "kb_5k_2",
 		.value = "S",
 	});
 	entries.emplace_back(Entry{
 		.category = "controls",
-		.name = "5k_3",
+		.name = "kb_5k_3",
 		.value = "X",
 	});
 	entries.emplace_back(Entry{
 		.category = "controls",
-		.name = "5k_4",
+		.name = "kb_5k_4",
 		.value = "D",
 	});
 	entries.emplace_back(Entry{
 		.category = "controls",
-		.name = "5k_5",
+		.name = "kb_5k_5",
 		.value = "C",
 	});
 	entries.emplace_back(Entry{
 		.category = "controls",
-		.name = "5k_s",
+		.name = "kb_5k_s",
 		.value = "LeftShift",
 	});
 
 	entries.emplace_back(Entry{
 		.category = "controls",
-		.name = "7k_1",
+		.name = "kb_7k_1",
 		.value = "Z",
 	});
 	entries.emplace_back(Entry{
 		.category = "controls",
-		.name = "7k_2",
+		.name = "kb_7k_2",
 		.value = "S",
 	});
 	entries.emplace_back(Entry{
 		.category = "controls",
-		.name = "7k_3",
+		.name = "kb_7k_3",
 		.value = "X",
 	});
 	entries.emplace_back(Entry{
 		.category = "controls",
-		.name = "7k_4",
+		.name = "kb_7k_4",
 		.value = "D",
 	});
 	entries.emplace_back(Entry{
 		.category = "controls",
-		.name = "7k_5",
+		.name = "kb_7k_5",
 		.value = "C",
 	});
 	entries.emplace_back(Entry{
 		.category = "controls",
-		.name = "7k_6",
+		.name = "kb_7k_6",
 		.value = "F",
 	});
 	entries.emplace_back(Entry{
 		.category = "controls",
-		.name = "7k_7",
+		.name = "kb_7k_7",
 		.value = "V",
 	});
 	entries.emplace_back(Entry{
 		.category = "controls",
-		.name = "7k_s",
+		.name = "kb_7k_s",
 		.value = "LeftShift",
 	});
 
 	entries.emplace_back(Entry{
 		.category = "controls",
-		.name = "10k_p1_1",
+		.name = "kb_10k_p1_1",
 		.value = "Z",
 	});
 	entries.emplace_back(Entry{
 		.category = "controls",
-		.name = "10k_p1_2",
+		.name = "kb_10k_p1_2",
 		.value = "S",
 	});
 	entries.emplace_back(Entry{
 		.category = "controls",
-		.name = "10k_p1_3",
+		.name = "kb_10k_p1_3",
 		.value = "X",
 	});
 	entries.emplace_back(Entry{
 		.category = "controls",
-		.name = "10k_p1_4",
+		.name = "kb_10k_p1_4",
 		.value = "D",
 	});
 	entries.emplace_back(Entry{
 		.category = "controls",
-		.name = "10k_p1_5",
+		.name = "kb_10k_p1_5",
 		.value = "C",
 	});
 	entries.emplace_back(Entry{
 		.category = "controls",
-		.name = "10k_p1_s",
+		.name = "kb_10k_p1_s",
 		.value = "LeftShift",
 	});
 	entries.emplace_back(Entry{
 		.category = "controls",
-		.name = "10k_p2_1",
+		.name = "kb_10k_p2_1",
 		.value = "M",
 	});
 	entries.emplace_back(Entry{
 		.category = "controls",
-		.name = "10k_p2_2",
+		.name = "kb_10k_p2_2",
 		.value = "K",
 	});
 	entries.emplace_back(Entry{
 		.category = "controls",
-		.name = "10k_p2_3",
+		.name = "kb_10k_p2_3",
 		.value = "Comma",
 	});
 	entries.emplace_back(Entry{
 		.category = "controls",
-		.name = "10k_p2_4",
+		.name = "kb_10k_p2_4",
 		.value = "L",
 	});
 	entries.emplace_back(Entry{
 		.category = "controls",
-		.name = "10k_p2_5",
+		.name = "kb_10k_p2_5",
 		.value = "Period",
 	});
 	entries.emplace_back(Entry{
 		.category = "controls",
-		.name = "10k_p2_s",
+		.name = "kb_10k_p2_s",
 		.value = "RightShift",
 	});
 
 	entries.emplace_back(Entry{
 		.category = "controls",
-		.name = "14k_p1_1",
+		.name = "kb_14k_p1_1",
 		.value = "Z",
 	});
 	entries.emplace_back(Entry{
 		.category = "controls",
-		.name = "14k_p1_2",
+		.name = "kb_14k_p1_2",
 		.value = "S",
 	});
 	entries.emplace_back(Entry{
 		.category = "controls",
-		.name = "14k_p1_3",
+		.name = "kb_14k_p1_3",
 		.value = "X",
 	});
 	entries.emplace_back(Entry{
 		.category = "controls",
-		.name = "14k_p1_4",
+		.name = "kb_14k_p1_4",
 		.value = "D",
 	});
 	entries.emplace_back(Entry{
 		.category = "controls",
-		.name = "14k_p1_5",
+		.name = "kb_14k_p1_5",
 		.value = "C",
 	});
 	entries.emplace_back(Entry{
 		.category = "controls",
-		.name = "14k_p1_6",
+		.name = "kb_14k_p1_6",
 		.value = "F",
 	});
 	entries.emplace_back(Entry{
 		.category = "controls",
-		.name = "14k_p1_7",
+		.name = "kb_14k_p1_7",
 		.value = "V",
 	});
 	entries.emplace_back(Entry{
 		.category = "controls",
-		.name = "14k_p1_s",
+		.name = "kb_14k_p1_s",
 		.value = "LeftShift",
 	});
 	entries.emplace_back(Entry{
 		.category = "controls",
-		.name = "14k_p2_1",
+		.name = "kb_14k_p2_1",
 		.value = "M",
 	});
 	entries.emplace_back(Entry{
 		.category = "controls",
-		.name = "14k_p2_2",
+		.name = "kb_14k_p2_2",
 		.value = "K",
 	});
 	entries.emplace_back(Entry{
 		.category = "controls",
-		.name = "14k_p2_3",
+		.name = "kb_14k_p2_3",
 		.value = "Comma",
 	});
 	entries.emplace_back(Entry{
 		.category = "controls",
-		.name = "14k_p2_4",
+		.name = "kb_14k_p2_4",
 		.value = "L",
 	});
 	entries.emplace_back(Entry{
 		.category = "controls",
-		.name = "14k_p2_5",
+		.name = "kb_14k_p2_5",
 		.value = "Period",
 	});
 	entries.emplace_back(Entry{
 		.category = "controls",
-		.name = "14k_p2_6",
+		.name = "kb_14k_p2_6",
 		.value = "Semicolon",
 	});
 	entries.emplace_back(Entry{
 		.category = "controls",
-		.name = "14k_p2_7",
+		.name = "kb_14k_p2_7",
 		.value = "Slash",
 	});
 	entries.emplace_back(Entry{
 		.category = "controls",
-		.name = "14k_p2_s",
+		.name = "kb_14k_p2_s",
 		.value = "RightShift",
+	});
+
+	entries.emplace_back(Entry{
+		.category = "controls",
+		.name = "con_5k_1",
+		.value = "None",
+	});
+	entries.emplace_back(Entry{
+		.category = "controls",
+		.name = "con_5k_2",
+		.value = "None",
+	});
+	entries.emplace_back(Entry{
+		.category = "controls",
+		.name = "con_5k_3",
+		.value = "None",
+	});
+	entries.emplace_back(Entry{
+		.category = "controls",
+		.name = "con_5k_4",
+		.value = "None",
+	});
+	entries.emplace_back(Entry{
+		.category = "controls",
+		.name = "con_5k_5",
+		.value = "None",
+	});
+	entries.emplace_back(Entry{
+		.category = "controls",
+		.name = "con_5k_s",
+		.value = "None",
+	});
+
+	entries.emplace_back(Entry{
+		.category = "controls",
+		.name = "con_7k_1",
+		.value = "None",
+	});
+	entries.emplace_back(Entry{
+		.category = "controls",
+		.name = "con_7k_2",
+		.value = "None",
+	});
+	entries.emplace_back(Entry{
+		.category = "controls",
+		.name = "con_7k_3",
+		.value = "None",
+	});
+	entries.emplace_back(Entry{
+		.category = "controls",
+		.name = "con_7k_4",
+		.value = "None",
+	});
+	entries.emplace_back(Entry{
+		.category = "controls",
+		.name = "con_7k_5",
+		.value = "None",
+	});
+	entries.emplace_back(Entry{
+		.category = "controls",
+		.name = "con_7k_6",
+		.value = "None",
+	});
+	entries.emplace_back(Entry{
+		.category = "controls",
+		.name = "con_7k_7",
+		.value = "None",
+	});
+	entries.emplace_back(Entry{
+		.category = "controls",
+		.name = "con_7k_s",
+		.value = "None",
+	});
+
+	entries.emplace_back(Entry{
+		.category = "controls",
+		.name = "con_10k_p1_1",
+		.value = "None",
+	});
+	entries.emplace_back(Entry{
+		.category = "controls",
+		.name = "con_10k_p1_2",
+		.value = "None",
+	});
+	entries.emplace_back(Entry{
+		.category = "controls",
+		.name = "con_10k_p1_3",
+		.value = "None",
+	});
+	entries.emplace_back(Entry{
+		.category = "controls",
+		.name = "con_10k_p1_4",
+		.value = "None",
+	});
+	entries.emplace_back(Entry{
+		.category = "controls",
+		.name = "con_10k_p1_5",
+		.value = "None",
+	});
+	entries.emplace_back(Entry{
+		.category = "controls",
+		.name = "con_10k_p1_s",
+		.value = "None",
+	});
+	entries.emplace_back(Entry{
+		.category = "controls",
+		.name = "con_10k_p2_1",
+		.value = "None",
+	});
+	entries.emplace_back(Entry{
+		.category = "controls",
+		.name = "con_10k_p2_2",
+		.value = "None",
+	});
+	entries.emplace_back(Entry{
+		.category = "controls",
+		.name = "con_10k_p2_3",
+		.value = "None",
+	});
+	entries.emplace_back(Entry{
+		.category = "controls",
+		.name = "con_10k_p2_4",
+		.value = "None",
+	});
+	entries.emplace_back(Entry{
+		.category = "controls",
+		.name = "con_10k_p2_5",
+		.value = "None",
+	});
+	entries.emplace_back(Entry{
+		.category = "controls",
+		.name = "con_10k_p2_s",
+		.value = "None",
+	});
+
+	entries.emplace_back(Entry{
+		.category = "controls",
+		.name = "con_14k_p1_1",
+		.value = "None",
+	});
+	entries.emplace_back(Entry{
+		.category = "controls",
+		.name = "con_14k_p1_2",
+		.value = "None",
+	});
+	entries.emplace_back(Entry{
+		.category = "controls",
+		.name = "con_14k_p1_3",
+		.value = "None",
+	});
+	entries.emplace_back(Entry{
+		.category = "controls",
+		.name = "con_14k_p1_4",
+		.value = "None",
+	});
+	entries.emplace_back(Entry{
+		.category = "controls",
+		.name = "con_14k_p1_5",
+		.value = "None",
+	});
+	entries.emplace_back(Entry{
+		.category = "controls",
+		.name = "con_14k_p1_6",
+		.value = "None",
+	});
+	entries.emplace_back(Entry{
+		.category = "controls",
+		.name = "con_14k_p1_7",
+		.value = "None",
+	});
+	entries.emplace_back(Entry{
+		.category = "controls",
+		.name = "con_14k_p1_s",
+		.value = "None",
+	});
+	entries.emplace_back(Entry{
+		.category = "controls",
+		.name = "con_14k_p2_1",
+		.value = "None",
+	});
+	entries.emplace_back(Entry{
+		.category = "controls",
+		.name = "con_14k_p2_2",
+		.value = "None",
+	});
+	entries.emplace_back(Entry{
+		.category = "controls",
+		.name = "con_14k_p2_3",
+		.value = "None",
+	});
+	entries.emplace_back(Entry{
+		.category = "controls",
+		.name = "con_14k_p2_4",
+		.value = "None",
+	});
+	entries.emplace_back(Entry{
+		.category = "controls",
+		.name = "con_14k_p2_5",
+		.value = "None",
+	});
+	entries.emplace_back(Entry{
+		.category = "controls",
+		.name = "con_14k_p2_6",
+		.value = "None",
+	});
+	entries.emplace_back(Entry{
+		.category = "controls",
+		.name = "con_14k_p2_7",
+		.value = "None",
+	});
+	entries.emplace_back(Entry{
+		.category = "controls",
+		.name = "con_14k_p2_s",
+		.value = "None",
 	});
 
 	entries.emplace_back(Entry{

@@ -98,8 +98,9 @@ static void run_audio(Broadcaster& broadcaster, dev::Window& window, audio::Mixe
 			bms_player->enqueue_input(*input);
 		});
 		broadcaster.receive_all<ButtonInput>([&](auto ev) {
-			TRACE("Button event: {};{} #{} {}", +ev.controller.guid, ev.controller.duplicate,
-				ev.button, ev.state? "push" : "release");
+			auto input = mapper.from_button(ev, bms_player->get_chart().metrics.playstyle);
+			if (!input) return;
+			bms_player->enqueue_input(*input);
 		});
 		broadcaster.receive_all<AxisInput>([&](auto ev) {
 			TRACE("Axis event: {};{} #{} {}", +ev.controller.guid, ev.controller.duplicate,

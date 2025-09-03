@@ -30,6 +30,7 @@ struct KeyInput {
 struct ControllerID {
 	id guid; // Hash of the GUID
 	uint32 duplicate; // Initially 0, incremented if a duplicate GUID is found
+	auto operator==(ControllerID const&) const -> bool = default;
 };
 
 // A controller button event.
