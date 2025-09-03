@@ -25,14 +25,14 @@ struct Input {
 class Mapper {
 public:
 	Mapper();
-	[[nodiscard]] auto from_key(threads::KeyInput const&, Playstyle) const -> optional<Input>;
-	[[nodiscard]] auto from_button(threads::ButtonInput const&, Playstyle) const -> optional<Input>;
+	[[nodiscard]] auto from_key(threads::KeyInput const&, Playstyle) -> optional<Input>;
+	[[nodiscard]] auto from_button(threads::ButtonInput const&, Playstyle) -> optional<Input>;
 	[[nodiscard]] auto submit_axis_input(threads::AxisInput const&, Playstyle) -> vector<Input>;
 	[[nodiscard]] auto from_axis_state(dev::GLFW const& glfw, Playstyle) -> vector<Input>;
 
 private:
-	static constexpr auto TurntableDeadzone = 0.01f;
-	static constexpr auto TurntableStopTimeout = 250ms;
+	static constexpr auto DebounceDuration = 4ms;
+	static constexpr auto TurntableStopTimeout = 100ms;
 
 	struct ConBinding {
 		threads::ControllerID controller;
@@ -51,6 +51,7 @@ private:
 	array<array<optional<ConBinding>, +Chart::LaneType::Size>, +Playstyle::Size> button_bindings;
 	array<array<optional<ConBinding>, 2>, +Playstyle::Size> axis_bindings;
 	array<array<TurntableState, 2>, +Playstyle::Size> turntable_states;
+	array<array<nanoseconds, +Chart::LaneType::Size>, +Playstyle::Size> last_input{};
 
 	[[nodiscard]] static auto tt_difference(float prev, float curr) -> float;
 	[[nodiscard]] static auto tt_direction(float prev, float curr) -> TurntableState::Direction;
@@ -178,19 +179,26 @@ inline Mapper::Mapper()
 	axis_bindings[+Playstyle::_14K][1] = get_con("con_14k_p2_s_analog");
 }
 
-inline auto Mapper::from_key(threads::KeyInput const& key, Playstyle playstyle) const -> optional<Input>
+inline auto Mapper::from_key(threads::KeyInput const& key, Playstyle playstyle) -> optional<Input>
 {
 	auto const& playstyle_binds = key_bindings[+playstyle];
-	auto match = find(playstyle_binds, key.code);
+	auto const match = find(playstyle_binds, key.code);
 	if (match == playstyle_binds.end()) return nullopt;
+
+	auto const lane = static_cast<Chart::LaneType>(distance(playstyle_binds.begin(), match));
+	auto& last = last_input[+playstyle][+lane];
+	auto const since_last = key.timestamp - last;
+	if (since_last <= DebounceDuration) return nullopt;
+
+	last = key.timestamp;
 	return Input{
 		.timestamp = key.timestamp,
-		.lane = static_cast<Chart::LaneType>(distance(playstyle_binds.begin(), match)),
+		.lane = lane,
 		.state = key.state,
 	};
 }
 
-inline auto Mapper::from_button(threads::ButtonInput const& button, Playstyle playstyle) const -> optional<Input>
+inline auto Mapper::from_button(threads::ButtonInput const& button, Playstyle playstyle) -> optional<Input>
 {
 	auto const& playstyle_binds = button_bindings[+playstyle];
 	auto input = ConBinding{button.controller, button.button};
@@ -199,9 +207,16 @@ inline auto Mapper::from_button(threads::ButtonInput const& button, Playstyle pl
 		return *bind == input;
 	});
 	if (match == playstyle_binds.end()) return nullopt;
+
+	auto const lane = static_cast<Chart::LaneType>(distance(playstyle_binds.begin(), match));
+	auto& last = last_input[+playstyle][+lane];
+	auto const since_last = button.timestamp - last;
+	if (since_last <= DebounceDuration) return nullopt;
+
+	last = button.timestamp;
 	return Input{
 		.timestamp = button.timestamp,
-		.lane = static_cast<Chart::LaneType>(distance(playstyle_binds.begin(), match)),
+		.lane = lane,
 		.state = button.state,
 	};
 }
@@ -223,9 +238,10 @@ inline auto Mapper::submit_axis_input(threads::AxisInput const& axis, Playstyle 
 	auto inputs = vector<Input>{};
 	auto lane = tt_idx == 0? Chart::LaneType::P1_KeyS : Chart::LaneType::P2_KeyS;
 	auto current_direction = tt_direction(tt_state.value, axis.value);
+	auto& last = last_input[+playstyle][+lane];
+	auto const since_last = axis.timestamp - last;
 
-	if (current_direction != tt_state.direction &&
-		abs(tt_difference(tt_state.last_press_value, tt_state.value)) > TurntableDeadzone) {
+	if (current_direction != tt_state.direction && since_last > DebounceDuration) {
 		// Changing direction of existing rotation
 		if (tt_state.direction != TurntableState::Direction::None) {
 			inputs.emplace_back(Input{
@@ -235,7 +251,7 @@ inline auto Mapper::submit_axis_input(threads::AxisInput const& axis, Playstyle 
 			});
 		}
 
-		// Starting rotation
+		// Starting new rotation
 		inputs.emplace_back(Input{
 			.timestamp = axis.timestamp,
 			.lane = lane,
@@ -243,6 +259,7 @@ inline auto Mapper::submit_axis_input(threads::AxisInput const& axis, Playstyle 
 		});
 		tt_state.direction = current_direction;
 		tt_state.last_press_value = axis.value;
+		last = axis.timestamp;
 	}
 	tt_state.value = axis.value;
 	tt_state.last_stopped = axis.timestamp;
