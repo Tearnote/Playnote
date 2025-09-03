@@ -10,6 +10,7 @@ Implementation file for threads/audio.hpp.
 
 #include "preamble.hpp"
 #include "logger.hpp"
+#include "dev/controller.hpp"
 #include "dev/window.hpp"
 #include "dev/os.hpp"
 #include "threads/input_shouts.hpp"
@@ -27,9 +28,11 @@ static void run_input(Broadcaster& broadcaster, dev::Window& window, ChartReques
 			.state = state,
 		});
 	});
+	auto con_dispatcher = dev::ControllerDispatcher{};
 	broadcaster.shout(request);
 	while (!window.is_closing()) {
 		glfw.poll();
+		con_dispatcher.poll([]{});
 		yield();
 	}
 }
