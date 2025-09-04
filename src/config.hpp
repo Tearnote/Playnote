@@ -26,19 +26,6 @@ inline constexpr auto AppVersion = to_array({0u, 0u, 3u});
 #error Build type incorrectly defined
 #endif
 
-enum class Build {
-	Debug,
-	RelDeb,
-	Release,
-};
-#if BUILD_TYPE == BUILD_DEBUG
-inline constexpr auto BuildType = Build::Debug;
-#elif BUILD_TYPE == BUILD_RELDEB
-inline constexpr auto BuildType = Build::RelDeb;
-#else
-inline constexpr auto BuildType = Build::Release;
-#endif
-
 // Detect target
 #define TARGET_WINDOWS 0
 #define TARGET_LINUX 1
@@ -152,6 +139,12 @@ private:
 // Consult this function for the list of registered config entries.
 inline void Config::create_defaults()
 {
+	entries.emplace_back(Entry{
+		.category = "system",
+		.name = "attach_console",
+		.value = false,
+	});
+
 	entries.emplace_back(Entry{
 		.category = "pipewire",
 		.name = "buffer_size",
