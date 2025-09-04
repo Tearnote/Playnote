@@ -38,13 +38,6 @@ inline constexpr auto LogLevelGraphics = Logger::Level::Info;
 inline constexpr auto LogLevelBMSBuild = Logger::Level::Info;
 #endif
 
-// Whether Vulkan validation layers are enabled
-#if defined(BUILD_DEBUG) && defined(TARGET_LINUX)
-inline constexpr auto VulkanValidationEnabled = true;
-#else
-inline constexpr auto VulkanValidationEnabled = false;
-#endif
-
 // Logfile location
 #ifdef BUILD_DEBUG
 inline constexpr auto LogfilePath = "playnote-debug.log"sv;
@@ -142,6 +135,11 @@ inline void Config::create_defaults()
 		.category = "vulkan",
 		.name = "frames_in_flight",
 		.value = 1,
+	});
+	entries.emplace_back(Entry{
+		.category = "vulkan",
+		.name = "validation_enabled",
+		.value = false,
 	});
 
 	entries.emplace_back(Entry{

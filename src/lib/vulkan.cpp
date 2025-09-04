@@ -56,7 +56,7 @@ auto create_instance(string_view name, Logger::Category* debug_logger) -> Instan
 		.set_engine_name("vuk")
 		.require_api_version(1, 2, 0)
 		.set_app_version(AppVersion[0], AppVersion[1], AppVersion[2]);
-	if constexpr (VulkanValidationEnabled) {
+	if (globals::config->get_entry<bool>("vulkan", "validation_enabled")) {
 		instance_builder
 			.enable_layer("VK_LAYER_KHRONOS_validation")
 			.add_validation_feature_enable(
@@ -108,9 +108,9 @@ void detail::PhysicalDeviceDeleter::operator()(vkb::PhysicalDevice* pdev) noexce
 
 auto select_physical_device(Instance const& instance, Surface surface) -> PhysicalDevice
 {
-	constexpr auto features = []() {
+	auto const features = []() {
 		auto features = VkPhysicalDeviceFeatures{};
-		if constexpr (VulkanValidationEnabled) {
+		if (globals::config->get_entry<bool>("vulkan", "validation_enabled")) {
 			features.robustBufferAccess = VK_TRUE;
 			features.shaderInt64 = VK_TRUE;
 		}
@@ -146,7 +146,7 @@ auto select_physical_device(Instance const& instance, Surface surface) -> Physic
 			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES_KHR,
 			.synchronization2 = VK_TRUE,
 		});
-	if (VulkanValidationEnabled) {
+	if (globals::config->get_entry<bool>("vulkan", "validation_enabled")) {
 		physical_device_selector
 			.add_required_extension(VK_EXT_ROBUSTNESS_2_EXTENSION_NAME)
 			.add_required_extension_features(VkPhysicalDeviceRobustness2FeaturesEXT{
