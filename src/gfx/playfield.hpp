@@ -70,6 +70,7 @@ private:
 	[[nodiscard]] static auto lane_width(Lane::Visual) -> int32;
 	[[nodiscard]] static auto lane_background_color(Lane::Visual) -> vec4;
 	[[nodiscard]] static auto lane_note_color(Lane::Visual) -> vec4;
+	[[nodiscard]] static auto judgement_color(bms::Cursor::Judgment::Type) -> vec4;
 
 	static auto make_field(bms::Playstyle, Side = Side::Left) -> vector<Lane>;
 	static void enqueue_field_border(Renderer::Queue&, ivec2 position, ivec2 size);
@@ -191,8 +192,8 @@ inline auto Playfield::get_lane(bms::Chart::LaneType type) -> Lane&
 inline auto Playfield::lane_width(Lane::Visual visual) -> int32
 {
 	switch (visual) {
-	case Lane::Visual::Odd: return 40;
-	case Lane::Visual::Even: return 32;
+	case Lane::Visual::Odd:     return 40;
+	case Lane::Visual::Even:    return 32;
 	case Lane::Visual::Scratch: return 72;
 	default: PANIC();
 	}
@@ -202,7 +203,7 @@ inline auto Playfield::lane_background_color(Lane::Visual visual) -> vec4
 {
 	switch (visual) {
 	case Lane::Visual::Scratch:
-	case Lane::Visual::Odd: return {0.000f, 0.000f, 0.000f, 1.000f};
+	case Lane::Visual::Odd:  return {0.000f, 0.000f, 0.000f, 1.000f};
 	case Lane::Visual::Even: return {0.035f, 0.035f, 0.035f, 1.000f};
 	default: PANIC();
 	}
@@ -211,10 +212,21 @@ inline auto Playfield::lane_background_color(Lane::Visual visual) -> vec4
 inline auto Playfield::lane_note_color(Lane::Visual visual) -> vec4
 {
 	switch (visual) {
-	case Lane::Visual::Odd: return {0.800f, 0.800f, 0.800f, 1.000f};
-	case Lane::Visual::Even: return {0.200f, 0.600f, 0.800f, 1.000f};
+	case Lane::Visual::Odd:     return {0.800f, 0.800f, 0.800f, 1.000f};
+	case Lane::Visual::Even:    return {0.200f, 0.600f, 0.800f, 1.000f};
 	case Lane::Visual::Scratch: return {0.800f, 0.200f, 0.200f, 1.000f};
 	default: PANIC();
+	}
+}
+
+inline auto Playfield::judgement_color(bms::Cursor::Judgment::Type judge) -> vec4
+{
+	switch (judge) {
+	case bms::Cursor::Judgment::Type::PGreat: return {0.533f, 0.859f, 0.961f, 1.000f};
+	case bms::Cursor::Judgment::Type::Great:  return {0.980f, 0.863f, 0.380f, 1.000f};
+	case bms::Cursor::Judgment::Type::Good:   return {0.796f, 0.576f, 0.191f, 1.000f};
+	case bms::Cursor::Judgment::Type::Bad:    return {0.933f, 0.525f, 0.373f, 1.000f};
+	case bms::Cursor::Judgment::Type::Poor:   return {0.606f, 0.207f, 0.171f, 1.000f};
 	}
 }
 
@@ -224,30 +236,30 @@ inline auto Playfield::make_field(bms::Playstyle playstyle, Side side) -> vector
 	switch (playstyle) {
 	case bms::Playstyle::_5K:
 		result.emplace_back(Lane::Visual::Scratch, bms::Chart::LaneType::P1_KeyS);
-		result.emplace_back(Lane::Visual::Odd, bms::Chart::LaneType::P1_Key1);
-		result.emplace_back(Lane::Visual::Even, bms::Chart::LaneType::P1_Key2);
-		result.emplace_back(Lane::Visual::Odd, bms::Chart::LaneType::P1_Key3);
-		result.emplace_back(Lane::Visual::Even, bms::Chart::LaneType::P1_Key4);
-		result.emplace_back(Lane::Visual::Odd, bms::Chart::LaneType::P1_Key5);
+		result.emplace_back(Lane::Visual::Odd,     bms::Chart::LaneType::P1_Key1);
+		result.emplace_back(Lane::Visual::Even,    bms::Chart::LaneType::P1_Key2);
+		result.emplace_back(Lane::Visual::Odd,     bms::Chart::LaneType::P1_Key3);
+		result.emplace_back(Lane::Visual::Even,    bms::Chart::LaneType::P1_Key4);
+		result.emplace_back(Lane::Visual::Odd,     bms::Chart::LaneType::P1_Key5);
 		return result;
 	case bms::Playstyle::_7K:
 		if (side == Side::Left) {
 			result.emplace_back(Lane::Visual::Scratch, bms::Chart::LaneType::P1_KeyS);
-			result.emplace_back(Lane::Visual::Odd, bms::Chart::LaneType::P1_Key1);
-			result.emplace_back(Lane::Visual::Even, bms::Chart::LaneType::P1_Key2);
-			result.emplace_back(Lane::Visual::Odd, bms::Chart::LaneType::P1_Key3);
-			result.emplace_back(Lane::Visual::Even, bms::Chart::LaneType::P1_Key4);
-			result.emplace_back(Lane::Visual::Odd, bms::Chart::LaneType::P1_Key5);
-			result.emplace_back(Lane::Visual::Even, bms::Chart::LaneType::P1_Key6);
-			result.emplace_back(Lane::Visual::Odd, bms::Chart::LaneType::P1_Key7);
+			result.emplace_back(Lane::Visual::Odd,     bms::Chart::LaneType::P1_Key1);
+			result.emplace_back(Lane::Visual::Even,    bms::Chart::LaneType::P1_Key2);
+			result.emplace_back(Lane::Visual::Odd,     bms::Chart::LaneType::P1_Key3);
+			result.emplace_back(Lane::Visual::Even,    bms::Chart::LaneType::P1_Key4);
+			result.emplace_back(Lane::Visual::Odd,     bms::Chart::LaneType::P1_Key5);
+			result.emplace_back(Lane::Visual::Even,    bms::Chart::LaneType::P1_Key6);
+			result.emplace_back(Lane::Visual::Odd,     bms::Chart::LaneType::P1_Key7);
 		} else {
-			result.emplace_back(Lane::Visual::Odd, bms::Chart::LaneType::P2_Key1);
-			result.emplace_back(Lane::Visual::Even, bms::Chart::LaneType::P2_Key2);
-			result.emplace_back(Lane::Visual::Odd, bms::Chart::LaneType::P2_Key3);
-			result.emplace_back(Lane::Visual::Even, bms::Chart::LaneType::P2_Key4);
-			result.emplace_back(Lane::Visual::Odd, bms::Chart::LaneType::P2_Key5);
-			result.emplace_back(Lane::Visual::Even, bms::Chart::LaneType::P2_Key6);
-			result.emplace_back(Lane::Visual::Odd, bms::Chart::LaneType::P2_Key7);
+			result.emplace_back(Lane::Visual::Odd,     bms::Chart::LaneType::P2_Key1);
+			result.emplace_back(Lane::Visual::Even,    bms::Chart::LaneType::P2_Key2);
+			result.emplace_back(Lane::Visual::Odd,     bms::Chart::LaneType::P2_Key3);
+			result.emplace_back(Lane::Visual::Even,    bms::Chart::LaneType::P2_Key4);
+			result.emplace_back(Lane::Visual::Odd,     bms::Chart::LaneType::P2_Key5);
+			result.emplace_back(Lane::Visual::Even,    bms::Chart::LaneType::P2_Key6);
+			result.emplace_back(Lane::Visual::Odd,     bms::Chart::LaneType::P2_Key7);
 			result.emplace_back(Lane::Visual::Scratch, bms::Chart::LaneType::P2_KeyS);
 		}
 		return result;
@@ -342,8 +354,9 @@ inline void Playfield::enqueue_judgment(bms::Cursor::Judgment const& judgment, u
 	auto const name = format("judgment{}", field_id);
 	auto judge_str = string{enum_name(judgment.type)};
 	to_upper(judge_str);
+	auto const color = judgement_color(judgment.type);
 	lib::imgui::begin_window(name.c_str(), uvec2{position} + uvec2{static_cast<uint32>(size.x() / 2 - WindowWidth / 2), WindowY}, WindowWidth, true);
-	lib::imgui::text_styled(judge_str, vec4{0.500f, 0.500f, 1.000f, 1.000f}, 2.0f, lib::imgui::TextAlignment::Center);
+	lib::imgui::text_styled(judge_str, color, 2.0f, lib::imgui::TextAlignment::Center);
 	lib::imgui::end_window();
 }
 
