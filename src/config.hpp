@@ -27,20 +27,6 @@ inline constexpr auto AppVersion = to_array({0u, 0u, 3u});
 #error Unknown target platform
 #endif
 
-// Whether to use assertions
-#ifdef BUILD_RELEASE
-inline constexpr auto AssertionsEnabled = false;
-#else
-inline constexpr auto AssertionsEnabled = true;
-#endif
-
-// Whether to name threads for debugging
-#ifdef BUILD_RELEASE
-inline constexpr auto ThreadNamesEnabled = true;
-#else
-inline constexpr auto ThreadNamesEnabled = false;
-#endif
-
 // Level of logging to file and/or console
 #ifdef BUILD_RELEASE
 inline constexpr auto LogLevelGlobal = Logger::Level::TraceL1;

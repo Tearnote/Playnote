@@ -37,7 +37,6 @@ private:
 // Name the current thread. This name is visible in debuggers and profilers.
 inline void name_current_thread(string_view name)
 {
-	if constexpr (!ThreadNamesEnabled) return;
 	lib::os::name_current_thread(name);
 }
 
