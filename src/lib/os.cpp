@@ -8,20 +8,21 @@ Implementation file for lib/thread.hpp.
 
 #include "lib/os.hpp"
 
+#include "config.hpp"
 #ifdef TARGET_WINDOWS
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
-#ifdef WIN32_LEAN_AND_MEAN
-#undef WIN32_LEAN_AND_MEAN
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
 #endif
 #include <Windows.h>
+#include <timeapi.h>
 #include <shellapi.h>
-#elif TARGET_LINUX
+#elifdef TARGET_LINUX
 #include <pthread.h>
 #endif
 #include "preamble.hpp"
-#include "config.hpp"
 
 namespace playnote::lib::os {
 

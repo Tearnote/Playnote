@@ -8,6 +8,7 @@ Implementation file for lib/debug.hpp.
 
 #include "lib/debug.hpp"
 
+#include "config.hpp"
 #ifdef TARGET_WINDOWS
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -18,7 +19,6 @@ Implementation file for lib/debug.hpp.
 #include <Windows.h>
 #include <string>
 #include <cstdio>
-#include <Windows.h>
 #include <fcntl.h>
 #include <io.h>
 #endif
