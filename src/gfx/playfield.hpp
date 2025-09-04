@@ -74,7 +74,7 @@ private:
 	static void enqueue_field_border(Renderer::Queue&, ivec2 position, ivec2 size);
 	static void enqueue_lane(Renderer::Queue&, ivec2 position, int32 length, Lane const&, bool left_border, bool pressed);
 	static void enqueue_measure_lines(Renderer::Queue&, span<float const> measure_lines, ivec2 position, ivec2 size);
-	static void enqueue_judgment(uint32 field_id, ivec2 position, ivec2 size);
+	static void enqueue_judgment(bms::Cursor::Judgment const&, uint32 field_id, ivec2 position, ivec2 size);
 };
 
 inline Playfield::Playfield(ivec2 position, int32 length, bms::Playstyle playstyle):
@@ -126,16 +126,16 @@ inline void Playfield::enqueue_from_cursor(Renderer::Queue& queue, bms::Cursor c
 
 	// Enqueue graphics
 	auto x_advance = position.x();
-	for (auto const& field: fields) {
+	for (auto [idx, field]: fields | views::enumerate) {
 		auto field_x_advance = 0;
-		for (auto [idx, lane]: field | views::enumerate) {
+		for (auto [l_idx, lane]: field | views::enumerate) {
 			enqueue_lane(queue, {x_advance + field_x_advance, position.y()}, length, lane,
-				idx != 0, cursor.is_pressed(lane.type));
-			field_x_advance += lane_width(lane.visual) + (idx != field.size() - 1? LaneSeparatorWidth : 0);
+				l_idx != 0, cursor.is_pressed(lane.type));
+			field_x_advance += lane_width(lane.visual) + (l_idx != field.size() - 1? LaneSeparatorWidth : 0);
 		}
 		enqueue_measure_lines(queue, measure_lines, {x_advance, position.y()}, {field_x_advance, length});
 		enqueue_field_border(queue, {x_advance, position.y()}, {field_x_advance, length});
-//		enqueue_judgment(&field - &fields[0], {x_advance, position.y()}, {field_x_advance, length});
+		enqueue_judgment(cursor.get_latest_judgment(idx), idx, {x_advance, position.y()}, {field_x_advance, length});
 		x_advance += field_x_advance + FieldSpacing;
 	}
 }
@@ -332,13 +332,15 @@ inline void Playfield::enqueue_measure_lines(Renderer::Queue& queue, span<float 
 	}
 }
 
-inline void Playfield::enqueue_judgment(uint32 field_id, ivec2 position, ivec2 size)
+inline void Playfield::enqueue_judgment(bms::Cursor::Judgment const& judgment, uint32 field_id, ivec2 position, ivec2 size)
 {
 	constexpr auto WindowWidth = 112;
 	constexpr auto WindowY = 332;
 	auto const name = format("judgment{}", field_id);
+	auto judge_str = string{enum_name(judgment.type)};
+	to_upper(judge_str);
 	lib::imgui::begin_window(name.c_str(), uvec2{position} + uvec2{static_cast<uint32>(size.x() / 2 - WindowWidth / 2), WindowY}, WindowWidth, true);
-	lib::imgui::text_styled("GREAT", vec4{0.500f, 0.500f, 1.000f, 1.000f}, 2.0f, lib::imgui::TextAlignment::Center);
+	lib::imgui::text_styled(judge_str, vec4{0.500f, 0.500f, 1.000f, 1.000f}, 2.0f, lib::imgui::TextAlignment::Center);
 	lib::imgui::end_window();
 }
 
