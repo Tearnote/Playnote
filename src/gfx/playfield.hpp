@@ -137,8 +137,8 @@ inline void Playfield::enqueue_from_cursor(Renderer::Queue& queue, bms::Cursor c
 		enqueue_measure_lines(queue, measure_lines, {x_advance, position.y()}, {field_x_advance, length});
 		enqueue_field_border(queue, {x_advance, position.y()}, {field_x_advance, length});
 		auto const judgment = cursor.get_latest_judgment(idx);
-		if (cursor.get_progress_ns() - judgment.timestamp <= milliseconds{globals::config->get_entry<int>("gameplay", "judgment_timeout")})
-			enqueue_judgment(cursor.get_latest_judgment(idx), idx, {x_advance, position.y()}, {field_x_advance, length});
+		if (judgment && cursor.get_progress_ns() - judgment->timestamp <= milliseconds{globals::config->get_entry<int>("gameplay", "judgment_timeout")})
+			enqueue_judgment(*judgment, idx, {x_advance, position.y()}, {field_x_advance, length});
 		x_advance += field_x_advance + FieldSpacing;
 	}
 }

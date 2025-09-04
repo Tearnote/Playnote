@@ -87,7 +87,10 @@ public:
 	[[nodiscard]] auto get_judge_totals() const -> JudgeTotals { return judge_totals; }
 
 	// Return the latest judgment on given playfield.
-	[[nodiscard]] auto get_latest_judgment(uint32 field_idx) const -> Judgment { return latest_judgement[field_idx]; }
+	[[nodiscard]] auto get_latest_judgment(uint32 field_idx) const -> optional<Judgment>
+	{
+		return latest_judgement[field_idx];
+	}
 
 	// Return current combo.
 	[[nodiscard]] auto get_combo() const -> usize { return combo; }
@@ -137,7 +140,7 @@ private:
 	array<LaneProgress, enum_count<Chart::LaneType>()> lane_progress = {};
 	vector<WavSlotProgress> wav_slot_progress;
 	JudgeTotals judge_totals;
-	array<Judgment, 2> latest_judgement = {};
+	array<optional<Judgment>, 2> latest_judgement = {};
 	usize combo;
 	usize score;
 
