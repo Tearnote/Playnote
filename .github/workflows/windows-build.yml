@@ -33,3 +33,11 @@ jobs:
 
     - name: Build
       run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: playnote-windows-build
+        path: |
+          ${{github.workspace}}/build/${{env.BUILD_TYPE}}/Playnote.exe
+          ${{github.workspace}}/build/${{env.BUILD_TYPE}}/assets
