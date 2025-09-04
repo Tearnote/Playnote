@@ -57,6 +57,7 @@ using std::remove_cvref_t;
 using std::bit_cast;
 using magic_enum::enum_name;
 using magic_enum::enum_cast;
+using magic_enum::enum_count;
 
 // Constructs a type with overloaded operator()s, for use as a std::variant visitor
 template<typename... Ts>

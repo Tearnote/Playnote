@@ -82,19 +82,19 @@ static void show_scroll_speed_controls(double& scroll_speed)
 	lib::imgui::input_double("Scroll speed", scroll_speed, 0.25f, 1.0f, "%.2f");
 }
 
-static void show_judgments(bms::Cursor::JudgmentCounts judgments)
+static void show_judgments(bms::Cursor::JudgeTotals judgments)
 {
-	lib::imgui::text("PGREAT: {}", judgments.pgreat);
-	lib::imgui::text(" GREAT: {}", judgments.great);
-	lib::imgui::text("  GOOD: {}", judgments.good);
-	lib::imgui::text("   BAD: {}", judgments.bad);
-	lib::imgui::text("  POOR: {}", judgments.poor);
+	lib::imgui::text("PGREAT: {}", judgments.types[+bms::Cursor::Judgment::Type::PGreat]);
+	lib::imgui::text(" GREAT: {}", judgments.types[+bms::Cursor::Judgment::Type::Great]);
+	lib::imgui::text("  GOOD: {}", judgments.types[+bms::Cursor::Judgment::Type::Good]);
+	lib::imgui::text("   BAD: {}", judgments.types[+bms::Cursor::Judgment::Type::Bad]);
+	lib::imgui::text("  POOR: {}", judgments.types[+bms::Cursor::Judgment::Type::Poor]);
 }
 
-static void show_earlylate(bms::Cursor::JudgmentCounts judgments)
+static void show_earlylate(bms::Cursor::JudgeTotals judgments)
 {
-	lib::imgui::text(" Early: {}", judgments.early);
-	lib::imgui::text("  Late: {}", judgments.late);
+	lib::imgui::text(" Early: {}", judgments.timings[+bms::Cursor::Judgment::Timing::Early]);
+	lib::imgui::text("  Late: {}", judgments.timings[+bms::Cursor::Judgment::Timing::Late]);
 }
 
 static void show_results(bms::Cursor const& cursor)
