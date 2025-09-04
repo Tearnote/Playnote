@@ -234,8 +234,8 @@ inline auto Playfield::judgement_color(bms::Cursor::Judgment::Type judge) -> vec
 inline auto Playfield::timing_color(bms::Cursor::Judgment::Timing timing) -> vec4
 {
 	switch (timing) {
-	case bms::Cursor::Judgment::Timing::Early: return {0.933f, 0.300f, 0.300f, 1.000f};
-	case bms::Cursor::Judgment::Timing::Late:  return {0.200f, 0.400f, 0.961f, 1.000f};
+	case bms::Cursor::Judgment::Timing::Early: return {0.200f, 0.400f, 0.961f, 1.000f};
+	case bms::Cursor::Judgment::Timing::Late:  return {0.933f, 0.300f, 0.300f, 1.000f};
 	}
 	return {1.000f, 1.000f, 1.000f, 1.000f};
 }
@@ -359,17 +359,19 @@ inline void Playfield::enqueue_measure_lines(Renderer::Queue& queue, span<float 
 
 inline void Playfield::enqueue_judgment(bms::Cursor::Judgment const& judgment, uint32 field_id, ivec2 position, ivec2 size)
 {
-	constexpr auto JudgeWidth = 112;
+	constexpr auto JudgeWidth = 200;
 	constexpr auto JudgeY = 332;
 	constexpr auto TimingWidth = 64;
-	constexpr auto TimingY = 300;
+	constexpr auto TimingY = 316;
 
 	auto const judge_name = format("judgment{}", field_id);
 	auto judge_str = string{enum_name(judgment.type)};
 	to_upper(judge_str);
 	auto const judge_color = judgement_color(judgment.type);
-	lib::imgui::begin_window(judge_name.c_str(), uvec2{position} + uvec2{static_cast<uint32>(size.x() / 2 - JudgeWidth / 2), JudgeY}, JudgeWidth, true);
-	lib::imgui::text_styled(judge_str, judge_color, 2.0f, lib::imgui::TextAlignment::Center);
+	lib::imgui::begin_window(judge_name.c_str(),
+		uvec2{position} + uvec2{static_cast<uint32>(size.x() / 2 - JudgeWidth / 2), JudgeY}, JudgeWidth,
+		lib::imgui::WindowStyle::Transparent);
+	lib::imgui::text_styled(judge_str, judge_color, 3.0f, lib::imgui::TextAlignment::Center);
 	lib::imgui::end_window();
 
 	if (judgment.timing == bms::Cursor::Judgment::Timing::None || judgment.timing == bms::Cursor::Judgment::Timing::OnTime) return;
@@ -377,7 +379,9 @@ inline void Playfield::enqueue_judgment(bms::Cursor::Judgment const& judgment, u
 	auto timing_str = string{enum_name(judgment.timing)};
 	to_upper(timing_str);
 	auto const time_color = timing_color(judgment.timing);
-	lib::imgui::begin_window(timing_name.c_str(), uvec2{position} + uvec2{static_cast<uint32>(size.x() / 2 - TimingWidth / 2), TimingY}, TimingWidth, true);
+	lib::imgui::begin_window(timing_name.c_str(),
+		uvec2{position} + uvec2{static_cast<uint32>(size.x() / 2 - TimingWidth / 2), TimingY}, TimingWidth,
+		lib::imgui::WindowStyle::Transparent);
 	lib::imgui::text_styled(timing_str, time_color, 1.0f, lib::imgui::TextAlignment::Center);
 	lib::imgui::end_window();
 }

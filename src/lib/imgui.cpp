@@ -226,11 +226,13 @@ auto render(vuk::Allocator& frame_allocator, vuk::ManagedImage&& target, Context
 
 void begin_window(char const* title) { ImGui::Begin(title); }
 
-void begin_window(char const* title, uvec2 pos, uint32 width, bool static_frame)
+void begin_window(char const* title, uvec2 pos, uint32 width, WindowStyle style)
 {
 	ImGui::SetNextWindowPos({static_cast<float>(pos.x()), static_cast<float>(pos.y())});
 	ImGui::SetNextWindowSize({static_cast<float>(width), 0});
-	ImGui::Begin(title, nullptr, static_frame? ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_AlwaysAutoResize : 0);
+	auto flags = style != WindowStyle::Normal? ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_AlwaysAutoResize : 0;
+	if (style == WindowStyle::Transparent) flags |= ImGuiWindowFlags_NoBackground;
+	ImGui::Begin(title, nullptr, flags);
 }
 
 void end_window() { ImGui::End(); }

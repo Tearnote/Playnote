@@ -44,9 +44,15 @@ auto render(vuk::Allocator& frame_allocator, vuk::ManagedImage&& target, Context
 // Start a new ImGui window. Initial position and size will be chosen automatically.
 void begin_window(char const* title);
 
+enum class WindowStyle {
+	Normal,
+	Static, // No title bar, no resizing, no moving
+	Transparent, // No title bar, no resizing, no moving, no background
+};
+
 // Start a new ImGui window at a specific position and size. If static_frame is true, the window
 // will have no title and won't be able to be modified by the user.
-void begin_window(char const* title, uvec2 pos, uint32 width, bool static_frame = false);
+void begin_window(char const* title, uvec2 pos, uint32 width, WindowStyle);
 
 // Finalize a started window.
 void end_window();

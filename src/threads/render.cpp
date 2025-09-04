@@ -168,7 +168,7 @@ void receive_loading_shouts(Broadcaster& broadcaster, optional<LoadingToast>& lo
 
 static void enqueue_loading_toast(LoadingToast const& toast)
 {
-	lib::imgui::begin_window("loading", {420, 300}, 440, true);
+	lib::imgui::begin_window("loading", {420, 300}, 440, lib::imgui::WindowStyle::Static);
 	lib::imgui::text("Loading {}", toast.path);
 	lib::imgui::text(toast.phase);
 	if (toast.progress_text) {
@@ -196,7 +196,7 @@ static void run_render(Broadcaster& broadcaster, dev::Window const& window, gfx:
 			if (player) {
 				auto const cursor = player->get_audio_cursor();
 				auto const& chart = cursor.get_chart();
-				lib::imgui::begin_window("info", {860, 8}, 412, true);
+				lib::imgui::begin_window("info", {860, 8}, 412, lib::imgui::WindowStyle::Static);
 				show_metadata(chart.metadata);
 				lib::imgui::text("");
 				show_metrics(cursor, chart.metrics);
@@ -207,15 +207,15 @@ static void run_render(Broadcaster& broadcaster, dev::Window const& window, gfx:
 				playfield->enqueue_from_cursor(queue, cursor, scroll_speed, offset);
 				lib::imgui::end_window();
 
-				lib::imgui::begin_window("judgements", {860, 436}, 120, true);
+				lib::imgui::begin_window("judgements", {860, 436}, 120, lib::imgui::WindowStyle::Static);
 				show_judgments(cursor.get_judge_totals());
 				lib::imgui::end_window();
 
-				lib::imgui::begin_window("earlylate", {860, 558}, 120, true);
+				lib::imgui::begin_window("earlylate", {860, 558}, 120, lib::imgui::WindowStyle::Static);
 				show_earlylate(cursor.get_judge_totals());
 				lib::imgui::end_window();
 
-				lib::imgui::begin_window("results", {988, 436}, 120, true);
+				lib::imgui::begin_window("results", {988, 436}, 120, lib::imgui::WindowStyle::Static);
 				show_results(cursor);
 				lib::imgui::end_window();
 			}
