@@ -284,7 +284,8 @@ inline IR::IR():
 
 inline IRCompiler::IRCompiler()
 {
-	cat = globals::logger->register_category("BMS parse", LogLevelBMSBuild);
+	cat = globals::logger->register_category("BMS parse",
+		*enum_cast<Logger::Level>(globals::config->get_entry<string>("logging", "bms_build")));
 	register_header_handlers();
 	register_channel_handlers();
 }

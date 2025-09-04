@@ -78,7 +78,8 @@ try {
 	lib::dbg::set_assert_handler();
 	auto config_stub = globals::config.provide();
 	if (globals::config->get_entry<bool>("system", "attach_console")) lib::dbg::attach_console();
-	auto logger_stub = globals::logger.provide(LogfilePath, LogLevelGlobal);
+	auto logger_stub = globals::logger.provide(LogfilePath,
+		*enum_cast<Logger::Level>(globals::config->get_entry<string>("logging", "global")));
 	globals::config->load_from_file();
 	auto const song_request = parse_arguments(argc, argv);
 	INFO("{} {}.{}.{} starting up", AppTitle, AppVersion[0], AppVersion[1], AppVersion[2]);

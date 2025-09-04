@@ -174,7 +174,8 @@ auto inline GPU::create_swapchain(lib::vuk::Allocator& allocator, Device& device
 
 inline GPU::GPU(dev::Window& window):
 	// Beautiful, isn't it
-	cat{globals::logger->register_category("Graphics", LogLevelGraphics)},
+	cat{globals::logger->register_category("Graphics",
+		*enum_cast<Logger::Level>(globals::config->get_entry<string>("logging", "graphics")))},
 	window{window},
 	instance{cat},
 	surface{cat, window, instance},

@@ -27,17 +27,6 @@ inline constexpr auto AppVersion = to_array({0u, 0u, 3u});
 #error Unknown target platform
 #endif
 
-// Level of logging to file and/or console
-#ifdef BUILD_RELEASE
-inline constexpr auto LogLevelGlobal = Logger::Level::TraceL1;
-inline constexpr auto LogLevelGraphics = Logger::Level::Warning;
-inline constexpr auto LogLevelBMSBuild = Logger::Level::Debug;
-#else
-inline constexpr auto LogLevelGlobal = Logger::Level::Info;
-inline constexpr auto LogLevelGraphics = Logger::Level::Info;
-inline constexpr auto LogLevelBMSBuild = Logger::Level::Info;
-#endif
-
 // Logfile location
 #ifdef BUILD_DEBUG
 inline constexpr auto LogfilePath = "playnote-debug.log"sv;
@@ -102,6 +91,22 @@ inline void Config::create_defaults()
 		.category = "system",
 		.name = "attach_console",
 		.value = false,
+	});
+
+	entries.emplace_back(Entry{
+		.category = "logging",
+		.name = "global",
+		.value = "Info",
+	});
+	entries.emplace_back(Entry{
+		.category = "logging",
+		.name = "bms_build",
+		.value = "Info",
+	});
+	entries.emplace_back(Entry{
+		.category = "logging",
+		.name = "graphics",
+		.value = "Info",
 	});
 
 	entries.emplace_back(Entry{
