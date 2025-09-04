@@ -241,6 +241,21 @@ auto button(char const* str) -> bool { return ImGui::Button(str); }
 
 void text(string_view str) { ImGui::TextWrapped("%s", string{str}.c_str()); }
 
+void text_styled(string_view str, optional<vec4> color, float size, TextAlignment alignment)
+{
+	if (size != 1.0f) ImGui::SetWindowFontScale(size);
+	if (color) ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{color->r(), color->g(), color->b(), color->a()});
+	auto const text = string{str};
+	if (alignment == TextAlignment::Center) {
+		auto const window_width = ImGui::GetWindowSize().x;
+		auto const text_width = ImGui::CalcTextSize(text.c_str()).x;
+		ImGui::SetCursorPosX((window_width - text_width) * 0.5f);
+	}
+	ImGui::TextWrapped("%s", text.c_str());
+	if (color) ImGui::PopStyleColor();
+	if (size != 1.0f) ImGui::SetWindowFontScale(1.0f);
+}
+
 void input_float(char const* str, float& value, float step, float step_fast,
 	char const* format)
 {

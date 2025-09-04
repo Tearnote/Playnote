@@ -67,6 +67,14 @@ void text(fmtquill::format_string<Args...> fmt, Args&&... args)
 	text(format(fmt, forward<Args>(args)...).c_str());
 }
 
+enum class TextAlignment {
+	Left,
+	Center,
+};
+
+// Styled static text.
+void text_styled(string_view str, optional<vec4> color, float size = 1.0f, TextAlignment = TextAlignment::Left);
+
 // A control for a float variable, with +/- buttons and direct value input via keyboard.
 void input_float(char const* str, float& value,
 float step = 0.0f, float step_fast = 0.0f, char const* format = "%.3f");
