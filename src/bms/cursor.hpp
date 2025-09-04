@@ -52,13 +52,14 @@ public:
 			Poor,
 		};
 		enum class Timing {
+			None, // For miss/release
 			Early,
 			OnTime,
 			Late,
 		};
-		nanoseconds timestamp;
 		Type type;
 		Timing timing;
+		nanoseconds timestamp;
 	};
 
 	// Totals of each judgment type.
@@ -83,7 +84,7 @@ public:
 	[[nodiscard]] auto get_judged_notes() const -> usize { return notes_judged; }
 
 	// Return the note judgments.
-	[[nodiscard]] auto get_judgments() const -> JudgeTotals { return judgment_counts; }
+	[[nodiscard]] auto get_judge_totals() const -> JudgeTotals { return judge_totals; }
 
 	// Return current combo.
 	[[nodiscard]] auto get_combo() const -> usize { return combo; }
@@ -132,11 +133,13 @@ private:
 	usize notes_judged;
 	array<LaneProgress, +Chart::LaneType::Size> lane_progress = {};
 	vector<WavSlotProgress> wav_slot_progress;
-	JudgeTotals judgment_counts;
+	JudgeTotals judge_totals;
+	array<Judgment, 2> latest_judgement = {};
 	usize combo;
 	usize score;
 
-	void trigger_lane_input(Lane const&, LaneProgress&, bool state);
+	void trigger_lane_input(Lane const&, Chart::LaneType, LaneProgress&, bool state);
+	void apply_judgment(Judgment, Chart::LaneType);
 };
 
 [[nodiscard]] inline auto get_bpm_section(nanoseconds timestamp, span<BPMChange const> bpm_changes) -> BPMChange const&
@@ -182,7 +185,7 @@ inline void Cursor::restart()
 	notes_judged = 0zu;
 	for (auto& lane: lane_progress) lane.restart();
 	for (auto& slot: wav_slot_progress) slot.playback_pos = WavSlotProgress::Stopped;
-	judgment_counts = {};
+	judge_totals = {};
 	combo = 0;
 	score = 0;
 
@@ -197,45 +200,33 @@ inline void Cursor::fast_forward(usize samples)
 	for (auto const i: views::iota(0zu, samples)) advance_one_sample([](dev::Sample){});
 }
 
-inline void Cursor::trigger_lane_input(Lane const& lane, LaneProgress& progress, bool state)
+inline void Cursor::trigger_lane_input(Lane const& lane, Chart::LaneType type, LaneProgress& progress, bool state)
 {
 	if (progress.pressed == state) return;
 
 	// Judge press
 	if (state && progress.next_note < lane.notes.size()) {
 		auto const& note = lane.notes[progress.next_note];
-		auto const timing = note.timestamp - get_progress_ns(); // +: in the future, -: in the past
+		auto const timing_ns = note.timestamp - get_progress_ns(); // +: in the future, -: in the past
 
-		if (timing <= MashPoorWindow) {
-			if (timing > BadWindow && lane.playable) {
+		if (timing_ns <= MashPoorWindow) {
+			if (timing_ns > BadWindow && lane.playable) {
 				// Mashpoor
-				judgment_counts.types[+Judgment::Type::Poor] += 1;
+				apply_judgment({Judgment::Type::Poor}, type);
 			} else {
 				// The note will now be removed by any judgment
-				auto const abs_timing = abs(timing);
+				auto const abs_timing_ns = abs(timing_ns);
 				if (lane.playable) {
-					if (abs_timing <= PGreatWindow) {
-						judgment_counts.types[+Judgment::Type::PGreat] += 1;
-						judgment_counts.timings[+Judgment::Timing::OnTime] += 1;
-						combo += 1;
-						score += 2;
+					if (abs_timing_ns <= PGreatWindow) {
+						apply_judgment({Judgment::Type::PGreat, Judgment::Timing::OnTime}, type);
 					} else {
-						// The note will now add an early or late
-						if (abs_timing <= GreatWindow) {
-							judgment_counts.types[+Judgment::Type::Great] += 1;
-							combo += 1;
-							score += 1;
-						} else if (abs_timing <= GoodWindow) {
-							judgment_counts.types[+Judgment::Type::Good] += 1;
-							combo += 1;
-						} else {
-							judgment_counts.types[+Judgment::Type::Bad] += 1;
-							combo = 0;
-						}
-						if (timing < 0ns)
-							judgment_counts.timings[+Judgment::Timing::Late] += 1;
+						auto const timing = timing_ns < 0ns? Judgment::Timing::Late : Judgment::Timing::Early;
+						if (abs_timing_ns <= GreatWindow)
+							apply_judgment({Judgment::Type::Great, timing}, type);
+						else if (abs_timing_ns <= GoodWindow)
+							apply_judgment({Judgment::Type::Good, timing}, type);
 						else
-							judgment_counts.timings[+Judgment::Timing::Early] += 1;
+							apply_judgment({Judgment::Type::Bad, timing}, type);
 					}
 				}
 				if (!note.type_is<Note::LN>()) {
@@ -256,10 +247,10 @@ inline void Cursor::trigger_lane_input(Lane const& lane, LaneProgress& progress,
 		if (note.type_is<Note::LN>()) {
 			if (lane.playable) {
 				if (note.timestamp + note.params<Note::LN>().length > get_progress_ns()) {
-					judgment_counts.types[+Judgment::Type::Poor] += 1;
+					judge_totals.types[+Judgment::Type::Poor] += 1;
 					combo = 0;
 				} else {
-					judgment_counts.types[+Judgment::Type::PGreat] += 1;
+					judge_totals.types[+Judgment::Type::PGreat] += 1;
 					combo += 1;
 				}
 			}
@@ -276,6 +267,34 @@ inline void Cursor::trigger_lane_input(Lane const& lane, LaneProgress& progress,
 	progress.pressed = state;
 }
 
+inline void Cursor::apply_judgment(Judgment judgment, Chart::LaneType lane)
+{
+	judgment.timestamp = get_progress_ns();
+	judge_totals.types[+judgment.type] += 1;
+	judge_totals.timings[+judgment.timing] += 1;
+
+	switch (judgment.type) {
+	case Judgment::Type::PGreat:
+		combo += 1;
+		score += 2;
+		break;
+	case Judgment::Type::Great:
+		combo += 1;
+		score += 1;
+		break;
+	case Judgment::Type::Good:
+		combo += 1;
+		break;
+	case Judgment::Type::Bad:
+	case Judgment::Type::Poor:
+		combo = 0;
+		break;
+	}
+
+	auto const field_id = +lane < +Chart::LaneType::P2_Key1? 0 : 1;
+	latest_judgement[field_id] = judgment;
+}
+
 template<callable<void(dev::Sample)> Func>
 auto Cursor::advance_one_sample(Func&& func, span<LaneInput const> inputs, bool use_bb) -> bool
 {
@@ -284,36 +303,41 @@ auto Cursor::advance_one_sample(Func&& func, span<LaneInput const> inputs, bool 
 	auto const progress_ns = dev::Audio::samples_to_ns(sample_progress);
 
 	// Trigger inputs if unplayable or autoplay
-	for (auto [lane, progress]: views::zip(chart->lanes, lane_progress) |
-		views::filter([](auto const& view) { return get<1>(view).next_note < get<0>(view).notes.size(); })) {
+	for (auto [type, lane, progress]: views::zip(
+		views::iota(0u) | views::transform([](auto i) { return static_cast<Chart::LaneType>(i); }),
+		chart->lanes,
+		lane_progress
+		) | views::filter([](auto const& view) { return get<2>(view).next_note < get<1>(view).notes.size(); })) {
 		Note const& note = lane.notes[progress.next_note];
 		if (autoplay || !lane.playable) {
 			if (progress_ns >= note.timestamp && !progress.ln_active) {
-				trigger_lane_input(lane, progress, true);
+				trigger_lane_input(lane, type, progress, true);
 				if (!note.type_is<Note::LN>())
-					trigger_lane_input(lane, progress, false);
+					trigger_lane_input(lane, type, progress, false);
 			}
 			if (note.type_is<Note::LN>() && progress_ns >= note.timestamp + note.params<Note::LN>().length)
-				trigger_lane_input(lane, progress, false);
+				trigger_lane_input(lane, type, progress, false);
 		}
 	}
 
 	// Trigger manual inputs
 	if (!autoplay && !inputs.empty()) {
 		for (auto const& input: inputs)
-			trigger_lane_input(chart->lanes[+input.lane], lane_progress[+input.lane], input.state);
+			trigger_lane_input(chart->lanes[+input.lane], input.lane, lane_progress[+input.lane], input.state);
 	}
 
 	// Detect missed notes
-	for (auto [lane, progress]: views::zip(chart->lanes, lane_progress) |
-		views::filter([](auto const& view) { return get<0>(view).playable; })) {
+	for (auto [type, lane, progress]: views::zip(
+		views::iota(0u) | views::transform([](auto i) { return static_cast<Chart::LaneType>(i); }),
+		chart->lanes,
+		lane_progress
+		) | views::filter([](auto const& view) { return get<1>(view).playable; })) {
 		if (progress.next_note >= lane.notes.size()) continue;
 		auto const& note = lane.notes[progress.next_note];
 		if (progress_ns - note.timestamp > BadWindow && !progress.ln_active) { // LNs are only advanced by being released
 			progress.next_note += 1;
-			judgment_counts.types[+Judgment::Type::Poor] += 1;
 			notes_judged += 1;
-			combo = 0;
+			apply_judgment({Judgment::Type::Poor}, type);
 			if (progress.next_note >= lane.notes.size())
 				progress.active_slot = lane.notes[progress.next_note].wav_slot;
 		}

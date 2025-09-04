@@ -208,11 +208,11 @@ static void run_render(Broadcaster& broadcaster, dev::Window const& window, gfx:
 				lib::imgui::end_window();
 
 				lib::imgui::begin_window("judgements", {860, 436}, 120, true);
-				show_judgments(cursor.get_judgments());
+				show_judgments(cursor.get_judge_totals());
 				lib::imgui::end_window();
 
 				lib::imgui::begin_window("earlylate", {860, 558}, 120, true);
-				show_earlylate(cursor.get_judgments());
+				show_earlylate(cursor.get_judge_totals());
 				lib::imgui::end_window();
 
 				lib::imgui::begin_window("results", {988, 436}, 120, true);
