@@ -627,6 +627,11 @@ inline void Config::create_defaults()
 		.name = "note_offset",
 		.value = 0,
 	});
+	entries.emplace_back(Entry{
+		.category = "gameplay",
+		.name = "judgment_timeout",
+		.value = 400,
+	});
 }
 
 namespace globals {
