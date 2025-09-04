@@ -134,7 +134,7 @@ private:
 	bool autoplay;
 	usize sample_progress;
 	usize notes_judged;
-	array<LaneProgress, +Chart::LaneType::Size> lane_progress = {};
+	array<LaneProgress, enum_count<Chart::LaneType>()> lane_progress = {};
 	vector<WavSlotProgress> wav_slot_progress;
 	JudgeTotals judge_totals;
 	array<Judgment, 2> latest_judgement = {};

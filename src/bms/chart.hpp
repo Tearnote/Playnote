@@ -74,7 +74,6 @@ enum class Playstyle {
 	_9K,
 	_10K,
 	_14K,
-	Size,
 };
 
 // Density functions of a chart's notes, and calculated NPS values.
@@ -143,9 +142,8 @@ struct Chart: enable_shared_from_this<Chart> {
 		P2_KeyS,
 		BGM,
 		MeasureLine,
-		Size,
 	};
-	using Lanes = array<Lane, +LaneType::Size>;
+	using Lanes = array<Lane, enum_count<LaneType>()>;
 	using WavSlot = vector<dev::Sample>;
 
 	Metadata metadata;

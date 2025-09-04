@@ -216,7 +216,7 @@ inline auto channel_to_note_type(IR::ChannelEvent::Type ch) -> RelativeNoteType
 	PANIC();
 }
 
-inline auto channel_to_lane(IR::ChannelEvent::Type ch) -> Chart::LaneType
+inline auto channel_to_lane(IR::ChannelEvent::Type ch) -> optional<Chart::LaneType>
 {
 	switch (ch) {
 	case IR::ChannelEvent::Type::BGM:
@@ -269,7 +269,7 @@ inline auto channel_to_lane(IR::ChannelEvent::Type ch) -> Chart::LaneType
 	case IR::ChannelEvent::Type::Note_P2_KeyS:
 	case IR::ChannelEvent::Type::Note_P2_KeyS_LN:
 		return Chart::LaneType::P2_KeyS;
-	default: return Chart::LaneType::Size;
+	default: return nullopt;
 	}
 }
 
@@ -336,10 +336,10 @@ inline void process_ir_channels(IR const& ir, SlotValues const& slot_values, vec
 			return;
 		}
 		auto const lane_id = channel_to_lane(event.type);
-		if (lane_id == Chart::LaneType::Size) return;
+		if (!lane_id) return;
 		notes.emplace_back(MeasureRelNote{
 			.type = channel_to_note_type(event.type),
-			.lane = lane_id,
+			.lane = *lane_id,
 			.position = event.position,
 			.wav_slot = event.slot,
 		});
@@ -473,7 +473,7 @@ inline auto build_bpm_changes(span<BeatRelBPM const> bpms) -> vector<BPMChange>
 
 inline void build_lanes(Chart& chart, span<AbsNote const> notes)
 {
-	auto lane_builders = array<LaneBuilder, +Chart::LaneType::Size>{};
+	auto lane_builders = array<LaneBuilder, enum_count<Chart::LaneType>()>{};
 
 	for (auto const& note: notes)
 		lane_builders[+note.lane].add_note(note);
@@ -595,7 +595,7 @@ void load_files(Chart& chart, io::Song& song, FileReferences const& references, 
 inline auto determine_playstyle(Chart::Lanes const& lanes) -> Playstyle
 {
 	using enum Chart::LaneType;
-	auto lanes_used = array<bool, +Size>{};
+	auto lanes_used = array<bool, enum_count<Chart::LaneType>()>{};
 	transform(lanes, lanes_used.begin(), [](auto const& lane) { return !lane.notes.empty(); });
 
 	if (lanes_used[+P2_Key6] ||

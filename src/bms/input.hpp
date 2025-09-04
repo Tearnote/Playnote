@@ -44,11 +44,11 @@ private:
 		nanoseconds last_stopped;
 	};
 
-	array<array<threads::KeyInput::Code, +Chart::LaneType::Size>, +Playstyle::Size> key_bindings;
-	array<array<optional<ConBinding>, +Chart::LaneType::Size>, +Playstyle::Size> button_bindings;
-	array<array<optional<ConBinding>, 2>, +Playstyle::Size> axis_bindings;
-	array<array<TurntableState, 2>, +Playstyle::Size> turntable_states;
-	array<array<nanoseconds, +Chart::LaneType::Size>, +Playstyle::Size> last_input{};
+	array<array<threads::KeyInput::Code, enum_count<Chart::LaneType>()>, enum_count<Playstyle>()> key_bindings;
+	array<array<optional<ConBinding>, enum_count<Chart::LaneType>()>, enum_count<Playstyle>()> button_bindings;
+	array<array<optional<ConBinding>, 2>, enum_count<Playstyle>()> axis_bindings;
+	array<array<TurntableState, 2>, enum_count<Playstyle>()> turntable_states;
+	array<array<nanoseconds, enum_count<Chart::LaneType>()>, enum_count<Playstyle>()> last_input{};
 
 	[[nodiscard]] static auto tt_difference(float prev, float curr) -> float;
 	[[nodiscard]] static auto tt_direction(float prev, float curr) -> TurntableState::Direction;
