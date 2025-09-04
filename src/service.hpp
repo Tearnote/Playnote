@@ -29,6 +29,9 @@ public:
 	auto operator*() -> T& { return *ASSUME_VAL(handle); }
 	auto operator->() -> T* { return ASSUME_VAL(handle); }
 
+	// Check if instance exists
+	explicit operator bool() const { return handle != nullptr; }
+
 private:
 	class Stub {
 	public:

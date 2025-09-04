@@ -668,9 +668,7 @@ inline void Config::create_defaults()
 }
 
 namespace globals {
-
 inline auto config = Service<Config>{};
-
 }
 
 }

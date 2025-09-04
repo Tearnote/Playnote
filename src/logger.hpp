@@ -14,6 +14,7 @@ Wrapper for the Quill threaded async logging library.
 #include "quill/Backend.h"
 #include "quill/Logger.h"
 #include "preamble.hpp"
+#include "service.hpp"
 #include "assert.hpp"
 
 // Workaround for compiler warning on Windows
@@ -40,67 +41,33 @@ Wrapper for the Quill threaded async logging library.
 namespace playnote {
 
 class Logger {
-	class Impl {
-	public:
-		using Category = quill::Frontend::logger_t;
-		using Level = quill::LogLevel;
-
-		Category* global{nullptr};
-
-		Impl(string_view log_file_path, Level);
-		auto register_category(string_view name, Level = Level::TraceL1,
-			bool log_to_console = true, bool log_to_file = true) -> Category*;
-		auto get_category(string_view name) -> Category* { return categories.at(name); }
-
-	private:
-		static inline auto const Pattern = quill::PatternFormatterOptions{
-			"%(time) [%(log_level_short_code)] [%(logger)] %(message)",
-			"%H:%M:%S.%Qms"
-		};
-		static inline auto const ShortCodes = to_array<string>({
-			"TR3", "TR2", "TRA", "DBG", "INF", "NTC",
-			"WRN", "ERR", "CRT", "BCT", "___", "DYN"
-		});
-
-		shared_ptr<quill::ConsoleSink> console_sink;
-		shared_ptr<quill::FileSink> file_sink;
-		unordered_map<string_view, Category*> categories;
-	};
-
-	class Stub {
-	public:
-		Stub(Logger& parent, string_view log_file_path, Impl::Level global_level):
-			logger{log_file_path, global_level}
-		{
-			parent.handle = &logger;
-		}
-		Stub(Stub const&) = delete;
-		auto operator=(Stub const&) -> Stub& = delete;
-		Stub(Stub&&) = delete;
-		auto operator=(Stub&&) -> Stub& = delete;
-
-	private:
-		Impl logger;
-	};
-
 public:
-	using Category = Impl::Category;
-	using Level = Impl::Level;
+	using Category = quill::Frontend::logger_t;
+	using Level = quill::LogLevel;
 
-	auto provide(string_view log_file_path, Impl::Level global_level) -> Stub
-	{
-		return Stub{*this, log_file_path, global_level};
-	}
+	Category* global{nullptr};
 
-	auto operator*() -> Impl& { return *ASSUME_VAL(handle); }
-	auto operator->() -> Impl* { return ASSUME_VAL(handle); }
-	operator bool() const { return handle != nullptr; } // NOLINT(*-explicit-constructor)
+	Logger(string_view log_file_path, Level);
+	auto register_category(string_view name, Level = Level::TraceL1,
+		bool log_to_console = true, bool log_to_file = true) -> Category*;
+	auto get_category(string_view name) -> Category* { return categories.at(name); }
 
 private:
-	Impl* handle{nullptr};
+	static inline auto const Pattern = quill::PatternFormatterOptions{
+		"%(time) [%(log_level_short_code)] [%(logger)] %(message)",
+		"%H:%M:%S.%Qms"
+	};
+	static inline auto const ShortCodes = to_array<string>({
+		"TR3", "TR2", "TRA", "DBG", "INF", "NTC",
+		"WRN", "ERR", "CRT", "BCT", "___", "DYN"
+	});
+
+	shared_ptr<quill::ConsoleSink> console_sink;
+	shared_ptr<quill::FileSink> file_sink;
+	unordered_map<string_view, Category*> categories;
 };
 
-inline Logger::Impl::Impl(string_view log_file_path, Level global_log_level)
+inline Logger::Logger(string_view log_file_path, Level global_log_level)
 {
 	quill::Backend::start<quill::FrontendOptions>({
 		.thread_name = "Logging",
@@ -121,7 +88,7 @@ inline Logger::Impl::Impl(string_view log_file_path, Level global_log_level)
 	global = register_category("Global", global_log_level);
 }
 
-inline auto Logger::Impl::register_category(string_view name, Level level, bool log_to_console,
+inline auto Logger::register_category(string_view name, Level level, bool log_to_console,
 	bool log_to_file) -> Category*
 {
 	auto* category = quill::Frontend::create_or_get_logger(string{name}, {
@@ -136,5 +103,5 @@ inline auto Logger::Impl::register_category(string_view name, Level level, bool 
 }
 
 namespace playnote::globals {
-inline auto logger = Logger{};
+inline auto logger = Service<Logger>{};
 }
