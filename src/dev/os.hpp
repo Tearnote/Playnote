@@ -46,9 +46,9 @@ inline void name_current_thread(string_view name)
 template <typename... Args>
 void syserror(format_string<Args...> fmt, Args&&... args)
 {
-#ifdef _WIN32
+#ifdef TARGET_WINDOWS
 	lib::os::block_with_message(format(fmt, forward<Args>(args)...));
-#else
+#elifdef TARGET_LINUX
 	print(stderr, fmt, forward<Args>(args)...);
 #endif
 }

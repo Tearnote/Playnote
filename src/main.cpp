@@ -65,13 +65,13 @@ auto run(threads::ChartRequest const& song_request) -> int
 	return EXIT_SUCCESS;
 }
 
-#ifndef _WIN32
+#ifdef TARGET_LINUX
 auto main(int argc, char** argv) -> int
-#else
+#elifdef TARGET_WINDOWS
 auto WinMain(HINSTANCE, HINSTANCE, LPSTR, int) -> int
 #endif
 try {
-#ifdef _WIN32
+#ifdef TARGET_WINDOWS
 	auto const argc = __argc;
 	auto** argv = __argv;
 #endif

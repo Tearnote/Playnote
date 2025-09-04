@@ -8,7 +8,7 @@ Implementation file for lib/debug.hpp.
 
 #include "lib/debug.hpp"
 
-#ifdef _WIN32
+#ifdef TARGET_WINDOWS
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
@@ -37,7 +37,7 @@ void set_assert_handler()
 
 void attach_console()
 {
-#ifdef _WIN32
+#ifdef TARGET_WINDOWS
 	AllocConsole();
 
 	if (_fileno(stdout) == -2) {

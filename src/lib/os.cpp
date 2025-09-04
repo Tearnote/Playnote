@@ -8,7 +8,7 @@ Implementation file for lib/thread.hpp.
 
 #include "lib/os.hpp"
 
-#ifdef _WIN32
+#ifdef TARGET_WINDOWS
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
@@ -17,7 +17,7 @@ Implementation file for lib/thread.hpp.
 #endif
 #include <Windows.h>
 #include <shellapi.h>
-#else
+#elif TARGET_LINUX
 #include <pthread.h>
 #endif
 #include "preamble.hpp"
@@ -27,12 +27,12 @@ namespace playnote::lib::os {
 
 void name_current_thread(string_view name)
 {
-#ifdef _WIN32
+#ifdef TARGET_WINDOWS
 	auto const lname = std::wstring{name.begin(), name.end()}; // No reencoding; not expecting non-ASCII here
 	auto const err = SetThreadDescription(GetCurrentThread(), lname.c_str());
 	if (FAILED(err))
 		throw runtime_error_fmt("Failed to set thread name: error {}", err);
-#else
+#elifdef TARGET_LINUX
 	auto const err = pthread_setname_np(pthread_self(), string{name}.c_str());
 	if (err != 0)
 		throw system_error("Failed to set thread name");
@@ -41,7 +41,7 @@ void name_current_thread(string_view name)
 
 void begin_scheduler_period([[maybe_unused]] milliseconds period)
 {
-#ifdef _WIN32
+#ifdef TARGET_WINDOWS
 	if (timeBeginPeriod(period.count()) != TIMERR_NOERROR)
 		throw runtime_error{"Failed to initialize thread scheduler period"};
 #endif
@@ -49,14 +49,14 @@ void begin_scheduler_period([[maybe_unused]] milliseconds period)
 
 void end_scheduler_period([[maybe_unused]] milliseconds period) noexcept
 {
-#ifdef _WIN32
+#ifdef TARGET_WINDOWS
 	timeEndPeriod(period.count());
 #endif
 }
 
 void block_with_message([[maybe_unused]] string_view message)
 {
-#ifdef _WIN32
+#ifdef TARGET_WINDOWS
 	MessageBoxA(nullptr, string{message}.c_str(), AppTitle, MB_OK);
 #endif
 }

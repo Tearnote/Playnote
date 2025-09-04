@@ -12,9 +12,9 @@ Abstraction over the available audio backends.
 #include "config.hpp"
 #include "logger.hpp"
 #include "lib/audio_common.hpp"
-#ifdef _WIN32
+#ifdef TARGET_WINDOWS
 #include "lib/wasapi.hpp"
-#else
+#elifdef TARGET_LINUX
 #include "lib/pipewire.hpp"
 #endif
 
@@ -51,9 +51,9 @@ public:
 private:
 	InstanceLimit<Audio, 1> instance_limit;
 
-#ifndef _WIN32
+#ifdef TARGET_LINUX
 	static inline lib::pw::Context context;
-#else
+#elifdef TARGET_WINDOWS
 	static inline lib::wasapi::Context context;
 #endif
 
@@ -66,10 +66,10 @@ template<callable<void(span<Sample>)> Func>
 Audio::Audio(Func&& generator):
 	generator{generator}
 {
-#ifndef _WIN32
+#ifdef TARGET_LINUX
 	context = lib::pw::init(AppTitle, globals::config->get_entry<int>("pipewire", "buffer_size"),
 		[this](auto buffer) { on_process(buffer); });
-#else
+#elifdef TARGET_WINDOWS
 	context = lib::wasapi::init(globals::config->get_entry<bool>("wasapi", "exclusive_mode"),
 		[this](auto buffer) { on_process(buffer); },
 		globals::config->get_entry<bool>("wasapi", "use_custom_latency")?
@@ -82,9 +82,9 @@ Audio::Audio(Func&& generator):
 
 inline Audio::~Audio()
 {
-#ifndef _WIN32
+#ifdef TARGET_LINUX
 	lib::pw::cleanup(move(context));
-#else
+#elifdef TARGET_WINDOWS
 	lib::wasapi::cleanup(move(context));
 #endif
 }
