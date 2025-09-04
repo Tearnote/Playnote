@@ -40,7 +40,7 @@ endif()
 target_precompile_headers(Playnote PRIVATE src/preamble.hpp)
 target_include_directories(Playnote PRIVATE src) # All includes start from src as root
 # Communicate build type to the project
-target_compile_definitions(Playnote PRIVATE "BUILD_TYPE=$<$<CONFIG:Debug>:BUILD_DEBUG>$<$<CONFIG:RelWithDebInfo>:BUILD_RELDEB>$<$<CONFIG:Release>:BUILD_RELEASE>")
+target_compile_definitions(Playnote PRIVATE "$<$<CONFIG:Debug>:BUILD_DEBUG>$<$<CONFIG:RelWithDebInfo>:BUILD_RELDEB>$<$<CONFIG:Release>:BUILD_RELEASE>")
 
 target_link_libraries(Playnote PRIVATE signalsmith-basics)
 target_link_libraries(Playnote PRIVATE tomlplusplus::tomlplusplus)
