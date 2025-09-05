@@ -19,12 +19,12 @@ namespace playnote::bms {
 // and audio playback progress.
 class Cursor {
 public:
-	static constexpr auto   PGreatWindow =  16'670'000ns;
-	static constexpr auto    GreatWindow =  33'330'000ns;
-	static constexpr auto     GoodWindow = 116'670'000ns;
-	static constexpr auto      BadWindow = 250'000'000ns;
-	static constexpr auto MashPoorWindow = 500'000'000ns;
-	static constexpr auto LNEarlyRelease = 100'000'000ns; // How early can an LN be released and still count as a PGreat
+	static constexpr auto   PGreatWindow =  18ms;
+	static constexpr auto    GreatWindow =  36ms;
+	static constexpr auto     GoodWindow = 120ms;
+	static constexpr auto      BadWindow = 240ms;
+	static constexpr auto MashPoorWindow = 500ms;
+	static constexpr auto LNEarlyRelease = 120ms; // How early can an LN be released and still count as a PGreat
 
 	enum class Rank {
 		AAA,
