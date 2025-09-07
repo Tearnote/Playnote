@@ -6,6 +6,7 @@ main.cpp:
 Entry point. Initializes basic facilities, spawns threads.
 */
 
+#include <clocale>
 #include "preamble.hpp"
 #include "assert.hpp"
 #include "config.hpp"
@@ -71,6 +72,7 @@ auto main(int argc, char** argv) -> int
 auto WinMain(HINSTANCE, HINSTANCE, LPSTR, int) -> int
 #endif
 try {
+	std::setlocale(LC_ALL, "en_US.UTF-8");
 #ifdef TARGET_WINDOWS
 	auto const argc = __argc;
 	auto** argv = __argv;
