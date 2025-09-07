@@ -16,38 +16,34 @@ Implementation file for lib/glfw.hpp.
 
 namespace playnote::lib::glfw {
 
-namespace detail {
-
-void set_window_user_pointer_raw(Window window, void* ptr)
+void detail::set_window_user_pointer_raw(Window window, void* ptr)
 {
 	ASSERT(window);
 	glfwSetWindowUserPointer(window, ptr);
 }
 
-[[nodiscard]] auto get_window_user_pointer_raw(Window window) -> void*
+[[nodiscard]] auto detail::get_window_user_pointer_raw(Window window) -> void*
 {
 	ASSERT(window);
 	return glfwGetWindowUserPointer(window);
 }
 
-void set_window_key_handler_raw(Window window, void (*func)(Window, int, int, int, int))
+void detail::set_window_key_handler_raw(Window window, void (*func)(Window, int, int, int, int))
 {
 	ASSERT(window);
 	glfwSetKeyCallback(window, func);
 }
 
-void set_window_cursor_motion_handler_raw(Window window, void (*func)(Window, double, double))
+void detail::set_window_cursor_motion_handler_raw(Window window, void (*func)(Window, double, double))
 {
 	ASSERT(window);
 	glfwSetCursorPosCallback(window, func);
 }
 
-void set_window_mouse_button_handler_raw(Window window, void (*func)(Window, int, int, int))
+void detail::set_window_mouse_button_handler_raw(Window window, void (*func)(Window, int, int, int))
 {
 	ASSERT(window);
 	glfwSetMouseButtonCallback(window, func);
-}
-
 }
 
 void register_error_handler()

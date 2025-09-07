@@ -37,8 +37,6 @@ void close_read(Archive&& archive) noexcept
 	archive_read_free(archive);
 }
 
-//TODO
-
 auto read_data(Archive archive) -> vector<byte>
 {
 	auto result = vector<byte>{};
