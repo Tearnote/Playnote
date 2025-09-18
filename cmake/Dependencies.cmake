@@ -15,6 +15,7 @@ include(FetchContent)
 
 find_package(LibArchive REQUIRED) # Archive read/write support
 find_package(OpenSSL REQUIRED) # MD5 hash
+find_package(SQLite3 REQUIRED) # Local database
 if(WIN32)
 	find_package(VulkanHeaders REQUIRED)
 	find_package(unofficial-shaderc REQUIRED)

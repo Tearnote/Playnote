@@ -48,5 +48,8 @@
   }, {
     "name" : "shaderc",
     "version>=" : "2025.2"
+  }, {
+    "name" : "sqlite3",
+    "version>=" : "3.50.4"
   } ]
 }
