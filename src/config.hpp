@@ -39,6 +39,10 @@ inline constexpr auto LogfilePath = "playnote.log"sv;
 // Config file location
 inline constexpr auto ConfigPath = "config.toml"sv;
 
+// Song library database location
+
+inline constexpr auto LibraryPath = "library.db"sv;
+
 // Global runtime configuration, kept in sync with the config file.
 class Config {
 public:

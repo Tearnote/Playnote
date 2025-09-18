@@ -16,6 +16,7 @@ Implementation file for threads/audio.hpp.
 #include "io/song.hpp"
 #include "audio/player.hpp"
 #include "audio/mixer.hpp"
+#include "bms/library.hpp"
 #include "bms/build.hpp"
 #include "bms/input.hpp"
 #include "bms/ir.hpp"
@@ -42,6 +43,7 @@ static void run_audio(Broadcaster& broadcaster, dev::Window& window, audio::Mixe
 		[&](auto&& req) { request = move(req); },
 		[]() { yield(); });
 
+	auto library = bms::Library{LibraryPath};
 	auto song = io::Song{request.domain};
 	broadcaster.make_shout<ChartLoadProgress>(ChartLoadProgress::CompilingIR{request.filename});
 	auto bms_compiler = bms::IRCompiler{};
