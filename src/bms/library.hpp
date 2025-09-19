@@ -28,7 +28,7 @@ private:
 	// language=SQLite
 	static constexpr auto ChartsSchema = R"(
 		CREATE TABLE IF NOT EXISTS charts(
-			md5 BLOB PRIMARY KEY,
+			md5 BLOB PRIMARY KEY CHECK(length(md5) == 16),
 			date_imported INTEGER DEFAULT(unixepoch()),
 			title TEXT NOT NULL
 		);
