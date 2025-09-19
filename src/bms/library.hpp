@@ -25,11 +25,22 @@ public:
 	auto operator=(Library&&) -> Library& = delete;
 
 private:
+	// language=SQLite
+	static constexpr auto ChartsSchema = R"(
+		CREATE TABLE IF NOT EXISTS charts(
+			md5 BLOB PRIMARY KEY,
+			date_imported INTEGER DEFAULT(unixepoch()),
+			title TEXT NOT NULL
+		);
+	)"sv;
+
 	lib::sqlite::DB db;
 };
 
-inline Library::Library(fs::path const& path): db{lib::sqlite::open(path)}
+inline Library::Library(fs::path const& path):
+	db{lib::sqlite::open(path)}
 {
+	lib::sqlite::execute(db, ChartsSchema);
 	INFO("Opened song library at \"{}\"", path);
 }
 

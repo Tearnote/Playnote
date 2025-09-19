@@ -32,7 +32,12 @@ static auto ret_check(int ret) -> int
 // Throws runtime_error on sqlite error, or if database could only be opened read-only.
 auto open(fs::path const&) -> DB;
 
+// Close a previously opened database. Execute this to free any allocated resources.
 void close(DB) noexcept;
+
+// Run a SQL query on the database. Use only for one-time queries that don't return data.
+// Throws runtime_error on sqlite error.
+void execute(DB, string_view query);
 
 inline auto open(fs::path const& path) -> DB
 {
@@ -57,6 +62,21 @@ inline auto open(fs::path const& path) -> DB
 inline void close(DB db) noexcept
 {
 	sqlite3_close(db);
+}
+
+inline void execute(DB db, string_view query)
+{
+	auto* stmt = static_cast<sqlite3_stmt*>(nullptr);
+	ret_check(sqlite3_prepare_v2(db, query.data(), query.size(), &stmt, nullptr));
+	auto check = [&](int ret) {
+		if (ret != SQLITE_OK) {
+			sqlite3_finalize(stmt);
+			ret_check(ret);
+		}
+	};
+	auto ret = sqlite3_step(stmt);
+	if (ret != SQLITE_DONE && ret != SQLITE_ROW) check(ret);
+	sqlite3_finalize(stmt);
 }
 
 }
