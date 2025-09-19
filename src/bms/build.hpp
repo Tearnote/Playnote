@@ -853,6 +853,7 @@ template<callable<void(threads::ChartLoadProgress::Type)> Func>
 auto chart_from_ir(IR const& ir, io::Song& song, Func&& progress) -> shared_ptr<Chart const>
 {
 	auto chart = make_shared<Chart>();
+	chart->md5 = ir.get_md5();
 	auto measure_rel_notes = vector<MeasureRelNote>{};
 	auto measure_rel_bpms = vector<MeasureRelBPM>{};
 	auto measure_lengths = vector<double>{};

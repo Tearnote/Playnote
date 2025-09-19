@@ -19,6 +19,9 @@ public:
 	explicit Library(fs::path const&);
 	~Library() noexcept;
 
+	// Register chart in the library, if not already present.
+	void add_chart(Chart const&);
+
 	Library(Library const&) = delete;
 	auto operator=(Library const&) -> Library& = delete;
 	Library(Library&&) = delete;
@@ -31,22 +34,35 @@ private:
 			md5 BLOB PRIMARY KEY CHECK(length(md5) == 16),
 			date_imported INTEGER DEFAULT(unixepoch()),
 			title TEXT NOT NULL
-		);
+		)
+	)"sv;
+
+	// language=SQLite
+	static constexpr auto ChartInsertQuery = R"(
+		INSERT OR IGNORE INTO charts(md5, title) VALUES(?1, ?2)
 	)"sv;
 
 	lib::sqlite::DB db;
+	lib::sqlite::Statement insert_chart;
 };
 
 inline Library::Library(fs::path const& path):
 	db{lib::sqlite::open(path)}
 {
 	lib::sqlite::execute(db, ChartsSchema);
+	insert_chart = lib::sqlite::create_statement(db, ChartInsertQuery);
 	INFO("Opened song library at \"{}\"", path);
 }
 
 inline Library::~Library() noexcept
 {
+	lib::sqlite::destroy_statement(insert_chart);
 	lib::sqlite::close(db);
+}
+
+inline void Library::add_chart(Chart const& chart)
+{
+	lib::sqlite::execute(insert_chart, chart.md5, chart.metadata.title);
 }
 
 }

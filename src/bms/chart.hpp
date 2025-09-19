@@ -146,6 +146,7 @@ struct Chart: enable_shared_from_this<Chart> {
 	using Lanes = array<Lane, enum_count<LaneType>()>;
 	using WavSlot = vector<dev::Sample>;
 
+	array<byte, 16> md5;
 	Metadata metadata;
 	Metrics metrics;
 	Lanes lanes;

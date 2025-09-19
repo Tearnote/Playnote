@@ -154,6 +154,9 @@ public:
 	template<callable<void(ChannelEvent const&)> Func>
 	void each_channel_event(Func&& func) const { for (auto const& event: channel_events) func(event); }
 
+	// Get the MD5 of the original BMS file.
+	[[nodiscard]] auto get_md5() const -> array<byte, 16> { return md5; }
+
 	// Get the total number of WAV slots referenced by the headers and channels.
 	[[nodiscard]] auto get_wav_slot_count() const -> usize { return wav_slot_count; }
 

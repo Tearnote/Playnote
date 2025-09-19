@@ -14,10 +14,12 @@ Wrapper for sqlite database operations.
 // Forward declarations
 
 struct sqlite3;
+struct sqlite3_stmt;
 
 namespace playnote::lib::sqlite {
 
 using DB = sqlite3*;
+using Statement = sqlite3_stmt*;
 
 // Helper functions for error handling
 
@@ -38,6 +40,17 @@ void close(DB) noexcept;
 // Run a SQL query on the database. Use only for one-time queries that don't return data.
 // Throws runtime_error on sqlite error.
 void execute(DB, string_view query);
+
+// Compile a query into a statement object. Can contain numbered placeholders.
+// Throws runtime_error on sqlite error.
+auto create_statement(DB, string_view query) -> Statement;
+
+// Destroy a statement, freeing related resources.
+void destroy_statement(Statement) noexcept;
+
+// Execute a statement with provided parameters, discarding any output data.
+template<typename... Args>
+void execute(Statement, Args&&... args);
 
 inline auto open(fs::path const& path) -> DB
 {
@@ -66,17 +79,58 @@ inline void close(DB db) noexcept
 
 inline void execute(DB db, string_view query)
 {
-	auto* stmt = static_cast<sqlite3_stmt*>(nullptr);
-	ret_check(sqlite3_prepare_v2(db, query.data(), query.size(), &stmt, nullptr));
+	auto stmt = create_statement(db, query);
 	auto check = [&](int ret) {
 		if (ret != SQLITE_OK) {
 			sqlite3_finalize(stmt);
 			ret_check(ret);
 		}
 	};
-	auto ret = sqlite3_step(stmt);
+
+	auto const ret = sqlite3_step(stmt);
 	if (ret != SQLITE_DONE && ret != SQLITE_ROW) check(ret);
+
+	destroy_statement(stmt);
+}
+
+inline auto create_statement(DB db, string_view query) -> Statement
+{
+	auto stmt = Statement{};
+	ret_check(sqlite3_prepare_v2(db, query.data(), query.size(), &stmt, nullptr));
+	return stmt;
+}
+
+inline void destroy_statement(Statement stmt) noexcept
+{
 	sqlite3_finalize(stmt);
+}
+
+template<typename ... Args>
+void execute(Statement stmt, Args&&... args)
+{
+	auto bind = [&](int idx, auto&& arg) {
+		using ArgT = remove_cvref_t<decltype(arg)>;
+		if constexpr (same_as<ArgT, float> || same_as<ArgT, double>)
+			ret_check(sqlite3_bind_double(stmt, idx, arg));
+		else if constexpr (convertible_to<ArgT, int> || same_as<ArgT, bool>)
+			ret_check(sqlite3_bind_int(stmt, idx, arg));
+		else if constexpr (convertible_to<ArgT, sqlite3_int64>)
+			ret_check(sqlite3_bind_int64(stmt, idx, arg));
+		else if constexpr (same_as<ArgT, string> || same_as<ArgT, string_view>)
+			ret_check(sqlite3_bind_text(stmt, idx, arg.data(), arg.size(), SQLITE_TRANSIENT));
+		else if constexpr (convertible_to<ArgT, span<byte const>>)
+			ret_check(sqlite3_bind_blob(stmt, idx, arg.data(), arg.size(), SQLITE_TRANSIENT));
+	};
+
+	auto index = 1;
+	(bind(index++, forward<Args>(args)), ...);
+
+	auto const ret = sqlite3_step(stmt);
+	if (ret != SQLITE_DONE && ret != SQLITE_ROW) {
+		ret_check(sqlite3_reset(stmt));
+		ret_check(ret);
+	}
+	ret_check(sqlite3_reset(stmt));
 }
 
 }
