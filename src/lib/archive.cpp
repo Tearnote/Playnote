@@ -45,11 +45,12 @@ auto read_data(Archive archive) -> vector<byte>
 	auto offset = 0z;
 	while (true) {
 		auto ret = archive_read_data_block(archive, reinterpret_cast<void const**>(&buf), &size, &offset);
-		if (ret != ARCHIVE_EOF) ret_check(ret, archive);
+		if (ret == ARCHIVE_EOF) break;
+		ret_check(ret, archive);
+
 		result.resize(offset + size);
 		copy(span{buf, size}, &result[offset]);
 
-		if (ret == ARCHIVE_EOF) break;
 	}
 	return result;
 }
