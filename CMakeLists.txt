@@ -16,6 +16,7 @@ add_executable(Playnote WIN32
 	src/lib/archive.cpp
 	src/lib/ebur128.cpp
 	src/lib/openssl.cpp
+	src/lib/sqlite.cpp
 	src/lib/ffmpeg.cpp
 	src/lib/vulkan.cpp
 	src/lib/debug.cpp
