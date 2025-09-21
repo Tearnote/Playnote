@@ -68,7 +68,6 @@ static void run_audio(Broadcaster& broadcaster, dev::Window& window, audio::Mixe
 		}, progress);
 		broadcaster.make_shout<ChartLoadProgress>(move(progress));
 	});
-	library.add_chart(*bms_chart);
 	auto bms_player = make_shared<audio::Player>(window.get_glfw(), mixer);
 	bms_player->play(*bms_chart, false);
 	broadcaster.make_shout<ChartLoadProgress>(ChartLoadProgress::Finished{

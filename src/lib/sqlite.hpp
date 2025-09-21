@@ -27,9 +27,15 @@ auto open(fs::path const&) -> DB;
 // Close a previously opened database. Execute this to free any allocated resources.
 void close(DB) noexcept;
 
-// Run a SQL query on the database. Use only for one-time queries that don't return data.
+// Execute a single SQL statement on the database, discarding any output.
 // Throws runtime_error on sqlite error.
-void execute(DB, string_view query);
+void execute(DB, string_view statement);
+
+// Execute a list of SQL statements on the database, discarding any output. This must be used for
+// executions that contain multiple statements, as the single-statement version doesn't support
+// splitting by the ";" character.
+// Throws runtime_error on sqlite error.
+void execute(DB, span<string_view const> statements);
 
 // Compile a query into a statement object. Can contain numbered placeholders.
 // Throws runtime_error on sqlite error.

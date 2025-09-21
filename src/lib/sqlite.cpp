@@ -50,9 +50,9 @@ void close(DB db) noexcept
 	sqlite3_close(db);
 }
 
-void execute(DB db, string_view query)
+void execute(DB db, string_view statement)
 {
-	auto stmt = create_statement(db, query);
+	auto stmt = create_statement(db, statement);
 	auto check = [&](int ret) {
 		if (ret != SQLITE_OK) {
 			sqlite3_finalize(stmt);
@@ -64,6 +64,11 @@ void execute(DB db, string_view query)
 	if (ret != SQLITE_DONE && ret != SQLITE_ROW) check(ret);
 
 	destroy_statement(stmt);
+}
+
+void execute(DB db, span<string_view const> statements)
+{
+	for (auto statement: statements) execute(db, statement);
 }
 
 auto create_statement(DB db, string_view query) -> Statement

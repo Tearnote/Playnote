@@ -121,7 +121,7 @@ struct SlotBB {
 };
 
 // An entire loaded chart, with all of its notes and meta information. Immutable; a chart is played
-// by creating and advancing a Play from it.
+// by creating and advancing a Cursor from it.
 struct Chart: enable_shared_from_this<Chart> {
 	enum class LaneType: usize {
 		P1_Key1,
