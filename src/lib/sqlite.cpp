@@ -38,6 +38,10 @@ auto open(fs::path const& path) -> DB
 		sqlite3_close(db);
 		throw runtime_error{"Database is read-only"};
 	}
+	execute(db, "PRAGMA foreign_keys = ON");
+	execute(db, "PRAGMA journal_mode = WAL");
+	execute(db, "PRAGMA trusted_schema = OFF");
+	execute(db, "PRAGMA mmap_size = 268435456"); // 256 MB
 	return db;
 }
 
