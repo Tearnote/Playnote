@@ -18,7 +18,7 @@ namespace playnote::bms {
 // A singular player input.
 struct Input {
 	nanoseconds timestamp; // Time since chart start
-	Chart::LaneType lane;
+	Lane::Type lane;
 	bool state; // true for pressed, false for released
 };
 
@@ -44,11 +44,11 @@ private:
 		nanoseconds last_stopped;
 	};
 
-	array<array<threads::KeyInput::Code, enum_count<Chart::LaneType>()>, enum_count<Playstyle>()> key_bindings;
-	array<array<optional<ConBinding>, enum_count<Chart::LaneType>()>, enum_count<Playstyle>()> button_bindings;
+	array<array<threads::KeyInput::Code, enum_count<Lane::Type>()>, enum_count<Playstyle>()> key_bindings;
+	array<array<optional<ConBinding>, enum_count<Lane::Type>()>, enum_count<Playstyle>()> button_bindings;
 	array<array<optional<ConBinding>, 2>, enum_count<Playstyle>()> axis_bindings;
 	array<array<TurntableState, 2>, enum_count<Playstyle>()> turntable_states;
-	array<array<nanoseconds, enum_count<Chart::LaneType>()>, enum_count<Playstyle>()> last_input{};
+	array<array<nanoseconds, enum_count<Lane::Type>()>, enum_count<Playstyle>()> last_input{};
 
 	[[nodiscard]] static auto tt_difference(float prev, float curr) -> float;
 	[[nodiscard]] static auto tt_direction(float prev, float curr) -> TurntableState::Direction;
@@ -76,97 +76,97 @@ inline Mapper::Mapper()
 		};
 	};
 
-	key_bindings[+Playstyle::_5K][+Chart::LaneType::P1_Key1] = get_key("kb_5k_1");
-	key_bindings[+Playstyle::_5K][+Chart::LaneType::P1_Key2] = get_key("kb_5k_2");
-	key_bindings[+Playstyle::_5K][+Chart::LaneType::P1_Key3] = get_key("kb_5k_3");
-	key_bindings[+Playstyle::_5K][+Chart::LaneType::P1_Key4] = get_key("kb_5k_4");
-	key_bindings[+Playstyle::_5K][+Chart::LaneType::P1_Key5] = get_key("kb_5k_5");
-	key_bindings[+Playstyle::_5K][+Chart::LaneType::P1_KeyS] = get_key("kb_5k_s");
+	key_bindings[+Playstyle::_5K][+Lane::Type::P1_Key1] = get_key("kb_5k_1");
+	key_bindings[+Playstyle::_5K][+Lane::Type::P1_Key2] = get_key("kb_5k_2");
+	key_bindings[+Playstyle::_5K][+Lane::Type::P1_Key3] = get_key("kb_5k_3");
+	key_bindings[+Playstyle::_5K][+Lane::Type::P1_Key4] = get_key("kb_5k_4");
+	key_bindings[+Playstyle::_5K][+Lane::Type::P1_Key5] = get_key("kb_5k_5");
+	key_bindings[+Playstyle::_5K][+Lane::Type::P1_KeyS] = get_key("kb_5k_s");
 
-	key_bindings[+Playstyle::_7K][+Chart::LaneType::P1_Key1] = get_key("kb_7k_1");
-	key_bindings[+Playstyle::_7K][+Chart::LaneType::P1_Key2] = get_key("kb_7k_2");
-	key_bindings[+Playstyle::_7K][+Chart::LaneType::P1_Key3] = get_key("kb_7k_3");
-	key_bindings[+Playstyle::_7K][+Chart::LaneType::P1_Key4] = get_key("kb_7k_4");
-	key_bindings[+Playstyle::_7K][+Chart::LaneType::P1_Key5] = get_key("kb_7k_5");
-	key_bindings[+Playstyle::_7K][+Chart::LaneType::P1_Key6] = get_key("kb_7k_6");
-	key_bindings[+Playstyle::_7K][+Chart::LaneType::P1_Key7] = get_key("kb_7k_7");
-	key_bindings[+Playstyle::_7K][+Chart::LaneType::P1_KeyS] = get_key("kb_7k_s");
+	key_bindings[+Playstyle::_7K][+Lane::Type::P1_Key1] = get_key("kb_7k_1");
+	key_bindings[+Playstyle::_7K][+Lane::Type::P1_Key2] = get_key("kb_7k_2");
+	key_bindings[+Playstyle::_7K][+Lane::Type::P1_Key3] = get_key("kb_7k_3");
+	key_bindings[+Playstyle::_7K][+Lane::Type::P1_Key4] = get_key("kb_7k_4");
+	key_bindings[+Playstyle::_7K][+Lane::Type::P1_Key5] = get_key("kb_7k_5");
+	key_bindings[+Playstyle::_7K][+Lane::Type::P1_Key6] = get_key("kb_7k_6");
+	key_bindings[+Playstyle::_7K][+Lane::Type::P1_Key7] = get_key("kb_7k_7");
+	key_bindings[+Playstyle::_7K][+Lane::Type::P1_KeyS] = get_key("kb_7k_s");
 
-	key_bindings[+Playstyle::_10K][+Chart::LaneType::P1_Key1] = get_key("kb_10k_p1_1");
-	key_bindings[+Playstyle::_10K][+Chart::LaneType::P1_Key2] = get_key("kb_10k_p1_2");
-	key_bindings[+Playstyle::_10K][+Chart::LaneType::P1_Key3] = get_key("kb_10k_p1_3");
-	key_bindings[+Playstyle::_10K][+Chart::LaneType::P1_Key4] = get_key("kb_10k_p1_4");
-	key_bindings[+Playstyle::_10K][+Chart::LaneType::P1_Key5] = get_key("kb_10k_p1_5");
-	key_bindings[+Playstyle::_10K][+Chart::LaneType::P1_KeyS] = get_key("kb_10k_p1_s");
-	key_bindings[+Playstyle::_10K][+Chart::LaneType::P2_Key1] = get_key("kb_10k_p2_1");
-	key_bindings[+Playstyle::_10K][+Chart::LaneType::P2_Key2] = get_key("kb_10k_p2_2");
-	key_bindings[+Playstyle::_10K][+Chart::LaneType::P2_Key3] = get_key("kb_10k_p2_3");
-	key_bindings[+Playstyle::_10K][+Chart::LaneType::P2_Key4] = get_key("kb_10k_p2_4");
-	key_bindings[+Playstyle::_10K][+Chart::LaneType::P2_Key5] = get_key("kb_10k_p2_5");
-	key_bindings[+Playstyle::_10K][+Chart::LaneType::P2_KeyS] = get_key("kb_10k_p2_s");
+	key_bindings[+Playstyle::_10K][+Lane::Type::P1_Key1] = get_key("kb_10k_p1_1");
+	key_bindings[+Playstyle::_10K][+Lane::Type::P1_Key2] = get_key("kb_10k_p1_2");
+	key_bindings[+Playstyle::_10K][+Lane::Type::P1_Key3] = get_key("kb_10k_p1_3");
+	key_bindings[+Playstyle::_10K][+Lane::Type::P1_Key4] = get_key("kb_10k_p1_4");
+	key_bindings[+Playstyle::_10K][+Lane::Type::P1_Key5] = get_key("kb_10k_p1_5");
+	key_bindings[+Playstyle::_10K][+Lane::Type::P1_KeyS] = get_key("kb_10k_p1_s");
+	key_bindings[+Playstyle::_10K][+Lane::Type::P2_Key1] = get_key("kb_10k_p2_1");
+	key_bindings[+Playstyle::_10K][+Lane::Type::P2_Key2] = get_key("kb_10k_p2_2");
+	key_bindings[+Playstyle::_10K][+Lane::Type::P2_Key3] = get_key("kb_10k_p2_3");
+	key_bindings[+Playstyle::_10K][+Lane::Type::P2_Key4] = get_key("kb_10k_p2_4");
+	key_bindings[+Playstyle::_10K][+Lane::Type::P2_Key5] = get_key("kb_10k_p2_5");
+	key_bindings[+Playstyle::_10K][+Lane::Type::P2_KeyS] = get_key("kb_10k_p2_s");
 
-	key_bindings[+Playstyle::_14K][+Chart::LaneType::P1_Key1] = get_key("kb_14k_p1_1");
-	key_bindings[+Playstyle::_14K][+Chart::LaneType::P1_Key2] = get_key("kb_14k_p1_2");
-	key_bindings[+Playstyle::_14K][+Chart::LaneType::P1_Key3] = get_key("kb_14k_p1_3");
-	key_bindings[+Playstyle::_14K][+Chart::LaneType::P1_Key4] = get_key("kb_14k_p1_4");
-	key_bindings[+Playstyle::_14K][+Chart::LaneType::P1_Key5] = get_key("kb_14k_p1_5");
-	key_bindings[+Playstyle::_14K][+Chart::LaneType::P1_Key6] = get_key("kb_14k_p1_6");
-	key_bindings[+Playstyle::_14K][+Chart::LaneType::P1_Key7] = get_key("kb_14k_p1_7");
-	key_bindings[+Playstyle::_14K][+Chart::LaneType::P1_KeyS] = get_key("kb_14k_p1_s");
-	key_bindings[+Playstyle::_14K][+Chart::LaneType::P2_Key1] = get_key("kb_14k_p2_1");
-	key_bindings[+Playstyle::_14K][+Chart::LaneType::P2_Key2] = get_key("kb_14k_p2_2");
-	key_bindings[+Playstyle::_14K][+Chart::LaneType::P2_Key3] = get_key("kb_14k_p2_3");
-	key_bindings[+Playstyle::_14K][+Chart::LaneType::P2_Key4] = get_key("kb_14k_p2_4");
-	key_bindings[+Playstyle::_14K][+Chart::LaneType::P2_Key5] = get_key("kb_14k_p2_5");
-	key_bindings[+Playstyle::_14K][+Chart::LaneType::P2_Key6] = get_key("kb_14k_p2_6");
-	key_bindings[+Playstyle::_14K][+Chart::LaneType::P2_Key7] = get_key("kb_14k_p2_7");
-	key_bindings[+Playstyle::_14K][+Chart::LaneType::P2_KeyS] = get_key("kb_14k_p2_s");
+	key_bindings[+Playstyle::_14K][+Lane::Type::P1_Key1] = get_key("kb_14k_p1_1");
+	key_bindings[+Playstyle::_14K][+Lane::Type::P1_Key2] = get_key("kb_14k_p1_2");
+	key_bindings[+Playstyle::_14K][+Lane::Type::P1_Key3] = get_key("kb_14k_p1_3");
+	key_bindings[+Playstyle::_14K][+Lane::Type::P1_Key4] = get_key("kb_14k_p1_4");
+	key_bindings[+Playstyle::_14K][+Lane::Type::P1_Key5] = get_key("kb_14k_p1_5");
+	key_bindings[+Playstyle::_14K][+Lane::Type::P1_Key6] = get_key("kb_14k_p1_6");
+	key_bindings[+Playstyle::_14K][+Lane::Type::P1_Key7] = get_key("kb_14k_p1_7");
+	key_bindings[+Playstyle::_14K][+Lane::Type::P1_KeyS] = get_key("kb_14k_p1_s");
+	key_bindings[+Playstyle::_14K][+Lane::Type::P2_Key1] = get_key("kb_14k_p2_1");
+	key_bindings[+Playstyle::_14K][+Lane::Type::P2_Key2] = get_key("kb_14k_p2_2");
+	key_bindings[+Playstyle::_14K][+Lane::Type::P2_Key3] = get_key("kb_14k_p2_3");
+	key_bindings[+Playstyle::_14K][+Lane::Type::P2_Key4] = get_key("kb_14k_p2_4");
+	key_bindings[+Playstyle::_14K][+Lane::Type::P2_Key5] = get_key("kb_14k_p2_5");
+	key_bindings[+Playstyle::_14K][+Lane::Type::P2_Key6] = get_key("kb_14k_p2_6");
+	key_bindings[+Playstyle::_14K][+Lane::Type::P2_Key7] = get_key("kb_14k_p2_7");
+	key_bindings[+Playstyle::_14K][+Lane::Type::P2_KeyS] = get_key("kb_14k_p2_s");
 
-	key_bindings[+Playstyle::_5K][+Chart::LaneType::P1_Key1] = get_key("kb_5k_1");
-	key_bindings[+Playstyle::_5K][+Chart::LaneType::P1_Key2] = get_key("kb_5k_2");
-	key_bindings[+Playstyle::_5K][+Chart::LaneType::P1_Key3] = get_key("kb_5k_3");
-	key_bindings[+Playstyle::_5K][+Chart::LaneType::P1_Key4] = get_key("kb_5k_4");
-	key_bindings[+Playstyle::_5K][+Chart::LaneType::P1_Key5] = get_key("kb_5k_5");
-	key_bindings[+Playstyle::_5K][+Chart::LaneType::P1_KeyS] = get_key("kb_5k_s");
+	key_bindings[+Playstyle::_5K][+Lane::Type::P1_Key1] = get_key("kb_5k_1");
+	key_bindings[+Playstyle::_5K][+Lane::Type::P1_Key2] = get_key("kb_5k_2");
+	key_bindings[+Playstyle::_5K][+Lane::Type::P1_Key3] = get_key("kb_5k_3");
+	key_bindings[+Playstyle::_5K][+Lane::Type::P1_Key4] = get_key("kb_5k_4");
+	key_bindings[+Playstyle::_5K][+Lane::Type::P1_Key5] = get_key("kb_5k_5");
+	key_bindings[+Playstyle::_5K][+Lane::Type::P1_KeyS] = get_key("kb_5k_s");
 
-	button_bindings[+Playstyle::_7K][+Chart::LaneType::P1_Key1] = get_con("con_7k_1");
-	button_bindings[+Playstyle::_7K][+Chart::LaneType::P1_Key2] = get_con("con_7k_2");
-	button_bindings[+Playstyle::_7K][+Chart::LaneType::P1_Key3] = get_con("con_7k_3");
-	button_bindings[+Playstyle::_7K][+Chart::LaneType::P1_Key4] = get_con("con_7k_4");
-	button_bindings[+Playstyle::_7K][+Chart::LaneType::P1_Key5] = get_con("con_7k_5");
-	button_bindings[+Playstyle::_7K][+Chart::LaneType::P1_Key6] = get_con("con_7k_6");
-	button_bindings[+Playstyle::_7K][+Chart::LaneType::P1_Key7] = get_con("con_7k_7");
-	button_bindings[+Playstyle::_7K][+Chart::LaneType::P1_KeyS] = get_con("con_7k_s");
+	button_bindings[+Playstyle::_7K][+Lane::Type::P1_Key1] = get_con("con_7k_1");
+	button_bindings[+Playstyle::_7K][+Lane::Type::P1_Key2] = get_con("con_7k_2");
+	button_bindings[+Playstyle::_7K][+Lane::Type::P1_Key3] = get_con("con_7k_3");
+	button_bindings[+Playstyle::_7K][+Lane::Type::P1_Key4] = get_con("con_7k_4");
+	button_bindings[+Playstyle::_7K][+Lane::Type::P1_Key5] = get_con("con_7k_5");
+	button_bindings[+Playstyle::_7K][+Lane::Type::P1_Key6] = get_con("con_7k_6");
+	button_bindings[+Playstyle::_7K][+Lane::Type::P1_Key7] = get_con("con_7k_7");
+	button_bindings[+Playstyle::_7K][+Lane::Type::P1_KeyS] = get_con("con_7k_s");
 
-	button_bindings[+Playstyle::_10K][+Chart::LaneType::P1_Key1] = get_con("con_10k_p1_1");
-	button_bindings[+Playstyle::_10K][+Chart::LaneType::P1_Key2] = get_con("con_10k_p1_2");
-	button_bindings[+Playstyle::_10K][+Chart::LaneType::P1_Key3] = get_con("con_10k_p1_3");
-	button_bindings[+Playstyle::_10K][+Chart::LaneType::P1_Key4] = get_con("con_10k_p1_4");
-	button_bindings[+Playstyle::_10K][+Chart::LaneType::P1_Key5] = get_con("con_10k_p1_5");
-	button_bindings[+Playstyle::_10K][+Chart::LaneType::P1_KeyS] = get_con("con_10k_p1_s");
-	button_bindings[+Playstyle::_10K][+Chart::LaneType::P2_Key1] = get_con("con_10k_p2_1");
-	button_bindings[+Playstyle::_10K][+Chart::LaneType::P2_Key2] = get_con("con_10k_p2_2");
-	button_bindings[+Playstyle::_10K][+Chart::LaneType::P2_Key3] = get_con("con_10k_p2_3");
-	button_bindings[+Playstyle::_10K][+Chart::LaneType::P2_Key4] = get_con("con_10k_p2_4");
-	button_bindings[+Playstyle::_10K][+Chart::LaneType::P2_Key5] = get_con("con_10k_p2_5");
-	button_bindings[+Playstyle::_10K][+Chart::LaneType::P2_KeyS] = get_con("con_10k_p2_s");
+	button_bindings[+Playstyle::_10K][+Lane::Type::P1_Key1] = get_con("con_10k_p1_1");
+	button_bindings[+Playstyle::_10K][+Lane::Type::P1_Key2] = get_con("con_10k_p1_2");
+	button_bindings[+Playstyle::_10K][+Lane::Type::P1_Key3] = get_con("con_10k_p1_3");
+	button_bindings[+Playstyle::_10K][+Lane::Type::P1_Key4] = get_con("con_10k_p1_4");
+	button_bindings[+Playstyle::_10K][+Lane::Type::P1_Key5] = get_con("con_10k_p1_5");
+	button_bindings[+Playstyle::_10K][+Lane::Type::P1_KeyS] = get_con("con_10k_p1_s");
+	button_bindings[+Playstyle::_10K][+Lane::Type::P2_Key1] = get_con("con_10k_p2_1");
+	button_bindings[+Playstyle::_10K][+Lane::Type::P2_Key2] = get_con("con_10k_p2_2");
+	button_bindings[+Playstyle::_10K][+Lane::Type::P2_Key3] = get_con("con_10k_p2_3");
+	button_bindings[+Playstyle::_10K][+Lane::Type::P2_Key4] = get_con("con_10k_p2_4");
+	button_bindings[+Playstyle::_10K][+Lane::Type::P2_Key5] = get_con("con_10k_p2_5");
+	button_bindings[+Playstyle::_10K][+Lane::Type::P2_KeyS] = get_con("con_10k_p2_s");
 
-	button_bindings[+Playstyle::_14K][+Chart::LaneType::P1_Key1] = get_con("con_14k_p1_1");
-	button_bindings[+Playstyle::_14K][+Chart::LaneType::P1_Key2] = get_con("con_14k_p1_2");
-	button_bindings[+Playstyle::_14K][+Chart::LaneType::P1_Key3] = get_con("con_14k_p1_3");
-	button_bindings[+Playstyle::_14K][+Chart::LaneType::P1_Key4] = get_con("con_14k_p1_4");
-	button_bindings[+Playstyle::_14K][+Chart::LaneType::P1_Key5] = get_con("con_14k_p1_5");
-	button_bindings[+Playstyle::_14K][+Chart::LaneType::P1_Key6] = get_con("con_14k_p1_6");
-	button_bindings[+Playstyle::_14K][+Chart::LaneType::P1_Key7] = get_con("con_14k_p1_7");
-	button_bindings[+Playstyle::_14K][+Chart::LaneType::P1_KeyS] = get_con("con_14k_p1_s");
-	button_bindings[+Playstyle::_14K][+Chart::LaneType::P2_Key1] = get_con("con_14k_p2_1");
-	button_bindings[+Playstyle::_14K][+Chart::LaneType::P2_Key2] = get_con("con_14k_p2_2");
-	button_bindings[+Playstyle::_14K][+Chart::LaneType::P2_Key3] = get_con("con_14k_p2_3");
-	button_bindings[+Playstyle::_14K][+Chart::LaneType::P2_Key4] = get_con("con_14k_p2_4");
-	button_bindings[+Playstyle::_14K][+Chart::LaneType::P2_Key5] = get_con("con_14k_p2_5");
-	button_bindings[+Playstyle::_14K][+Chart::LaneType::P2_Key6] = get_con("con_14k_p2_6");
-	button_bindings[+Playstyle::_14K][+Chart::LaneType::P2_Key7] = get_con("con_14k_p2_7");
-	button_bindings[+Playstyle::_14K][+Chart::LaneType::P2_KeyS] = get_con("con_14k_p2_s");
+	button_bindings[+Playstyle::_14K][+Lane::Type::P1_Key1] = get_con("con_14k_p1_1");
+	button_bindings[+Playstyle::_14K][+Lane::Type::P1_Key2] = get_con("con_14k_p1_2");
+	button_bindings[+Playstyle::_14K][+Lane::Type::P1_Key3] = get_con("con_14k_p1_3");
+	button_bindings[+Playstyle::_14K][+Lane::Type::P1_Key4] = get_con("con_14k_p1_4");
+	button_bindings[+Playstyle::_14K][+Lane::Type::P1_Key5] = get_con("con_14k_p1_5");
+	button_bindings[+Playstyle::_14K][+Lane::Type::P1_Key6] = get_con("con_14k_p1_6");
+	button_bindings[+Playstyle::_14K][+Lane::Type::P1_Key7] = get_con("con_14k_p1_7");
+	button_bindings[+Playstyle::_14K][+Lane::Type::P1_KeyS] = get_con("con_14k_p1_s");
+	button_bindings[+Playstyle::_14K][+Lane::Type::P2_Key1] = get_con("con_14k_p2_1");
+	button_bindings[+Playstyle::_14K][+Lane::Type::P2_Key2] = get_con("con_14k_p2_2");
+	button_bindings[+Playstyle::_14K][+Lane::Type::P2_Key3] = get_con("con_14k_p2_3");
+	button_bindings[+Playstyle::_14K][+Lane::Type::P2_Key4] = get_con("con_14k_p2_4");
+	button_bindings[+Playstyle::_14K][+Lane::Type::P2_Key5] = get_con("con_14k_p2_5");
+	button_bindings[+Playstyle::_14K][+Lane::Type::P2_Key6] = get_con("con_14k_p2_6");
+	button_bindings[+Playstyle::_14K][+Lane::Type::P2_Key7] = get_con("con_14k_p2_7");
+	button_bindings[+Playstyle::_14K][+Lane::Type::P2_KeyS] = get_con("con_14k_p2_s");
 
 	axis_bindings[+Playstyle::_5K][0] = get_con("con_5k_s_analog");
 	axis_bindings[+Playstyle::_7K][0] = get_con("con_7k_s_analog");
@@ -182,7 +182,7 @@ inline auto Mapper::from_key(threads::KeyInput const& key, Playstyle playstyle) 
 	auto const match = find(playstyle_binds, key.code);
 	if (match == playstyle_binds.end()) return nullopt;
 
-	auto const lane = static_cast<Chart::LaneType>(distance(playstyle_binds.begin(), match));
+	auto const lane = static_cast<Lane::Type>(distance(playstyle_binds.begin(), match));
 	auto& last = last_input[+playstyle][+lane];
 	auto const since_last = key.timestamp - last;
 	if (since_last <= milliseconds{globals::config->get_entry<int32>("controls", "debounce_duration")}) return nullopt;
@@ -205,7 +205,7 @@ inline auto Mapper::from_button(threads::ButtonInput const& button, Playstyle pl
 	});
 	if (match == playstyle_binds.end()) return nullopt;
 
-	auto const lane = static_cast<Chart::LaneType>(distance(playstyle_binds.begin(), match));
+	auto const lane = static_cast<Lane::Type>(distance(playstyle_binds.begin(), match));
 	auto& last = last_input[+playstyle][+lane];
 	auto const since_last = button.timestamp - last;
 	if (since_last <= milliseconds{globals::config->get_entry<int32>("controls", "debounce_duration")}) return nullopt;
@@ -233,7 +233,7 @@ inline auto Mapper::submit_axis_input(threads::AxisInput const& axis, Playstyle 
 	if (tt_state.value == axis.value) return {};
 
 	auto inputs = vector<Input>{};
-	auto lane = tt_idx == 0? Chart::LaneType::P1_KeyS : Chart::LaneType::P2_KeyS;
+	auto lane = tt_idx == 0? Lane::Type::P1_KeyS : Lane::Type::P2_KeyS;
 	auto current_direction = tt_direction(tt_state.value, axis.value);
 	auto& last = last_input[+playstyle][+lane];
 	auto const since_last = axis.timestamp - last;
@@ -271,7 +271,7 @@ inline auto Mapper::from_axis_state(dev::GLFW const& glfw, Playstyle playstyle) 
 
 	// Handle delayed stopping
 	for (auto [lane, tt]: views::zip(
-		views::iota(0u) | views::transform([](auto idx) { return idx == 0? Chart::LaneType::P1_KeyS : Chart::LaneType::P2_KeyS; }),
+		views::iota(0u) | views::transform([](auto idx) { return idx == 0? Lane::Type::P1_KeyS : Lane::Type::P2_KeyS; }),
 		turntables)) {
 		if (tt.direction == TurntableState::Direction::None) continue;
 		auto now = glfw.get_time();

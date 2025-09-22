@@ -76,7 +76,7 @@ private:
 inline void Player::play(bms::Chart const& chart, bool autoplay, bool paused)
 {
 	cursor.emplace(chart, autoplay);
-	gain = chart.metrics.gain;
+	gain = dev::lufs_to_gain(chart.metadata.loudness);
 	ASSERT(gain > 0);
 	timer_slop = glfw.get_time();
 	this->paused = paused;

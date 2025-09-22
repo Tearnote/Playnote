@@ -95,20 +95,20 @@ static void run_audio(Broadcaster& broadcaster, dev::Window& window, audio::Mixe
 			}
 		});
 		broadcaster.receive_all<KeyInput>([&](auto ev) {
-			auto input = mapper.from_key(ev, bms_player->get_chart().metrics.playstyle);
+			auto input = mapper.from_key(ev, bms_player->get_chart().timeline.playstyle);
 			if (!input) return;
 			bms_player->enqueue_input(*input);
 		});
 		broadcaster.receive_all<ButtonInput>([&](auto ev) {
-			auto input = mapper.from_button(ev, bms_player->get_chart().metrics.playstyle);
+			auto input = mapper.from_button(ev, bms_player->get_chart().timeline.playstyle);
 			if (!input) return;
 			bms_player->enqueue_input(*input);
 		});
 		broadcaster.receive_all<AxisInput>([&](auto ev) {
-			auto inputs = mapper.submit_axis_input(ev, bms_player->get_chart().metrics.playstyle);
+			auto inputs = mapper.submit_axis_input(ev, bms_player->get_chart().timeline.playstyle);
 			for (auto const& input: inputs) bms_player->enqueue_input(input);
 		});
-		auto inputs = mapper.from_axis_state(window.get_glfw(), bms_player->get_chart().metrics.playstyle);
+		auto inputs = mapper.from_axis_state(window.get_glfw(), bms_player->get_chart().timeline.playstyle);
 		for (auto const& input: inputs) bms_player->enqueue_input(input);
 
 		yield();

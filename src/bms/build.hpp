@@ -35,7 +35,7 @@ struct RelativeNote {
 	using Type = RelativeNoteType;
 
 	Type type;
-	Chart::LaneType lane;
+	Lane::Type lane;
 	T position;
 	usize wav_slot;
 
@@ -216,59 +216,59 @@ inline auto channel_to_note_type(IR::ChannelEvent::Type ch) -> RelativeNoteType
 	PANIC();
 }
 
-inline auto channel_to_lane(IR::ChannelEvent::Type ch) -> optional<Chart::LaneType>
+inline auto channel_to_lane(IR::ChannelEvent::Type ch) -> optional<Lane::Type>
 {
 	switch (ch) {
 	case IR::ChannelEvent::Type::BGM:
-		return Chart::LaneType::BGM;
+		return Lane::Type::BGM;
 	case IR::ChannelEvent::Type::Note_P1_Key1:
 	case IR::ChannelEvent::Type::Note_P1_Key1_LN:
-		return Chart::LaneType::P1_Key1;
+		return Lane::Type::P1_Key1;
 	case IR::ChannelEvent::Type::Note_P1_Key2:
 	case IR::ChannelEvent::Type::Note_P1_Key2_LN:
-		return Chart::LaneType::P1_Key2;
+		return Lane::Type::P1_Key2;
 	case IR::ChannelEvent::Type::Note_P1_Key3:
 	case IR::ChannelEvent::Type::Note_P1_Key3_LN:
-		return Chart::LaneType::P1_Key3;
+		return Lane::Type::P1_Key3;
 	case IR::ChannelEvent::Type::Note_P1_Key4:
 	case IR::ChannelEvent::Type::Note_P1_Key4_LN:
-		return Chart::LaneType::P1_Key4;
+		return Lane::Type::P1_Key4;
 	case IR::ChannelEvent::Type::Note_P1_Key5:
 	case IR::ChannelEvent::Type::Note_P1_Key5_LN:
-		return Chart::LaneType::P1_Key5;
+		return Lane::Type::P1_Key5;
 	case IR::ChannelEvent::Type::Note_P1_Key6:
 	case IR::ChannelEvent::Type::Note_P1_Key6_LN:
-		return Chart::LaneType::P1_Key6;
+		return Lane::Type::P1_Key6;
 	case IR::ChannelEvent::Type::Note_P1_Key7:
 	case IR::ChannelEvent::Type::Note_P1_Key7_LN:
-		return Chart::LaneType::P1_Key7;
+		return Lane::Type::P1_Key7;
 	case IR::ChannelEvent::Type::Note_P1_KeyS:
 	case IR::ChannelEvent::Type::Note_P1_KeyS_LN:
-		return Chart::LaneType::P1_KeyS;
+		return Lane::Type::P1_KeyS;
 	case IR::ChannelEvent::Type::Note_P2_Key1:
 	case IR::ChannelEvent::Type::Note_P2_Key1_LN:
-		return Chart::LaneType::P2_Key1;
+		return Lane::Type::P2_Key1;
 	case IR::ChannelEvent::Type::Note_P2_Key2:
 	case IR::ChannelEvent::Type::Note_P2_Key2_LN:
-		return Chart::LaneType::P2_Key2;
+		return Lane::Type::P2_Key2;
 	case IR::ChannelEvent::Type::Note_P2_Key3:
 	case IR::ChannelEvent::Type::Note_P2_Key3_LN:
-		return Chart::LaneType::P2_Key3;
+		return Lane::Type::P2_Key3;
 	case IR::ChannelEvent::Type::Note_P2_Key4:
 	case IR::ChannelEvent::Type::Note_P2_Key4_LN:
-		return Chart::LaneType::P2_Key4;
+		return Lane::Type::P2_Key4;
 	case IR::ChannelEvent::Type::Note_P2_Key5:
 	case IR::ChannelEvent::Type::Note_P2_Key5_LN:
-		return Chart::LaneType::P2_Key5;
+		return Lane::Type::P2_Key5;
 	case IR::ChannelEvent::Type::Note_P2_Key6:
 	case IR::ChannelEvent::Type::Note_P2_Key6_LN:
-		return Chart::LaneType::P2_Key6;
+		return Lane::Type::P2_Key6;
 	case IR::ChannelEvent::Type::Note_P2_Key7:
 	case IR::ChannelEvent::Type::Note_P2_Key7_LN:
-		return Chart::LaneType::P2_Key7;
+		return Lane::Type::P2_Key7;
 	case IR::ChannelEvent::Type::Note_P2_KeyS:
 	case IR::ChannelEvent::Type::Note_P2_KeyS_LN:
-		return Chart::LaneType::P2_KeyS;
+		return Lane::Type::P2_KeyS;
 	default: return nullopt;
 	}
 }
@@ -299,7 +299,7 @@ inline auto process_ir_headers(Chart& chart, IR const& ir, FileReferences& file_
 			[&](IR::HeaderEvent::URL* params) { chart.metadata.url = params->url; },
 			[&](IR::HeaderEvent::Email* params) { chart.metadata.email = params->email; },
 			[&](IR::HeaderEvent::Difficulty* params) { chart.metadata.difficulty = params->level; },
-			[&](IR::HeaderEvent::BPM* params) { chart.bpm = params->bpm; },
+			[&](IR::HeaderEvent::BPM* params) { chart.metadata.bpm_range.initial = params->bpm; },
 			[&](IR::HeaderEvent::WAV* params) { file_references.wav[params->slot] = params->name; },
 			[&](IR::HeaderEvent::BPMxx* params) { slot_values.store(slot_values.bpmxx, params->slot, params->bpm); },
 			[](auto&&) {}
@@ -386,7 +386,7 @@ inline void generate_measure_lines(vector<BeatRelNote>& notes, span<BeatRelMeasu
 	transform(measures, back_inserter(notes), [](auto const& measure) {
 		return BeatRelNote{
 			.type = Simple{},
-			.lane = Chart::LaneType::MeasureLine,
+			.lane = Lane::Type::MeasureLine,
 			.position = measure.start,
 		};
 	});
@@ -473,14 +473,14 @@ inline auto build_bpm_changes(span<BeatRelBPM const> bpms) -> vector<BPMChange>
 
 inline void build_lanes(Chart& chart, span<AbsNote const> notes)
 {
-	auto lane_builders = array<LaneBuilder, enum_count<Chart::LaneType>()>{};
+	auto lane_builders = array<LaneBuilder, enum_count<Lane::Type>()>{};
 
 	for (auto const& note: notes)
 		lane_builders[+note.lane].add_note(note);
 
-	for (auto [idx, lane]: chart.lanes | views::enumerate) {
-		auto const is_bgm = idx == +Chart::LaneType::BGM;
-		auto const is_measure_line = idx == +Chart::LaneType::MeasureLine;
+	for (auto [idx, lane]: chart.timeline.lanes | views::enumerate) {
+		auto const is_bgm = idx == +Lane::Type::BGM;
+		auto const is_measure_line = idx == +Lane::Type::MeasureLine;
 		lane = lane_builders[idx].build(!is_bgm);
 		if (!is_bgm && !is_measure_line) lane.playable = true;
 		if (!is_bgm) lane.visible = true;
@@ -495,8 +495,8 @@ void load_files(Chart& chart, io::Song& song, FileReferences const& references, 
 
 	// Mark used slots
 	auto needed_slots = vector<bool>{};
-	needed_slots.resize(chart.wav_slots.size(), false);
-	for (auto const& lane: chart.lanes) {
+	needed_slots.resize(chart.media.wav_slots.size(), false);
+	for (auto const& lane: chart.timeline.lanes) {
 		for (auto const& note: lane.notes) {
 			needed_slots[note.wav_slot] = true;
 		}
@@ -505,11 +505,11 @@ void load_files(Chart& chart, io::Song& song, FileReferences const& references, 
 	// Enqueue file requests for used slots
 	struct Request {
 		string_view filename;
-		Chart::WavSlot& slot;
+		Media::WavSlot& slot;
 	};
 	auto requests = vector<Request>{};
 	requests.reserve(references.wav.size());
-	for (auto [needed, request, slot]: views::zip(needed_slots, references.wav, chart.wav_slots) |
+	for (auto [needed, request, slot]: views::zip(needed_slots, references.wav, chart.media.wav_slots) |
 		views::filter([](auto const& view) { return get<0>(view) && !get<1>(view).empty(); })) {
 		requests.emplace_back(Request{
 			.filename = request,
@@ -521,7 +521,7 @@ void load_files(Chart& chart, io::Song& song, FileReferences const& references, 
 	struct Job {
 		string_view filename;
 		vector<byte> file;
-		Chart::WavSlot& slot;
+		Media::WavSlot& slot;
 	};
 	auto jobs = vector<Job>{};
 	jobs.reserve(requests.size());
@@ -584,18 +584,10 @@ void load_files(Chart& chart, io::Song& song, FileReferences const& references, 
 	}
 }
 
-[[nodiscard]] inline auto lufs_to_gain(double lufs) -> float
+inline auto determine_playstyle(Timeline::Lanes const& lanes) -> Playstyle
 {
-	constexpr auto LufsTarget = -14.0;
-	auto const db_from_target = LufsTarget - lufs;
-	auto const amplitude_ratio = pow(10.0, db_from_target / 20.0);
-	return static_cast<float>(amplitude_ratio);
-}
-
-inline auto determine_playstyle(Chart::Lanes const& lanes) -> Playstyle
-{
-	using enum Chart::LaneType;
-	auto lanes_used = array<bool, enum_count<Chart::LaneType>()>{};
+	using enum Lane::Type;
+	auto lanes_used = array<bool, enum_count<Lane::Type>()>{};
 	transform(lanes, lanes_used.begin(), [](auto const& lane) { return !lane.notes.empty(); });
 
 	if (lanes_used[+P2_Key6] ||
@@ -621,12 +613,12 @@ inline auto determine_playstyle(Chart::Lanes const& lanes) -> Playstyle
 	return Playstyle::_7K; // Empty chart, but sure whatever
 }
 
-inline void calculate_note_metrics(Chart::Lanes const& lanes, Metrics& metrics)
+inline void calculate_note_metrics(Timeline::Lanes const& lanes, Metadata& metadata)
 {
-	metrics.note_count = fold_left(lanes, 0u, [](auto acc, auto const& lane) {
+	metadata.note_count = fold_left(lanes, 0u, [](auto acc, auto const& lane) {
 		return acc + (lane.playable? lane.notes.size() : 0);
 	});
-	metrics.chart_duration = fold_left(lanes |
+	metadata.chart_duration = fold_left(lanes |
 		views::filter([](auto const& lane) { return !lane.notes.empty() && lane.playable; }) |
 		views::transform([](auto const& lane) -> Note const& { return lane.notes.back(); }),
 		0ns, [](auto acc, Note const& last_note) {
@@ -638,7 +630,7 @@ inline void calculate_note_metrics(Chart::Lanes const& lanes, Metrics& metrics)
 }
 
 template<callable<void(threads::ChartLoadProgress::Type)> Func>
-void calculate_audio_metrics(Cursor&& cursor, Metrics& metrics, Func&& progress)
+void calculate_audio_metrics(Cursor&& cursor, Metadata& metadata, Func&& progress)
 {
 	constexpr auto BufferSize = 4096zu / sizeof(dev::Sample);
 
@@ -662,9 +654,8 @@ void calculate_audio_metrics(Cursor&& cursor, Metrics& metrics, Func&& progress)
 		buffer.clear();
 	}
 
-	metrics.loudness = r128::get_loudness(ctx);
-	metrics.gain = lufs_to_gain(metrics.loudness);
-	metrics.audio_duration = cursor.get_progress_ns();
+	metadata.loudness = r128::get_loudness(ctx);
+	metadata.audio_duration = cursor.get_progress_ns();
 	r128::cleanup(ctx);
 }
 
@@ -680,18 +671,17 @@ inline auto notes_around(span<Note const> notes, nanoseconds cursor, nanoseconds
 }
 
 template<callable<void(threads::ChartLoadProgress::Type)> Func>
-auto calculate_density_distribution(Chart::Lanes const& lanes, nanoseconds chart_duration,
-	nanoseconds resolution, nanoseconds window, Func&& progress) -> Density
+void calculate_density_distribution(Metadata& metadata, Timeline::Lanes const& lanes,
+	nanoseconds chart_duration, nanoseconds resolution, nanoseconds window, Func&& progress)
 {
 	constexpr auto Bandwidth = 3.0f; // in standard deviations
 	// scale back a stretched window, and correct for considering only 3 standard deviations
 	auto const GaussianScale = 1.0f / (window / 1s) * (1.0f / 0.973f);
 
-	auto result = Density{};
 	auto const points = chart_duration / resolution + 1;
-	result.key_density.resize(points);
-	result.scratch_density.resize(points);
-	result.ln_density.resize(points);
+	metadata.density.key.resize(points);
+	metadata.density.scratch.resize(points);
+	metadata.density.ln.resize(points);
 
 	// Collect all playable notes
 	auto notes_keys = vector<Note>{};
@@ -700,10 +690,10 @@ auto calculate_density_distribution(Chart::Lanes const& lanes, nanoseconds chart
 	notes_keys.reserve(note_total);
 	notes_scr.reserve(note_total);
 	for (auto [type, lane]: views::zip(
-		views::iota(0u) | views::transform([](auto idx) { return Chart::LaneType{idx}; }),
+		views::iota(0u) | views::transform([](auto idx) { return Lane::Type{idx}; }),
 		lanes) |
 		views::filter([](auto const& view) { return get<1>(view).playable; })) {
-		auto& dest = type == Chart::LaneType::P1_KeyS || type == Chart::LaneType::P2_KeyS? notes_scr : notes_keys;
+		auto& dest = type == Lane::Type::P1_KeyS || type == Lane::Type::P2_KeyS? notes_scr : notes_keys;
 		for (Note const& note: lane.notes) {
 			if (note.type_is<Note::LN>()) {
 				dest.emplace_back(note);
@@ -722,7 +712,7 @@ auto calculate_density_distribution(Chart::Lanes const& lanes, nanoseconds chart
 	auto until_progress_update = 0u;
 	for (auto [cursor, key, scratch, ln]: views::zip(
 		views::iota(0u) | views::transform([&](auto i) { return i * resolution; }),
-		result.key_density, result.scratch_density, result.ln_density)) {
+		metadata.density.key, metadata.density.scratch, metadata.density.ln)) {
 		for (Note const& note: notes_around(notes_keys, cursor, window)) {
 			auto& target = [&]() -> float& {
 				if (note.type_is<Note::LN>()) return ln;
@@ -747,40 +737,38 @@ auto calculate_density_distribution(Chart::Lanes const& lanes, nanoseconds chart
 
 	// Average NPS: actually Root Mean Square of the middle 50% of the dataset
 	auto overall_density = vector<float>{};
-	overall_density.reserve(result.key_density.size());
-	transform(views::zip(result.key_density, result.scratch_density, result.ln_density), back_inserter(overall_density),
+	overall_density.reserve(metadata.density.key.size());
+	transform(views::zip(metadata.density.key, metadata.density.scratch, metadata.density.ln), back_inserter(overall_density),
 		[](auto const& view) { return get<0>(view) + get<1>(view) + get<2>(view); });
 	sort(overall_density);
 	auto quarter_size = overall_density.size() / 4;
 	auto density_mid50 = span{overall_density.begin() + quarter_size, overall_density.end() - quarter_size};
 	auto rms = fold_left(density_mid50, 0.0,
 		[&](auto acc, auto val) { return acc + val * val * val * val / density_mid50.size(); });
-	result.average_nps = sqrt(sqrt(rms));
+	metadata.nps.average = sqrt(sqrt(rms));
 
 	// Peak NPS: RMS of the 98th percentile
 	auto fiftieth_size = overall_density.size() / 50;
 	auto density_top2 = span{overall_density.end() - fiftieth_size, overall_density.end()};
 	auto peak_rms = fold_left(density_top2, 0.0,
 		[&](auto acc, auto val) { return acc + val * val * val * val / density_top2.size(); });
-	result.peak_nps = sqrt(sqrt(peak_rms));
-
-	return result;
+	metadata.nps.peak = sqrt(sqrt(peak_rms));
 }
 
-inline auto calculate_features(Chart const& chart) -> Features
+inline auto calculate_features(Chart const& chart) -> Metadata::Features
 {
-	auto result = Features{};
-	result.has_ln = any_of(chart.lanes, [](auto const& lane) {
+	auto result = Metadata::Features{};
+	result.has_ln = any_of(chart.timeline.lanes, [](auto const& lane) {
 		if (!lane.playable) return false;
 		return any_of(lane.notes, [](Note const& note) {
 			return note.type_is<Note::LN>();
 		});
 	});
-	result.has_soflan = chart.bpm_changes.size() > 1;
+	result.has_soflan = chart.timeline.bpm_sections.size() > 1;
 	return result;
 }
 
-inline auto calculate_bpm_range(Chart const& chart) -> BPMRange
+inline auto calculate_bpm_range(Chart const& chart) -> Metadata::BPMRange
 {
 	auto bpm_distribution = unordered_map<float, nanoseconds>{};
 	auto update = [&](float bpm, nanoseconds duration) {
@@ -788,52 +776,51 @@ inline auto calculate_bpm_range(Chart const& chart) -> BPMRange
 		bpm_distribution[bpm] += duration;
 	};
 
-	for (auto [current, next]: chart.bpm_changes | views::pairwise)
+	for (auto [current, next]: chart.timeline.bpm_sections | views::pairwise)
 		update(current.bpm, next.position - current.position);
 	// Last one has no pairing; duration is until the end of the chart
-	update(chart.bpm_changes.back().bpm, chart.metrics.chart_duration - chart.bpm_changes.back().position);
+	update(chart.timeline.bpm_sections.back().bpm, chart.metadata.chart_duration - chart.timeline.bpm_sections.back().position);
 
-	auto result = BPMRange{
+	auto result = Metadata::BPMRange{
 		.min = *min_element(bpm_distribution | views::keys),
 		.max = *max_element(bpm_distribution | views::keys),
 		.main = max_element(bpm_distribution, [](auto const& left, auto const& right) { return left.second < right.second; })->first,
 	};
-	result.scroll_adjustment = 120.0f / result.main;
 	return result;
 }
 
 template<callable<void(threads::ChartLoadProgress::Type)> Func>
 void calculate_metrics(Chart& chart, Func&& progress)
 {
-	chart.metrics.playstyle = determine_playstyle(chart.lanes);
-	calculate_note_metrics(chart.lanes, chart.metrics);
-	calculate_audio_metrics(Cursor{chart, true}, chart.metrics, progress);
-	chart.metrics.density = calculate_density_distribution(chart.lanes, chart.metrics.chart_duration, 125ms, 2s, progress);
-	chart.metrics.features = calculate_features(chart);
-	chart.metrics.bpm = calculate_bpm_range(chart);
+	chart.timeline.playstyle = determine_playstyle(chart.timeline.lanes);
+	calculate_note_metrics(chart.timeline.lanes, chart.metadata);
+	calculate_audio_metrics(Cursor{chart, true}, chart.metadata, progress);
+	calculate_density_distribution(chart.metadata, chart.timeline.lanes, chart.metadata.chart_duration, 125ms, 2s, progress);
+	chart.metadata.features = calculate_features(chart);
+	chart.metadata.bpm_range = calculate_bpm_range(chart);
 }
 
 inline void calculate_bb(Chart& chart)
 {
-	chart.slot_bb.windows.resize(chart.metrics.audio_duration / SlotBB::WindowSize + 1);
+	chart.media.wav_bb.windows.resize(chart.metadata.audio_duration / Media::SlotBB::WindowSize + 1);
 
-	for (auto const& lane: chart.lanes) {
+	for (auto const& lane: chart.timeline.lanes) {
 		if (!lane.audible) continue;
 		for (auto [idx, note]: lane.notes | views::enumerate) {
-			if (chart.wav_slots[note.wav_slot].empty()) continue;
+			if (chart.media.wav_slots[note.wav_slot].empty()) continue;
 			// Register note audio in the structure
-			auto const wav_len = dev::Audio::samples_to_ns(chart.wav_slots[note.wav_slot].size());
-			auto const next_note_start = idx >= lane.notes.size() - 1? chart.metrics.audio_duration :
+			auto const wav_len = dev::Audio::samples_to_ns(chart.media.wav_slots[note.wav_slot].size());
+			auto const next_note_start = idx >= lane.notes.size() - 1? chart.metadata.audio_duration :
 				lane.playable? lane.notes[idx + 1].timestamp : note.timestamp;
 			auto const start = note.timestamp;
 			auto const end = next_note_start + wav_len;
-			auto const first_window = clamp<usize>(start / SlotBB::WindowSize, 0zu, chart.slot_bb.windows.size() - 1);
-			auto const last_window = clamp<usize>(end / SlotBB::WindowSize + 1, 0zu, chart.slot_bb.windows.size() - 1);
+			auto const first_window = clamp<usize>(start / Media::SlotBB::WindowSize, 0zu, chart.media.wav_bb.windows.size() - 1);
+			auto const last_window = clamp<usize>(end / Media::SlotBB::WindowSize + 1, 0zu, chart.media.wav_bb.windows.size() - 1);
 			for (auto& window: views::iota(first_window, last_window + 1) |
-				views::transform([&](auto i) -> auto& { return chart.slot_bb.windows[i]; })) {
+				views::transform([&](auto i) -> auto& { return chart.media.wav_bb.windows[i]; })) {
 				if (contains(window, note.wav_slot)) continue;
 				if (window.size() == window.capacity()) {
-					WARN("Unable to add sample slot to bounding box; reached limit of {}", SlotBB::MaxSlots);
+					WARN("Unable to add sample slot to bounding box; reached limit of {}", Media::SlotBB::MaxSlots);
 					continue;
 				}
 				window.push_back(note.wav_slot);
@@ -842,7 +829,7 @@ inline void calculate_bb(Chart& chart)
 	}
 
 	auto biggest_window = 0zu;
-	for (auto const& window: chart.slot_bb.windows) {
+	for (auto const& window: chart.media.wav_bb.windows) {
 		biggest_window = max(biggest_window, window.size());
 	}
 }
@@ -860,12 +847,12 @@ auto chart_from_ir(IR const& ir, io::Song& song, Func&& progress) -> shared_ptr<
 	auto file_references = FileReferences{};
 
 	measure_lengths.reserve(256); // Arbitrary; enough for most charts
-	chart->wav_slots.resize(ir.get_wav_slot_count());
+	chart->media.wav_slots.resize(ir.get_wav_slot_count());
 	file_references.wav.clear();
 	file_references.wav.resize(ir.get_wav_slot_count());
 
 	auto const slot_values = process_ir_headers(*chart, ir, file_references);
-	measure_rel_bpms.emplace_back(NotePosition{0}, chart->bpm, 1.0f); // Add initial BPM as the first BPM change
+	measure_rel_bpms.emplace_back(NotePosition{0}, chart->metadata.bpm_range.initial, 1.0f); // Add initial BPM as the first BPM change
 	process_ir_channels(ir, slot_values, measure_rel_notes, measure_rel_bpms, measure_lengths);
 	stable_sort(measure_rel_bpms, [](auto const& a, auto const& b) { return a.position < b.position; });
 
@@ -873,8 +860,8 @@ auto chart_from_ir(IR const& ir, io::Song& song, Func&& progress) -> shared_ptr<
 	auto beat_rel_notes = measure_rel_notes_to_beat_rel(measure_rel_notes, measures);
 	generate_measure_lines(beat_rel_notes, measures);
 	auto const beat_rel_bpms = measure_rel_bpms_to_beat_rel(measure_rel_bpms, measures);
-	chart->bpm_changes = build_bpm_changes(beat_rel_bpms);
-	auto const abs_notes = beat_rel_notes_to_abs(beat_rel_notes, beat_rel_bpms, chart->bpm_changes);
+	chart->timeline.bpm_sections = build_bpm_changes(beat_rel_bpms);
+	auto const abs_notes = beat_rel_notes_to_abs(beat_rel_notes, beat_rel_bpms, chart->timeline.bpm_sections);
 	build_lanes(*chart, abs_notes);
 
 	load_files(*chart, song, file_references, progress);

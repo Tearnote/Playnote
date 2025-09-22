@@ -43,7 +43,7 @@ private:
 		};
 
 		Visual visual;
-		bms::Chart::LaneType type;
+		bms::Lane::Type type;
 		vector<Note> notes;
 	};
 
@@ -66,7 +66,7 @@ private:
 	vector<vector<Lane>> fields;
 	vector<float> measure_lines;
 
-	[[nodiscard]] auto get_lane(bms::Chart::LaneType) -> Lane&;
+	[[nodiscard]] auto get_lane(bms::Lane::Type) -> Lane&;
 	[[nodiscard]] static auto lane_width(Lane::Visual) -> int32;
 	[[nodiscard]] static auto lane_background_color(Lane::Visual) -> vec4;
 	[[nodiscard]] static auto lane_note_color(Lane::Visual) -> vec4;
@@ -115,11 +115,11 @@ inline void Playfield::enqueue_from_cursor(Renderer::Queue& queue, bms::Cursor c
 
 	// Retrieve visible notes
 	scroll_speed /= 4.0f; // 1 beat -> 1 standard measure
-	scroll_speed *= cursor.get_chart().metrics.bpm.scroll_adjustment;
+	scroll_speed *= 120.0f / cursor.get_chart().metadata.bpm_range.main; // Normalize to 120 BPM
 	auto const max_distance = 1.0f / scroll_speed;
 	cursor.upcoming_notes(max_distance, [&](bms::Note const& note, auto type, auto distance) {
 		auto const y_pos = distance / max_distance;
-		if (type == bms::Chart::LaneType::MeasureLine) {
+		if (type == bms::Lane::Type::MeasureLine) {
 			measure_lines.emplace_back(y_pos);
 			return;
 		}
@@ -145,45 +145,45 @@ inline void Playfield::enqueue_from_cursor(Renderer::Queue& queue, bms::Cursor c
 	}
 }
 
-inline auto Playfield::get_lane(bms::Chart::LaneType type) -> Lane&
+inline auto Playfield::get_lane(bms::Lane::Type type) -> Lane&
 {
 	switch (playstyle) {
 	case bms::Playstyle::_5K:
 	case bms::Playstyle::_7K:
 	case bms::Playstyle::_14K:
 		switch (type) {
-		case bms::Chart::LaneType::P1_KeyS: return fields[0][0];
-		case bms::Chart::LaneType::P1_Key1: return fields[0][1];
-		case bms::Chart::LaneType::P1_Key2: return fields[0][2];
-		case bms::Chart::LaneType::P1_Key3: return fields[0][3];
-		case bms::Chart::LaneType::P1_Key4: return fields[0][4];
-		case bms::Chart::LaneType::P1_Key5: return fields[0][5];
-		case bms::Chart::LaneType::P1_Key6: return fields[0][6];
-		case bms::Chart::LaneType::P1_Key7: return fields[0][7];
-		case bms::Chart::LaneType::P2_Key1: return fields[1][0];
-		case bms::Chart::LaneType::P2_Key2: return fields[1][1];
-		case bms::Chart::LaneType::P2_Key3: return fields[1][2];
-		case bms::Chart::LaneType::P2_Key4: return fields[1][3];
-		case bms::Chart::LaneType::P2_Key5: return fields[1][4];
-		case bms::Chart::LaneType::P2_Key6: return fields[1][5];
-		case bms::Chart::LaneType::P2_Key7: return fields[1][6];
-		case bms::Chart::LaneType::P2_KeyS: return fields[1][7];
+		case bms::Lane::Type::P1_KeyS: return fields[0][0];
+		case bms::Lane::Type::P1_Key1: return fields[0][1];
+		case bms::Lane::Type::P1_Key2: return fields[0][2];
+		case bms::Lane::Type::P1_Key3: return fields[0][3];
+		case bms::Lane::Type::P1_Key4: return fields[0][4];
+		case bms::Lane::Type::P1_Key5: return fields[0][5];
+		case bms::Lane::Type::P1_Key6: return fields[0][6];
+		case bms::Lane::Type::P1_Key7: return fields[0][7];
+		case bms::Lane::Type::P2_Key1: return fields[1][0];
+		case bms::Lane::Type::P2_Key2: return fields[1][1];
+		case bms::Lane::Type::P2_Key3: return fields[1][2];
+		case bms::Lane::Type::P2_Key4: return fields[1][3];
+		case bms::Lane::Type::P2_Key5: return fields[1][4];
+		case bms::Lane::Type::P2_Key6: return fields[1][5];
+		case bms::Lane::Type::P2_Key7: return fields[1][6];
+		case bms::Lane::Type::P2_KeyS: return fields[1][7];
 		default: PANIC();
 		}
 	case bms::Playstyle::_10K:
 		switch (type) {
-		case bms::Chart::LaneType::P1_KeyS: return fields[0][0];
-		case bms::Chart::LaneType::P1_Key1: return fields[0][1];
-		case bms::Chart::LaneType::P1_Key2: return fields[0][2];
-		case bms::Chart::LaneType::P1_Key3: return fields[0][3];
-		case bms::Chart::LaneType::P1_Key4: return fields[0][4];
-		case bms::Chart::LaneType::P1_Key5: return fields[0][5];
-		case bms::Chart::LaneType::P2_KeyS: return fields[1][0];
-		case bms::Chart::LaneType::P2_Key1: return fields[1][1];
-		case bms::Chart::LaneType::P2_Key2: return fields[1][2];
-		case bms::Chart::LaneType::P2_Key3: return fields[1][3];
-		case bms::Chart::LaneType::P2_Key4: return fields[1][4];
-		case bms::Chart::LaneType::P2_Key5: return fields[1][5];
+		case bms::Lane::Type::P1_KeyS: return fields[0][0];
+		case bms::Lane::Type::P1_Key1: return fields[0][1];
+		case bms::Lane::Type::P1_Key2: return fields[0][2];
+		case bms::Lane::Type::P1_Key3: return fields[0][3];
+		case bms::Lane::Type::P1_Key4: return fields[0][4];
+		case bms::Lane::Type::P1_Key5: return fields[0][5];
+		case bms::Lane::Type::P2_KeyS: return fields[1][0];
+		case bms::Lane::Type::P2_Key1: return fields[1][1];
+		case bms::Lane::Type::P2_Key2: return fields[1][2];
+		case bms::Lane::Type::P2_Key3: return fields[1][3];
+		case bms::Lane::Type::P2_Key4: return fields[1][4];
+		case bms::Lane::Type::P2_Key5: return fields[1][5];
 		default: PANIC();
 		}
 	default: PANIC();
@@ -245,32 +245,32 @@ inline auto Playfield::make_field(bms::Playstyle playstyle, Side side) -> vector
 	auto result = vector<Lane>{};
 	switch (playstyle) {
 	case bms::Playstyle::_5K:
-		result.emplace_back(Lane::Visual::Scratch, bms::Chart::LaneType::P1_KeyS);
-		result.emplace_back(Lane::Visual::Odd,     bms::Chart::LaneType::P1_Key1);
-		result.emplace_back(Lane::Visual::Even,    bms::Chart::LaneType::P1_Key2);
-		result.emplace_back(Lane::Visual::Odd,     bms::Chart::LaneType::P1_Key3);
-		result.emplace_back(Lane::Visual::Even,    bms::Chart::LaneType::P1_Key4);
-		result.emplace_back(Lane::Visual::Odd,     bms::Chart::LaneType::P1_Key5);
+		result.emplace_back(Lane::Visual::Scratch, bms::Lane::Type::P1_KeyS);
+		result.emplace_back(Lane::Visual::Odd,     bms::Lane::Type::P1_Key1);
+		result.emplace_back(Lane::Visual::Even,    bms::Lane::Type::P1_Key2);
+		result.emplace_back(Lane::Visual::Odd,     bms::Lane::Type::P1_Key3);
+		result.emplace_back(Lane::Visual::Even,    bms::Lane::Type::P1_Key4);
+		result.emplace_back(Lane::Visual::Odd,     bms::Lane::Type::P1_Key5);
 		return result;
 	case bms::Playstyle::_7K:
 		if (side == Side::Left) {
-			result.emplace_back(Lane::Visual::Scratch, bms::Chart::LaneType::P1_KeyS);
-			result.emplace_back(Lane::Visual::Odd,     bms::Chart::LaneType::P1_Key1);
-			result.emplace_back(Lane::Visual::Even,    bms::Chart::LaneType::P1_Key2);
-			result.emplace_back(Lane::Visual::Odd,     bms::Chart::LaneType::P1_Key3);
-			result.emplace_back(Lane::Visual::Even,    bms::Chart::LaneType::P1_Key4);
-			result.emplace_back(Lane::Visual::Odd,     bms::Chart::LaneType::P1_Key5);
-			result.emplace_back(Lane::Visual::Even,    bms::Chart::LaneType::P1_Key6);
-			result.emplace_back(Lane::Visual::Odd,     bms::Chart::LaneType::P1_Key7);
+			result.emplace_back(Lane::Visual::Scratch, bms::Lane::Type::P1_KeyS);
+			result.emplace_back(Lane::Visual::Odd,     bms::Lane::Type::P1_Key1);
+			result.emplace_back(Lane::Visual::Even,    bms::Lane::Type::P1_Key2);
+			result.emplace_back(Lane::Visual::Odd,     bms::Lane::Type::P1_Key3);
+			result.emplace_back(Lane::Visual::Even,    bms::Lane::Type::P1_Key4);
+			result.emplace_back(Lane::Visual::Odd,     bms::Lane::Type::P1_Key5);
+			result.emplace_back(Lane::Visual::Even,    bms::Lane::Type::P1_Key6);
+			result.emplace_back(Lane::Visual::Odd,     bms::Lane::Type::P1_Key7);
 		} else {
-			result.emplace_back(Lane::Visual::Odd,     bms::Chart::LaneType::P2_Key1);
-			result.emplace_back(Lane::Visual::Even,    bms::Chart::LaneType::P2_Key2);
-			result.emplace_back(Lane::Visual::Odd,     bms::Chart::LaneType::P2_Key3);
-			result.emplace_back(Lane::Visual::Even,    bms::Chart::LaneType::P2_Key4);
-			result.emplace_back(Lane::Visual::Odd,     bms::Chart::LaneType::P2_Key5);
-			result.emplace_back(Lane::Visual::Even,    bms::Chart::LaneType::P2_Key6);
-			result.emplace_back(Lane::Visual::Odd,     bms::Chart::LaneType::P2_Key7);
-			result.emplace_back(Lane::Visual::Scratch, bms::Chart::LaneType::P2_KeyS);
+			result.emplace_back(Lane::Visual::Odd,     bms::Lane::Type::P2_Key1);
+			result.emplace_back(Lane::Visual::Even,    bms::Lane::Type::P2_Key2);
+			result.emplace_back(Lane::Visual::Odd,     bms::Lane::Type::P2_Key3);
+			result.emplace_back(Lane::Visual::Even,    bms::Lane::Type::P2_Key4);
+			result.emplace_back(Lane::Visual::Odd,     bms::Lane::Type::P2_Key5);
+			result.emplace_back(Lane::Visual::Even,    bms::Lane::Type::P2_Key6);
+			result.emplace_back(Lane::Visual::Odd,     bms::Lane::Type::P2_Key7);
+			result.emplace_back(Lane::Visual::Scratch, bms::Lane::Type::P2_KeyS);
 		}
 		return result;
 	case bms::Playstyle::_9K: // TODO

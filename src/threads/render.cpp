@@ -27,7 +27,12 @@ Implementation file for threads/render.hpp.
 
 namespace playnote::threads {
 
-static void show_metadata(bms::Metadata const& meta)
+static auto ns_to_minsec(nanoseconds duration) -> string
+{
+	return format("{}:{:02}", duration / 60s, duration % 60s / 1s);
+}
+
+static void show_metadata(bms::Cursor const& cursor, bms::Metadata const& meta)
 {
 	lib::imgui::text(meta.title);
 	if (!meta.subtitle.empty()) lib::imgui::text(meta.subtitle);
@@ -37,32 +42,26 @@ static void show_metadata(bms::Metadata const& meta)
 	lib::imgui::text("Difficulty: {}", enum_name(meta.difficulty));
 	if (!meta.url.empty()) lib::imgui::text(meta.url);
 	if (!meta.email.empty()) lib::imgui::text(meta.email);
-}
 
-static auto ns_to_minsec(nanoseconds duration) -> string
-{
-	return format("{}:{:02}", duration / 60s, duration % 60s / 1s);
-}
+	lib::imgui::text("");
 
-static void show_metrics(bms::Cursor const& cursor, bms::Metrics const& metrics)
-{
 	auto const progress = ns_to_minsec(cursor.get_progress_ns());
-	auto const chart_duration = ns_to_minsec(metrics.chart_duration);
-	auto const audio_duration = ns_to_minsec(metrics.audio_duration);
+	auto const chart_duration = ns_to_minsec(meta.chart_duration);
+	auto const audio_duration = ns_to_minsec(meta.audio_duration);
 	lib::imgui::text("Progress: {} / {} ({})", progress, chart_duration, audio_duration);
-	lib::imgui::text("Notes: {} / {}", cursor.get_judged_notes(), metrics.note_count);
-	if (metrics.bpm.main == metrics.bpm.min && metrics.bpm.main == metrics.bpm.max)
-		lib::imgui::text("BPM: {}", metrics.bpm.main);
+	lib::imgui::text("Notes: {} / {}", cursor.get_judged_notes(), meta.note_count);
+	if (meta.bpm_range.main == meta.bpm_range.min && meta.bpm_range.main == meta.bpm_range.max)
+		lib::imgui::text("BPM: {}", meta.bpm_range.main);
 	else
-		lib::imgui::text("BPM: {} - {} ({})", metrics.bpm.min, metrics.bpm.max, metrics.bpm.main);
+		lib::imgui::text("BPM: {} - {} ({})", meta.bpm_range.min, meta.bpm_range.max, meta.bpm_range.main);
 	lib::imgui::plot("Note density", {
-		{"Scratch", metrics.density.scratch_density, {1.0f, 0.1f, 0.1f, 1.0f}},
-		{"LN", metrics.density.ln_density, {0.1f, 0.1f, 1.0f, 1.0f}},
-		{"Key", metrics.density.key_density, {1.0f, 1.0f, 1.0f, 1.0f}},
+		{"Scratch", meta.density.scratch, {1.0f, 0.1f, 0.1f, 1.0f}},
+		{"LN", meta.density.ln, {0.1f, 0.1f, 1.0f, 1.0f}},
+		{"Key", meta.density.key, {1.0f, 1.0f, 1.0f, 1.0f}},
 	}, {
 		{lib::imgui::PlotMarker::Type::Vertical, static_cast<float>(cursor.get_progress_ns() / 125ms), {1.0f, 0.0f, 0.0f, 1.0f}},
-		{lib::imgui::PlotMarker::Type::Horizontal, metrics.density.average_nps, {0.0f, 0.0f, 1.0f, 1.0f}},
-		{lib::imgui::PlotMarker::Type::Horizontal, metrics.density.peak_nps, {1.0f, 0.0f, 1.0f, 1.0f}}
+		{lib::imgui::PlotMarker::Type::Horizontal, meta.nps.average, {0.0f, 0.0f, 1.0f, 1.0f}},
+		{lib::imgui::PlotMarker::Type::Horizontal, meta.nps.peak, {1.0f, 0.0f, 1.0f, 1.0f}}
 	}, 120, true);
 }
 
@@ -188,7 +187,7 @@ static void run_render(Broadcaster& broadcaster, dev::Window const& window, gfx:
 	while (!window.is_closing()) {
 		receive_loading_shouts(broadcaster, loading_toast, [&](auto finished_player) {
 			player = move(finished_player);
-			playfield = gfx::Playfield{{44, 0}, 545, player->get_chart().metrics.playstyle};
+			playfield = gfx::Playfield{{44, 0}, 545, player->get_chart().timeline.playstyle};
 		});
 		renderer.frame({"bg"_id, "frame"_id, "measure"_id, "judgment_line"_id, "notes"_id, "pressed"_id}, [&](gfx::Renderer::Queue& queue) {
 			queue.enqueue_rect("bg"_id, {{0, 0}, {1280, 720}, {0.060f, 0.060f, 0.060f, 1.000f}});
@@ -197,9 +196,7 @@ static void run_render(Broadcaster& broadcaster, dev::Window const& window, gfx:
 				auto const cursor = player->get_audio_cursor();
 				auto const& chart = cursor.get_chart();
 				lib::imgui::begin_window("info", {860, 8}, 412, lib::imgui::WindowStyle::Static);
-				show_metadata(chart.metadata);
-				lib::imgui::text("");
-				show_metrics(cursor, chart.metrics);
+				show_metadata(cursor, chart.metadata);
 				lib::imgui::text("");
 				show_playback_controls(broadcaster);
 				lib::imgui::text("");

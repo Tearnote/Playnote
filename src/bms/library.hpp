@@ -63,6 +63,7 @@ inline Library::Library(fs::path const& path):
 {
 	lib::sqlite::execute(db, SongsSchema);
 	lib::sqlite::execute(db, ChartsSchema);
+	lib::sqlite::execute(db, ChartIRsSchema);
 	INFO("Opened song library at \"{}\"", path);
 }
 

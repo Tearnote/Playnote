@@ -107,4 +107,13 @@ inline auto Audio::ns_to_samples(nanoseconds ns) -> isize
 	return ns / ns_per_sample;
 }
 
+// Converts LUFS relative to target to an amplitude gain value.
+[[nodiscard]] inline auto lufs_to_gain(double lufs) -> float
+{
+	constexpr auto LufsTarget = -14.0;
+	auto const db_from_target = LufsTarget - lufs;
+	auto const amplitude_ratio = pow(10.0, db_from_target / 20.0);
+	return static_cast<float>(amplitude_ratio);
+}
+
 }
