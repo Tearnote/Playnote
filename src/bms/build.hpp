@@ -834,8 +834,7 @@ inline void calculate_bb(Chart& chart)
 	}
 }
 
-// Generate a Chart from an IR. Requires a function to handle the loading of a bulk request.
-// The provided function must block until the bulk request is complete.
+// Generate a Chart from an IR. The provided function is called to report on progress events.
 template<callable<void(threads::ChartLoadProgress::Type)> Func>
 auto chart_from_ir(IR const& ir, io::Song& song, Func&& progress) -> shared_ptr<Chart const>
 {
