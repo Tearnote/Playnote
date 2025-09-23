@@ -79,14 +79,16 @@ void execute(Statement stmt, Args&&... args)
 		using ArgT = remove_cvref_t<decltype(arg)>;
 		if constexpr (same_as<ArgT, float> || same_as<ArgT, double>)
 			detail::bind_double(stmt, idx, arg);
+		else if constexpr (same_as<ArgT, int64> || same_as<ArgT, uint64>)
+			detail::bind_int64(stmt, idx, arg);
 		else if constexpr (convertible_to<ArgT, int> || same_as<ArgT, bool>)
 			detail::bind_int(stmt, idx, arg);
-		else if constexpr (convertible_to<ArgT, int64>)
-			detail::bind_int64(stmt, idx, arg);
-		else if constexpr (same_as<ArgT, string> || same_as<ArgT, string_view>)
+		else if constexpr (same_as<ArgT, char const*> || same_as<ArgT, string> || same_as<ArgT, string_view>)
 			detail::bind_text(stmt, idx, arg);
-		else if constexpr (convertible_to<ArgT, span<byte const>>)
-			detail::bind_blob(stmt, idx, arg);
+		else if constexpr (convertible_to<ArgT, span<byte const>> || convertible_to<ArgT, span<unsigned char const>>)
+			detail::bind_blob(stmt, idx, span<byte const>{reinterpret_cast<byte const*>(arg.data()), arg.size()});
+		else
+			static_assert(false, "Unknown sqlite binding type");
 	};
 	auto index = 1;
 	(bind(index++, forward<Args>(args)), ...);
