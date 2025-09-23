@@ -17,7 +17,9 @@ class Library {
 public:
 	// Open an existing library, or create an empty one at the provided path.
 	explicit Library(fs::path const&);
-	~Library() noexcept;
+
+	// Add a chart to the library. If it already exists, do nothing.
+	void add_chart(Chart const&);
 
 	Library(Library const&) = delete;
 	auto operator=(Library const&) -> Library& = delete;
@@ -31,6 +33,10 @@ private:
 			id INTEGER PRIMARY KEY,
 			path TEXT NOT NULL UNIQUE
 		)
+	)"sv;
+	// language=SQLite
+	static constexpr auto InsertSongQuery = R"(
+		INSERT OR IGNORE INTO songs(path) VALUES(?1)
 	)"sv;
 
 	// language=SQLite
@@ -76,9 +82,9 @@ private:
 	)"sv, R"(
 		CREATE INDEX IF NOT EXISTS charts_playstyle ON charts(playstyle)
 	)"sv, R"(
-		CREATE INDEX IF NOT EXISTS charts_chart_duration ON charts(chart_duration)
+		CREATE INDEX IF NOT EXISTS charts_note_count ON charts(note_count)
 	)"sv, R"(
-		CREATE INDEX IF NOT EXISTS charts_artist ON charts(artist)
+		CREATE INDEX IF NOT EXISTS charts_chart_duration ON charts(chart_duration)
 	)"sv, R"(
 		CREATE INDEX IF NOT EXISTS charts_average_nps ON charts(average_nps)
 	)"sv, R"(
@@ -86,6 +92,13 @@ private:
 	)"sv, R"(
 		CREATE INDEX IF NOT EXISTS charts_main_bpm ON charts(main_bpm)
 	)"sv});
+	// language=SQLite
+	static constexpr auto InsertChartQuery = R"(
+		INSERT OR IGNORE INTO charts(md5, song_id, title, subtitle, artist, subartist, genre, url,
+			email, difficulty, playstyle, has_ln, has_soflan, note_count, chart_duration,
+			audio_duration, loudness, average_nps, peak_nps, initial_bpm, min_bpm, max_bpm, main_bpm)
+			VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23)
+	)"sv;
 
 	// language=SQLite
 	static constexpr auto ChartDensitiesSchema = to_array({R"(
@@ -99,6 +112,10 @@ private:
 	)"sv, R"(
 		CREATE INDEX IF NOT EXISTS chart_densities_md5 ON chart_densities(md5)
 	)"sv});
+	// language=SQLite
+	static constexpr auto InsertChartDensityQuery = R"(
+		INSERT OR IGNORE INTO chart_densities(md5, resolution, key, scratch, ln) VALUES(?1, ?2, ?3, ?4, ?5)
+	)"sv;
 
 	// language=SQLite
 	static constexpr auto ChartIRsSchema = to_array({R"(
@@ -109,23 +126,42 @@ private:
 	)"sv, R"(
 		CREATE INDEX IF NOT EXISTS chart_irs_md5 ON chart_irs(md5)
 	)"sv});
+	// language=SQLite
+	static constexpr auto InsertChartIRQuery = R"(
+		INSERT OR IGNORE INTO chart_irs(md5, ir) VALUES(?1, ?2)
+	)"sv;
 
-	lib::sqlite::DB db;
+	using DBHandle = unique_resource<lib::sqlite::DB, decltype([](auto db) noexcept {
+		lib::sqlite::close(db);
+	})>;
+	using StatementHandle = unique_resource<lib::sqlite::Statement, decltype([](auto st) noexcept {
+		lib::sqlite::finalize(st);
+	})>;
+
+	DBHandle db;
+	StatementHandle insert_song;
+	StatementHandle insert_chart;
+	StatementHandle insert_chart_density;
+	StatementHandle insert_chart_ir;
 };
 
 inline Library::Library(fs::path const& path):
 	db{lib::sqlite::open(path)}
 {
-	lib::sqlite::execute(db, SongsSchema);
-	lib::sqlite::execute(db, ChartsSchema);
-	lib::sqlite::execute(db, ChartDensitiesSchema);
-	lib::sqlite::execute(db, ChartIRsSchema);
+	lib::sqlite::execute(db.get(), SongsSchema);
+	lib::sqlite::execute(db.get(), ChartsSchema);
+	lib::sqlite::execute(db.get(), ChartDensitiesSchema);
+	lib::sqlite::execute(db.get(), ChartIRsSchema);
+	insert_song.reset(lib::sqlite::prepare(db.get(), InsertSongQuery));
+	insert_chart.reset(lib::sqlite::prepare(db.get(), InsertChartQuery));
+	insert_chart_density.reset(lib::sqlite::prepare(db.get(), InsertChartDensityQuery));
+	insert_chart_ir.reset(lib::sqlite::prepare(db.get(), InsertChartIRQuery));
 	INFO("Opened song library at \"{}\"", path);
 }
 
-inline Library::~Library() noexcept
+inline void Library::add_chart(Chart const& chart)
 {
-	lib::sqlite::close(db);
+	// do something
 }
 
 }

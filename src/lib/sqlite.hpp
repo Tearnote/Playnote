@@ -39,10 +39,10 @@ void execute(DB, span<string_view const> statements);
 
 // Compile a query into a statement object. Can contain numbered placeholders.
 // Throws runtime_error on sqlite error.
-auto create_statement(DB, string_view query) -> Statement;
+auto prepare(DB, string_view query) -> Statement;
 
 // Destroy a statement, freeing related resources.
-void destroy_statement(Statement) noexcept;
+void finalize(Statement) noexcept;
 
 // Execute a statement with provided parameters, discarding any output data.
 template<typename... Args>
