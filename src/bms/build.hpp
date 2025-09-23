@@ -679,6 +679,7 @@ void calculate_density_distribution(Metadata& metadata, Timeline::Lanes const& l
 	auto const GaussianScale = 1.0f / (window / 1s) * (1.0f / 0.973f);
 
 	auto const points = chart_duration / resolution + 1;
+	metadata.density.resolution = resolution;
 	metadata.density.key.resize(points);
 	metadata.density.scratch.resize(points);
 	metadata.density.ln.resize(points);
