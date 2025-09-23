@@ -37,17 +37,22 @@ void execute(DB, string_view statement);
 // Throws runtime_error on sqlite error.
 void execute(DB, span<string_view const> statements);
 
+// Execute a statement with provided parameters, discarding any output data.
+// Throws runtime_error on sqlite error.
+template<typename... Args>
+void execute(Statement, Args&&... args);
+
+// Execute an insert statement with provided parameters, and return the rowid of the inserted row.
+// Throws runtime_error on sqlite error.
+template<typename... Args>
+auto insert(Statement, Args&&... args) -> int64;
+
 // Compile a query into a statement object. Can contain numbered placeholders.
 // Throws runtime_error on sqlite error.
 auto prepare(DB, string_view query) -> Statement;
 
 // Destroy a statement, freeing related resources.
 void finalize(Statement) noexcept;
-
-// Execute a statement with provided parameters, discarding any output data.
-// Throws runtime_error on sqlite error.
-template<typename... Args>
-void execute(Statement, Args&&... args);
 
 // Bundle queries into an atomic transaction. All queries executed within the provided function
 // will be executed wholly or not at all.
@@ -64,6 +69,7 @@ namespace detail {
 	void execute(Statement);
 	void begin_transaction(DB);
 	void end_transaction(DB);
+	auto last_insert_rowid(Statement) -> int64;
 }
 
 template<typename ... Args>
@@ -85,6 +91,13 @@ void execute(Statement stmt, Args&&... args)
 	auto index = 1;
 	(bind(index++, forward<Args>(args)), ...);
 	detail::execute(stmt);
+}
+
+template<typename ... Args>
+auto insert(Statement stmt, Args&&... args) -> int64
+{
+	execute(stmt, forward<Args>(args)...);
+	return detail::last_insert_rowid(stmt);
 }
 
 template<callable<void()> Func>

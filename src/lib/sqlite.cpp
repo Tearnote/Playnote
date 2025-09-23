@@ -128,4 +128,9 @@ void detail::end_transaction(DB db)
 	sqlite::execute(db, "END TRANSACTION");
 }
 
+auto detail::last_insert_rowid(Statement stmt) -> int64
+{
+	return sqlite3_last_insert_rowid(sqlite3_db_handle(stmt));
+}
+
 }
