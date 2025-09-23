@@ -21,6 +21,12 @@ static auto ret_check(int ret) -> int
 	return ret;
 }
 
+static auto ret_check_ext(DB db, int ret) -> int
+{
+	if (ret != SQLITE_OK) throw runtime_error_fmt("sqlite error: {}", sqlite3_errmsg(db));
+	return ret;
+}
+
 auto open(fs::path const& path) -> DB
 {
 	auto db = static_cast<DB>(nullptr);
@@ -56,7 +62,7 @@ void execute(DB db, string_view statement)
 	auto check = [&](int ret) {
 		if (ret != SQLITE_OK) {
 			sqlite3_finalize(stmt);
-			ret_check(ret);
+			ret_check_ext(db, ret);
 		}
 	};
 
@@ -74,7 +80,7 @@ void execute(DB db, span<string_view const> statements)
 auto prepare(DB db, string_view query) -> Statement
 {
 	auto stmt = Statement{};
-	ret_check(sqlite3_prepare_v2(db, query.data(), query.size(), &stmt, nullptr));
+	ret_check_ext(db, sqlite3_prepare_v2(db, query.data(), query.size(), &stmt, nullptr));
 	return stmt;
 }
 
@@ -85,37 +91,37 @@ void finalize(Statement stmt) noexcept
 
 void detail::bind_int(Statement stmt, int idx, int arg)
 {
-	ret_check(sqlite3_bind_int(stmt, idx, arg));
+	ret_check_ext(sqlite3_db_handle(stmt), sqlite3_bind_int(stmt, idx, arg));
 }
 
 void detail::bind_int64(Statement stmt, int idx, int64 arg)
 {
-	ret_check(sqlite3_bind_int64(stmt, idx, arg));
+	ret_check_ext(sqlite3_db_handle(stmt), sqlite3_bind_int64(stmt, idx, arg));
 }
 
 void detail::bind_double(Statement stmt, int idx, double arg)
 {
-	ret_check(sqlite3_bind_double(stmt, idx, arg));
+	ret_check_ext(sqlite3_db_handle(stmt), sqlite3_bind_double(stmt, idx, arg));
 }
 
 void detail::bind_text(Statement stmt, int idx, string_view arg)
 {
-	ret_check(sqlite3_bind_text(stmt, idx, arg.data(), arg.size(), SQLITE_TRANSIENT));
+	ret_check_ext(sqlite3_db_handle(stmt), sqlite3_bind_text(stmt, idx, arg.data(), arg.size(), SQLITE_TRANSIENT));
 }
 
 void detail::bind_blob(Statement stmt, int idx, span<byte const> arg)
 {
-	ret_check(sqlite3_bind_blob(stmt, idx, arg.data(), arg.size(), SQLITE_TRANSIENT));
+	ret_check_ext(sqlite3_db_handle(stmt), sqlite3_bind_blob(stmt, idx, arg.data(), arg.size(), SQLITE_TRANSIENT));
 }
 
 void detail::execute(Statement stmt)
 {
 	auto const ret = sqlite3_step(stmt);
 	if (ret != SQLITE_DONE && ret != SQLITE_ROW) {
-		ret_check(sqlite3_reset(stmt));
-		ret_check(ret);
+		ret_check_ext(sqlite3_db_handle(stmt), sqlite3_reset(stmt));
+		ret_check_ext(sqlite3_db_handle(stmt), ret);
 	}
-	ret_check(sqlite3_reset(stmt));
+	ret_check_ext(sqlite3_db_handle(stmt), sqlite3_reset(stmt));
 }
 
 void detail::begin_transaction(DB db)
