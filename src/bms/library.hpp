@@ -36,7 +36,7 @@ private:
 	)"sv;
 	// language=SQLite
 	static constexpr auto InsertSongQuery = R"(
-		INSERT OR IGNORE INTO songs(path) VALUES(?1)
+		INSERT INTO songs(path) VALUES(?1)
 	)"sv;
 
 	// language=SQLite
@@ -94,7 +94,7 @@ private:
 	)"sv});
 	// language=SQLite
 	static constexpr auto InsertChartQuery = R"(
-		INSERT OR IGNORE INTO charts(md5, song_id, title, subtitle, artist, subartist, genre, url,
+		INSERT INTO charts(md5, song_id, title, subtitle, artist, subartist, genre, url,
 			email, difficulty, playstyle, has_ln, has_soflan, note_count, chart_duration,
 			audio_duration, loudness, average_nps, peak_nps, initial_bpm, min_bpm, max_bpm, main_bpm)
 			VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23)
@@ -114,7 +114,7 @@ private:
 	)"sv});
 	// language=SQLite
 	static constexpr auto InsertChartDensityQuery = R"(
-		INSERT OR IGNORE INTO chart_densities(md5, resolution, key, scratch, ln) VALUES(?1, ?2, ?3, ?4, ?5)
+		INSERT INTO chart_densities(md5, resolution, key, scratch, ln) VALUES(?1, ?2, ?3, ?4, ?5)
 	)"sv;
 
 	// language=SQLite
@@ -128,7 +128,7 @@ private:
 	)"sv});
 	// language=SQLite
 	static constexpr auto InsertChartIRQuery = R"(
-		INSERT OR IGNORE INTO chart_irs(md5, ir) VALUES(?1, ?2)
+		INSERT INTO chart_irs(md5, ir) VALUES(?1, ?2)
 	)"sv;
 
 	using DBHandle = unique_resource<lib::sqlite::DB, decltype([](auto db) noexcept {
@@ -161,7 +161,24 @@ inline Library::Library(fs::path const& path):
 
 inline void Library::add_chart(Chart const& chart)
 {
-	// do something
+	lib::sqlite::transaction(db.get(), [&] {
+		static constexpr auto BlobPlaceholder = to_array<unsigned char const>({0x01, 0x02, 0x03, 0x04});
+
+		auto const song_id = lib::sqlite::insert(insert_song.get(), "TODO"sv);
+		WARN("Density resolution: {}", chart.metadata.density.resolution.count());
+		lib::sqlite::execute(insert_chart.get(), chart.md5, song_id, chart.metadata.title,
+			chart.metadata.subtitle, chart.metadata.artist, chart.metadata.subartist,
+			chart.metadata.genre, chart.metadata.url, chart.metadata.email,
+			+chart.metadata.difficulty, +chart.timeline.playstyle, chart.metadata.features.has_ln,
+			chart.metadata.features.has_soflan, chart.metadata.note_count,
+			chart.metadata.chart_duration.count(), chart.metadata.audio_duration.count(),
+			chart.metadata.loudness, chart.metadata.nps.average, chart.metadata.nps.peak,
+			chart.metadata.bpm_range.initial, chart.metadata.bpm_range.min,
+			chart.metadata.bpm_range.max, chart.metadata.bpm_range.main);
+		lib::sqlite::execute(insert_chart_density.get(), chart.md5,
+			chart.metadata.density.resolution.count(), BlobPlaceholder, BlobPlaceholder, BlobPlaceholder);
+		lib::sqlite::execute(insert_chart_ir.get(), chart.md5, BlobPlaceholder);
+	});
 }
 
 }
