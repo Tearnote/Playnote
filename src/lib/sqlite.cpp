@@ -118,4 +118,14 @@ void detail::execute(Statement stmt)
 	ret_check(sqlite3_reset(stmt));
 }
 
+void detail::begin_transaction(DB db)
+{
+	sqlite::execute(db, "BEGIN TRANSACTION");
+}
+
+void detail::end_transaction(DB db)
+{
+	sqlite::execute(db, "END TRANSACTION");
+}
+
 }

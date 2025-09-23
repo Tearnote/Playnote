@@ -45,8 +45,15 @@ auto prepare(DB, string_view query) -> Statement;
 void finalize(Statement) noexcept;
 
 // Execute a statement with provided parameters, discarding any output data.
+// Throws runtime_error on sqlite error.
 template<typename... Args>
 void execute(Statement, Args&&... args);
+
+// Bundle queries into an atomic transaction. All queries executed within the provided function
+// will be executed wholly or not at all.
+// Throws runtime_error on sqlite error.
+template<callable<void()> Func>
+void transaction(DB, Func&&);
 
 namespace detail {
 	void bind_int(Statement, int idx, int arg);
@@ -55,6 +62,8 @@ namespace detail {
 	void bind_text(Statement, int idx, string_view arg);
 	void bind_blob(Statement, int idx, span<byte const> arg);
 	void execute(Statement);
+	void begin_transaction(DB);
+	void end_transaction(DB);
 }
 
 template<typename ... Args>
@@ -76,6 +85,14 @@ void execute(Statement stmt, Args&&... args)
 	auto index = 1;
 	(bind(index++, forward<Args>(args)), ...);
 	detail::execute(stmt);
+}
+
+template<callable<void()> Func>
+void transaction(DB db, Func&& func)
+{
+	detail::begin_transaction(db);
+	func();
+	detail::end_transaction(db);
 }
 
 }
