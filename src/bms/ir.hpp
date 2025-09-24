@@ -168,7 +168,6 @@ private:
 	unique_ptr<pmr::monotonic_buffer_resource> buffer_resource; // unique_ptr makes it moveable
 	pmr::polymorphic_allocator<byte> allocator;
 
-	string filename;
 	array<byte, 16> md5;
 	pmr::vector<HeaderEvent> header_events;
 	pmr::vector<ChannelEvent> channel_events;
@@ -299,8 +298,6 @@ inline auto IRCompiler::compile(string_view filename, span<byte const> bms_file_
 	auto ir = IR{};
 	auto maps = SlotMappings{};
 
-	// Fill in original metadata to maintain a link from the IR back to the BMS file
-	ir.filename = filename;
 	ir.md5 = lib::openssl::md5(bms_file_contents);
 
 	// Parse file and process the commands
