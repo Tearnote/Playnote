@@ -19,7 +19,7 @@ public:
 	explicit Library(fs::path const&);
 
 	// Add a chart to the library. If it already exists, do nothing.
-	void add_chart(Chart const&);
+	void add_chart(fs::path const& domain, Chart const&);
 
 	Library(Library const&) = delete;
 	auto operator=(Library const&) -> Library& = delete;
@@ -159,13 +159,12 @@ inline Library::Library(fs::path const& path):
 	INFO("Opened song library at \"{}\"", path);
 }
 
-inline void Library::add_chart(Chart const& chart)
+inline void Library::add_chart(fs::path const& domain, Chart const& chart)
 {
 	lib::sqlite::transaction(db.get(), [&] {
 		static constexpr auto BlobPlaceholder = to_array<unsigned char const>({0x01, 0x02, 0x03, 0x04});
 
-		auto const song_id = lib::sqlite::insert(insert_song.get(), "TODO"sv);
-		WARN("Density resolution: {}", chart.metadata.density.resolution.count());
+		auto const song_id = lib::sqlite::insert(insert_song.get(), domain.string());
 		lib::sqlite::execute(insert_chart.get(), chart.md5, song_id, chart.metadata.title,
 			chart.metadata.subtitle, chart.metadata.artist, chart.metadata.subartist,
 			chart.metadata.genre, chart.metadata.url, chart.metadata.email,
