@@ -10,6 +10,7 @@ A database of chart information. Holds cached IR blobs and calculated metadata.
 #include "preamble.hpp"
 #include "logger.hpp"
 #include "lib/sqlite.hpp"
+#include "lib/bits.hpp"
 
 namespace playnote::bms {
 
@@ -177,8 +178,17 @@ inline void Library::add_chart(fs::path const& domain, Chart const& chart)
 			chart.metadata.loudness, chart.metadata.nps.average, chart.metadata.nps.peak,
 			chart.metadata.bpm_range.min, chart.metadata.bpm_range.max,
 			chart.metadata.bpm_range.main);
+
+		auto serialize_density = [](vector<float> const& v) {
+			auto [data, out] = lib::bits::data_out();
+			out(v).or_throw();
+			return data;
+		};
 		lib::sqlite::execute(chart_density_insert, chart.md5,
-			chart.metadata.density.resolution.count(), BlobPlaceholder, BlobPlaceholder, BlobPlaceholder);
+			chart.metadata.density.resolution.count(),
+			serialize_density(chart.metadata.density.key),
+			serialize_density(chart.metadata.density.scratch),
+			serialize_density(chart.metadata.density.ln));
 		lib::sqlite::execute(chart_ir_insert, chart.md5, BlobPlaceholder);
 	});
 }
