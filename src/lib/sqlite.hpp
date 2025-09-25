@@ -16,8 +16,17 @@ struct sqlite3_stmt;
 
 namespace playnote::lib::sqlite {
 
-using DB = sqlite3*;
-using Statement = sqlite3_stmt*;
+namespace detail {
+struct DBDeleter {
+	static void operator()(sqlite3* db) noexcept;
+};
+struct StatementDeleter {
+	static void operator()(sqlite3_stmt* st) noexcept;
+};
+}
+
+using DB = unique_resource<sqlite3*, detail::DBDeleter>;
+using Statement = unique_resource<sqlite3_stmt*, detail::StatementDeleter>;
 
 namespace detail {
 enum class QueryStatus: int {
@@ -26,26 +35,26 @@ enum class QueryStatus: int {
 };
 
 template<typename T>
-void bind(Statement, int idx, T arg);
-template<> void bind<int>(Statement, int idx, int arg);
-template<> void bind<int64>(Statement, int idx, int64 arg);
-template<> void bind<double>(Statement, int idx, double arg);
-template<> void bind<string_view>(Statement, int idx, string_view arg);
-template<> void bind<span<byte const>>(Statement, int idx, span<byte const> arg);
+           void bind                  (Statement&, int idx, T arg);
+template<> void bind<int>             (Statement&, int idx, int arg);
+template<> void bind<int64>           (Statement&, int idx, int64 arg);
+template<> void bind<double>          (Statement&, int idx, double arg);
+template<> void bind<string_view>     (Statement&, int idx, string_view arg);
+template<> void bind<span<byte const>>(Statement&, int idx, span<byte const> arg);
 
-auto step(Statement) -> QueryStatus;
-void reset(Statement);
-void begin_transaction(DB);
-void end_transaction(DB);
-auto last_insert_rowid(Statement) -> int64;
+auto step(Statement&) -> QueryStatus;
+void reset(Statement&);
+void begin_transaction(DB&);
+void end_transaction(DB&);
+auto last_insert_rowid(Statement&) -> int64;
 
 template<typename T>
-auto get_column(Statement, int idx) -> T;
-template<> auto get_column<int>(Statement, int idx) -> int;
-template<> auto get_column<int64>(Statement, int idx) -> int64;
-template<> auto get_column<double>(Statement, int idx) -> double;
-template<> auto get_column<string_view>(Statement, int idx) -> string_view;
-template<> auto get_column<span<byte const>>(Statement, int idx) -> span<byte const>;
+           auto get_column                  (Statement&, int idx) -> T;
+template<> auto get_column<int>             (Statement&, int idx) -> int;
+template<> auto get_column<int64>           (Statement&, int idx) -> int64;
+template<> auto get_column<double>          (Statement&, int idx) -> double;
+template<> auto get_column<string_view>     (Statement&, int idx) -> string_view;
+template<> auto get_column<span<byte const>>(Statement&, int idx) -> span<byte const>;
 }
 
 // Open an existing database, or create a new one if it doesn't exist yet. The database
@@ -53,62 +62,56 @@ template<> auto get_column<span<byte const>>(Statement, int idx) -> span<byte co
 // Throws runtime_error on sqlite error, or if database could only be opened read-only.
 auto open(fs::path const&) -> DB;
 
-// Close a previously opened database. Execute this to free any allocated resources.
-void close(DB) noexcept;
-
 // Compile a query into a statement object. Can contain numbered placeholders.
 // Throws runtime_error on sqlite error.
-auto prepare(DB, string_view query) -> Statement;
-
-// Destroy a statement, freeing related resources.
-void finalize(Statement) noexcept;
+auto prepare(DB&, string_view query) -> Statement;
 
 // Execute a single SQL query on the database, discarding any output.
 // Throws runtime_error on sqlite error.
-void execute(DB, string_view query);
+void execute(DB&, string_view query);
 
 // Execute a list of SQL queries on the database, discarding any output. This must be used for
 // executions that contain multiple statements, as the single-statement version doesn't support
 // splitting by the ";" character.
 // Throws runtime_error on sqlite error.
-void execute(DB, span<string_view const> query);
+void execute(DB&, span<string_view const> query);
 
 // Execute a statement with provided parameters, discarding any output data.
 // Throws runtime_error on sqlite error.
 template<typename... Args>
-void execute(Statement, Args&&... args);
+void execute(Statement&, Args&&... args);
 
 // Execute an insert statement with provided parameters, and return the rowid of the inserted row.
 // Throws runtime_error on sqlite error.
 template<typename... Args>
-auto insert(Statement, Args&&... args) -> int64;
+auto insert(Statement&, Args&&... args) -> int64;
 
 // Execute a statement with provided parameters, and call the provided function on every resulting row.
 // Throws runtime_error on sqlite error.
 template<typename Func, typename... Args>
-void query(Statement, Func&&, Args&&... args);
+void query(Statement&, Func&&, Args&&... args);
 
 // Bundle queries into an atomic transaction. All queries executed within the provided function
 // will be executed wholly or not at all.
 // Throws runtime_error on sqlite error.
 template<callable<void()> Func>
-void transaction(DB, Func&&);
+void transaction(DB&, Func&&);
 
 template<typename ... Args>
-void execute(Statement stmt, Args&&... args) { query(stmt, []{}, forward<Args>(args)...); }
+void execute(Statement& stmt, Args&&... args) { query(stmt, []{}, forward<Args>(args)...); }
 
 template<typename ... Args>
-auto insert(Statement stmt, Args&&... args) -> int64
+auto insert(Statement& stmt, Args&&... args) -> int64
 {
 	query(stmt, []{}, forward<Args>(args)...);
 	return detail::last_insert_rowid(stmt);
 }
 
 template<typename Func, typename... Args>
-void query(Statement stmt, Func&& func, Args&&... args)
+void query(Statement& stmt, Func&& func, Args&&... args)
 {
 	// Bind statement parameters
-	auto bind = [&](int idx, auto&& arg) {
+	[[maybe_unused]] auto bind = [&](int idx, auto&& arg) {
 		using ArgT = remove_cvref_t<decltype(arg)>;
 		if constexpr (same_as<ArgT, float> || same_as<ArgT, double>)
 			detail::bind<double>(stmt, idx, arg);
@@ -141,7 +144,7 @@ void query(Statement stmt, Func&& func, Args&&... args)
 }
 
 template<callable<void()> Func>
-void transaction(DB db, Func&& func)
+void transaction(DB& db, Func&& func)
 {
 	detail::begin_transaction(db);
 	func();

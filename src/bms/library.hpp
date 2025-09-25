@@ -131,41 +131,34 @@ private:
 		INSERT INTO chart_irs(md5, ir) VALUES(?1, ?2)
 	)"sv;
 
-	using DBHandle = unique_resource<lib::sqlite::DB, decltype([](auto db) noexcept {
-		lib::sqlite::close(db);
-	})>;
-	using StatementHandle = unique_resource<lib::sqlite::Statement, decltype([](auto st) noexcept {
-		lib::sqlite::finalize(st);
-	})>;
-
-	DBHandle db;
-	StatementHandle insert_song;
-	StatementHandle insert_chart;
-	StatementHandle insert_chart_density;
-	StatementHandle insert_chart_ir;
+	lib::sqlite::DB db;
+	lib::sqlite::Statement insert_song;
+	lib::sqlite::Statement insert_chart;
+	lib::sqlite::Statement insert_chart_density;
+	lib::sqlite::Statement insert_chart_ir;
 };
 
 inline Library::Library(fs::path const& path):
 	db{lib::sqlite::open(path)}
 {
-	lib::sqlite::execute(db.get(), SongsSchema);
-	lib::sqlite::execute(db.get(), ChartsSchema);
-	lib::sqlite::execute(db.get(), ChartDensitiesSchema);
-	lib::sqlite::execute(db.get(), ChartIRsSchema);
-	insert_song.reset(lib::sqlite::prepare(db.get(), InsertSongQuery));
-	insert_chart.reset(lib::sqlite::prepare(db.get(), InsertChartQuery));
-	insert_chart_density.reset(lib::sqlite::prepare(db.get(), InsertChartDensityQuery));
-	insert_chart_ir.reset(lib::sqlite::prepare(db.get(), InsertChartIRQuery));
+	lib::sqlite::execute(db, SongsSchema);
+	lib::sqlite::execute(db, ChartsSchema);
+	lib::sqlite::execute(db, ChartDensitiesSchema);
+	lib::sqlite::execute(db, ChartIRsSchema);
+	insert_song = lib::sqlite::prepare(db, InsertSongQuery);
+	insert_chart = lib::sqlite::prepare(db, InsertChartQuery);
+	insert_chart_density = lib::sqlite::prepare(db, InsertChartDensityQuery);
+	insert_chart_ir = lib::sqlite::prepare(db, InsertChartIRQuery);
 	INFO("Opened song library at \"{}\"", path);
 }
 
 inline void Library::add_chart(fs::path const& domain, Chart const& chart)
 {
-	lib::sqlite::transaction(db.get(), [&] {
+	lib::sqlite::transaction(db, [&] {
 		static constexpr auto BlobPlaceholder = to_array<unsigned char const>({0x01, 0x02, 0x03, 0x04});
 
-		auto song_id = lib::sqlite::insert(insert_song.get(), domain.string());
-		lib::sqlite::execute(insert_chart.get(), chart.md5, song_id, chart.metadata.title,
+		auto song_id = lib::sqlite::insert(insert_song, domain.string());
+		lib::sqlite::execute(insert_chart, chart.md5, song_id, chart.metadata.title,
 			chart.metadata.subtitle, chart.metadata.artist, chart.metadata.subartist,
 			chart.metadata.genre, chart.metadata.url, chart.metadata.email,
 			+chart.metadata.difficulty, +chart.timeline.playstyle, chart.metadata.features.has_ln,
@@ -174,9 +167,9 @@ inline void Library::add_chart(fs::path const& domain, Chart const& chart)
 			chart.metadata.loudness, chart.metadata.nps.average, chart.metadata.nps.peak,
 			chart.metadata.bpm_range.initial, chart.metadata.bpm_range.min,
 			chart.metadata.bpm_range.max, chart.metadata.bpm_range.main);
-		lib::sqlite::execute(insert_chart_density.get(), chart.md5,
+		lib::sqlite::execute(insert_chart_density, chart.md5,
 			chart.metadata.density.resolution.count(), BlobPlaceholder, BlobPlaceholder, BlobPlaceholder);
-		lib::sqlite::execute(insert_chart_ir.get(), chart.md5, BlobPlaceholder);
+		lib::sqlite::execute(insert_chart_ir, chart.md5, BlobPlaceholder);
 	});
 }
 
