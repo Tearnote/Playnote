@@ -93,6 +93,10 @@ private:
 		CREATE INDEX IF NOT EXISTS charts_main_bpm ON charts(main_bpm)
 	)"sv});
 	// language=SQLite
+	static constexpr auto ChartExistsQuery = R"(
+		SELECT 1 FROM charts WHERE md5 = ?1
+	)"sv;
+	// language=SQLite
 	static constexpr auto InsertChartQuery = R"(
 		INSERT INTO charts(md5, song_id, title, subtitle, artist, subartist, genre, url,
 			email, difficulty, playstyle, has_ln, has_soflan, note_count, chart_duration,
@@ -132,10 +136,11 @@ private:
 	)"sv;
 
 	lib::sqlite::DB db;
-	lib::sqlite::Statement insert_song;
-	lib::sqlite::Statement insert_chart;
-	lib::sqlite::Statement insert_chart_density;
-	lib::sqlite::Statement insert_chart_ir;
+	lib::sqlite::Statement song_insert_or_retrieve;
+	lib::sqlite::Statement chart_exists;
+	lib::sqlite::Statement chart_insert;
+	lib::sqlite::Statement chart_density_insert;
+	lib::sqlite::Statement chart_ir_insert;
 };
 
 inline Library::Library(fs::path const& path):
@@ -145,21 +150,26 @@ inline Library::Library(fs::path const& path):
 	lib::sqlite::execute(db, ChartsSchema);
 	lib::sqlite::execute(db, ChartDensitiesSchema);
 	lib::sqlite::execute(db, ChartIRsSchema);
-	insert_song = lib::sqlite::prepare(db, InsertOrRetrieveSongQuery);
-	insert_chart = lib::sqlite::prepare(db, InsertChartQuery);
-	insert_chart_density = lib::sqlite::prepare(db, InsertChartDensityQuery);
-	insert_chart_ir = lib::sqlite::prepare(db, InsertChartIRQuery);
+	song_insert_or_retrieve = lib::sqlite::prepare(db, InsertOrRetrieveSongQuery);
+	chart_exists = lib::sqlite::prepare(db, ChartExistsQuery);
+	chart_insert = lib::sqlite::prepare(db, InsertChartQuery);
+	chart_density_insert = lib::sqlite::prepare(db, InsertChartDensityQuery);
+	chart_ir_insert = lib::sqlite::prepare(db, InsertChartIRQuery);
 	INFO("Opened song library at \"{}\"", path);
 }
 
 inline void Library::add_chart(fs::path const& domain, Chart const& chart)
 {
 	lib::sqlite::transaction(db, [&] {
-		static constexpr auto BlobPlaceholder = to_array<unsigned char const>({0x01, 0x02, 0x03, 0x04});
+		// Check if chart already exists in library
+		auto exists = false;
+		lib::sqlite::query(chart_exists, [&]() { exists = true; }, chart.md5);
+		if (exists) return;
 
+		static constexpr auto BlobPlaceholder = to_array<unsigned char const>({0x01, 0x02, 0x03, 0x04});
 		auto song_id = 0;
-		lib::sqlite::query(insert_song, [&](int id) { song_id = id; }, domain.string());
-		lib::sqlite::execute(insert_chart, chart.md5, song_id, chart.metadata.title,
+		lib::sqlite::query(song_insert_or_retrieve, [&](int id) { song_id = id; }, domain.string());
+		lib::sqlite::execute(chart_insert, chart.md5, song_id, chart.metadata.title,
 			chart.metadata.subtitle, chart.metadata.artist, chart.metadata.subartist,
 			chart.metadata.genre, chart.metadata.url, chart.metadata.email,
 			+chart.metadata.difficulty, +chart.timeline.playstyle, chart.metadata.features.has_ln,
@@ -168,9 +178,9 @@ inline void Library::add_chart(fs::path const& domain, Chart const& chart)
 			chart.metadata.loudness, chart.metadata.nps.average, chart.metadata.nps.peak,
 			chart.metadata.bpm_range.initial, chart.metadata.bpm_range.min,
 			chart.metadata.bpm_range.max, chart.metadata.bpm_range.main);
-		lib::sqlite::execute(insert_chart_density, chart.md5,
+		lib::sqlite::execute(chart_density_insert, chart.md5,
 			chart.metadata.density.resolution.count(), BlobPlaceholder, BlobPlaceholder, BlobPlaceholder);
-		lib::sqlite::execute(insert_chart_ir, chart.md5, BlobPlaceholder);
+		lib::sqlite::execute(chart_ir_insert, chart.md5, BlobPlaceholder);
 	});
 }
 
