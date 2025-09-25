@@ -35,8 +35,8 @@ private:
 		)
 	)"sv;
 	// language=SQLite
-	static constexpr auto InsertSongQuery = R"(
-		INSERT INTO songs(path) VALUES(?1)
+	static constexpr auto InsertOrRetrieveSongQuery = R"(
+		INSERT INTO songs(path) VALUES(?1) ON CONFLICT(path) DO UPDATE SET path=path RETURNING id
 	)"sv;
 
 	// language=SQLite
@@ -145,7 +145,7 @@ inline Library::Library(fs::path const& path):
 	lib::sqlite::execute(db, ChartsSchema);
 	lib::sqlite::execute(db, ChartDensitiesSchema);
 	lib::sqlite::execute(db, ChartIRsSchema);
-	insert_song = lib::sqlite::prepare(db, InsertSongQuery);
+	insert_song = lib::sqlite::prepare(db, InsertOrRetrieveSongQuery);
 	insert_chart = lib::sqlite::prepare(db, InsertChartQuery);
 	insert_chart_density = lib::sqlite::prepare(db, InsertChartDensityQuery);
 	insert_chart_ir = lib::sqlite::prepare(db, InsertChartIRQuery);
@@ -157,7 +157,8 @@ inline void Library::add_chart(fs::path const& domain, Chart const& chart)
 	lib::sqlite::transaction(db, [&] {
 		static constexpr auto BlobPlaceholder = to_array<unsigned char const>({0x01, 0x02, 0x03, 0x04});
 
-		auto song_id = lib::sqlite::insert(insert_song, domain.string());
+		auto song_id = 0;
+		lib::sqlite::query(insert_song, [&](int id) { song_id = id; }, domain.string());
 		lib::sqlite::execute(insert_chart, chart.md5, song_id, chart.metadata.title,
 			chart.metadata.subtitle, chart.metadata.artist, chart.metadata.subartist,
 			chart.metadata.genre, chart.metadata.url, chart.metadata.email,
