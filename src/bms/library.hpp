@@ -62,7 +62,6 @@ private:
 			loudness REAL NOT NULL,
 			average_nps REAL NOT NULL CHECK(average_nps >= 0),
 			peak_nps REAL NOT NULL CHECK(peak_nps >= 0),
-			initial_bpm REAL NOT NULL,
 			min_bpm REAL NOT NULL,
 			max_bpm REAL NOT NULL,
 			main_bpm REAL NOT NULL
@@ -100,8 +99,8 @@ private:
 	static constexpr auto InsertChartQuery = R"(
 		INSERT INTO charts(md5, song_id, title, subtitle, artist, subartist, genre, url,
 			email, difficulty, playstyle, has_ln, has_soflan, note_count, chart_duration,
-			audio_duration, loudness, average_nps, peak_nps, initial_bpm, min_bpm, max_bpm, main_bpm)
-			VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23)
+			audio_duration, loudness, average_nps, peak_nps, min_bpm, max_bpm, main_bpm)
+			VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22)
 	)"sv;
 
 	// language=SQLite
@@ -176,8 +175,8 @@ inline void Library::add_chart(fs::path const& domain, Chart const& chart)
 			chart.metadata.features.has_soflan, chart.metadata.note_count,
 			chart.metadata.chart_duration.count(), chart.metadata.audio_duration.count(),
 			chart.metadata.loudness, chart.metadata.nps.average, chart.metadata.nps.peak,
-			chart.metadata.bpm_range.initial, chart.metadata.bpm_range.min,
-			chart.metadata.bpm_range.max, chart.metadata.bpm_range.main);
+			chart.metadata.bpm_range.min, chart.metadata.bpm_range.max,
+			chart.metadata.bpm_range.main);
 		lib::sqlite::execute(chart_density_insert, chart.md5,
 			chart.metadata.density.resolution.count(), BlobPlaceholder, BlobPlaceholder, BlobPlaceholder);
 		lib::sqlite::execute(chart_ir_insert, chart.md5, BlobPlaceholder);
