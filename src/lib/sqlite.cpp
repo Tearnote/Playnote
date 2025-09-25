@@ -56,6 +56,18 @@ void close(DB db) noexcept
 	sqlite3_close(db);
 }
 
+auto prepare(DB db, string_view query) -> Statement
+{
+	auto stmt = Statement{};
+	ret_check_ext(db, sqlite3_prepare_v2(db, query.data(), query.size(), &stmt, nullptr));
+	return stmt;
+}
+
+void finalize(Statement stmt) noexcept
+{
+	sqlite3_finalize(stmt);
+}
+
 void execute(DB db, string_view statement)
 {
 	auto stmt = prepare(db, statement);
@@ -75,18 +87,6 @@ void execute(DB db, string_view statement)
 void execute(DB db, span<string_view const> statements)
 {
 	for (auto statement: statements) execute(db, statement);
-}
-
-auto prepare(DB db, string_view query) -> Statement
-{
-	auto stmt = Statement{};
-	ret_check_ext(db, sqlite3_prepare_v2(db, query.data(), query.size(), &stmt, nullptr));
-	return stmt;
-}
-
-void finalize(Statement stmt) noexcept
-{
-	sqlite3_finalize(stmt);
 }
 
 void detail::bind_int(Statement stmt, int idx, int arg)
@@ -114,29 +114,72 @@ void detail::bind_blob(Statement stmt, int idx, span<byte const> arg)
 	ret_check_ext(sqlite3_db_handle(stmt), sqlite3_bind_blob(stmt, idx, arg.data(), arg.size(), SQLITE_TRANSIENT));
 }
 
-void detail::execute(Statement stmt)
+auto detail::step(Statement stmt) -> QueryStatus
 {
 	auto const ret = sqlite3_step(stmt);
-	if (ret != SQLITE_DONE && ret != SQLITE_ROW) {
-		ret_check_ext(sqlite3_db_handle(stmt), sqlite3_reset(stmt));
-		ret_check_ext(sqlite3_db_handle(stmt), ret);
-	}
+	if (ret == SQLITE_DONE || ret == SQLITE_ROW)
+		return static_cast<QueryStatus>(ret);
+	reset(stmt);
+	ret_check_ext(sqlite3_db_handle(stmt), ret);
+	unreachable(); // The line above is guaranteed to throw
+}
+
+void detail::reset(Statement stmt)
+{
 	ret_check_ext(sqlite3_db_handle(stmt), sqlite3_reset(stmt));
 }
 
 void detail::begin_transaction(DB db)
 {
-	sqlite::execute(db, "BEGIN TRANSACTION");
+	execute(db, "BEGIN TRANSACTION");
 }
 
 void detail::end_transaction(DB db)
 {
-	sqlite::execute(db, "END TRANSACTION");
+	execute(db, "END TRANSACTION");
 }
 
 auto detail::last_insert_rowid(Statement stmt) -> int64
 {
 	return sqlite3_last_insert_rowid(sqlite3_db_handle(stmt));
+}
+
+template<>
+auto detail::get_column<int>(Statement stmt, int idx) -> int
+{
+	return sqlite3_column_int(stmt, idx);
+}
+
+template<>
+auto detail::get_column<int64>(Statement stmt, int idx) -> int64
+{
+	return sqlite3_column_int64(stmt, idx);
+}
+
+template<>
+auto detail::get_column<double>(Statement stmt, int idx) -> double
+{
+	return sqlite3_column_double(stmt, idx);
+}
+
+template<>
+auto detail::get_column<string_view>(Statement stmt, int idx) -> string_view
+{
+	auto const* text = reinterpret_cast<char const*>(sqlite3_column_text(stmt, idx));
+	auto const len = sqlite3_column_bytes(stmt, idx);
+	// The string pointed at by string_view lives until the next step() or reset(),
+	// which is guaranteed by the usage of this function in query()
+	return {text, static_cast<usize>(len)};
+}
+
+template<>
+auto detail::get_column<span<byte const>>(Statement stmt, int idx) -> span<byte const>
+{
+	auto const* blob = reinterpret_cast<byte const*>(sqlite3_column_blob(stmt, idx));
+	auto const size = sqlite3_column_bytes(stmt, idx);
+	// The buffer pointed at by the span lives until the next step() or reset(),
+	// which is guaranteed by the usage of this function in query()
+	return {blob, static_cast<usize>(size)};
 }
 
 }

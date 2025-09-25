@@ -19,6 +19,32 @@ namespace playnote::lib::sqlite {
 using DB = sqlite3*;
 using Statement = sqlite3_stmt*;
 
+namespace detail {
+enum class QueryStatus: int {
+	Done = 101, // SQLITE_DONE
+	Row = 100, // SQLITE_ROW
+};
+
+void bind_int(Statement, int idx, int arg);
+void bind_int64(Statement, int idx, int64 arg);
+void bind_double(Statement, int idx, double arg);
+void bind_text(Statement, int idx, string_view arg);
+void bind_blob(Statement, int idx, span<byte const> arg);
+auto step(Statement) -> QueryStatus;
+void reset(Statement);
+void begin_transaction(DB);
+void end_transaction(DB);
+auto last_insert_rowid(Statement) -> int64;
+
+template<typename T>
+auto get_column(Statement, int idx) -> T;
+template<> auto get_column<int>(Statement, int idx) -> int;
+template<> auto get_column<int64>(Statement, int idx) -> int64;
+template<> auto get_column<double>(Statement, int idx) -> double;
+template<> auto get_column<string_view>(Statement, int idx) -> string_view;
+template<> auto get_column<span<byte const>>(Statement, int idx) -> span<byte const>;
+}
+
 // Open an existing database, or create a new one if it doesn't exist yet. The database
 // is guaranteed to be read-write.
 // Throws runtime_error on sqlite error, or if database could only be opened read-only.
@@ -26,6 +52,13 @@ auto open(fs::path const&) -> DB;
 
 // Close a previously opened database. Execute this to free any allocated resources.
 void close(DB) noexcept;
+
+// Compile a query into a statement object. Can contain numbered placeholders.
+// Throws runtime_error on sqlite error.
+auto prepare(DB, string_view query) -> Statement;
+
+// Destroy a statement, freeing related resources.
+void finalize(Statement) noexcept;
 
 // Execute a single SQL statement on the database, discarding any output.
 // Throws runtime_error on sqlite error.
@@ -47,30 +80,25 @@ void execute(Statement, Args&&... args);
 template<typename... Args>
 auto insert(Statement, Args&&... args) -> int64;
 
-// Compile a query into a statement object. Can contain numbered placeholders.
-// Throws runtime_error on sqlite error.
-auto prepare(DB, string_view query) -> Statement;
-
-// Destroy a statement, freeing related resources.
-void finalize(Statement) noexcept;
+template<typename Func>
+void query(Statement stmt, Func&& func)
+{
+	using FuncParams = function_traits<Func>::params;
+	while (detail::step(stmt) == detail::QueryStatus::Row) {
+		auto const process_row = [&]<usize... I>(index_sequence<I...>) {
+			auto row = make_tuple(detail::get_column<tuple_element_t<I, FuncParams>>(stmt, I)...);
+			apply(func, row);
+		};
+		process_row(make_index_sequence<tuple_size_v<FuncParams>>{});
+	}
+	detail::reset(stmt);
+}
 
 // Bundle queries into an atomic transaction. All queries executed within the provided function
 // will be executed wholly or not at all.
 // Throws runtime_error on sqlite error.
 template<callable<void()> Func>
 void transaction(DB, Func&&);
-
-namespace detail {
-	void bind_int(Statement, int idx, int arg);
-	void bind_int64(Statement, int idx, int64 arg);
-	void bind_double(Statement, int idx, double arg);
-	void bind_text(Statement, int idx, string_view arg);
-	void bind_blob(Statement, int idx, span<byte const> arg);
-	void execute(Statement);
-	void begin_transaction(DB);
-	void end_transaction(DB);
-	auto last_insert_rowid(Statement) -> int64;
-}
 
 template<typename ... Args>
 void execute(Statement stmt, Args&&... args)
@@ -92,7 +120,8 @@ void execute(Statement stmt, Args&&... args)
 	};
 	auto index = 1;
 	(bind(index++, forward<Args>(args)), ...);
-	detail::execute(stmt);
+	detail::step(stmt);
+	detail::reset(stmt);
 }
 
 template<typename ... Args>
