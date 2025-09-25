@@ -68,9 +68,9 @@ void finalize(Statement stmt) noexcept
 	sqlite3_finalize(stmt);
 }
 
-void execute(DB db, string_view statement)
+void execute(DB db, string_view query)
 {
-	auto stmt = prepare(db, statement);
+	auto stmt = prepare(db, query);
 	auto check = [&](int ret) {
 		if (ret != SQLITE_OK) {
 			sqlite3_finalize(stmt);
@@ -84,9 +84,9 @@ void execute(DB db, string_view statement)
 	finalize(stmt);
 }
 
-void execute(DB db, span<string_view const> statements)
+void execute(DB db, span<string_view const> queries)
 {
-	for (auto statement: statements) execute(db, statement);
+	for (auto query: queries) execute(db, query);
 }
 
 template<>

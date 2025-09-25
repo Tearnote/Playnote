@@ -63,15 +63,15 @@ auto prepare(DB, string_view query) -> Statement;
 // Destroy a statement, freeing related resources.
 void finalize(Statement) noexcept;
 
-// Execute a single SQL statement on the database, discarding any output.
+// Execute a single SQL query on the database, discarding any output.
 // Throws runtime_error on sqlite error.
-void execute(DB, string_view statement);
+void execute(DB, string_view query);
 
-// Execute a list of SQL statements on the database, discarding any output. This must be used for
+// Execute a list of SQL queries on the database, discarding any output. This must be used for
 // executions that contain multiple statements, as the single-statement version doesn't support
 // splitting by the ";" character.
 // Throws runtime_error on sqlite error.
-void execute(DB, span<string_view const> statements);
+void execute(DB, span<string_view const> query);
 
 // Execute a statement with provided parameters, discarding any output data.
 // Throws runtime_error on sqlite error.
@@ -95,8 +95,19 @@ template<callable<void()> Func>
 void transaction(DB, Func&&);
 
 template<typename ... Args>
-void execute(Statement stmt, Args&&... args)
+void execute(Statement stmt, Args&&... args) { query(stmt, []{}, forward<Args>(args)...); }
+
+template<typename ... Args>
+auto insert(Statement stmt, Args&&... args) -> int64
 {
+	query(stmt, []{}, forward<Args>(args)...);
+	return detail::last_insert_rowid(stmt);
+}
+
+template<typename Func, typename... Args>
+void query(Statement stmt, Func&& func, Args&&... args)
+{
+	// Bind statement parameters
 	auto bind = [&](int idx, auto&& arg) {
 		using ArgT = remove_cvref_t<decltype(arg)>;
 		if constexpr (same_as<ArgT, float> || same_as<ArgT, double>)
@@ -114,20 +125,8 @@ void execute(Statement stmt, Args&&... args)
 	};
 	auto index = 1;
 	(bind(index++, forward<Args>(args)), ...);
-	detail::step(stmt);
-	detail::reset(stmt);
-}
 
-template<typename ... Args>
-auto insert(Statement stmt, Args&&... args) -> int64
-{
-	execute(stmt, forward<Args>(args)...);
-	return detail::last_insert_rowid(stmt);
-}
-
-template<typename Func, typename... Args>
-void query(Statement stmt, Func&& func, Args&&... args)
-{
+	// Step through every result row
 	using FuncParams = function_traits<Func>::params;
 	while (detail::step(stmt) == detail::QueryStatus::Row) {
 		auto const process_row = [&]<usize... I>(index_sequence<I...>) {
@@ -136,6 +135,8 @@ void query(Statement stmt, Func&& func, Args&&... args)
 		};
 		process_row(make_index_sequence<tuple_size_v<FuncParams>>{});
 	}
+
+	// Finished; reset the statement
 	detail::reset(stmt);
 }
 
