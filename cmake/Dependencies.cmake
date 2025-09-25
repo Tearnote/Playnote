@@ -164,3 +164,11 @@ FetchContent_Declare(magic_enum
 	GIT_TAG v0.9.7
 )
 FetchContent_MakeAvailable(magic_enum)
+
+FetchContent_Declare(zpp_bits
+	GIT_REPOSITORY https://github.com/eyalz800/zpp_bits
+	GIT_TAG v4.5.1
+)
+FetchContent_MakeAvailable(zpp_bits)
+add_library(zpp_bits INTERFACE ${zpp_bits_SOURCE_DIR}/zpp_bits.h)
+target_include_directories(zpp_bits INTERFACE ${zpp_bits_SOURCE_DIR})
