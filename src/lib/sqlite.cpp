@@ -89,27 +89,32 @@ void execute(DB db, span<string_view const> statements)
 	for (auto statement: statements) execute(db, statement);
 }
 
-void detail::bind_int(Statement stmt, int idx, int arg)
+template<>
+void detail::bind<int>(Statement stmt, int idx, int arg)
 {
 	ret_check_ext(sqlite3_db_handle(stmt), sqlite3_bind_int(stmt, idx, arg));
 }
 
-void detail::bind_int64(Statement stmt, int idx, int64 arg)
+template<>
+void detail::bind<int64>(Statement stmt, int idx, int64 arg)
 {
 	ret_check_ext(sqlite3_db_handle(stmt), sqlite3_bind_int64(stmt, idx, arg));
 }
 
-void detail::bind_double(Statement stmt, int idx, double arg)
+template<>
+void detail::bind<double>(Statement stmt, int idx, double arg)
 {
 	ret_check_ext(sqlite3_db_handle(stmt), sqlite3_bind_double(stmt, idx, arg));
 }
 
-void detail::bind_text(Statement stmt, int idx, string_view arg)
+template<>
+void detail::bind<string_view>(Statement stmt, int idx, string_view arg)
 {
 	ret_check_ext(sqlite3_db_handle(stmt), sqlite3_bind_text(stmt, idx, arg.data(), arg.size(), SQLITE_TRANSIENT));
 }
 
-void detail::bind_blob(Statement stmt, int idx, span<byte const> arg)
+template<>
+void detail::bind<span<byte const>>(Statement stmt, int idx, span<byte const> arg)
 {
 	ret_check_ext(sqlite3_db_handle(stmt), sqlite3_bind_blob(stmt, idx, arg.data(), arg.size(), SQLITE_TRANSIENT));
 }
