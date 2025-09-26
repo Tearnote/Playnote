@@ -3,7 +3,7 @@ This software is dual-licensed. For more details, please consult LICENSE.txt.
 Copyright (c) 2025 Tearnote (Hubert Maraszek)
 
 bms/library.hpp:
-A database of chart information. Holds cached IR blobs and calculated metadata.
+A database of chart information. Handles loading and saving of charts from/to the database.
 */
 
 #pragma once
@@ -18,6 +18,8 @@ class Library {
 public:
 	// Open an existing library, or create an empty one at the provided path.
 	explicit Library(fs::path const&);
+
+	void import(fs::path const&);
 
 	// Add a chart to the library. If it already exists, do nothing.
 	void add_chart(fs::path const& domain, Chart const&);
@@ -43,7 +45,7 @@ private:
 	// language=SQLite
 	static constexpr auto ChartsSchema = to_array({R"(
 		CREATE TABLE IF NOT EXISTS charts(
-			md5 BLOB PRIMARY KEY CHECK(length(md5) == 16),
+			md5 BLOB PRIMARY KEY NOT NULL CHECK(length(md5) == 16),
 			song_id INTEGER NOT NULL REFERENCES songs ON DELETE CASCADE,
 			date_imported INTEGER DEFAULT(unixepoch()),
 			title TEXT NOT NULL,
@@ -141,6 +143,8 @@ private:
 	lib::sqlite::Statement chart_insert;
 	lib::sqlite::Statement chart_density_insert;
 	lib::sqlite::Statement chart_ir_insert;
+
+	void import_song(fs::path const&);
 };
 
 inline Library::Library(fs::path const& path):
@@ -156,6 +160,27 @@ inline Library::Library(fs::path const& path):
 	chart_density_insert = lib::sqlite::prepare(db, InsertChartDensityQuery);
 	chart_ir_insert = lib::sqlite::prepare(db, InsertChartIRQuery);
 	INFO("Opened song library at \"{}\"", path);
+}
+
+inline void Library::import(fs::path const& path)
+{
+	static constexpr auto BMSExtensions = to_array({".bms", ".bme", ".bml", ".pms"});
+
+	if (is_regular_file(path)) {
+		import_song(path);
+	} else if (is_directory(path)) {
+		auto contents = vector<fs::directory_entry>{};
+		copy(fs::directory_iterator{path}, back_inserter(contents));
+		auto const contains_bms = any_of(contents, [&](auto const& entry) {
+			return entry.is_regular_file() && contains(BMSExtensions, entry.path().extension());
+		});
+		if (contains_bms)
+			import_song(path);
+		else
+			for (auto const& entry: contents) import_song(entry);
+	} else {
+		throw runtime_error_fmt("Failed to import \"{}\": unknown type of file", path);
+	}
 }
 
 inline void Library::add_chart(fs::path const& domain, Chart const& chart)
@@ -191,6 +216,11 @@ inline void Library::add_chart(fs::path const& domain, Chart const& chart)
 			serialize_density(chart.metadata.density.ln));
 		lib::sqlite::execute(chart_ir_insert, chart.md5, BlobPlaceholder);
 	});
+}
+
+inline void Library::import_song(fs::path const& path)
+{
+	INFO("Importing song at \"{}\"", path);
 }
 
 }

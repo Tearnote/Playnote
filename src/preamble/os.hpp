@@ -19,7 +19,10 @@ namespace fs {
 	using std::filesystem::status;
 	using std::filesystem::exists;
 	using std::filesystem::is_regular_file;
+	using std::filesystem::is_directory;
+	using std::filesystem::directory_iterator;
 	using std::filesystem::recursive_directory_iterator;
+	using std::filesystem::directory_entry;
 	using std::filesystem::relative;
 }
 using std::jthread;
