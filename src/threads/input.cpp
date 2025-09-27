@@ -28,6 +28,11 @@ static void run_input(Broadcaster& broadcaster, dev::Window& window, ChartReques
 			.state = state,
 		});
 	});
+	window.register_file_drop_callback([&](span<char const* const> paths) {
+		auto event = FileDrop{};
+		copy(paths, back_inserter(event.paths));
+		broadcaster.shout(move(event));
+	});
 	auto con_dispatcher = dev::ControllerDispatcher{glfw};
 	broadcaster.shout(request);
 	while (!window.is_closing()) {

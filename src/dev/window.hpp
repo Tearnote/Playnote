@@ -87,6 +87,13 @@ public:
 		mouse_button_callbacks.emplace_back(move(func));
 	}
 
+	// Run the provided function when the user drops files onto the window.
+	// Function is provided with the list of paths dropped.
+	void register_file_drop_callback(function<void(span<char const* const>)>&& func)
+	{
+		file_drop_callbacks.emplace_back(move(func));
+	}
+
 	auto handle() -> lib::glfw::Window { return window_handle.get(); }
 
 	// Create a Vulkan surface for the window's framebuffer.
@@ -110,6 +117,7 @@ private:
 	vector<function<void(KeyCode, bool)>> key_callbacks;
 	vector<function<void(vec2)>> cursor_motion_callbacks;
 	vector<function<void(MouseButton, bool)>> mouse_button_callbacks;
+	vector<function<void(span<char const* const>)>> file_drop_callbacks;
 };
 
 inline GLFW::GLFW()
@@ -155,6 +163,15 @@ inline Window::Window(GLFW& glfw, string_view title, uvec2 size):
 			auto& window = *lib::glfw::get_window_user_pointer<Window>(window_ptr);
 			for (auto& func: window.mouse_button_callbacks)
 				func(MouseButton{button}, action == +MouseButtonAction::Press);
+		}
+	);
+
+	lib::glfw::set_window_file_drop_handler(window_handle.get(),
+		[](lib::glfw::Window window_ptr, int count, char const** paths_raw) {
+			auto& window = *lib::glfw::get_window_user_pointer<Window>(window_ptr);
+			auto const paths = span{paths_raw, static_cast<usize>(count)};
+			for (auto& func: window.file_drop_callbacks)
+				func(paths);
 		}
 	);
 

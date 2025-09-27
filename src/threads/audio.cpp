@@ -109,6 +109,9 @@ static void run_audio(Broadcaster& broadcaster, dev::Window& window, audio::Mixe
 			auto inputs = mapper.submit_axis_input(ev, bms_player->get_chart().timeline.playstyle);
 			for (auto const& input: inputs) bms_player->enqueue_input(input);
 		});
+		broadcaster.receive_all<FileDrop>([&](auto ev) {
+			for (auto const& path: ev.paths) library.import(path);
+		});
 		auto inputs = mapper.from_axis_state(window.get_glfw(), bms_player->get_chart().timeline.playstyle);
 		for (auto const& input: inputs) bms_player->enqueue_input(input);
 
@@ -125,6 +128,7 @@ try {
 	broadcaster.subscribe<KeyInput>();
 	broadcaster.subscribe<ButtonInput>();
 	broadcaster.subscribe<AxisInput>();
+	broadcaster.subscribe<FileDrop>();
 	barriers.startup.arrive_and_wait();
 	auto mixer = audio::Mixer{};
 	run_audio(broadcaster, window, mixer);

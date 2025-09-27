@@ -18,6 +18,11 @@ struct ChartRequest {
 	string filename;
 };
 
+// File drop event.
+struct FileDrop {
+	vector<fs::path> paths;
+};
+
 // A player keyboard input event.
 struct KeyInput {
 	using Code = dev::Window::KeyCode;

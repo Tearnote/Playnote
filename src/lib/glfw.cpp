@@ -46,6 +46,12 @@ void detail::set_window_mouse_button_handler_raw(Window window, void (*func)(Win
 	glfwSetMouseButtonCallback(window, func);
 }
 
+void detail::set_window_file_drop_handler_raw(Window window, void(*func)(Window, int, char const**))
+{
+	ASSERT(window);
+	glfwSetDropCallback(window, func);
+}
+
 void register_error_handler()
 {
 	glfwSetErrorCallback([](int code, char const* str) {

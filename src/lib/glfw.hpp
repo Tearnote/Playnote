@@ -19,13 +19,12 @@ namespace playnote::lib::glfw {
 using Window = GLFWwindow*;
 
 namespace detail {
-
 void set_window_user_pointer_raw(Window window, void* ptr);
 [[nodiscard]] auto get_window_user_pointer_raw(Window window) -> void*;
 void set_window_key_handler_raw(Window window, void (*func)(Window, int, int, int, int));
 void set_window_cursor_motion_handler_raw(Window window, void (*func)(Window, double, double));
 void set_window_mouse_button_handler_raw(Window window, void (*func)(Window, int, int, int));
-
+void set_window_file_drop_handler_raw(Window window, void (*func)(Window, int, char const**));
 }
 
 // Make GLFW throw on any error. Can be called anytime.
@@ -240,6 +239,14 @@ template<callable<void(Window, int, int, int)> Func>
 void set_window_mouse_button_handler(Window window, Func&& func)
 {
 	detail::set_window_mouse_button_handler_raw(window, func);
+}
+
+// Set the handler for file drop events.
+// Param 2 is MouseButton, param 3 is MouseButtonAction
+template<callable<void(Window, int, char const**)> Func>
+void set_window_file_drop_handler(Window window, Func&& func)
+{
+	detail::set_window_file_drop_handler_raw(window, func);
 }
 
 // Return the size of the window's framebuffer in pixels.
