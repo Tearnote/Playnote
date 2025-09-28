@@ -39,6 +39,10 @@ private:
 		)
 	)"sv;
 	// language=SQLite
+	static constexpr auto SongExistsQuery = R"(
+		SELECT 1 FROM songs WHERE path = ?1
+	)"sv;
+	// language=SQLite
 	static constexpr auto InsertOrRetrieveSongQuery = R"(
 		INSERT INTO songs(path) VALUES(?1) ON CONFLICT(path) DO UPDATE SET path=path RETURNING id
 	)"sv;
@@ -125,6 +129,7 @@ private:
 	)"sv;
 
 	lib::sqlite::DB db;
+	lib::sqlite::Statement song_exists;
 	lib::sqlite::Statement song_insert_or_retrieve;
 	lib::sqlite::Statement chart_exists;
 	lib::sqlite::Statement chart_insert;
@@ -139,6 +144,7 @@ inline Library::Library(fs::path const& path):
 	lib::sqlite::execute(db, SongsSchema);
 	lib::sqlite::execute(db, ChartsSchema);
 	lib::sqlite::execute(db, ChartDensitiesSchema);
+	song_exists = lib::sqlite::prepare(db, SongExistsQuery);
 	song_insert_or_retrieve = lib::sqlite::prepare(db, InsertOrRetrieveSongQuery);
 	chart_exists = lib::sqlite::prepare(db, ChartExistsQuery);
 	chart_insert = lib::sqlite::prepare(db, InsertChartQuery);
@@ -173,7 +179,7 @@ inline void Library::add_chart(fs::path const& domain, Chart const& chart)
 	lib::sqlite::transaction(db, [&] {
 		// Check if chart already exists in library
 		auto exists = false;
-		lib::sqlite::query(chart_exists, [&]() { exists = true; }, chart.md5);
+		lib::sqlite::query(chart_exists, [&] { exists = true; }, chart.md5);
 		if (exists) return;
 
 		static constexpr auto BlobPlaceholder = to_array<unsigned char const>({0x01, 0x02, 0x03, 0x04});
@@ -205,6 +211,24 @@ inline void Library::add_chart(fs::path const& domain, Chart const& chart)
 inline void Library::import_song(fs::path const& path)
 {
 	INFO("Importing song at \"{}\"", path);
+
+	auto is_archive = fs::is_regular_file(path);
+
+	// Determine an available filename
+	auto out_filename = is_archive? path.stem().string() : path.filename().string();
+	if (out_filename.empty())
+		throw runtime_error_fmt("Failed to import \"{}\": invalid filename", path);
+	for (auto i: views::iota(0u)) {
+		auto test = i == 0?
+			format("{}.zip", out_filename) :
+			format("{}-{}.zip", out_filename, i);
+		auto exists = false;
+		lib::sqlite::query(song_exists, [&] { exists = true; }, test);
+		if (!exists) {
+			out_filename = move(test);
+			break;
+		}
+	}
 }
 
 }
