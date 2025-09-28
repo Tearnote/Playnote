@@ -8,6 +8,7 @@ A database of chart information. Handles loading and saving of charts from/to th
 
 #pragma once
 #include "preamble.hpp"
+#include "config.hpp"
 #include "logger.hpp"
 #include "lib/sqlite.hpp"
 #include "lib/bits.hpp"
@@ -159,6 +160,7 @@ inline Library::Library(fs::path const& path):
 	chart_insert = lib::sqlite::prepare(db, InsertChartQuery);
 	chart_density_insert = lib::sqlite::prepare(db, InsertChartDensityQuery);
 	chart_ir_insert = lib::sqlite::prepare(db, InsertChartIRQuery);
+	fs::create_directory(LibraryPath);
 	INFO("Opened song library at \"{}\"", path);
 }
 

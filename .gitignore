@@ -11,4 +11,5 @@ songs/**
 imgui.ini
 playnote*.log
 config.toml
+library/**
 library.db*
