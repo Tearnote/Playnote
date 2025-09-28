@@ -179,7 +179,7 @@ inline void Library::import(fs::path const& path)
 		if (contains_bms)
 			import_song(path);
 		else
-			for (auto const& entry: contents) import_song(entry);
+			for (auto const& entry: contents) import(entry);
 	} else {
 		throw runtime_error_fmt("Failed to import \"{}\": unknown type of file", path);
 	}
