@@ -124,26 +124,11 @@ private:
 		INSERT INTO chart_densities(md5, resolution, key, scratch, ln) VALUES(?1, ?2, ?3, ?4, ?5)
 	)"sv;
 
-	// language=SQLite
-	static constexpr auto ChartIRsSchema = to_array({R"(
-		CREATE TABLE IF NOT EXISTS chart_irs(
-			md5 BLOB UNIQUE NOT NULL REFERENCES charts ON DELETE CASCADE,
-			ir BLOB NOT NULL
-		)
-	)"sv, R"(
-		CREATE INDEX IF NOT EXISTS chart_irs_md5 ON chart_irs(md5)
-	)"sv});
-	// language=SQLite
-	static constexpr auto InsertChartIRQuery = R"(
-		INSERT INTO chart_irs(md5, ir) VALUES(?1, ?2)
-	)"sv;
-
 	lib::sqlite::DB db;
 	lib::sqlite::Statement song_insert_or_retrieve;
 	lib::sqlite::Statement chart_exists;
 	lib::sqlite::Statement chart_insert;
 	lib::sqlite::Statement chart_density_insert;
-	lib::sqlite::Statement chart_ir_insert;
 
 	void import_song(fs::path const&);
 };
@@ -154,12 +139,10 @@ inline Library::Library(fs::path const& path):
 	lib::sqlite::execute(db, SongsSchema);
 	lib::sqlite::execute(db, ChartsSchema);
 	lib::sqlite::execute(db, ChartDensitiesSchema);
-	lib::sqlite::execute(db, ChartIRsSchema);
 	song_insert_or_retrieve = lib::sqlite::prepare(db, InsertOrRetrieveSongQuery);
 	chart_exists = lib::sqlite::prepare(db, ChartExistsQuery);
 	chart_insert = lib::sqlite::prepare(db, InsertChartQuery);
 	chart_density_insert = lib::sqlite::prepare(db, InsertChartDensityQuery);
-	chart_ir_insert = lib::sqlite::prepare(db, InsertChartIRQuery);
 	fs::create_directory(LibraryPath);
 	INFO("Opened song library at \"{}\"", path);
 }
@@ -216,7 +199,6 @@ inline void Library::add_chart(fs::path const& domain, Chart const& chart)
 			serialize_density(chart.metadata.density.key),
 			serialize_density(chart.metadata.density.scratch),
 			serialize_density(chart.metadata.density.ln));
-		lib::sqlite::execute(chart_ir_insert, chart.md5, BlobPlaceholder);
 	});
 }
 
