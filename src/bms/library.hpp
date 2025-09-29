@@ -10,6 +10,7 @@ A database of chart information. Handles loading and saving of charts from/to th
 #include "preamble.hpp"
 #include "config.hpp"
 #include "logger.hpp"
+#include "lib/archive.hpp"
 #include "lib/sqlite.hpp"
 #include "lib/bits.hpp"
 
@@ -229,6 +230,20 @@ inline void Library::import_song(fs::path const& path)
 			break;
 		}
 	}
+
+	// Write song contents to library archive
+	auto out = lib::archive::open_write(fs::path{LibraryPath} / out_filename);
+	if (is_archive) {
+		auto in_buf = io::read_file(path);
+		auto in = lib::archive::open_read(in_buf.contents);
+		lib::archive::for_each_entry(in, [&](string_view pathname) {
+			auto data = lib::archive::read_data(in);
+			lib::archive::write_entry(out, pathname, data);
+			return true;
+		});
+		lib::archive::close_read(move(in));
+	}
+	lib::archive::close_write(move(out));
 }
 
 }
