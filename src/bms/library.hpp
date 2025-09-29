@@ -32,6 +32,8 @@ public:
 	auto operator=(Library&&) -> Library& = delete;
 
 private:
+	static constexpr auto BMSExtensions = to_array({".bms", ".bme", ".bml", ".pms"});
+
 	// language=SQLite
 	static constexpr auto SongsSchema = R"(
 		CREATE TABLE IF NOT EXISTS songs(
@@ -156,15 +158,15 @@ inline Library::Library(fs::path const& path):
 
 inline void Library::import(fs::path const& path)
 {
-	static constexpr auto BMSExtensions = to_array({".bms", ".bme", ".bml", ".pms"});
-
 	if (is_regular_file(path)) {
 		import_song(path);
 	} else if (is_directory(path)) {
 		auto contents = vector<fs::directory_entry>{};
 		copy(fs::directory_iterator{path}, back_inserter(contents));
 		auto const contains_bms = any_of(contents, [&](auto const& entry) {
-			return entry.is_regular_file() && contains(BMSExtensions, entry.path().extension());
+			auto extension = entry.path().extension().string();
+			to_lower(extension);
+			return entry.is_regular_file() && contains(BMSExtensions, extension);
 		});
 		if (contains_bms)
 			import_song(path);
