@@ -232,18 +232,25 @@ inline void Library::import_song(fs::path const& path)
 	}
 
 	// Write song contents to library archive
-	auto out = lib::archive::open_write(fs::path{LibraryPath} / out_filename);
+	auto out_path = fs::path{LibraryPath} / out_filename;
+	auto wrote_something = false;
+	auto out = lib::archive::open_write(out_path);
 	if (is_archive) {
 		auto in_buf = io::read_file(path);
 		auto in = lib::archive::open_read(in_buf.contents);
 		lib::archive::for_each_entry(in, [&](string_view pathname) {
 			auto data = lib::archive::read_data(in);
 			lib::archive::write_entry(out, pathname, data);
+			wrote_something = true;
 			return true;
 		});
 		lib::archive::close_read(move(in));
 	}
 	lib::archive::close_write(move(out));
+	if (!wrote_something) {
+		fs::remove(out_path);
+		throw runtime_error_fmt("Failed to import \"{}\": empty location", path);
+	}
 }
 
 }

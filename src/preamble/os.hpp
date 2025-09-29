@@ -25,6 +25,7 @@ namespace fs {
 	using std::filesystem::recursive_directory_iterator;
 	using std::filesystem::directory_entry;
 	using std::filesystem::relative;
+	using std::filesystem::remove;
 }
 using std::jthread;
 using std::this_thread::sleep_for;
