@@ -159,13 +159,13 @@ FetchContent_Declare(tomlplusplus # TOML config file parsing
 )
 FetchContent_MakeAvailable(tomlplusplus)
 
-FetchContent_Declare(magic_enum
+FetchContent_Declare(magic_enum # Enum reflection
 	GIT_REPOSITORY https://github.com/Neargye/magic_enum
 	GIT_TAG v0.9.7
 )
 FetchContent_MakeAvailable(magic_enum)
 
-FetchContent_Declare(zpp_bits
+FetchContent_Declare(zpp_bits # Serialization
 	GIT_REPOSITORY https://github.com/eyalz800/zpp_bits
 	GIT_TAG v4.5.1
 )

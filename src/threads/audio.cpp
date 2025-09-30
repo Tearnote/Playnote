@@ -13,7 +13,7 @@ Implementation file for threads/audio.hpp.
 #include "logger.hpp"
 #include "dev/window.hpp"
 #include "dev/os.hpp"
-#include "io/song.hpp"
+#include "io/song_legacy.hpp"
 #include "audio/player.hpp"
 #include "audio/mixer.hpp"
 #include "bms/library.hpp"
@@ -27,7 +27,7 @@ Implementation file for threads/audio.hpp.
 
 namespace playnote::threads {
 
-static auto load_bms(bms::IRCompiler& compiler, io::Song const& song, string_view filename) -> bms::IR
+static auto load_bms(bms::IRCompiler& compiler, io::SongLegacy const& song, string_view filename) -> bms::IR
 {
 	INFO("Loading BMS file \"{}\"", filename);
 	auto const file = song.load_bms(filename);
@@ -44,7 +44,7 @@ static void run_audio(Broadcaster& broadcaster, dev::Window& window, audio::Mixe
 		[]() { yield(); });
 
 	auto library = bms::Library{LibraryDBPath};
-	auto song = io::Song{request.domain};
+	auto song = io::SongLegacy{request.domain};
 	broadcaster.make_shout<ChartLoadProgress>(ChartLoadProgress::CompilingIR{request.filename});
 	auto bms_compiler = bms::IRCompiler{};
 	auto try_bms_ir = optional<bms::IR>{};

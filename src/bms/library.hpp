@@ -3,17 +3,16 @@ This software is dual-licensed. For more details, please consult LICENSE.txt.
 Copyright (c) 2025 Tearnote (Hubert Maraszek)
 
 bms/library.hpp:
-A database of chart information. Handles loading and saving of charts from/to the database.
+A cache of song and chart metadata. Handles import events.
 */
 
 #pragma once
 #include "preamble.hpp"
 #include "config.hpp"
 #include "logger.hpp"
-#include "lib/archive.hpp"
 #include "lib/sqlite.hpp"
 #include "lib/bits.hpp"
-#include "io/file.hpp"
+#include "io/song.hpp"
 
 namespace playnote::bms {
 
@@ -33,8 +32,6 @@ public:
 	auto operator=(Library&&) -> Library& = delete;
 
 private:
-	static constexpr auto BMSExtensions = to_array({".bms", ".bme", ".bml", ".pms"});
-
 	// language=SQLite
 	static constexpr auto SongsSchema = R"(
 		CREATE TABLE IF NOT EXISTS songs(
@@ -144,9 +141,9 @@ private:
 	lib::sqlite::Statement chart_insert;
 	lib::sqlite::Statement chart_density_insert;
 
-	[[nodiscard]] static auto is_bms_file(fs::path const&) -> bool;
-	[[nodiscard]] static auto find_prefix(span<byte const> const&) -> fs::path;
-	void import_song(fs::path const&);
+	[[nodiscard]] auto find_available_song_filename(string_view name) -> string;
+	void import_one(fs::path const&);
+	auto import_song(fs::path const&) -> pair<usize, string>;
 };
 
 inline Library::Library(fs::path const& path):
@@ -168,12 +165,12 @@ inline Library::Library(fs::path const& path):
 inline void Library::import(fs::path const& path)
 {
 	if (is_regular_file(path)) {
-		import_song(path);
+		import_one(path);
 	} else if (is_directory(path)) {
 		auto contents = vector<fs::directory_entry>{};
 		copy(fs::directory_iterator{path}, back_inserter(contents));
-		if (any_of(contents, [&](auto const& entry) { return fs::is_regular_file(entry) && is_bms_file(entry); }))
-			import_song(path);
+		if (any_of(contents, [&](auto const& entry) { return fs::is_regular_file(entry) && io::Song::is_bms_file(entry); }))
+			import_one(path);
 		else
 			for (auto const& entry: contents) import(entry);
 	} else {
@@ -215,83 +212,41 @@ inline void Library::add_chart(fs::path const& domain, Chart const& chart)
 	});
 }
 
-inline auto Library::is_bms_file(fs::path const& path) -> bool
+inline auto Library::find_available_song_filename(string_view name) -> string
 {
-	auto const ext = path.extension().string();
-	return find_if(BMSExtensions, [&](auto const& e) { return iequals(e, ext); }) != BMSExtensions.end();
+	for (auto i: views::iota(0u)) {
+		auto test = i == 0?
+			format("{}.zip", name) :
+			format("{}-{}.zip", name, i);
+		auto exists = false;
+		lib::sqlite::query(song_exists, [&] { exists = true; }, test);
+		if (!exists) return test;
+	}
+	unreachable();
 }
 
-inline auto Library::find_prefix(span<byte const> const& archive_data) -> fs::path
+inline void Library::import_one(fs::path const& path)
 {
-	auto shortest_prefix = fs::path{};
-	auto shortest_prefix_parts = -1zu;
-	auto archive = lib::archive::open_read(archive_data);
-	lib::archive::for_each_entry(archive, [&](auto pathname) {
-		auto const path = fs::path{pathname};
-		if (is_bms_file(path)) {
-			auto const parts = distance(path.begin(), path.end());
-			if (parts < shortest_prefix_parts) {
-				shortest_prefix = path.parent_path().string();
-				shortest_prefix_parts = parts;
-			}
-		}
-		return true;
-	});
-
-	if (shortest_prefix_parts == -1zu)
-		throw runtime_error_fmt("No BMS files found in archive");
-	return shortest_prefix;
+	auto [song_id, song_filename] = import_song(path);
 }
 
-inline void Library::import_song(fs::path const& path)
+inline auto Library::import_song(fs::path const& path) -> pair<usize, string>
 {
-	INFO("Importing song at \"{}\"", path);
-
 	auto const is_archive = fs::is_regular_file(path);
 
-	// Determine an available filename
 	auto out_filename = is_archive? path.stem().string() : path.filename().string();
 	if (out_filename.empty())
 		throw runtime_error_fmt("Failed to import \"{}\": invalid filename", path);
-	for (auto i: views::iota(0u)) {
-		auto test = i == 0?
-			format("{}.zip", out_filename) :
-			format("{}-{}.zip", out_filename, i);
-		auto exists = false;
-		lib::sqlite::query(song_exists, [&] { exists = true; }, test);
-		if (!exists) {
-			out_filename = move(test);
-			break;
-		}
-	}
+	out_filename = find_available_song_filename(out_filename);
 
-	// Write song contents to library archive
 	auto const out_path = fs::path{LibraryPath} / out_filename;
-	auto wrote_something = false;
-	auto out = lib::archive::open_write(out_path);
-	if (is_archive) {
-		auto in_buf = io::read_file(path);
-		auto const prefix = find_prefix(in_buf.contents);
-		auto in = lib::archive::open_read(in_buf.contents);
-		lib::archive::for_each_entry(in, [&](string_view pathname) {
-			auto data = lib::archive::read_data(in);
-			lib::archive::write_entry(out, fs::relative(pathname, prefix), data);
-			wrote_something = true;
-			return true;
-		});
-	} else {
-		for (auto const& entry: fs::recursive_directory_iterator{path}) {
-			if (!entry.is_regular_file()) continue;
-			auto const rel_path = fs::relative(entry.path(), path);
-			lib::archive::write_entry(out, rel_path, io::read_file(entry.path()).contents);
-			wrote_something = true;
-		}
-	}
-	if (!wrote_something) {
-		fs::remove(out_path);
-		throw runtime_error_fmt("Failed to import \"{}\": empty location", path);
-	}
+	if (is_archive)
+		io::Song::zip_from_archive(path, out_path);
+	else
+		io::Song::zip_from_directory(path, out_path);
+
 	auto const song_id = lib::sqlite::insert(song_insert, out_filename);
+	return {song_id, out_filename};
 }
 
 }

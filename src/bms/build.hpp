@@ -13,7 +13,7 @@ Construction of a chart from an IR.
 #include "lib/ebur128.hpp"
 #include "lib/ffmpeg.hpp"
 #include "dev/audio.hpp"
-#include "io/song.hpp"
+#include "io/song_legacy.hpp"
 #include "bms/cursor.hpp"
 #include "bms/chart.hpp"
 #include "bms/ir.hpp"
@@ -489,7 +489,7 @@ inline void build_lanes(Chart& chart, span<AbsNote const> notes)
 }
 
 template<callable<void(threads::ChartLoadProgress::Type)> Func>
-void load_files(Chart& chart, io::Song& song, FileReferences const& references, Func&& progress)
+void load_files(Chart& chart, io::SongLegacy& song, FileReferences const& references, Func&& progress)
 {
 	static constexpr auto AudioExtensions = {"wav"sv, "ogg"sv, "mp3"sv, "flac"sv, "opus"sv};
 
@@ -836,7 +836,7 @@ inline void calculate_bb(Chart& chart)
 
 // Generate a Chart from an IR. The provided function is called to report on progress events.
 template<callable<void(threads::ChartLoadProgress::Type)> Func>
-auto chart_from_ir(IR const& ir, io::Song& song, Func&& progress) -> shared_ptr<Chart const>
+auto chart_from_ir(IR const& ir, io::SongLegacy& song, Func&& progress) -> shared_ptr<Chart const>
 {
 	auto chart = make_shared<Chart>();
 	chart->md5 = ir.get_md5();
