@@ -13,6 +13,7 @@ A database of chart information. Handles loading and saving of charts from/to th
 #include "lib/archive.hpp"
 #include "lib/sqlite.hpp"
 #include "lib/bits.hpp"
+#include "io/file.hpp"
 
 namespace playnote::bms {
 
@@ -138,6 +139,8 @@ private:
 	lib::sqlite::Statement chart_insert;
 	lib::sqlite::Statement chart_density_insert;
 
+	[[nodiscard]] static auto is_bms_file(fs::path const&) -> bool;
+	[[nodiscard]] static auto find_prefix(span<byte const> const&) -> fs::path;
 	void import_song(fs::path const&);
 };
 
@@ -163,12 +166,7 @@ inline void Library::import(fs::path const& path)
 	} else if (is_directory(path)) {
 		auto contents = vector<fs::directory_entry>{};
 		copy(fs::directory_iterator{path}, back_inserter(contents));
-		auto const contains_bms = any_of(contents, [&](auto const& entry) {
-			auto extension = entry.path().extension().string();
-			to_lower(extension);
-			return entry.is_regular_file() && contains(BMSExtensions, extension);
-		});
-		if (contains_bms)
+		if (any_of(contents, [&](auto const& entry) { return fs::is_regular_file(entry) && is_bms_file(entry); }))
 			import_song(path);
 		else
 			for (auto const& entry: contents) import(entry);
@@ -211,6 +209,35 @@ inline void Library::add_chart(fs::path const& domain, Chart const& chart)
 	});
 }
 
+inline auto Library::is_bms_file(fs::path const& path) -> bool
+{
+	auto const ext = path.extension().string();
+	return find_if(BMSExtensions, [&](auto const& e) { return iequals(e, ext); }) != BMSExtensions.end();
+}
+
+inline auto Library::find_prefix(span<byte const> const& archive_data) -> fs::path
+{
+	auto shortest_prefix = fs::path{};
+	auto shortest_prefix_parts = -1zu;
+	auto archive = lib::archive::open_read(archive_data);
+	lib::archive::for_each_entry(archive, [&](auto pathname) {
+		auto const path = fs::path{pathname};
+		if (is_bms_file(path)) {
+			auto const parts = distance(path.begin(), path.end());
+			if (parts < shortest_prefix_parts) {
+				shortest_prefix = path.parent_path().string();
+				shortest_prefix_parts = parts;
+			}
+		}
+		return true;
+	});
+	lib::archive::close_read(move(archive));
+
+	if (shortest_prefix_parts == -1zu)
+		throw runtime_error_fmt("No BMS files found in archive");
+	return shortest_prefix;
+}
+
 inline void Library::import_song(fs::path const& path)
 {
 	INFO("Importing song at \"{}\"", path);
@@ -239,10 +266,11 @@ inline void Library::import_song(fs::path const& path)
 	auto out = lib::archive::open_write(out_path);
 	if (is_archive) {
 		auto in_buf = io::read_file(path);
+		auto prefix = find_prefix(in_buf.contents);
 		auto in = lib::archive::open_read(in_buf.contents);
 		lib::archive::for_each_entry(in, [&](string_view pathname) {
 			auto data = lib::archive::read_data(in);
-			lib::archive::write_entry(out, pathname, data);
+			lib::archive::write_entry(out, fs::relative(pathname, prefix), data);
 			wrote_something = true;
 			return true;
 		});
