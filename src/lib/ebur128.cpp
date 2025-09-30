@@ -32,20 +32,23 @@ static void ret_check(int ret, string_view message = "libebur128 error")
 
 auto init(uint32 sampling_rate) -> Context
 {
-	return static_cast<Context>(ptr_check(ebur128_init(2, sampling_rate, EBUR128_MODE_I)));
+	return Context{static_cast<Context_t*>(ptr_check(ebur128_init(2, sampling_rate, EBUR128_MODE_I)))};
 }
 
-void cleanup(Context ctx) noexcept { ebur128_destroy(reinterpret_cast<ebur128_state**>(&ctx)); }
-
-void add_frames(Context ctx, span<Sample const> frames)
+void detail::ContextDeleter::operator()(Context_t* ctx) noexcept
 {
-	ret_check(ebur128_add_frames_float(ctx, reinterpret_cast<float const*>(frames.data()), frames.size()));
+	ebur128_destroy(reinterpret_cast<ebur128_state**>(&ctx));
 }
 
-auto get_loudness(Context ctx) -> double
+void add_frames(Context& ctx, span<Sample const> frames)
+{
+	ret_check(ebur128_add_frames_float(ctx.get(), reinterpret_cast<float const*>(frames.data()), frames.size()));
+}
+
+auto get_loudness(Context& ctx) -> double
 {
 	auto result = 0.0;
-	ret_check(ebur128_loudness_global(ctx, &result));
+	ret_check(ebur128_loudness_global(ctx.get(), &result));
 	return result;
 }
 

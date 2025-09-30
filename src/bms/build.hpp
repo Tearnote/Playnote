@@ -656,7 +656,6 @@ void calculate_audio_metrics(Cursor&& cursor, Metadata& metadata, Func&& progres
 
 	metadata.loudness = r128::get_loudness(ctx);
 	metadata.audio_duration = cursor.get_progress_ns();
-	r128::cleanup(ctx);
 }
 
 inline auto notes_around(span<Note const> notes, nanoseconds cursor, nanoseconds window)
