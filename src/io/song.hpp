@@ -19,7 +19,7 @@ public:
 	struct FileRef {
 		string_view filename;
 		Song& song;
-		optional<lib::archive::Archive> archive;
+		optional<reference_wrapper<lib::archive::ReadArchive>> archive;
 		auto load() -> vector<byte>;
 	};
 
@@ -84,7 +84,6 @@ inline Song::Song(fs::path domain):
 			}
 			return true;
 		});
-		lib::archive::close_read(move(archive));
 
 		if (shortest_prefix_parts == -1zu)
 			throw runtime_error_fmt("No BMS files found in archive \"{}\"", this->domain);
@@ -106,7 +105,6 @@ inline auto Song::load_bms(string_view filename) const -> vector<byte>
 			return false;
 		});
 
-		lib::archive::close_read(move(archive));
 		if (result.empty()) throw runtime_error_fmt("BMS file \"{}\" not found in archive", filename);
 		return result;
 	} else {
@@ -137,12 +135,11 @@ void Song::for_each_file(Func&& func)
 			func(FileRef{
 				.filename = pathname,
 				.song = *this,
-				.archive = archive,
+				.archive = ref(archive),
 			});
 			return true;
 		});
 
-		lib::archive::close_read(move(archive));
 	} else {
 		for (auto const& entry: fs::recursive_directory_iterator{domain} |
 			views::filter([](auto const& entry) { return entry.is_regular_file(); })) {

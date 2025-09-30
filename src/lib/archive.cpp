@@ -16,49 +16,55 @@ Implementation file for lib/archive.hpp.
 namespace playnote::lib::archive {
 
 // Helper function for error handling
-static void ret_check(int ret, optional<Archive> archive = nullopt)
+template<typename T>
+requires same_as<T, ReadArchive> || same_as<T, WriteArchive>
+static void ret_check(int ret, T& archive = {})
 {
-	auto message = archive ? archive_error_string(*archive) : "libarchive error";
+	auto message = archive.allocated()? archive_error_string(archive.get()) : "libarchive error";
 	if (ret == ARCHIVE_WARN) WARN("{}", message);
 	if (ret != ARCHIVE_OK) throw system_error_fmt("{}", message);
 }
 
-auto open_read(span<byte const> data) -> Archive
+auto open_read(span<byte const> data) -> ReadArchive
 {
 	auto archive = archive_read_new();
 	archive_read_support_format_all(archive);
 	archive_read_support_filter_all(archive);
-	ret_check(archive_read_open_memory(archive, data.data(), data.size()), archive);
-	return archive;
+	auto const ret = archive_read_open_memory(archive, data.data(), data.size());
+	auto result = ReadArchive{archive};
+	ret_check(ret, result);
+	return result;
 }
 
-void close_read(Archive&& archive) noexcept
+void detail::ReadArchiveDeleter::operator()(::archive* ar) noexcept
 {
-	archive_read_free(archive);
+	archive_read_free(ar);
 }
 
-auto open_write(fs::path const& path) -> Archive
+auto open_write(fs::path const& path) -> WriteArchive
 {
 	auto archive = archive_write_new();
 	archive_write_set_format_zip(archive);
 	archive_write_zip_set_compression_store(archive);
-	ret_check(archive_write_open_filename(archive, path.string().c_str()), archive);
-	return archive;
+	auto const ret = archive_write_open_filename(archive, path.string().c_str());
+	auto result = WriteArchive{archive};
+	ret_check(ret, result);
+	return result;
 }
 
-void close_write(Archive&& archive) noexcept
+void detail::WriteArchiveDeleter::operator()(::archive* ar) noexcept
 {
-	archive_write_free(archive);
+	archive_write_free(ar);
 }
 
-auto read_data(Archive archive) -> vector<byte>
+auto read_data(ReadArchive& archive) -> vector<byte>
 {
 	auto result = vector<byte>{};
 	auto* buf = static_cast<byte const*>(nullptr);
 	auto size = 0zu;
 	auto offset = 0z;
 	while (true) {
-		auto ret = archive_read_data_block(archive, reinterpret_cast<void const**>(&buf), &size, &offset);
+		auto const ret = archive_read_data_block(archive.get(), reinterpret_cast<void const**>(&buf), &size, &offset);
 		if (ret == ARCHIVE_EOF) break;
 		ret_check(ret, archive);
 
@@ -69,33 +75,33 @@ auto read_data(Archive archive) -> vector<byte>
 	return result;
 }
 
-void write_entry(Archive archive, fs::path const& pathname, span<byte const> data) {
+void write_entry(WriteArchive& archive, fs::path const& pathname, span<byte const> data) {
 	detail::write_header_for(archive, pathname, data.size());
 	detail::write_data(archive, data);
 }
 
-auto detail::next_entry(Archive archive) -> optional<string_view>
+auto detail::next_entry(ReadArchive& archive) -> optional<string_view>
 {
 	auto* entry = static_cast<archive_entry*>(nullptr);
-	auto const ret = archive_read_next_header(archive, &entry);
+	auto const ret = archive_read_next_header(archive.get(), &entry);
 	if (ret == ARCHIVE_EOF) return nullopt;
 	ret_check(ret, archive);
 	return archive_entry_pathname(entry);
 }
 
-void detail::write_header_for(Archive archive, fs::path const& pathname, usize total_size)
+void detail::write_header_for(WriteArchive& archive, fs::path const& pathname, usize total_size)
 {
 	auto entry = archive_entry_new();
 	archive_entry_set_pathname(entry, pathname.string().c_str());
 	archive_entry_set_size(entry, total_size);
 	archive_entry_set_filetype(entry, AE_IFREG);
-	archive_write_header(archive, entry);
+	archive_write_header(archive.get(), entry);
 	archive_entry_free(entry);
 }
 
-void detail::write_data(Archive archive, span<byte const> data)
+void detail::write_data(WriteArchive& archive, span<byte const> data)
 {
-	archive_write_data(archive, data.data(), data.size());
+	archive_write_data(archive.get(), data.data(), data.size());
 }
 
 }

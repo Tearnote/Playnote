@@ -231,7 +231,6 @@ inline auto Library::find_prefix(span<byte const> const& archive_data) -> fs::pa
 		}
 		return true;
 	});
-	lib::archive::close_read(move(archive));
 
 	if (shortest_prefix_parts == -1zu)
 		throw runtime_error_fmt("No BMS files found in archive");
@@ -274,9 +273,7 @@ inline void Library::import_song(fs::path const& path)
 			wrote_something = true;
 			return true;
 		});
-		lib::archive::close_read(move(in));
 	}
-	lib::archive::close_write(move(out));
 	if (!wrote_something) {
 		fs::remove(out_path);
 		throw runtime_error_fmt("Failed to import \"{}\": empty location", path);
