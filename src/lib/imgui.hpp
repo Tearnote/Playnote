@@ -18,11 +18,9 @@ namespace playnote::lib::imgui {
 struct Context_t;
 
 namespace detail {
-
 struct ContextDeleter {
 	static void operator()(Context_t* ctx) noexcept;
 };
-
 }
 
 using Context = unique_ptr<Context_t, detail::ContextDeleter>;

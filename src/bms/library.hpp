@@ -47,6 +47,10 @@ private:
 		SELECT 1 FROM songs WHERE path = ?1
 	)"sv;
 	// language=SQLite
+	static constexpr auto InsertSongQuery = R"(
+		INSERT INTO songs(path) VALUES(?1)
+	)"sv;
+	// language=SQLite
 	static constexpr auto InsertOrRetrieveSongQuery = R"(
 		INSERT INTO songs(path) VALUES(?1) ON CONFLICT(path) DO UPDATE SET path=path RETURNING id
 	)"sv;
@@ -134,6 +138,7 @@ private:
 
 	lib::sqlite::DB db;
 	lib::sqlite::Statement song_exists;
+	lib::sqlite::Statement song_insert;
 	lib::sqlite::Statement song_insert_or_retrieve;
 	lib::sqlite::Statement chart_exists;
 	lib::sqlite::Statement chart_insert;
@@ -151,6 +156,7 @@ inline Library::Library(fs::path const& path):
 	lib::sqlite::execute(db, ChartsSchema);
 	lib::sqlite::execute(db, ChartDensitiesSchema);
 	song_exists = lib::sqlite::prepare(db, SongExistsQuery);
+	song_insert = lib::sqlite::prepare(db, InsertSongQuery);
 	song_insert_or_retrieve = lib::sqlite::prepare(db, InsertOrRetrieveSongQuery);
 	chart_exists = lib::sqlite::prepare(db, ChartExistsQuery);
 	chart_insert = lib::sqlite::prepare(db, InsertChartQuery);
@@ -241,7 +247,7 @@ inline void Library::import_song(fs::path const& path)
 {
 	INFO("Importing song at \"{}\"", path);
 
-	auto is_archive = fs::is_regular_file(path);
+	auto const is_archive = fs::is_regular_file(path);
 
 	// Determine an available filename
 	auto out_filename = is_archive? path.stem().string() : path.filename().string();
@@ -260,12 +266,12 @@ inline void Library::import_song(fs::path const& path)
 	}
 
 	// Write song contents to library archive
-	auto out_path = fs::path{LibraryPath} / out_filename;
+	auto const out_path = fs::path{LibraryPath} / out_filename;
 	auto wrote_something = false;
 	auto out = lib::archive::open_write(out_path);
 	if (is_archive) {
 		auto in_buf = io::read_file(path);
-		auto prefix = find_prefix(in_buf.contents);
+		auto const prefix = find_prefix(in_buf.contents);
 		auto in = lib::archive::open_read(in_buf.contents);
 		lib::archive::for_each_entry(in, [&](string_view pathname) {
 			auto data = lib::archive::read_data(in);
@@ -273,11 +279,19 @@ inline void Library::import_song(fs::path const& path)
 			wrote_something = true;
 			return true;
 		});
+	} else {
+		for (auto const& entry: fs::recursive_directory_iterator{path}) {
+			if (!entry.is_regular_file()) continue;
+			auto const rel_path = fs::relative(entry.path(), path);
+			lib::archive::write_entry(out, rel_path, io::read_file(entry.path()).contents);
+			wrote_something = true;
+		}
 	}
 	if (!wrote_something) {
 		fs::remove(out_path);
 		throw runtime_error_fmt("Failed to import \"{}\": empty location", path);
 	}
+	auto const song_id = lib::sqlite::insert(song_insert, out_filename);
 }
 
 }
