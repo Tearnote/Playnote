@@ -75,6 +75,16 @@ auto read_data(ReadArchive& archive) -> vector<byte>
 	return result;
 }
 
+auto read_data_block(ReadArchive& archive) -> optional<span<byte const>>
+{
+	auto* buf = static_cast<byte const*>(nullptr);
+	auto size = 0zu;
+	auto offset = 0z;
+	auto const ret = archive_read_data_block(archive.get(), reinterpret_cast<void const**>(&buf), &size, &offset);
+	if (ret == ARCHIVE_EOF) return nullopt;
+	return span{buf, size};
+}
+
 void write_entry(WriteArchive& archive, fs::path const& pathname, span<byte const> data) {
 	detail::write_header_for(archive, pathname, data.size());
 	detail::write_data(archive, data);

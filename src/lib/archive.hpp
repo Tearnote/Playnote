@@ -35,13 +35,18 @@ auto open_read(span<byte const>) -> ReadArchive;
 auto open_write(fs::path const&) -> WriteArchive;
 
 // Call the provided function on each entry in the archive. The function can optionally call
-// read_data() to retrieve the entry's contents. If the function returns false, iteration
-// is aborted.
+// read_data() or read_data_block() to retrieve the entry's contents. If the function returns false,
+// iteration is aborted.
 template<callable<bool(string_view)> Func>
 void for_each_entry(ReadArchive&, Func&&);
 
 // Read the contents of the current entry. To be used from within a for_each_entry() callback.
 auto read_data(ReadArchive&) -> vector<byte>;
+
+// Read a block of the current entry's contents. To be used from within a for_each_entry() callback.
+// If entry is uncompressed, the block is guaranteed to be the size of the entire entry.  If EOF
+// has been reached, returns nullopt. Drops the offset; therefore incompatible with sparse archives.
+auto read_data_block(ReadArchive&) -> optional<span<byte const>>;
 
 // Write an entry into the archive.
 void write_entry(WriteArchive&, fs::path const& pathname, span<byte const> data);
