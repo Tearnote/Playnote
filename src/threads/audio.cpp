@@ -17,9 +17,9 @@ Implementation file for threads/audio.hpp.
 #include "audio/player.hpp"
 #include "audio/mixer.hpp"
 #include "bms/library.hpp"
-#include "bms/build.hpp"
+#include "bms/build_legacy.hpp"
 #include "bms/input.hpp"
-#include "bms/ir.hpp"
+#include "bms/ir_legacy.hpp"
 #include "threads/render_shouts.hpp"
 #include "threads/audio_shouts.hpp"
 #include "threads/input_shouts.hpp"
@@ -31,7 +31,7 @@ static auto load_bms(bms::IRCompiler& compiler, io::SongLegacy const& song, stri
 {
 	INFO("Loading BMS file \"{}\"", filename);
 	auto const file = song.load_bms(filename);
-	auto ir = compiler.compile(filename, file);
+	auto ir = compiler.compile(file);
 	INFO("Loaded BMS file \"{}\" successfully", filename);
 	return ir;
 }
@@ -96,23 +96,23 @@ static void run_audio(Broadcaster& broadcaster, dev::Window& window, audio::Mixe
 			}
 		});
 		broadcaster.receive_all<KeyInput>([&](auto ev) {
-			auto input = mapper.from_key(ev, bms_player->get_chart().timeline.playstyle);
+			auto input = mapper.from_key(ev, bms_player->get_chart().metadata.playstyle);
 			if (!input) return;
 			bms_player->enqueue_input(*input);
 		});
 		broadcaster.receive_all<ButtonInput>([&](auto ev) {
-			auto input = mapper.from_button(ev, bms_player->get_chart().timeline.playstyle);
+			auto input = mapper.from_button(ev, bms_player->get_chart().metadata.playstyle);
 			if (!input) return;
 			bms_player->enqueue_input(*input);
 		});
 		broadcaster.receive_all<AxisInput>([&](auto ev) {
-			auto inputs = mapper.submit_axis_input(ev, bms_player->get_chart().timeline.playstyle);
+			auto inputs = mapper.submit_axis_input(ev, bms_player->get_chart().metadata.playstyle);
 			for (auto const& input: inputs) bms_player->enqueue_input(input);
 		});
 		broadcaster.receive_all<FileDrop>([&](auto ev) {
 			for (auto const& path: ev.paths) library.import(path);
 		});
-		auto inputs = mapper.from_axis_state(window.get_glfw(), bms_player->get_chart().timeline.playstyle);
+		auto inputs = mapper.from_axis_state(window.get_glfw(), bms_player->get_chart().metadata.playstyle);
 		for (auto const& input: inputs) bms_player->enqueue_input(input);
 
 		yield();

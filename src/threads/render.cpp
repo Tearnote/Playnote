@@ -187,7 +187,7 @@ static void run_render(Broadcaster& broadcaster, dev::Window const& window, gfx:
 	while (!window.is_closing()) {
 		receive_loading_shouts(broadcaster, loading_toast, [&](auto finished_player) {
 			player = move(finished_player);
-			playfield = gfx::Playfield{{44, 0}, 545, player->get_chart().timeline.playstyle};
+			playfield = gfx::Playfield{{44, 0}, 545, player->get_chart().metadata.playstyle};
 		});
 		renderer.frame({"bg"_id, "frame"_id, "measure"_id, "judgment_line"_id, "notes"_id, "pressed"_id}, [&](gfx::Renderer::Queue& queue) {
 			queue.enqueue_rect("bg"_id, {{0, 0}, {1280, 720}, {0.060f, 0.060f, 0.060f, 1.000f}});

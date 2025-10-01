@@ -205,7 +205,7 @@ public:
 	// Generate IR from raw BMS file contents.
 	// Throws runtime_error if the BMS uses unsupported commands or channels that are known
 	// to be required for a semblance of correct playback.
-	auto compile(string_view filename, span<byte const> bms_file_contents) -> IR;
+	auto compile(span<byte const> chart) -> IR;
 
 private:
 	// A BMS channel command can contain multiple notes; we split them up into these.
@@ -292,16 +292,15 @@ inline IRCompiler::IRCompiler()
 	register_channel_handlers();
 }
 
-inline auto IRCompiler::compile(string_view filename, span<byte const> bms_file_contents) -> IR
+inline auto IRCompiler::compile(span<byte const> chart) -> IR
 {
-	INFO_AS(cat, "Compiling BMS file \"{}\"", filename);
 	auto ir = IR{};
 	auto maps = SlotMappings{};
 
-	ir.md5 = lib::openssl::md5(bms_file_contents);
+	ir.md5 = lib::openssl::md5(chart);
 
 	// Parse file and process the commands
-	parse(cat, bms_file_contents,
+	parse(cat, chart,
 		[&](HeaderCommand&& cmd) { handle_header(ir, move(cmd), maps); },
 		[&](ChannelCommand&& cmd) { handle_channel(ir, move(cmd), maps); }
 	);

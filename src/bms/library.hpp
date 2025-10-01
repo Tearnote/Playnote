@@ -14,6 +14,7 @@ A cache of song and chart metadata. Handles import events.
 #include "lib/sqlite.hpp"
 #include "lib/bits.hpp"
 #include "io/song.hpp"
+#include "bms/build.hpp"
 
 namespace playnote::bms {
 
@@ -150,7 +151,7 @@ private:
 	[[nodiscard]] auto find_available_song_filename(string_view name) -> string;
 	void import_one(fs::path const&);
 	auto import_song(fs::path const&) -> pair<usize, string>;
-	auto import_chart(span<byte const>, usize song_id) -> bool;
+	auto import_chart(io::Song& song, usize song_id, span<byte const>) -> bool;
 };
 
 inline Library::Library(fs::path const& path):
@@ -194,13 +195,12 @@ inline void Library::add_chart(fs::path const& domain, Chart const& chart)
 		lib::sqlite::query(chart_exists, [&] { exists = true; }, chart.md5);
 		if (exists) return;
 
-		static constexpr auto BlobPlaceholder = to_array<unsigned char const>({0x01, 0x02, 0x03, 0x04});
 		auto song_id = 0;
 		lib::sqlite::query(song_insert_or_retrieve, [&](int id) { song_id = id; }, domain.string());
 		lib::sqlite::execute(chart_insert, chart.md5, song_id, chart.metadata.title,
 			chart.metadata.subtitle, chart.metadata.artist, chart.metadata.subartist,
 			chart.metadata.genre, chart.metadata.url, chart.metadata.email,
-			+chart.metadata.difficulty, +chart.timeline.playstyle, chart.metadata.features.has_ln,
+			+chart.metadata.difficulty, +chart.metadata.playstyle, chart.metadata.features.has_ln,
 			chart.metadata.features.has_soflan, chart.metadata.note_count,
 			chart.metadata.chart_duration.count(), chart.metadata.audio_duration.count(),
 			chart.metadata.loudness, chart.metadata.nps.average, chart.metadata.nps.peak,
@@ -239,7 +239,7 @@ inline void Library::import_one(fs::path const& path)
 	auto song = io::Song::from_zip(song_path);
 	auto imported_count = 0u;
 	song.for_each_chart([&](auto chart) {
-		imported_count += import_chart(chart, song_id)? 1 : 0;
+		imported_count += import_chart(song, song_id, chart)? 1 : 0;
 	});
 	if (imported_count == 0) {
 		lib::sqlite::execute(song_delete, song_id);
@@ -269,10 +269,36 @@ inline auto Library::import_song(fs::path const& path) -> pair<usize, string> tr
 	throw;
 }
 
-inline auto Library::import_chart(span<byte const> chart, usize song_id) -> bool
+inline auto Library::import_chart(io::Song& song, usize song_id, span<byte const> chart_raw) -> bool
 {
-	auto const md5 = lib::openssl::md5(chart);
-	WARN("Importing chart size {}", chart.size());
+	auto const md5 = lib::openssl::md5(chart_raw);
+	auto exists = false;
+	lib::sqlite::query(chart_exists, [&] { exists = true; }, md5);
+	if (exists) return false;
+
+	auto chart = chart_from_bms(song, chart_raw);
+    lib::sqlite::transaction(db, [&] {
+        lib::sqlite::execute(chart_insert, chart->md5, song_id, chart->metadata.title,
+			chart->metadata.subtitle, chart->metadata.artist, chart->metadata.subartist,
+			chart->metadata.genre, chart->metadata.url, chart->metadata.email,
+			+chart->metadata.difficulty, +chart->metadata.playstyle, chart->metadata.features.has_ln,
+			chart->metadata.features.has_soflan, chart->metadata.note_count,
+			chart->metadata.chart_duration.count(), chart->metadata.audio_duration.count(),
+			chart->metadata.loudness, chart->metadata.nps.average, chart->metadata.nps.peak,
+			chart->metadata.bpm_range.min, chart->metadata.bpm_range.max,
+			chart->metadata.bpm_range.main);
+
+		auto serialize_density = [](vector<float> const& v) {
+			auto [data, out] = lib::bits::data_out();
+			out(v).or_throw();
+			return data;
+		};
+		lib::sqlite::execute(chart_density_insert, chart->md5,
+			chart->metadata.density.resolution.count(),
+			serialize_density(chart->metadata.density.key),
+			serialize_density(chart->metadata.density.scratch),
+			serialize_density(chart->metadata.density.ln));
+    });
 	return true;
 }
 

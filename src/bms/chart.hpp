@@ -9,7 +9,7 @@ A definite, playable rhythm game chart optimized for playback.
 #pragma once
 #include "preamble.hpp"
 #include "dev/audio.hpp"
-#include "bms/ir.hpp"
+#include "bms/ir_legacy.hpp"
 
 namespace playnote::bms {
 
@@ -63,12 +63,12 @@ struct BPMChange {
 	float scroll_speed; // Relative to 1.0 as the BPM's natural scroll speed
 };
 
-enum class Playstyle {
-	_5K, _7K, _9K, _10K, _14K,
-};
-
 // A chart's metadata and statistics.
 struct Metadata {
+	enum class Playstyle {
+		_5K, _7K, _9K, _10K, _14K,
+	};
+
 	using Difficulty = IR::HeaderEvent::Difficulty::Level;
 
 	// Features used by the chart that the player might want to know about ahead of time.
@@ -108,6 +108,7 @@ struct Metadata {
 	string email;
 	Difficulty difficulty = Difficulty::Unknown;
 
+	Playstyle playstyle;
 	Features features;
 	uint32 note_count; // Number of notes for the player to hit
 	nanoseconds chart_duration; // Timestamp when all notes are judged
@@ -119,11 +120,13 @@ struct Metadata {
 	BPMRange bpm_range;
 };
 
+using Playstyle = Metadata::Playstyle;
+using Difficulty = Metadata::Difficulty;
+
 // All the data that's required to reproduce a chart's timeline (timing and objects.)
 struct Timeline {
 	using Lanes = array<Lane, enum_count<Lane::Type>()>;
 
-	Playstyle playstyle;
 	Lanes lanes;
 	vector<BPMChange> bpm_sections; // Sorted from earliest
 };
