@@ -10,6 +10,7 @@ A cache of song and chart metadata. Handles import events.
 #include "preamble.hpp"
 #include "config.hpp"
 #include "logger.hpp"
+#include "lib/openssl.hpp"
 #include "lib/sqlite.hpp"
 #include "lib/bits.hpp"
 #include "io/song.hpp"
@@ -144,6 +145,7 @@ private:
 	[[nodiscard]] auto find_available_song_filename(string_view name) -> string;
 	void import_one(fs::path const&);
 	auto import_song(fs::path const&) -> pair<usize, string>;
+	auto import_chart(span<byte const>, usize song_id) -> bool;
 };
 
 inline Library::Library(fs::path const& path):
@@ -229,6 +231,10 @@ inline void Library::import_one(fs::path const& path)
 {
 	auto [song_id, song_path] = import_song(path);
 	auto song = io::Song::from_zip(song_path);
+	auto imported_count = 0u;
+	song.for_each_chart([&](auto chart) {
+		imported_count += import_chart(chart, song_id)? 1 : 0;
+	});
 }
 
 inline auto Library::import_song(fs::path const& path) -> pair<usize, string> try
@@ -251,6 +257,13 @@ inline auto Library::import_song(fs::path const& path) -> pair<usize, string> tr
 } catch (exception const&) {
 	fs::remove(path);
 	throw;
+}
+
+inline auto Library::import_chart(span<byte const> chart, usize song_id) -> bool
+{
+	auto const md5 = lib::openssl::md5(chart);
+	WARN("Importing chart size {}", chart.size());
+	return true;
 }
 
 }

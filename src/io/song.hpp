@@ -33,14 +33,18 @@ public:
 	// Throws runtime_error on failure.
 	static auto from_zip(fs::path const&) -> Song;
 
+	// Call the provided function for each chart of the song.
+	template<callable<void(span<byte const>)> Func>
+	void for_each_chart(Func&&);
+
 private:
 	static constexpr auto BMSExtensions = to_array({".bms", ".bme", ".bml", ".pms"});
 	static constexpr auto AudioExtensions = to_array({".wav", ".mp3", ".ogg", ".flac", ".wma", ".m4a", ".opus", ".aac", ".aiff", ".aif"});
 
 	enum class FileType {
-		Unknown,
-		BMS,
-		Audio,
+		Unknown, // 0
+		BMS,     // 1
+		Audio,   // 2
 	};
 
 	// language=SQLite
@@ -58,15 +62,28 @@ private:
 	static constexpr auto InsertContentsQuery = R"(
 		INSERT INTO contents(path, type, ptr, size) VALUES (?1, ?2, ?3, ?4)
 	)"sv;
+	// language=SQLite
+	static constexpr auto SelectChartsQuery = R"(
+		SELECT ptr, size FROM contents WHERE type = 1
+	)"sv;
 
 	ReadFile file;
 	lib::sqlite::DB db;
+	lib::sqlite::Statement select_charts;
 
-	Song(ReadFile&& file, lib::sqlite::DB&& db): file{move(file)}, db{move(db)} {} // Use factory methods
+	Song(ReadFile&&, lib::sqlite::DB&&); // Use factory methods
 	[[nodiscard]] static auto find_prefix(span<byte const> const&) -> fs::path;
 	[[nodiscard]] static auto is_audio_ext(string_view) -> bool;
 	[[nodiscard]] static auto type_from_ext(string_view) -> FileType;
 };
+
+template<callable<void(span<byte const>)> Func>
+void Song::for_each_chart(Func&& func)
+{
+	lib::sqlite::query(select_charts, [&](void const* ptr, isize size) {
+		func(span{static_cast<byte const*>(ptr), static_cast<usize>(size)});
+	});
+}
 
 inline auto Song::is_bms_ext(string_view ext) -> bool
 {
@@ -124,6 +141,13 @@ inline auto Song::from_zip(fs::path const& path) -> Song
 
 	auto song = Song(move(file), move(db));
 	return song;
+}
+
+inline Song::Song(ReadFile&& file, lib::sqlite::DB&& db):
+	file{move(file)},
+	db{move(db)}
+{
+	select_charts = lib::sqlite::prepare(this->db, SelectChartsQuery);
 }
 
 inline auto Song::find_prefix(span<byte const> const& archive_data) -> fs::path
