@@ -9,14 +9,15 @@ An abstraction for an imported BMS song. Wraps a zip archive with accelerated fi
 #pragma once
 #include "preamble.hpp"
 #include "lib/archive.hpp"
+#include "lib/sqlite.hpp"
 #include "io/file.hpp"
 
 namespace playnote::io {
 
 class Song {
 public:
-	// Return true if the provided path has a BMS file extension.
-	[[nodiscard]] static auto is_bms_file(fs::path const&) -> bool;
+	// Return true if the provided extension matches a known BMS extension.
+	[[nodiscard]] static auto is_bms_ext(string_view) -> bool;
 
 	// Create a Song-compatible zip archive from an arbitrary archive. Subfolders inside the archive
 	// are handled.
@@ -28,16 +29,47 @@ public:
 	// Throws runtime_error on failure.
 	static void zip_from_directory(fs::path const& src, fs::path const& dst);
 
+	// Create a Song from a zip archive. The zip must be Song-compatible.
+	// Throws runtime_error on failure.
+	static auto from_zip(fs::path const&) -> Song;
+
 private:
 	static constexpr auto BMSExtensions = to_array({".bms", ".bme", ".bml", ".pms"});
+	static constexpr auto AudioExtensions = to_array({".wav", ".mp3", ".ogg", ".flac", ".wma", ".m4a", ".opus", ".aac", ".aiff", ".aif"});
 
-	Song() = default; // Use factory methods
+	enum class FileType {
+		Unknown,
+		BMS,
+		Audio,
+	};
+
+	// language=SQLite
+	static constexpr auto ContentsSchema = to_array({R"(
+		CREATE TABLE contents(
+			path TEXT NOT NULL,
+			type INTEGER NOT NULL,
+			ptr BLOB NOT NULL,
+			size INTEGER NOT NULL
+		)
+	)"sv, R"(
+		CREATE INDEX contents_path ON contents(path)
+	)"sv});
+	// language=SQLite
+	static constexpr auto InsertContentsQuery = R"(
+		INSERT INTO contents(path, type, ptr, size) VALUES (?1, ?2, ?3, ?4)
+	)"sv;
+
+	ReadFile file;
+	lib::sqlite::DB db;
+
+	Song(ReadFile&& file, lib::sqlite::DB&& db): file{move(file)}, db{move(db)} {} // Use factory methods
 	[[nodiscard]] static auto find_prefix(span<byte const> const&) -> fs::path;
+	[[nodiscard]] static auto is_audio_ext(string_view) -> bool;
+	[[nodiscard]] static auto type_from_ext(string_view) -> FileType;
 };
 
-inline auto Song::is_bms_file(fs::path const& path) -> bool
+inline auto Song::is_bms_ext(string_view ext) -> bool
 {
-	auto const ext = path.extension().string();
 	return find_if(BMSExtensions, [&](auto const& e) { return iequals(e, ext); }) != BMSExtensions.end();
 }
 
@@ -72,6 +104,28 @@ inline void Song::zip_from_directory(fs::path const& src, fs::path const& dst)
 		throw runtime_error_fmt("Failed to create library zip from \"{}\": empty archive", src);
 }
 
+inline auto Song::from_zip(fs::path const& path) -> Song
+{
+	auto file = read_file(path);
+	auto archive = lib::archive::open_read(file.contents);
+	auto db = lib::sqlite::open(":memory:");
+	lib::sqlite::execute(db, ContentsSchema);
+	auto contents_insert = lib::sqlite::prepare(db, InsertContentsQuery);
+
+	lib::archive::for_each_entry(archive, [&](auto entry_path_str) {
+		auto entry_path = fs::path{entry_path_str};
+		auto const ext = entry_path.extension().string();
+		auto const data = *lib::archive::read_data_block(archive);
+		auto const type = type_from_ext(ext);
+		if (type != FileType::Unknown) entry_path.replace_extension();
+		lib::sqlite::execute(contents_insert, entry_path.string(), +type, static_cast<void const*>(data.data()), data.size());
+		return true;
+	});
+
+	auto song = Song(move(file), move(db));
+	return song;
+}
+
 inline auto Song::find_prefix(span<byte const> const& archive_data) -> fs::path
 {
 	auto shortest_prefix = fs::path{};
@@ -79,7 +133,7 @@ inline auto Song::find_prefix(span<byte const> const& archive_data) -> fs::path
 	auto archive = lib::archive::open_read(archive_data);
 	lib::archive::for_each_entry(archive, [&](auto pathname) {
 		auto const path = fs::path{pathname};
-		if (is_bms_file(path)) {
+		if (is_bms_ext(path.extension().string())) {
 			auto const parts = distance(path.begin(), path.end());
 			if (parts < shortest_prefix_parts) {
 				shortest_prefix = path.parent_path().string();
@@ -92,6 +146,18 @@ inline auto Song::find_prefix(span<byte const> const& archive_data) -> fs::path
 	if (shortest_prefix_parts == -1zu)
 		throw runtime_error_fmt("No BMS files found in archive");
 	return shortest_prefix;
+}
+
+inline auto Song::is_audio_ext(string_view ext) -> bool
+{
+	return find_if(AudioExtensions, [&](auto const& e) { return iequals(e, ext); }) != AudioExtensions.end();
+}
+
+inline auto Song::type_from_ext(string_view ext) -> FileType
+{
+	if (is_bms_ext(ext)) return FileType::BMS;
+	if (is_audio_ext(ext)) return FileType::Audio;
+	return FileType::Unknown;
 }
 
 }

@@ -169,7 +169,7 @@ inline void Library::import(fs::path const& path)
 	} else if (is_directory(path)) {
 		auto contents = vector<fs::directory_entry>{};
 		copy(fs::directory_iterator{path}, back_inserter(contents));
-		if (any_of(contents, [&](auto const& entry) { return fs::is_regular_file(entry) && io::Song::is_bms_file(entry); }))
+		if (any_of(contents, [&](auto const& entry) { return fs::is_regular_file(entry) && io::Song::is_bms_ext(entry.path().extension().string()); }))
 			import_one(path);
 		else
 			for (auto const& entry: contents) import(entry);
@@ -227,10 +227,11 @@ inline auto Library::find_available_song_filename(string_view name) -> string
 
 inline void Library::import_one(fs::path const& path)
 {
-	auto [song_id, song_filename] = import_song(path);
+	auto [song_id, song_path] = import_song(path);
+	auto song = io::Song::from_zip(song_path);
 }
 
-inline auto Library::import_song(fs::path const& path) -> pair<usize, string>
+inline auto Library::import_song(fs::path const& path) -> pair<usize, string> try
 {
 	auto const is_archive = fs::is_regular_file(path);
 
@@ -246,7 +247,10 @@ inline auto Library::import_song(fs::path const& path) -> pair<usize, string>
 		io::Song::zip_from_directory(path, out_path);
 
 	auto const song_id = lib::sqlite::insert(song_insert, out_filename);
-	return {song_id, out_filename};
+	return {song_id, out_path};
+} catch (exception const&) {
+	fs::remove(path);
+	throw;
 }
 
 }
