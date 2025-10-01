@@ -263,7 +263,7 @@ inline auto Library::import_song(fs::path const& path) -> pair<usize, string> tr
 		io::Song::zip_from_directory(path, out_path);
 
 	auto const song_id = lib::sqlite::insert(song_insert, out_filename);
-	return {song_id, out_path};
+	return {song_id, out_path.string()};
 } catch (exception const&) {
 	fs::remove(path);
 	throw;
