@@ -109,6 +109,12 @@ void detail::bind<span<byte const>>(Statement& stmt, int idx, span<byte const> a
 	ret_check_ext(sqlite3_db_handle(stmt.get()), sqlite3_bind_blob(stmt.get(), idx, arg.data(), arg.size(), SQLITE_TRANSIENT));
 }
 
+template<>
+void detail::bind<void const*>(Statement& stmt, int idx, void const* arg)
+{
+	ret_check_ext(sqlite3_db_handle(stmt.get()), sqlite3_bind_blob(stmt.get(), idx, &arg, sizeof(void const*), SQLITE_TRANSIENT));
+}
+
 auto detail::step(Statement& stmt) -> QueryStatus
 {
 	auto const ret = sqlite3_step(stmt.get());
@@ -175,6 +181,13 @@ auto detail::get_column<span<byte const>>(Statement& stmt, int idx) -> span<byte
 	// The buffer pointed at by the span lives until the next step() or reset(),
 	// which is guaranteed by the usage of this function in query()
 	return {blob, static_cast<usize>(size)};
+}
+
+template<>
+auto detail::get_column<void const*>(Statement& stmt, int idx) -> void const*
+{
+	auto* ptr = static_cast<void const* const*>(sqlite3_column_blob(stmt.get(), idx));
+	return *ptr;
 }
 
 }

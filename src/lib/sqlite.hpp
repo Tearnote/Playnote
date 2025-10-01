@@ -41,6 +41,7 @@ template<> void bind<int64>           (Statement&, int idx, int64 arg);
 template<> void bind<double>          (Statement&, int idx, double arg);
 template<> void bind<string_view>     (Statement&, int idx, string_view arg);
 template<> void bind<span<byte const>>(Statement&, int idx, span<byte const> arg);
+template<> void bind<void const*>     (Statement&, int idx, void const* arg);
 
 auto step(Statement&) -> QueryStatus;
 void reset(Statement&);
@@ -55,6 +56,8 @@ template<> auto get_column<int64>           (Statement&, int idx) -> int64;
 template<> auto get_column<double>          (Statement&, int idx) -> double;
 template<> auto get_column<string_view>     (Statement&, int idx) -> string_view;
 template<> auto get_column<span<byte const>>(Statement&, int idx) -> span<byte const>;
+template<> auto get_column<void const*>     (Statement&, int idx) -> void const*;
+
 }
 
 // Open an existing database, or create a new one if it doesn't exist yet. The database
@@ -123,6 +126,8 @@ void query(Statement& stmt, Func&& func, Args&&... args)
 			detail::bind<string_view>(stmt, idx, arg);
 		else if constexpr (convertible_to<ArgT, span<byte const>> || convertible_to<ArgT, span<unsigned char const>>)
 			detail::bind<span<byte const>>(stmt, idx, {reinterpret_cast<byte const*>(arg.data()), arg.size()});
+		else if constexpr (same_as<ArgT, void*> || same_as<ArgT, void const*>)
+			detail::bind<void const*>(stmt, idx, arg);
 		else
 			static_assert(false, "Unknown sqlite binding type");
 	};
