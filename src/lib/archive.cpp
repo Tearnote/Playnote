@@ -85,6 +85,7 @@ auto detail::next_entry(ReadArchive& archive) -> optional<string_view>
 	auto* entry = static_cast<archive_entry*>(nullptr);
 	auto const ret = archive_read_next_header(archive.get(), &entry);
 	if (ret == ARCHIVE_EOF) return nullopt;
+	if (archive_entry_filetype(entry) != AE_IFREG) return next_entry(archive);
 	ret_check(ret, archive);
 	return archive_entry_pathname(entry);
 }
