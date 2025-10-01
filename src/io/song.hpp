@@ -37,6 +37,9 @@ public:
 	template<callable<void(span<byte const>)> Func>
 	void for_each_chart(Func&&);
 
+	// Destroy the song and delete the underlying zip file on disk.
+	void remove() && noexcept;
+
 private:
 	static constexpr auto BMSExtensions = to_array({".bms", ".bme", ".bml", ".pms"});
 	static constexpr auto AudioExtensions = to_array({".wav", ".mp3", ".ogg", ".flac", ".wma", ".m4a", ".opus", ".aac", ".aiff", ".aif"});
@@ -141,6 +144,12 @@ inline auto Song::from_zip(fs::path const& path) -> Song
 
 	auto song = Song(move(file), move(db));
 	return song;
+}
+
+inline void Song::remove() && noexcept
+{
+	WARN("No charts found, deleting song");
+	fs::remove(file.path);
 }
 
 inline Song::Song(ReadFile&& file, lib::sqlite::DB&& db):

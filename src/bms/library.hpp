@@ -52,6 +52,10 @@ private:
 	static constexpr auto InsertOrRetrieveSongQuery = R"(
 		INSERT INTO songs(path) VALUES(?1) ON CONFLICT(path) DO UPDATE SET path=path RETURNING id
 	)"sv;
+	// language=SQLite
+	static constexpr auto DeleteSongQuery = R"(
+		DELETE FROM songs WHERE id = ?1
+	)"sv;
 
 	// language=SQLite
 	static constexpr auto ChartsSchema = to_array({R"(
@@ -138,6 +142,7 @@ private:
 	lib::sqlite::Statement song_exists;
 	lib::sqlite::Statement song_insert;
 	lib::sqlite::Statement song_insert_or_retrieve;
+	lib::sqlite::Statement song_delete;
 	lib::sqlite::Statement chart_exists;
 	lib::sqlite::Statement chart_insert;
 	lib::sqlite::Statement chart_density_insert;
@@ -157,6 +162,7 @@ inline Library::Library(fs::path const& path):
 	song_exists = lib::sqlite::prepare(db, SongExistsQuery);
 	song_insert = lib::sqlite::prepare(db, InsertSongQuery);
 	song_insert_or_retrieve = lib::sqlite::prepare(db, InsertOrRetrieveSongQuery);
+	song_delete = lib::sqlite::prepare(db, DeleteSongQuery);
 	chart_exists = lib::sqlite::prepare(db, ChartExistsQuery);
 	chart_insert = lib::sqlite::prepare(db, InsertChartQuery);
 	chart_density_insert = lib::sqlite::prepare(db, InsertChartDensityQuery);
@@ -235,6 +241,10 @@ inline void Library::import_one(fs::path const& path)
 	song.for_each_chart([&](auto chart) {
 		imported_count += import_chart(chart, song_id)? 1 : 0;
 	});
+	if (imported_count == 0) {
+		lib::sqlite::execute(song_delete, song_id);
+		move(song).remove();
+	}
 }
 
 inline auto Library::import_song(fs::path const& path) -> pair<usize, string> try
