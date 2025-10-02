@@ -13,7 +13,7 @@ but condensed, cleaned and serializable to a binary file.
 #include "config.hpp"
 #include "logger.hpp"
 #include "lib/openssl.hpp"
-#include "bms/parser.hpp"
+#include "bms/parser_legacy.hpp"
 
 namespace playnote::bms {
 

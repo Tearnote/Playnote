@@ -14,7 +14,7 @@ A cache of song and chart metadata. Handles import events.
 #include "lib/sqlite.hpp"
 #include "lib/bits.hpp"
 #include "io/song.hpp"
-#include "bms/build.hpp"
+#include "bms/builder.hpp"
 
 namespace playnote::bms {
 
@@ -148,6 +148,8 @@ private:
 	lib::sqlite::Statement chart_insert;
 	lib::sqlite::Statement chart_density_insert;
 
+	Builder builder;
+
 	[[nodiscard]] auto find_available_song_filename(string_view name) -> string;
 	void import_one(fs::path const&);
 	auto import_song(fs::path const&) -> pair<usize, string>;
@@ -276,7 +278,7 @@ inline auto Library::import_chart(io::Song& song, usize song_id, span<byte const
 	lib::sqlite::query(chart_exists, [&] { exists = true; }, md5);
 	if (exists) return false;
 
-	auto chart = chart_from_bms(song, chart_raw);
+	auto chart = builder.build(chart_raw, song);
     lib::sqlite::transaction(db, [&] {
         lib::sqlite::execute(chart_insert, chart->md5, song_id, chart->metadata.title,
 			chart->metadata.subtitle, chart->metadata.artist, chart->metadata.subartist,
