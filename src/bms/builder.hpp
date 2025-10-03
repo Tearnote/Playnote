@@ -42,19 +42,71 @@ private:
 		string_view value;
 	};
 
+	// Temporary structures for building the chart.
 	struct State {
-		using Mapping = unordered_map<string, usize, string_hash>;
-		Mapping wav;
-		Mapping bpm;
 
-		// Retrieve the slot's index, or register a new one
-		static auto get_slot_id(Mapping& map, string_view key) -> usize;
+		// This is out of RelativeNote so that it's not unique for each template argument.
+		struct Simple {};
+		struct LNToggle {};
+		using RelativeNoteType = variant<Simple, LNToggle>;
+
+		// A note of a chart with its timing information relative to unknowns such as measure length
+		// and BPM. LNs are represented as unpaired ends.
+		template<typename T>
+		struct RelativeNote {
+			using Type = RelativeNoteType;
+
+			Type type;
+			Lane::Type lane;
+			T position;
+			usize wav_slot_idx;
+
+			template<variant_alternative<Type> U>
+			[[nodiscard]] auto type_is() const -> bool { return holds_alternative<U>(type); }
+
+			template<variant_alternative<Type> U>
+			[[nodiscard]] auto params() -> T& { return get<U>(type); }
+			template<variant_alternative<Type> U>
+			[[nodiscard]] auto params() const -> T const& { return get<U>(type); }
+		};
+
+		using MeasureRelNote = RelativeNote<NotePosition>;
+
+		// A BPM change event, measure-relative.
+		struct MeasureRelBPM {
+			NotePosition position;
+			float bpm;
+			float scroll_speed;
+		};
+
+		// Maps for flattening the slot values into increasing indices.
+		template<typename T>
+		using Mapping = unordered_map<string, T, string_hash>;
+
+		struct WavSlot {
+			usize idx = -1u; // 0-based increasing index
+			string filename; // without extension
+			bool used = false; // true if any note uses the slot; if false, audio file load can be skipped
+		};
+		struct BPMSlot {
+			usize idx = -1u;
+			float bpm;
+		};
+
+		Mapping<WavSlot> wav;
+		Mapping<BPMSlot> bpm;
+
+		vector<double> measure_lengths;
+		vector<MeasureRelBPM> bpms;
+		vector<MeasureRelNote> measure_rel_notes;
 	};
 
 	using HeaderHandlerFunc = void(Builder::*)(HeaderCommand, Chart&, State&);
 	unordered_map<string, HeaderHandlerFunc, string_hash> header_handlers;
-	using ChannelHandlerFunc = void(Builder::*)(ChannelCommand, Chart&, State);
+	using ChannelHandlerFunc = void(Builder::*)(ChannelCommand, Chart&, State&);
 	unordered_map<string, ChannelHandlerFunc, string_hash> channel_handlers;
+
+	[[nodiscard]] static auto slot_hex_to_int(string_view hex) -> usize;
 
 	void parse_header(string_view line, usize line_num, Chart&, State&);
 	void parse_channel(string_view line, usize line_num, Chart&, State&);
@@ -83,6 +135,16 @@ private:
 	// Slot reference handlers
 	void handle_header_wav(HeaderCommand, Chart&, State&);
 	void handle_header_bpmxx(HeaderCommand, Chart&, State&);
+
+	// Audio channels
+	void handle_channel_bgm(ChannelCommand, Chart&, State&);
+	void handle_channel_note(ChannelCommand, Chart&, State&);
+	void handle_channel_ln(ChannelCommand, Chart&, State&);
+
+	// Timeline control channels
+	void handle_channel_measure_length(ChannelCommand, Chart&, State&);
+	void handle_channel_bpm(ChannelCommand, Chart&, State&);
+	void handle_channel_bpmxx(ChannelCommand, Chart&, State&);
 };
 
 inline Builder::Builder()
@@ -267,11 +329,16 @@ inline auto Builder::build(span<byte const> bms_raw, io::Song& song, optional<re
 	return chart;
 }
 
-inline auto Builder::State::get_slot_id(Mapping& map, string_view key) -> usize
+inline auto Builder::slot_hex_to_int(string_view hex) -> usize
 {
-	return map.contains(key)?
-		map.at(key) :
-		map.emplace(key, map.size()).first->second;
+	auto result = 0zu;
+	for (auto const c: hex) {
+		if (c >= '0' && c <= '9')
+			result = result * 16 + (c - '0');
+		else if (c >= 'A' && c <= 'F')
+			result = result * 16 + (c - 'A' + 10);
+	}
+	return result;
 }
 
 inline void Builder::parse_header(string_view line, usize line_num, Chart& chart, State& state)
@@ -279,10 +346,6 @@ inline void Builder::parse_header(string_view line, usize line_num, Chart& chart
 	// Extract components
 	auto header = string{substr_until(line, [](auto c) { return c == ' ' || c == '\t'; })};
 	to_upper(header);
-	if (!header_handlers.contains(header)) {
-		WARN("L{}: Unknown header: {}", line_num, header);
-		return;
-	}
 	auto const value = header.size() < line.size()? line.substr(header.size() + 1) : ""sv;
 
 	// Extract slot if applicable
@@ -298,16 +361,20 @@ inline void Builder::parse_header(string_view line, usize line_num, Chart& chart
 		slot.insert(slot.begin(), 2 - slot.size(), '0');
 
 	// Dispatch
+	if (!header_handlers.contains(header)) {
+		WARN("L{}: Unknown header: {}", line_num, header);
+		return;
+	}
 	(this->*header_handlers.at(header))({line_num, header, slot, value}, chart, state);
 }
 
 inline void Builder::parse_channel(string_view line, usize line_num, Chart& chart, State& state)
 {
-	if (line.size() < 4) return; // Not enough space for even the measure
-	auto const measure = lexical_cast<int32>(line.substr(1, 3)); // This won't throw (first character is a digit)
+	if (line.size() < 3) return; // Not enough space for even the measure
+	auto const measure = lexical_cast<int32>(line.substr(0, 3)); // This won't throw (first character is a digit)
 
 	auto const colon_pos = line.find_first_of(':');
-	auto channel = string{line.substr(4, colon_pos - 4)};
+	auto channel = string{line.substr(3, colon_pos - 3)};
 	to_upper(channel);
 	auto value = colon_pos < line.size()? string{line.substr(colon_pos + 1)} : ""s;
 	to_upper(value);
@@ -331,7 +398,7 @@ inline void Builder::parse_channel(string_view line, usize line_num, Chart& char
 	}
 
 	// Dispatch
-	auto channel_takes_float = [](string const& ch) { return ch == "02"; };
+	auto channel_takes_float = [](string_view ch) { return ch == "02"; };
 	if (channel_takes_float(channel)) { // Expected channel value is a single float
 		(this->*channel_handlers.at(channel))({line_num, measure, channel, value}, chart, state);
 	} else { // Expected channel value is a series of 2-character notes
@@ -479,7 +546,7 @@ catch (exception const&) {
 	WARN("L{}: Difficulty header has an invalid value: {}", cmd.line_num, cmd.value);
 }
 
-inline void Builder::handle_header_wav(HeaderCommand cmd, Chart& chart, State& state)
+inline void Builder::handle_header_wav(HeaderCommand cmd, Chart&, State& state)
 {
 	if (cmd.slot.empty()) {
 		WARN("L{}: WAV header has no slot", cmd.line_num);
@@ -498,25 +565,155 @@ inline void Builder::handle_header_wav(HeaderCommand cmd, Chart& chart, State& s
 			cmd.value = cmd.value.substr(0, cmd.value.size() - 1);
 	}
 
-	auto const slot_id = State::get_slot_id(state.wav, cmd.slot);
-	ir.add_header_event(IR::HeaderEvent::WAV{ .slot = slot_id, .name = move(cmd.value) });
+	auto& wav_slot = state.wav[cmd.slot];
+	if (wav_slot.idx == -1u) wav_slot.idx = state.wav.size() - 1;
+	wav_slot.filename = cmd.value;
 }
 
-inline void IRCompiler::parse_header_bpmxx(IR& ir, HeaderCommand&& cmd, SlotMappings& maps)
+inline void Builder::handle_header_bpmxx(HeaderCommand cmd, Chart&, State& state)
 {
 	if (cmd.slot.empty()) {
-		WARN_AS(cat, "L{}: BPMxx header has no slot", cmd.line);
+		WARN("L{}: BPMxx header has no slot", cmd.line_num);
 		return;
 	}
 	if (cmd.value.empty()) {
-		WARN_AS(cat, "L{}: BPMxx header has no value", cmd.line);
+		WARN("L{}: BPMxx header has no value", cmd.line_num);
 		return;
 	}
 
-	auto const slot_id = maps.get_slot_id(maps.bpm, cmd.slot);
-	auto const bpm = lexical_cast<float>(cmd.value);
-	TRACE_AS(cat, "L{}: BPMxx: {} -> #{}, {}", cmd.line, cmd.slot, slot_id, cmd.value);
-	ir.add_header_event(IR::HeaderEvent::BPMxx{ .slot = slot_id, .bpm = bpm });
+	auto& bpm_slot = state.bpm[cmd.slot];
+	if (bpm_slot.idx == -1u) bpm_slot.idx = state.bpm.size() - 1;
+	bpm_slot.bpm = lexical_cast<float>(cmd.value);
+}
+
+inline void Builder::handle_channel_bgm(ChannelCommand cmd, Chart&, State& state)
+{
+	if (cmd.value == "00") return; // Rest note
+	auto const slot_iter = state.wav.find(cmd.value);
+	if (slot_iter == state.wav.end()) return; // A BGM note that uses a nonexistent slot does nothing
+	auto& slot = slot_iter->second;
+	slot.used = true;
+
+	state.measure_rel_notes.emplace_back(State::MeasureRelNote{
+		.type = State::Simple{},
+		.lane = Lane::Type::BGM,
+		.position = cmd.position,
+		.wav_slot_idx = slot.idx,
+	});
+	state.measure_lengths.resize(max(state.measure_lengths.size(), static_cast<usize>(trunc(cmd.position))), 1.0);
+}
+
+inline void Builder::handle_channel_note(ChannelCommand cmd, Chart&, State& state)
+{
+	if (cmd.value == "00") return; // Rest note
+	auto const lane = [&]() {
+		if (cmd.channel == "11") return Lane::Type::P1_Key1;
+		if (cmd.channel == "12") return Lane::Type::P1_Key2;
+		if (cmd.channel == "13") return Lane::Type::P1_Key3;
+		if (cmd.channel == "14") return Lane::Type::P1_Key4;
+		if (cmd.channel == "15") return Lane::Type::P1_Key5;
+		if (cmd.channel == "18") return Lane::Type::P1_Key6;
+		if (cmd.channel == "19") return Lane::Type::P1_Key7;
+		if (cmd.channel == "16") return Lane::Type::P1_KeyS;
+		if (cmd.channel == "21") return Lane::Type::P2_Key1;
+		if (cmd.channel == "22") return Lane::Type::P2_Key2;
+		if (cmd.channel == "23") return Lane::Type::P2_Key3;
+		if (cmd.channel == "24") return Lane::Type::P2_Key4;
+		if (cmd.channel == "25") return Lane::Type::P2_Key5;
+		if (cmd.channel == "28") return Lane::Type::P2_Key6;
+		if (cmd.channel == "29") return Lane::Type::P2_Key7;
+		if (cmd.channel == "26") return Lane::Type::P2_KeyS;
+		throw runtime_error_fmt("L{}: Unknown note channel: {}", cmd.line_num, cmd.channel);
+	}();
+	auto const slot_iter = state.wav.find(cmd.value);
+	auto slot_idx = -1u;
+	if (slot_iter != state.wav.end()) { // Slot doesn't exist; quiet note
+		auto& slot = slot_iter->second;
+		slot_idx = slot.idx;
+		slot.used = true;
+	}
+	state.measure_rel_notes.emplace_back(State::MeasureRelNote{
+		.type = State::Simple{},
+		.lane = lane,
+		.position = cmd.position,
+		.wav_slot_idx = slot_idx,
+	});
+	state.measure_lengths.resize(max(state.measure_lengths.size(), static_cast<usize>(trunc(cmd.position))), 1.0);
+}
+
+inline void Builder::handle_channel_ln(ChannelCommand cmd, Chart&, State& state)
+{
+	if (cmd.value == "00") return; // Rest note
+	auto const lane = [&]() {
+		if (cmd.channel == "51") return Lane::Type::P1_Key1;
+		if (cmd.channel == "52") return Lane::Type::P1_Key2;
+		if (cmd.channel == "53") return Lane::Type::P1_Key3;
+		if (cmd.channel == "54") return Lane::Type::P1_Key4;
+		if (cmd.channel == "55") return Lane::Type::P1_Key5;
+		if (cmd.channel == "58") return Lane::Type::P1_Key6;
+		if (cmd.channel == "59") return Lane::Type::P1_Key7;
+		if (cmd.channel == "56") return Lane::Type::P1_KeyS;
+		if (cmd.channel == "61") return Lane::Type::P2_Key1;
+		if (cmd.channel == "62") return Lane::Type::P2_Key2;
+		if (cmd.channel == "63") return Lane::Type::P2_Key3;
+		if (cmd.channel == "64") return Lane::Type::P2_Key4;
+		if (cmd.channel == "65") return Lane::Type::P2_Key5;
+		if (cmd.channel == "68") return Lane::Type::P2_Key6;
+		if (cmd.channel == "69") return Lane::Type::P2_Key7;
+		if (cmd.channel == "66") return Lane::Type::P2_KeyS;
+		throw runtime_error_fmt("L{}: Unknown LN note channel: {}", cmd.line_num, cmd.channel);
+	}();
+	auto const slot_iter = state.wav.find(cmd.value);
+	auto slot_idx = -1u;
+	if (slot_iter != state.wav.end()) { // Slot doesn't exist; quiet note
+		auto& slot = slot_iter->second;
+		slot_idx = slot.idx;
+		slot.used = true;
+	}
+	state.measure_rel_notes.emplace_back(State::MeasureRelNote{
+		.type = State::LNToggle{},
+		.lane = lane,
+		.position = cmd.position,
+		.wav_slot_idx = slot_idx,
+	});
+	state.measure_lengths.resize(max(state.measure_lengths.size(), static_cast<usize>(trunc(cmd.position))), 1.0);
+}
+
+inline void Builder::handle_channel_measure_length(ChannelCommand cmd, Chart&, State& state)
+{
+	state.measure_lengths.resize(max(state.measure_lengths.size(), static_cast<usize>(trunc(cmd.position))), 1.0);
+	state.measure_lengths[trunc(cmd.position)] = lexical_cast<double>(cmd.value);
+}
+
+inline void Builder::handle_channel_bpm(ChannelCommand cmd, Chart&, State& state)
+{
+	if (cmd.value == "00") return; // Rhythm padding
+	auto const bpm = slot_hex_to_int(cmd.value);
+	state.bpms.emplace_back(State::MeasureRelBPM{
+		.position = cmd.position,
+		.bpm = static_cast<float>(bpm),
+		.scroll_speed = 1.0f,
+	});
+}
+
+inline void Builder::handle_channel_bpmxx(ChannelCommand cmd, Chart&, State& state)
+{
+	if (cmd.value == "00") return; // Rhythm padding
+	auto const slot_iter = state.bpm.find(cmd.value);
+	if (slot_iter == state.bpm.end()) {
+		WARN("L{}: Unknown BPM slot", cmd.line_num);
+		return;
+	}
+	auto const bpm = slot_iter->second.bpm;
+	if (bpm < 0.0f) {
+		WARN("L{}: Invalid BPM value of {}", cmd.line_num, bpm);
+		return;
+	}
+	state.bpms.emplace_back(State::MeasureRelBPM{
+		.position = cmd.position,
+		.bpm = bpm,
+		.scroll_speed = 1.0f,
+	});
 }
 
 }
