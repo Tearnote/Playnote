@@ -339,7 +339,7 @@ inline auto Builder::build(span<byte const> bms_raw, io::Song& song, optional<re
 	// - state.measure_rel_bpms, missing initial bpm and unsorted
 	// - state.measure_rel_notes, unsorted and LNs unpaired
 
-	// The chart generation process uses two kinds of relative values.
+	// The chart generation process uses several ways of anchoring event positions.
 	// Measure-relative:
 	//   Event positions are an improper fraction, where the whole part is the measure number,
 	//   and the fractional part is position within the measure. This is the initial state
@@ -348,6 +348,11 @@ inline auto Builder::build(span<byte const> bms_raw, io::Song& song, optional<re
 	//   Once measures are eliminated, event positions are a double, where 1.0 is the duration
 	//   of a beat. (A measure is 4 beats, unless modified by a measure length command.)
 	//   The actual timestamps will still depend on the BPMs throughout the chart.
+	// Absolute:
+	//   Position is now a timestamp since chart begin. It's also accompanied by a y-position,
+	//   which is used for rendering only and takes into account scroll speed changes.
+	//   Imagining a chart as a tall ribbon, y-position is a physical distance from the bottom
+	//   of the chart, relative to 1.0 being the on-screen height of one initial-BPM beat.
 
 	// Load used audio samples
 	//TODO multi-thread this again
@@ -358,6 +363,8 @@ inline auto Builder::build(span<byte const> bms_raw, io::Song& song, optional<re
 		slot = song.load_audio_file(parsed_slot.filename);
 	}
 
+	// chart.media is now complete
+
 	// Extract useful parse results
 	auto& measure_lengths = parse_state.measure_lengths;
 	auto& measure_rel_bpms = parse_state.measure_rel_bpms;
@@ -365,10 +372,11 @@ inline auto Builder::build(span<byte const> bms_raw, io::Song& song, optional<re
 
 	// Prepare measure_rel_bpms for use
 	if (chart->metadata.bpm_range.initial == 0.0f) chart->metadata.bpm_range.initial = 130.0f; // BMS spec default
-	// Add initial BPM as the first BPM section
-	measure_rel_bpms.emplace_back(NotePosition{0}, chart->metadata.bpm_range.initial, 1.0f);
+	// Add initial BPM as the first BPM section. The entire vector needs to be shifted,
+	// but we need to preserve ordering, and there shouldn't be too many of these.
+	measure_rel_bpms.insert(measure_rel_bpms.begin(), {NotePosition{0}, chart->metadata.bpm_range.initial, 1.0f});
 	// stable_sort is our best friend in chart generation, since by the spec overwriting values is allowed
-	// and the bottom-most one always wins
+	// and the bottom-most one always wins.
 	stable_sort(measure_rel_bpms, [](auto const& a, auto const& b) { return a.position < b.position; });
 
 	// The next stage is to eliminate the abstraction of measures from the data we have so far,
@@ -423,7 +431,7 @@ inline auto Builder::build(span<byte const> bms_raw, io::Song& song, optional<re
 		};
 	});
 
-	// Convert measure-relative BPM changes to beat-relative.
+	// Convert measure-relative BPM changes to beat-relative
 	struct BeatRelBPM {
 		double position;
 		float bpm;
@@ -444,6 +452,155 @@ inline auto Builder::build(span<byte const> bms_raw, io::Song& song, optional<re
 		return result;
 	}();
 
+	// The chart data is all beat-relative now, and we can begin to convert it into the absolute form.
+
+	// Generate the chart's final, absolute BPM sections
+	chart->timeline.bpm_sections = [&] {
+		auto result = vector<BPMChange>{};
+		result.reserve(beat_rel_bpms.size());
+
+		// To establish the timestamp of a BPM change, we need to know the BPM of the previous one,
+		// and the number of beats since then. So, the first one needs to be handled manually.
+		result.emplace_back(BPMChange{
+			.position = 0ns,
+			.bpm = beat_rel_bpms[0].bpm, // [0] must exist since we added initial BPM as a section earlier
+			.y_pos = 0.0,
+			.scroll_speed = 1.0f,
+		});
+
+		auto cursor = 0ns;
+		auto y_cursor = 0.0;
+		transform(beat_rel_bpms | views::pairwise, back_inserter(result), [&](auto const& bpm_pair) {
+			auto [prev_bpm, bpm] = bpm_pair;
+			auto const beats_elapsed = bpm.position - prev_bpm.position;
+			auto const time_elapsed = duration_cast<nanoseconds>(beats_elapsed * duration<double>{60.0 / prev_bpm.bpm});
+			cursor += time_elapsed;
+			y_cursor += beats_elapsed * prev_bpm.scroll_speed;
+			auto const bpm_change = BPMChange{
+				.position = cursor,
+				.bpm = bpm.bpm,
+				.y_pos = y_cursor,
+				.scroll_speed = bpm.scroll_speed,
+			};
+			return bpm_change;
+		});
+		return result;
+	}();
+
+	// Convert notes from beat-relative to absolute
+	struct AbsPosition {
+		nanoseconds timestamp;
+		double y_pos;
+	};
+	using AbsNote = RelativeNote<AbsPosition>;
+	auto const abs_notes = [&] {
+		auto result = vector<AbsNote>{};
+		result.reserve(beat_rel_notes.size());
+		transform(beat_rel_notes, back_inserter(result), [&](auto const& note) {
+			// Find the BPM section that the note is part of
+			auto bpm_section = find_last_if(views::zip(beat_rel_bpms, chart->timeline.bpm_sections), [&](auto const& view) {
+				return note.position >= get<0>(view).position;
+			});
+			ASSERT(!bpm_section.empty());
+			auto [beat_rel_bpm, bpm] = *bpm_section.begin();
+
+			auto const beats_since_bpm = note.position - beat_rel_bpm.position;
+			auto const time_since_bpm = beats_since_bpm * duration<double>{60.0 / bpm.bpm};
+			auto const timestamp = bpm.position + duration_cast<nanoseconds>(time_since_bpm);
+			auto const y_pos = bpm.y_pos + beats_since_bpm * bpm.scroll_speed;
+			return AbsNote{
+				.type = note.type,
+				.lane = note.lane,
+				.position = AbsPosition{
+					.timestamp = timestamp,
+					.y_pos = y_pos,
+				},
+				.wav_slot_idx = note.wav_slot_idx,
+			};
+		});
+		return result;
+	}();
+
+	// Split up the unsorted absolute note stream into sorted lanes
+	struct LaneState {
+		vector<AbsNote> notes;
+		vector<AbsNote> ln_ends;
+	};
+	auto lane_accumulators = array<LaneState, enum_count<Lane::Type>()>{};
+	for (auto const& note: abs_notes) {
+		auto& accumulator = lane_accumulators[+note.lane];
+		if (note.type_is<Simple>())
+			accumulator.notes.emplace_back(note);
+		else if (note.type_is<LNToggle>())
+			accumulator.ln_ends.emplace_back(note);
+	}
+	for (auto [idx, lane, accumulator]: views::zip(views::iota(0u), chart->timeline.lanes, lane_accumulators)) {
+		auto const type = Lane::Type{idx};
+
+		// Add simple notes
+		transform(accumulator.notes, back_inserter(lane.notes), [&](auto const& note) {
+			return Note{
+				.type = Note::Simple{},
+				.timestamp = note.position.timestamp,
+				.y_pos = note.position.y_pos,
+				.wav_slot = note.wav_slot_idx,
+			};
+		});
+
+		// Pair up LN ends and add
+		stable_sort(accumulator.ln_ends, [](auto const& a, auto const& b) { return a.position.timestamp < b.position.timestamp; });
+		if (accumulator.ln_ends.size() % 2 != 0) {
+			WARN("Unpaired LN ends found; dropping. Chart is most likely invalid or parsed incorrectly");
+			accumulator.ln_ends.pop_back();
+		}
+		transform(accumulator.ln_ends | views::chunk(2), back_inserter(lane.notes), [&](auto ends) {
+			auto const ln_length = ends[1].position.timestamp - ends[0].position.timestamp;
+			auto const ln_height = ends[1].position.y_pos - ends[0].position.y_pos;
+			return Note{
+				.type = Note::LN{
+					.length = ln_length,
+					.height = static_cast<float>(ln_height),
+				},
+				.timestamp = ends[0].position.timestamp,
+				.y_pos = ends[0].position.y_pos,
+				.wav_slot = ends[0].wav_slot_idx,
+			};
+		});
+
+		if (type != Lane::Type::BGM) {
+			// Sort with deduplication
+
+			// std::unique keeps the first of the two duplicate elements while we want to keep the second,
+			// so we just reverse the range first
+			stable_sort(lane.notes, [](auto const& a, auto const& b) {
+				return a.timestamp > b.timestamp; // Reverse sort
+			});
+			auto removed = unique(lane.notes, [](auto const& a, auto const& b) {
+				return a.timestamp == b.timestamp;
+			});
+			auto removed_count = removed.size();
+			lane.notes.erase(removed.begin(), removed.end());
+			if (removed_count) INFO("Removed {} duplicate notes", removed_count);
+			reverse(lane.notes); // Reverse back
+		} else {
+			// Sort only
+			stable_sort(lane.notes, [](auto const& a, auto const& b) {
+				return a.timestamp < b.timestamp;
+			});
+		}
+	}
+
+	// chart.timeline is now complete
+
+	// Some basic entries from chart.metadata were obtained from BMS headers, but certain statistics
+	// have to be calculated by analyzing the chart timeline, while some others require rendering out
+	// the entire song audio. Even some very fundamental values, like note count, are not part of
+	// the BMS file. If a cache of these values was provided, we're good to go; otherwise, they
+	// will be calculated now.
+
+	if (cache) return chart; // We applied the cache already at the start
+
+	//TODO
 	return chart;
 }
 
