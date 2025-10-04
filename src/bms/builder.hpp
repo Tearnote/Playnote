@@ -21,13 +21,17 @@ public:
 	auto build(span<byte const> bms, io::Song&, optional<reference_wrapper<Metadata>> cache = nullopt) -> shared_ptr<Chart const>;
 
 private:
+	// Text encodings expected to be found in BMS files.
 	static constexpr auto KnownEncodings = {"UTF-8"sv, "Shift_JIS"sv, "EUC-KR"sv};
+
+	// BMS header commands which can be followed up with a slot value as part of the header.
 	static constexpr auto CommandsWithSlots = {"WAV"sv, "BMP"sv, "BGA"sv, "BPM"sv, "TEXT"sv, "SONG"sv, "@BGA"sv,
 		"STOP"sv, "ARGB"sv, "SEEK"sv, "EXBPM"sv, "EXWAV"sv, "SWBGA"sv, "EXRANK"sv, "CHANGEOPTION"sv};
 
 	// Whole part - measure, fractional part - position within measure.
 	using NotePosition = rational<int32>;
 
+	// Parsed BMS header-type command.
 	struct HeaderCommand {
 		usize line_num;
 		string_view header;
@@ -35,6 +39,7 @@ private:
 		string_view value;
 	};
 
+	// Parsed BMS channel-type command.
 	struct ChannelCommand {
 		usize line_num;
 		NotePosition position;
@@ -42,43 +47,42 @@ private:
 		string_view value;
 	};
 
+	// This is out of RelativeNote so that it's not unique for each template argument.
+	struct Simple {};
+	struct LNToggle {};
+	using RelativeNoteType = variant<Simple, LNToggle>;
+
+	// A note of a chart with its timing information relative to unknowns such as measure length
+	// and BPM. LNs are represented as unpaired ends.
+	template<typename T>
+	struct RelativeNote {
+		using Type = RelativeNoteType;
+
+		Type type;
+		Lane::Type lane;
+		T position;
+		usize wav_slot_idx;
+
+		template<variant_alternative<Type> U>
+		[[nodiscard]] auto type_is() const -> bool { return holds_alternative<U>(type); }
+
+		template<variant_alternative<Type> U>
+		[[nodiscard]] auto params() -> T& { return get<U>(type); }
+		template<variant_alternative<Type> U>
+		[[nodiscard]] auto params() const -> T const& { return get<U>(type); }
+	};
+
+	using MeasureRelNote = RelativeNote<NotePosition>;
+
+	// A BPM change event, measure-relative.
+	struct MeasureRelBPM {
+		NotePosition position;
+		float bpm;
+		float scroll_speed;
+	};
+
 	// Temporary structures for building the chart.
 	struct State {
-
-		// This is out of RelativeNote so that it's not unique for each template argument.
-		struct Simple {};
-		struct LNToggle {};
-		using RelativeNoteType = variant<Simple, LNToggle>;
-
-		// A note of a chart with its timing information relative to unknowns such as measure length
-		// and BPM. LNs are represented as unpaired ends.
-		template<typename T>
-		struct RelativeNote {
-			using Type = RelativeNoteType;
-
-			Type type;
-			Lane::Type lane;
-			T position;
-			usize wav_slot_idx;
-
-			template<variant_alternative<Type> U>
-			[[nodiscard]] auto type_is() const -> bool { return holds_alternative<U>(type); }
-
-			template<variant_alternative<Type> U>
-			[[nodiscard]] auto params() -> T& { return get<U>(type); }
-			template<variant_alternative<Type> U>
-			[[nodiscard]] auto params() const -> T const& { return get<U>(type); }
-		};
-
-		using MeasureRelNote = RelativeNote<NotePosition>;
-
-		// A BPM change event, measure-relative.
-		struct MeasureRelBPM {
-			NotePosition position;
-			float bpm;
-			float scroll_speed;
-		};
-
 		// Maps for flattening the slot values into increasing indices.
 		template<typename T>
 		using Mapping = unordered_map<string, T, string_hash>;
@@ -97,7 +101,7 @@ private:
 		Mapping<BPMSlot> bpm;
 
 		vector<double> measure_lengths;
-		vector<MeasureRelBPM> bpms;
+		vector<MeasureRelBPM> measure_rel_bpms;
 		vector<MeasureRelNote> measure_rel_notes;
 	};
 
@@ -299,8 +303,8 @@ inline auto Builder::build(span<byte const> bms_raw, io::Song& song, optional<re
 	chart->md5 = lib::openssl::md5(bms_raw);
 	if (cache) chart->metadata = *cache;
 	chart->metadata.density.resolution = 1ms; //TODO remove this workaround once finished
-	auto state = State{};
-	state.measure_lengths.reserve(256); // Arbitrary
+	auto parse_state = State{};
+	parse_state.measure_lengths.reserve(256); // Arbitrary
 
 	// Convert chart to UTF-8
 	auto encoding = lib::icu::detect_encoding(bms_raw, KnownEncodings);
@@ -322,9 +326,9 @@ inline auto Builder::build(span<byte const> bms_raw, io::Song& song, optional<re
 		line = line.substr(1); // Remove the "#"
 		if (line.empty()) continue;
 		if (line[1] >= '0' && line[1] <= '9')
-			parse_channel(line, line_num, *chart, state);
+			parse_channel(line, line_num, *chart, parse_state);
 		else
-			parse_header(line, line_num, *chart, state);
+			parse_header(line, line_num, *chart, parse_state);
 	}
 
 	// At this point, we have:
@@ -332,16 +336,113 @@ inline auto Builder::build(span<byte const> bms_raw, io::Song& song, optional<re
 	//     (this purposefully overwrites any previously applied cache)
 	// - state slot mappings
 	// - state.measure_lengths
-	// - state.bpms, missing initial bpm and unsorted
+	// - state.measure_rel_bpms, missing initial bpm and unsorted
 	// - state.measure_rel_notes, unsorted and LNs unpaired
 
+	// The chart generation process uses two kinds of relative values.
+	// Measure-relative:
+	//   Event positions are an improper fraction, where the whole part is the measure number,
+	//   and the fractional part is position within the measure. This is the initial state
+	//   of event positions as stored in the BMS file.
+	// Beat-relative:
+	//   Once measures are eliminated, event positions are a double, where 1.0 is the duration
+	//   of a beat. (A measure is 4 beats, unless modified by a measure length command.)
+	//   The actual timestamps will still depend on the BPMs throughout the chart.
+
 	// Load used audio samples
-	chart->media.wav_slots.resize(state.wav.size());
-	for (auto const& parsed_slot: state.wav | views::values) {
+	//TODO multi-thread this again
+	chart->media.wav_slots.resize(parse_state.wav.size());
+	for (auto const& parsed_slot: parse_state.wav | views::values) {
 		if (!parsed_slot.used) continue;
 		auto& slot = chart->media.wav_slots[parsed_slot.idx];
 		slot = song.load_audio_file(parsed_slot.filename);
 	}
+
+	// Extract useful parse results
+	auto& measure_lengths = parse_state.measure_lengths;
+	auto& measure_rel_bpms = parse_state.measure_rel_bpms;
+	auto& measure_rel_notes = parse_state.measure_rel_notes;
+
+	// Prepare measure_rel_bpms for use
+	if (chart->metadata.bpm_range.initial == 0.0f) chart->metadata.bpm_range.initial = 130.0f; // BMS spec default
+	// Add initial BPM as the first BPM section
+	measure_rel_bpms.emplace_back(NotePosition{0}, chart->metadata.bpm_range.initial, 1.0f);
+	// stable_sort is our best friend in chart generation, since by the spec overwriting values is allowed
+	// and the bottom-most one always wins
+	stable_sort(measure_rel_bpms, [](auto const& a, auto const& b) { return a.position < b.position; });
+
+	// The next stage is to eliminate the abstraction of measures from the data we have so far,
+	// transforming them to be based on beats instead.
+
+	// Generate beat-relative measures
+	struct BeatRelMeasure {
+		double start;
+		double length;
+	};
+	auto const beat_rel_measures = [&] {
+		auto result = vector<BeatRelMeasure>{};
+		result.reserve(measure_lengths.size());
+
+		auto cursor = 0.0;
+		transform(measure_lengths, back_inserter(result), [&](auto length) {
+			auto const measure = BeatRelMeasure{
+				.start = cursor,
+				.length = length * 4.0,
+			};
+			cursor += measure.length;
+			return measure;
+		});
+		return result;
+	}();
+
+	// Convert measure-relative notes to beat-relative
+	using BeatRelNote = RelativeNote<double>;
+	auto beat_rel_notes = [&] {
+		auto result = vector<BeatRelNote>{};
+		result.reserve(measure_rel_notes.size());
+		transform(measure_rel_notes, back_inserter(result), [&](auto const& note) {
+			auto const& measure = beat_rel_measures[trunc(note.position)];
+			auto const position = measure.start + measure.length * rational_cast<double>(fract(note.position));
+			return BeatRelNote{
+				.type = note.type,
+				.lane = note.lane,
+				.position = position,
+				.wav_slot_idx = note.wav_slot_idx,
+			};
+		});
+		return result;
+	}();
+
+	// From now on we won't know where measures start, but measure lines still need to be displayed.
+	// To handle that, we generate fake notes into a new lane that's silent and unplayable.
+	transform(beat_rel_measures, back_inserter(beat_rel_notes), [](auto const& measure) {
+		return BeatRelNote{
+			.type = Simple{},
+			.lane = Lane::Type::MeasureLine,
+			.position = measure.start,
+		};
+	});
+
+	// Convert measure-relative BPM changes to beat-relative.
+	struct BeatRelBPM {
+		double position;
+		float bpm;
+		float scroll_speed;
+	};
+	auto const beat_rel_bpms = [&] {
+		auto result = vector<BeatRelBPM>{};
+		result.reserve(measure_rel_bpms.size());
+		transform(measure_rel_bpms, back_inserter(result), [&](auto const& bpm) {
+			auto const& measure = beat_rel_measures[trunc(bpm.position)];
+			auto const position = measure.start + measure.length * rational_cast<double>(fract(bpm.position));
+			return BeatRelBPM{
+				.position = position,
+				.bpm = bpm.bpm,
+				.scroll_speed = bpm.scroll_speed,
+			};
+		});
+		return result;
+	}();
 
 	return chart;
 }
@@ -611,8 +712,8 @@ inline void Builder::handle_channel_bgm(ChannelCommand cmd, Chart&, State& state
 	auto& slot = slot_iter->second;
 	slot.used = true;
 
-	state.measure_rel_notes.emplace_back(State::MeasureRelNote{
-		.type = State::Simple{},
+	state.measure_rel_notes.emplace_back(MeasureRelNote{
+		.type = Simple{},
 		.lane = Lane::Type::BGM,
 		.position = cmd.position,
 		.wav_slot_idx = slot.idx,
@@ -649,8 +750,8 @@ inline void Builder::handle_channel_note(ChannelCommand cmd, Chart&, State& stat
 		slot_idx = slot.idx;
 		slot.used = true;
 	}
-	state.measure_rel_notes.emplace_back(State::MeasureRelNote{
-		.type = State::Simple{},
+	state.measure_rel_notes.emplace_back(MeasureRelNote{
+		.type = Simple{},
 		.lane = lane,
 		.position = cmd.position,
 		.wav_slot_idx = slot_idx,
@@ -687,8 +788,8 @@ inline void Builder::handle_channel_ln(ChannelCommand cmd, Chart&, State& state)
 		slot_idx = slot.idx;
 		slot.used = true;
 	}
-	state.measure_rel_notes.emplace_back(State::MeasureRelNote{
-		.type = State::LNToggle{},
+	state.measure_rel_notes.emplace_back(MeasureRelNote{
+		.type = LNToggle{},
 		.lane = lane,
 		.position = cmd.position,
 		.wav_slot_idx = slot_idx,
@@ -706,7 +807,7 @@ inline void Builder::handle_channel_bpm(ChannelCommand cmd, Chart&, State& state
 {
 	if (cmd.value == "00") return; // Rhythm padding
 	auto const bpm = slot_hex_to_int(cmd.value);
-	state.bpms.emplace_back(State::MeasureRelBPM{
+	state.measure_rel_bpms.emplace_back(MeasureRelBPM{
 		.position = cmd.position,
 		.bpm = static_cast<float>(bpm),
 		.scroll_speed = 1.0f,
@@ -726,7 +827,7 @@ inline void Builder::handle_channel_bpmxx(ChannelCommand cmd, Chart&, State& sta
 		WARN("L{}: Invalid BPM value of {}", cmd.line_num, bpm);
 		return;
 	}
-	state.bpms.emplace_back(State::MeasureRelBPM{
+	state.measure_rel_bpms.emplace_back(MeasureRelBPM{
 		.position = cmd.position,
 		.bpm = bpm,
 		.scroll_speed = 1.0f,
