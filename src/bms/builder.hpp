@@ -300,6 +300,7 @@ inline auto Builder::build(span<byte const> bms_raw, io::Song& song, optional<re
 	if (cache) chart->metadata = *cache;
 	chart->metadata.density.resolution = 1ms; //TODO remove this workaround once finished
 	auto state = State{};
+	state.measure_lengths.reserve(256); // Arbitrary
 
 	// Convert chart to UTF-8
 	auto encoding = lib::icu::detect_encoding(bms_raw, KnownEncodings);
@@ -324,6 +325,22 @@ inline auto Builder::build(span<byte const> bms_raw, io::Song& song, optional<re
 			parse_channel(line, line_num, *chart, state);
 		else
 			parse_header(line, line_num, *chart, state);
+	}
+
+	// At this point, we have:
+	// - chart.metadata fields that correspond directly to header commands
+	//     (this purposefully overwrites any previously applied cache)
+	// - state slot mappings
+	// - state.measure_lengths
+	// - state.bpms, missing initial bpm and unsorted
+	// - state.measure_rel_notes, unsorted and LNs unpaired
+
+	// Load used audio samples
+	chart->media.wav_slots.resize(state.wav.size());
+	for (auto const& parsed_slot: state.wav | views::values) {
+		if (!parsed_slot.used) continue;
+		auto& slot = chart->media.wav_slots[parsed_slot.idx];
+		slot = song.load_audio_file(parsed_slot.filename);
 	}
 
 	return chart;

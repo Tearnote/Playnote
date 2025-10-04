@@ -10,10 +10,14 @@ An abstraction for an imported BMS song. Wraps a zip archive with accelerated fi
 #include "preamble.hpp"
 #include "lib/archive.hpp"
 #include "lib/sqlite.hpp"
+#include "lib/ffmpeg.hpp"
+#include "dev/audio.hpp"
 #include "io/file.hpp"
 
 namespace playnote::io {
 
+// A song archive optimized for file lookup and zero-copy access.
+// Once opened the contents are immutable, so all file loading methods are thread-safe.
 class Song {
 public:
 	// Return true if the provided extension matches a known BMS extension.
@@ -37,6 +41,9 @@ public:
 	template<callable<void(span<byte const>)> Func>
 	void for_each_chart(Func&&);
 
+	// Load the requested audio file, decode it, and resample to current device sample rate.
+	auto load_audio_file(string_view filepath) -> vector<dev::Sample>;
+
 	// Destroy the song and delete the underlying zip file on disk.
 	void remove() && noexcept;
 
@@ -53,7 +60,7 @@ private:
 	// language=SQLite
 	static constexpr auto ContentsSchema = to_array({R"(
 		CREATE TABLE contents(
-			path TEXT NOT NULL,
+			path TEXT NOT NULL COLLATE nocase,
 			type INTEGER NOT NULL,
 			ptr BLOB NOT NULL,
 			size INTEGER NOT NULL
@@ -69,10 +76,15 @@ private:
 	static constexpr auto SelectChartsQuery = R"(
 		SELECT ptr, size FROM contents WHERE type = 1
 	)"sv;
+	// language=SQLite
+	static constexpr auto SelectAudioFileQuery = R"(
+		SELECT ptr, size FROM contents WHERE type = 2 AND path = ?1
+	)"sv;
 
 	ReadFile file;
 	lib::sqlite::DB db;
 	lib::sqlite::Statement select_charts;
+	lib::sqlite::Statement select_audio_file;
 
 	Song(ReadFile&&, lib::sqlite::DB&&); // Use factory methods
 	[[nodiscard]] static auto find_prefix(span<byte const> const&) -> fs::path;
@@ -130,7 +142,7 @@ inline auto Song::from_zip(fs::path const& path) -> Song
 	auto archive = lib::archive::open_read(file.contents);
 	auto db = lib::sqlite::open(":memory:");
 	lib::sqlite::execute(db, ContentsSchema);
-	auto contents_insert = lib::sqlite::prepare(db, InsertContentsQuery);
+	auto insert_contents = lib::sqlite::prepare(db, InsertContentsQuery);
 
 	lib::archive::for_each_entry(archive, [&](auto entry_path_str) {
 		auto entry_path = fs::path{entry_path_str};
@@ -138,7 +150,7 @@ inline auto Song::from_zip(fs::path const& path) -> Song
 		auto const data = *lib::archive::read_data_block(archive);
 		auto const type = type_from_ext(ext);
 		if (type != FileType::Unknown) entry_path.replace_extension();
-		lib::sqlite::execute(contents_insert, entry_path.string(), +type, static_cast<void const*>(data.data()), data.size());
+		lib::sqlite::execute(insert_contents, entry_path.string(), +type, static_cast<void const*>(data.data()), data.size());
 		return true;
 	});
 
@@ -146,9 +158,20 @@ inline auto Song::from_zip(fs::path const& path) -> Song
 	return song;
 }
 
+inline auto Song::load_audio_file(string_view filepath) -> vector<dev::Sample>
+{
+	auto file = span<byte const>{};
+	lib::sqlite::query(select_audio_file, [&](void const* ptr, isize size) {
+		file = span{static_cast<byte const*>(ptr), static_cast<usize>(size)};
+		return false;
+	}, filepath);
+	if (!file.data())
+		throw runtime_error_fmt("Audio file \"{}\" doesn't exist within the song archive", filepath);
+	return lib::ffmpeg::decode_and_resample_file_buffer(file, dev::Audio::get_sampling_rate());
+}
+
 inline void Song::remove() && noexcept
 {
-	WARN("No charts found, deleting song");
 	fs::remove(file.path);
 }
 
@@ -157,6 +180,7 @@ inline Song::Song(ReadFile&& file, lib::sqlite::DB&& db):
 	db{move(db)}
 {
 	select_charts = lib::sqlite::prepare(this->db, SelectChartsQuery);
+	select_audio_file = lib::sqlite::prepare(this->db, SelectAudioFileQuery);
 }
 
 inline auto Song::find_prefix(span<byte const> const& archive_data) -> fs::path

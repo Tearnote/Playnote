@@ -141,12 +141,12 @@ private:
 
 	lib::sqlite::DB db;
 	lib::sqlite::Statement song_exists;
-	lib::sqlite::Statement song_insert;
-	lib::sqlite::Statement song_insert_or_retrieve;
-	lib::sqlite::Statement song_delete;
+	lib::sqlite::Statement insert_song;
+	lib::sqlite::Statement insert_or_retrieve_song;
+	lib::sqlite::Statement delete_song;
 	lib::sqlite::Statement chart_exists;
-	lib::sqlite::Statement chart_insert;
-	lib::sqlite::Statement chart_density_insert;
+	lib::sqlite::Statement insert_chart;
+	lib::sqlite::Statement insert_chart_density;
 
 	Builder builder;
 
@@ -163,12 +163,12 @@ inline Library::Library(fs::path const& path):
 	lib::sqlite::execute(db, ChartsSchema);
 	lib::sqlite::execute(db, ChartDensitiesSchema);
 	song_exists = lib::sqlite::prepare(db, SongExistsQuery);
-	song_insert = lib::sqlite::prepare(db, InsertSongQuery);
-	song_insert_or_retrieve = lib::sqlite::prepare(db, InsertOrRetrieveSongQuery);
-	song_delete = lib::sqlite::prepare(db, DeleteSongQuery);
+	insert_song = lib::sqlite::prepare(db, InsertSongQuery);
+	insert_or_retrieve_song = lib::sqlite::prepare(db, InsertOrRetrieveSongQuery);
+	delete_song = lib::sqlite::prepare(db, DeleteSongQuery);
 	chart_exists = lib::sqlite::prepare(db, ChartExistsQuery);
-	chart_insert = lib::sqlite::prepare(db, InsertChartQuery);
-	chart_density_insert = lib::sqlite::prepare(db, InsertChartDensityQuery);
+	insert_chart = lib::sqlite::prepare(db, InsertChartQuery);
+	insert_chart_density = lib::sqlite::prepare(db, InsertChartDensityQuery);
 	fs::create_directory(LibraryPath);
 	INFO("Opened song library at \"{}\"", path);
 }
@@ -198,8 +198,8 @@ inline void Library::add_chart(fs::path const& domain, Chart const& chart)
 		if (exists) return;
 
 		auto song_id = 0;
-		lib::sqlite::query(song_insert_or_retrieve, [&](int id) { song_id = id; }, domain.string());
-		lib::sqlite::execute(chart_insert, chart.md5, song_id, chart.metadata.title,
+		lib::sqlite::query(insert_or_retrieve_song, [&](int id) { song_id = id; }, domain.string());
+		lib::sqlite::execute(insert_chart, chart.md5, song_id, chart.metadata.title,
 			chart.metadata.subtitle, chart.metadata.artist, chart.metadata.subartist,
 			chart.metadata.genre, chart.metadata.url, chart.metadata.email,
 			+chart.metadata.difficulty, +chart.metadata.playstyle, chart.metadata.features.has_ln,
@@ -214,7 +214,7 @@ inline void Library::add_chart(fs::path const& domain, Chart const& chart)
 			out(v).or_throw();
 			return data;
 		};
-		lib::sqlite::execute(chart_density_insert, chart.md5,
+		lib::sqlite::execute(insert_chart_density, chart.md5,
 			chart.metadata.density.resolution.count(),
 			serialize_density(chart.metadata.density.key),
 			serialize_density(chart.metadata.density.scratch),
@@ -244,7 +244,7 @@ inline void Library::import_one(fs::path const& path)
 		imported_count += import_chart(song, song_id, chart)? 1 : 0;
 	});
 	if (imported_count == 0) {
-		lib::sqlite::execute(song_delete, song_id);
+		lib::sqlite::execute(delete_song, song_id);
 		move(song).remove();
 	}
 }
@@ -264,7 +264,7 @@ inline auto Library::import_song(fs::path const& path) -> pair<usize, string> tr
 	else
 		io::Song::zip_from_directory(path, out_path);
 
-	auto const song_id = lib::sqlite::insert(song_insert, out_filename);
+	auto const song_id = lib::sqlite::insert(insert_song, out_filename);
 	return {song_id, out_path.string()};
 } catch (exception const&) {
 	fs::remove(path);
@@ -280,7 +280,7 @@ inline auto Library::import_chart(io::Song& song, usize song_id, span<byte const
 
 	auto chart = builder.build(chart_raw, song);
     lib::sqlite::transaction(db, [&] {
-        lib::sqlite::execute(chart_insert, chart->md5, song_id, chart->metadata.title,
+        lib::sqlite::execute(insert_chart, chart->md5, song_id, chart->metadata.title,
 			chart->metadata.subtitle, chart->metadata.artist, chart->metadata.subartist,
 			chart->metadata.genre, chart->metadata.url, chart->metadata.email,
 			+chart->metadata.difficulty, +chart->metadata.playstyle, chart->metadata.features.has_ln,
@@ -295,7 +295,7 @@ inline auto Library::import_chart(io::Song& song, usize song_id, span<byte const
 			out(v).or_throw();
 			return data;
 		};
-		lib::sqlite::execute(chart_density_insert, chart->md5,
+		lib::sqlite::execute(insert_chart_density, chart->md5,
 			chart->metadata.density.resolution.count(),
 			serialize_density(chart->metadata.density.key),
 			serialize_density(chart->metadata.density.scratch),
