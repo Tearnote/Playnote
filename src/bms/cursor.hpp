@@ -266,7 +266,7 @@ inline void Cursor::trigger_lane_input(Lane const& lane, Lane::Type type, LanePr
 	}
 
 	// Trigger associated sample
-	if (state && lane.audible && !chart->media.wav_slots[progress.active_slot].empty())
+	if (state && lane.audible && progress.active_slot != -1u && !chart->media.wav_slots[progress.active_slot].empty())
 		wav_slot_progress[progress.active_slot].playback_pos = 0;
 
 	progress.pressed = state;
