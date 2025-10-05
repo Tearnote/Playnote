@@ -645,7 +645,7 @@ void calculate_audio_metrics(Cursor&& cursor, Metadata& metadata, Func&& progres
 			processing = !cursor.advance_one_sample([&](auto new_sample) {
 				sample.left += new_sample.left;
 				sample.right += new_sample.right;
-			}, {}, false);
+			});
 			if (!processing) break;
 		}
 
@@ -800,40 +800,6 @@ void calculate_metrics(Chart& chart, Func&& progress)
 	chart.metadata.bpm_range = calculate_bpm_range(chart);
 }
 
-inline void calculate_bb(Chart& chart)
-{
-	chart.media.wav_bb.windows.resize(chart.metadata.audio_duration / Media::SlotBB::WindowSize + 1);
-
-	for (auto const& lane: chart.timeline.lanes) {
-		if (!lane.audible) continue;
-		for (auto [idx, note]: lane.notes | views::enumerate) {
-			if (chart.media.wav_slots[note.wav_slot].empty()) continue;
-			// Register note audio in the structure
-			auto const wav_len = dev::Audio::samples_to_ns(chart.media.wav_slots[note.wav_slot].size());
-			auto const next_note_start = idx >= lane.notes.size() - 1? chart.metadata.audio_duration :
-				lane.playable? lane.notes[idx + 1].timestamp : note.timestamp;
-			auto const start = note.timestamp;
-			auto const end = next_note_start + wav_len;
-			auto const first_window = clamp<usize>(start / Media::SlotBB::WindowSize, 0zu, chart.media.wav_bb.windows.size() - 1);
-			auto const last_window = clamp<usize>(end / Media::SlotBB::WindowSize + 1, 0zu, chart.media.wav_bb.windows.size() - 1);
-			for (auto& window: views::iota(first_window, last_window + 1) |
-				views::transform([&](auto i) -> auto& { return chart.media.wav_bb.windows[i]; })) {
-				if (contains(window, note.wav_slot)) continue;
-				if (window.size() == window.capacity()) {
-					WARN("Unable to add sample slot to bounding box; reached limit of {}", Media::SlotBB::MaxSlots);
-					continue;
-				}
-				window.push_back(note.wav_slot);
-			}
-		}
-	}
-
-	auto biggest_window = 0zu;
-	for (auto const& window: chart.media.wav_bb.windows) {
-		biggest_window = max(biggest_window, window.size());
-	}
-}
-
 // Generate a Chart from an IR. The provided function is called to report on progress events.
 template<callable<void(threads::ChartLoadProgress::Type)> Func>
 auto chart_from_ir(IR const& ir, io::SongLegacy& song, Func&& progress) -> shared_ptr<Chart const>
@@ -866,7 +832,6 @@ auto chart_from_ir(IR const& ir, io::SongLegacy& song, Func&& progress) -> share
 	load_files(*chart, song, file_references, progress);
 	// Metrics require a fully loaded chart
 	calculate_metrics(*chart, progress);
-	calculate_bb(*chart);
 
 	INFO("Built chart \"{}\"", chart->metadata.title);
 

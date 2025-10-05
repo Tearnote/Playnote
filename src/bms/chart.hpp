@@ -134,16 +134,7 @@ struct Timeline {
 // Media contents referenced by the chart.
 struct Media {
 	using WavSlot = vector<dev::Sample>;
-
-	// Bounding box acceleration structure for reachable WAV slots.
-	struct SlotBB {
-		static constexpr auto WindowSize = 250ms; // Length of each window
-		static constexpr auto MaxSlots = 256zu; // Maximum number of WAV slots in each window
-		vector<static_vector<usize, MaxSlots>> windows;
-	};
-
 	vector<WavSlot> wav_slots;
-	SlotBB wav_bb;
 };
 
 // A complete chart. Immutable; a chart is played by creating and advancing a Cursor from it.

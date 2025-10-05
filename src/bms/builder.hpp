@@ -665,7 +665,7 @@ inline auto Builder::build(span<byte const> bms_raw, io::Song& song, optional<re
 				processing = !cursor.advance_one_sample([&](auto new_sample) {
 					sample.left += new_sample.left;
 					sample.right += new_sample.right;
-				}, {}, false);
+				});
 				if (!processing) break;
 			}
 			lib::ebur128::add_frames(ctx, buffer);

@@ -111,8 +111,7 @@ public:
 	// sound playback. inputs contains any inputs that should be processed at the current cursor
 	// position. use_bb controls if the bounding box should be used to speed up the lookup.
 	template<callable<void(dev::Sample)> Func>
-	auto advance_one_sample(Func&& func = [](dev::Sample){}, span<LaneInput const> inputs = {},
-		bool use_bb = true) -> bool;
+	auto advance_one_sample(Func&& func = [](dev::Sample){}, span<LaneInput const> inputs = {}) -> bool;
 
 	// Progress by the given number of samples, without generating any audio.
 	void fast_forward(usize samples);
@@ -302,7 +301,7 @@ inline void Cursor::apply_judgment(Judgment judgment, Lane::Type lane)
 }
 
 template<callable<void(dev::Sample)> Func>
-auto Cursor::advance_one_sample(Func&& func, span<LaneInput const> inputs, bool use_bb) -> bool
+auto Cursor::advance_one_sample(Func&& func, span<LaneInput const> inputs) -> bool
 {
 	auto chart_ended = (notes_judged >= chart->metadata.note_count);
 	sample_progress += 1;
@@ -349,7 +348,7 @@ auto Cursor::advance_one_sample(Func&& func, span<LaneInput const> inputs, bool 
 		}
 	}
 
-	// Function to progress audio playback of a sample in a slot
+	// Advance sample playback
 	auto play_slot = [&](vector<dev::Sample> const& slot, WavSlotProgress& progress) {
 		if (progress.playback_pos == WavSlotProgress::Stopped) return;
 		auto const result = slot[progress.playback_pos];
@@ -359,20 +358,8 @@ auto Cursor::advance_one_sample(Func&& func, span<LaneInput const> inputs, bool 
 		func(result);
 		chart_ended = false;
 	};
-
-	// Advance sample playback
-	if (use_bb) {
-		auto window_id = clamp<usize>(progress_ns / Media::SlotBB::WindowSize, 0zu, chart->media.wav_bb.windows.size() - 1);
-		auto const& window = chart->media.wav_bb.windows[window_id];
-		for (auto slot_id: window) {
-			auto const& slot = chart->media.wav_slots[slot_id];
-			auto& progress = wav_slot_progress[slot_id];
-			play_slot(slot, progress);
-		}
-	} else {
-		for (auto [slot, progress]: views::zip(chart->media.wav_slots, wav_slot_progress)) {
-			play_slot(slot, progress);
-		}
+	for (auto [slot, progress]: views::zip(chart->media.wav_slots, wav_slot_progress)) {
+		play_slot(slot, progress);
 	}
 
 	return chart_ended;
