@@ -113,6 +113,7 @@ private:
 	unordered_map<string, ChannelHandlerFunc, string_hash> channel_handlers;
 
 	[[nodiscard]] static auto slot_hex_to_int(string_view hex) -> usize;
+	static void extend_measure_lengths(vector<double>&, usize max_measure);
 
 	void parse_header(string_view line, usize line_num, Chart&, State&);
 	void parse_channel(string_view line, usize line_num, Chart&, State&);
@@ -458,7 +459,7 @@ inline auto Builder::build(span<byte const> bms_raw, io::Song& song, optional<re
 	// Generate the chart's final, absolute BPM sections
 	chart->timeline.bpm_sections = [&] {
 		auto result = vector<BPMChange>{};
-		result.reserve(beat_rel_bpms.size());
+		result.reserve(beat_rel_bpms.size() + 1);
 
 		// To establish the timestamp of a BPM change, we need to know the BPM of the previous one,
 		// and the number of beats since then. So, the first one needs to be handled manually.
@@ -824,6 +825,13 @@ inline auto Builder::slot_hex_to_int(string_view hex) -> usize
 	return result;
 }
 
+inline void Builder::extend_measure_lengths(vector<double>& lengths, usize max_measure)
+{
+	auto const min_length = max_measure + 1;
+	if (lengths.size() >= min_length) return;
+	lengths.resize(min_length, 1.0);
+}
+
 inline void Builder::parse_header(string_view line, usize line_num, Chart& chart, State& state)
 {
 	// Extract components
@@ -1083,7 +1091,7 @@ inline void Builder::handle_channel_bgm(ChannelCommand cmd, Chart&, State& state
 		.position = cmd.position,
 		.wav_slot_idx = slot.idx,
 	});
-	state.measure_lengths.resize(max(state.measure_lengths.size(), static_cast<usize>(trunc(cmd.position))), 1.0);
+	extend_measure_lengths(state.measure_lengths, trunc(cmd.position));
 }
 
 inline void Builder::handle_channel_note(ChannelCommand cmd, Chart&, State& state)
@@ -1121,7 +1129,7 @@ inline void Builder::handle_channel_note(ChannelCommand cmd, Chart&, State& stat
 		.position = cmd.position,
 		.wav_slot_idx = slot_idx,
 	});
-	state.measure_lengths.resize(max(state.measure_lengths.size(), static_cast<usize>(trunc(cmd.position))), 1.0);
+	extend_measure_lengths(state.measure_lengths, trunc(cmd.position));
 }
 
 inline void Builder::handle_channel_ln(ChannelCommand cmd, Chart&, State& state)
@@ -1159,12 +1167,12 @@ inline void Builder::handle_channel_ln(ChannelCommand cmd, Chart&, State& state)
 		.position = cmd.position,
 		.wav_slot_idx = slot_idx,
 	});
-	state.measure_lengths.resize(max(state.measure_lengths.size(), static_cast<usize>(trunc(cmd.position))), 1.0);
+	extend_measure_lengths(state.measure_lengths, trunc(cmd.position));
 }
 
 inline void Builder::handle_channel_measure_length(ChannelCommand cmd, Chart&, State& state)
 {
-	state.measure_lengths.resize(max(state.measure_lengths.size(), static_cast<usize>(trunc(cmd.position))), 1.0);
+	extend_measure_lengths(state.measure_lengths, trunc(cmd.position));
 	state.measure_lengths[trunc(cmd.position)] = lexical_cast<double>(cmd.value);
 }
 
