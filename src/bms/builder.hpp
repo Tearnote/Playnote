@@ -8,8 +8,10 @@ Parsing of BMS chart data into a Chart object.
 
 #pragma once
 #include "preamble.hpp"
+#include "lib/ebur128.hpp"
 #include "lib/icu.hpp"
 #include "io/song.hpp"
+#include "bms/cursor.hpp"
 #include "bms/chart.hpp"
 
 namespace playnote::bms {
@@ -302,7 +304,6 @@ inline auto Builder::build(span<byte const> bms_raw, io::Song& song, optional<re
 	auto chart = make_shared<Chart>();
 	chart->md5 = lib::openssl::md5(bms_raw);
 	if (cache) chart->metadata = *cache;
-	chart->metadata.density.resolution = 1ms; //TODO remove this workaround once finished
 	auto parse_state = State{};
 	parse_state.measure_lengths.reserve(256); // Arbitrary
 
@@ -590,6 +591,14 @@ inline auto Builder::build(span<byte const> bms_raw, io::Song& song, optional<re
 		}
 	}
 
+	// Fill in lane meta-information
+	for (auto [idx, lane]: chart->timeline.lanes | views::enumerate) {
+		auto const type = static_cast<Lane::Type>(idx);
+		lane.playable = type != Lane::Type::BGM && type != Lane::Type::MeasureLine;
+		lane.visible = type != Lane::Type::BGM;
+		lane.audible = type != Lane::Type::MeasureLine;
+	}
+
 	// chart.timeline is now complete
 
 	// Some basic entries from chart.metadata were obtained from BMS headers, but certain statistics
@@ -600,7 +609,206 @@ inline auto Builder::build(span<byte const> bms_raw, io::Song& song, optional<re
 
 	if (cache) return chart; // We applied the cache already at the start
 
-	//TODO
+	// Yeah, the *playstyle* needs to be heuristically determined. Seriously. BMS is not a good format.
+	chart->metadata.playstyle = [&] {
+		auto lanes_used = array<bool, enum_count<Lane::Type>()>{};
+		transform(chart->timeline.lanes, lanes_used.begin(), [](auto const& lane) { return !lane.notes.empty(); });
+		if (lanes_used[+Lane::Type::P2_Key6] ||
+			lanes_used[+Lane::Type::P2_Key7])
+			return Playstyle::_14K;
+		if (lanes_used[+Lane::Type::P2_Key1] ||
+			lanes_used[+Lane::Type::P2_Key2] ||
+			lanes_used[+Lane::Type::P2_Key3] ||
+			lanes_used[+Lane::Type::P2_Key4] ||
+			lanes_used[+Lane::Type::P2_Key5] ||
+			lanes_used[+Lane::Type::P2_KeyS])
+			return Playstyle::_10K;
+		if (lanes_used[+Lane::Type::P1_Key6] ||
+			lanes_used[+Lane::Type::P1_Key7])
+			return Playstyle::_7K;
+		if (lanes_used[+Lane::Type::P1_Key1] ||
+			lanes_used[+Lane::Type::P1_Key2] ||
+			lanes_used[+Lane::Type::P1_Key3] ||
+			lanes_used[+Lane::Type::P1_Key4] ||
+			lanes_used[+Lane::Type::P1_Key5] ||
+			lanes_used[+Lane::Type::P1_KeyS])
+			return Playstyle::_5K;
+		return Playstyle::_7K; // Empty chart, but sure whatever
+	}();
+
+	chart->metadata.note_count = fold_left(chart->timeline.lanes, 0u, [](auto acc, auto const& lane) {
+		return acc + (lane.playable? lane.notes.size() : 0);
+	});
+
+	chart->metadata.chart_duration = fold_left(chart->timeline.lanes |
+		views::filter([](auto const& lane) { return !lane.notes.empty() && lane.playable; }) |
+		views::transform([](auto const& lane) -> Note const& { return lane.notes.back(); }),
+		0ns, [](auto acc, Note const& last_note) { // omg not auto??? Actually, avoids dependent template ugliness
+			auto note_end = last_note.timestamp;
+			if (last_note.type_is<Note::LN>()) note_end += last_note.params<Note::LN>().length;
+			return max(acc, note_end);
+		}
+	);
+
+	// Offline audio render pass, handling all related statistics in one sweep
+	auto [loudness, audio_duration] = [&] {
+		static constexpr auto BufferSize = 4096zu / sizeof(dev::Sample); // One memory page
+		auto cursor = Cursor{*chart, true};
+		auto ctx = lib::ebur128::init(dev::Audio::get_sampling_rate());
+		auto buffer = vector<dev::Sample>{};
+		buffer.reserve(BufferSize);
+
+		auto processing = true;
+		while (processing) {
+			for (auto _: views::iota(0zu, BufferSize)) {
+				auto& sample = buffer.emplace_back();
+				processing = !cursor.advance_one_sample([&](auto new_sample) {
+					sample.left += new_sample.left;
+					sample.right += new_sample.right;
+				}, {}, false);
+				if (!processing) break;
+			}
+			lib::ebur128::add_frames(ctx, buffer);
+			buffer.clear();
+		}
+		return pair{lib::ebur128::get_loudness(ctx), cursor.get_progress_ns()};
+	}();
+	chart->metadata.loudness = loudness;
+	chart->metadata.audio_duration = audio_duration;
+
+	// Playable note density distribution
+	chart->metadata.density = [&] {
+		static constexpr auto Resolution = 125ms;
+		static constexpr auto Window = 2s;
+		static constexpr auto Bandwidth = 3.0f; // In standard deviations
+		// Scale back a stretched window, and correct for considering only 3 standard deviations
+		static constexpr auto GaussianScale = 1.0f / (Window / 1s) * (1.0f / 0.973f);
+
+		auto result = Metadata::Density{};
+		auto const points = chart->metadata.chart_duration / Resolution + 1;
+		result.resolution = Resolution;
+		result.key.resize(points);
+		result.scratch.resize(points);
+		result.ln.resize(points);
+
+		// Collect all playable notes
+		auto notes_keys = vector<Note>{};
+		auto notes_scr = vector<Note>{};
+		auto const note_total = fold_left(chart->timeline.lanes, 0u, [](auto sum, auto const& lane) {
+			return sum + lane.playable? lane.notes.size() : 0;
+		});
+		notes_keys.reserve(note_total);
+		notes_scr.reserve(note_total);
+		for (auto [type, lane]: views::zip(
+			views::iota(0u) | views::transform([](auto idx) { return Lane::Type{idx}; }),
+			chart->timeline.lanes) |
+			views::filter([](auto const& view) { return get<1>(view).playable; })) {
+			auto& dest = type == Lane::Type::P1_KeyS || type == Lane::Type::P2_KeyS? notes_scr : notes_keys;
+			for (Note const& note: lane.notes) {
+				if (note.type_is<Note::LN>()) {
+					dest.emplace_back(note);
+					auto ln_end = note;
+					ln_end.timestamp += ln_end.params<Note::LN>().length;
+					dest.emplace_back(ln_end); // LNs count as two notes to make up for increased cognitive load
+				} else {
+					dest.emplace_back(note);
+				}
+			}
+			}
+		sort(notes_keys, [](auto const& left, auto const& right) { return left.timestamp < right.timestamp; });
+		sort(notes_scr, [](auto const& left, auto const& right) { return left.timestamp < right.timestamp; });
+
+		auto notes_around = [&](span<Note const> notes, auto cursor) {
+			auto const from = cursor - Window;
+			auto const to = cursor + Window;
+			return notes | views::drop_while([=](auto const& note) {
+				return note.timestamp < from;
+			}) | views::take_while([=](auto const& note) {
+				return note.timestamp <= to;
+			});
+		};
+		for (auto [cursor, key, scratch, ln]: views::zip(
+			views::iota(0u) | views::transform([&](auto i) { return i * Resolution; }),
+			result.key, result.scratch, result.ln)) {
+			for (Note const& note: notes_around(notes_keys, cursor)) {
+				auto& target = [&]() -> float& {
+					if (note.type_is<Note::LN>()) return ln;
+					return key;
+				}();
+				auto const delta = note.timestamp - cursor;
+				auto const delta_scaled = ratio(delta, Window) * Bandwidth; // now within [-Bandwidth, Bandwidth]
+				target += exp(-pow(delta_scaled, 2.0f) / 2.0f) * GaussianScale; // Gaussian filter
+			}
+			for (Note const& note: notes_around(notes_scr, cursor)) {
+				auto const delta = note.timestamp - cursor;
+				auto const delta_scaled = ratio(delta, Window) * Bandwidth; // now within [-Bandwidth, Bandwidth]
+				scratch += exp(-pow(delta_scaled, 2.0f) / 2.0f) * GaussianScale; // Gaussian filter
+			}
+			}
+
+		return result;
+	}();
+
+	// Average notes-per-second
+	chart->metadata.nps = [&] {
+		auto result = Metadata::NPS{};
+
+		// Average NPS: actually Root Mean Square (4th power) of the middle 50% of the dataset
+		auto overall_density = vector<float>{};
+		overall_density.reserve(chart->metadata.density.key.size());
+		transform(views::zip(chart->metadata.density.key, chart->metadata.density.scratch, chart->metadata.density.ln), back_inserter(overall_density),
+			[](auto const& view) { return get<0>(view) + get<1>(view) + get<2>(view); });
+		sort(overall_density);
+		auto const quarter_size = overall_density.size() / 4;
+		auto density_mid50 = span{overall_density.begin() + quarter_size, overall_density.end() - quarter_size};
+		auto const rms = fold_left(density_mid50, 0.0,
+			[&](auto acc, auto val) { return acc + val * val * val * val / density_mid50.size(); });
+		result.average = sqrt(sqrt(rms));
+
+		// Peak NPS: RMS of the 96th percentile
+		auto const twentyfifth_size = overall_density.size() / 25;
+		auto density_top4 = span{overall_density.end() - twentyfifth_size, overall_density.end()};
+		auto const peak_rms = fold_left(density_top4, 0.0,
+			[&](auto acc, auto val) { return acc + val * val * val * val / density_top4.size(); });
+		result.peak = sqrt(sqrt(peak_rms));
+
+		return result;
+	}();
+
+	// Gameplay features in use
+	chart->metadata.features = [&] {
+		auto result = Metadata::Features{};
+		result.has_ln = any_of(chart->timeline.lanes, [](auto const& lane) {
+			if (!lane.playable) return false;
+			return any_of(lane.notes, [](Note const& note) {
+				return note.type_is<Note::LN>();
+			});
+		});
+		result.has_soflan = chart->timeline.bpm_sections.size() > 1;
+		return result;
+	}();
+
+	// BPM statistics
+	chart->metadata.bpm_range = [&] {
+		auto bpm_distribution = unordered_map<float, nanoseconds>{};
+		auto update = [&](float bpm, nanoseconds duration) {
+			bpm_distribution.try_emplace(bpm, 0ns);
+			bpm_distribution[bpm] += duration;
+		};
+
+		for (auto [current, next]: chart->timeline.bpm_sections | views::pairwise)
+			update(current.bpm, next.position - current.position);
+		// Last one has no pairing; duration is until the end of the chart
+		update(chart->timeline.bpm_sections.back().bpm,
+			chart->metadata.chart_duration - chart->timeline.bpm_sections.back().position);
+
+		return Metadata::BPMRange{
+			.min = *min_element(bpm_distribution | views::keys),
+			.max = *max_element(bpm_distribution | views::keys),
+			.main = max_element(bpm_distribution, [](auto const& left, auto const& right) { return left.second < right.second; })->first,
+		};
+	}();
+
 	return chart;
 }
 
