@@ -23,10 +23,8 @@ public:
 	// Open an existing library, or create an empty one at the provided path.
 	explicit Library(fs::path const&);
 
+	// Import a song and all its charts into the library.
 	void import(fs::path const&);
-
-	// Add a chart to the library. If it already exists, do nothing.
-	void add_chart(fs::path const& domain, Chart const&);
 
 	Library(Library const&) = delete;
 	auto operator=(Library const&) -> Library& = delete;
@@ -48,10 +46,6 @@ private:
 	// language=SQLite
 	static constexpr auto InsertSongQuery = R"(
 		INSERT INTO songs(path) VALUES(?1)
-	)"sv;
-	// language=SQLite
-	static constexpr auto InsertOrRetrieveSongQuery = R"(
-		INSERT INTO songs(path) VALUES(?1) ON CONFLICT(path) DO UPDATE SET path=path RETURNING id
 	)"sv;
 	// language=SQLite
 	static constexpr auto DeleteSongQuery = R"(
@@ -142,7 +136,6 @@ private:
 	lib::sqlite::DB db;
 	lib::sqlite::Statement song_exists;
 	lib::sqlite::Statement insert_song;
-	lib::sqlite::Statement insert_or_retrieve_song;
 	lib::sqlite::Statement delete_song;
 	lib::sqlite::Statement chart_exists;
 	lib::sqlite::Statement insert_chart;
@@ -164,7 +157,6 @@ inline Library::Library(fs::path const& path):
 	lib::sqlite::execute(db, ChartDensitiesSchema);
 	song_exists = lib::sqlite::prepare(db, SongExistsQuery);
 	insert_song = lib::sqlite::prepare(db, InsertSongQuery);
-	insert_or_retrieve_song = lib::sqlite::prepare(db, InsertOrRetrieveSongQuery);
 	delete_song = lib::sqlite::prepare(db, DeleteSongQuery);
 	chart_exists = lib::sqlite::prepare(db, ChartExistsQuery);
 	insert_chart = lib::sqlite::prepare(db, InsertChartQuery);
@@ -187,39 +179,6 @@ inline void Library::import(fs::path const& path)
 	} else {
 		throw runtime_error_fmt("Failed to import \"{}\": unknown type of file", path);
 	}
-}
-
-inline void Library::add_chart(fs::path const& domain, Chart const& chart)
-{
-	lib::sqlite::transaction(db, [&] {
-		// Check if chart already exists in library
-		auto exists = false;
-		lib::sqlite::query(chart_exists, [&] { exists = true; }, chart.md5);
-		if (exists) return;
-
-		auto song_id = 0;
-		lib::sqlite::query(insert_or_retrieve_song, [&](int id) { song_id = id; }, domain.string());
-		lib::sqlite::execute(insert_chart, chart.md5, song_id, chart.metadata.title,
-			chart.metadata.subtitle, chart.metadata.artist, chart.metadata.subartist,
-			chart.metadata.genre, chart.metadata.url, chart.metadata.email,
-			+chart.metadata.difficulty, +chart.metadata.playstyle, chart.metadata.features.has_ln,
-			chart.metadata.features.has_soflan, chart.metadata.note_count,
-			chart.metadata.chart_duration.count(), chart.metadata.audio_duration.count(),
-			chart.metadata.loudness, chart.metadata.nps.average, chart.metadata.nps.peak,
-			chart.metadata.bpm_range.min, chart.metadata.bpm_range.max,
-			chart.metadata.bpm_range.main);
-
-		auto serialize_density = [](vector<float> const& v) {
-			auto [data, out] = lib::bits::data_out();
-			out(v).or_throw();
-			return data;
-		};
-		lib::sqlite::execute(insert_chart_density, chart.md5,
-			chart.metadata.density.resolution.count(),
-			serialize_density(chart.metadata.density.key),
-			serialize_density(chart.metadata.density.scratch),
-			serialize_density(chart.metadata.density.ln));
-	});
 }
 
 inline auto Library::find_available_song_filename(string_view name) -> string
