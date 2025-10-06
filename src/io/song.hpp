@@ -23,6 +23,19 @@ public:
 	// Return true if the provided extension matches a known BMS extension.
 	[[nodiscard]] static auto is_bms_ext(string_view) -> bool;
 
+	// Iterate over the archive, find all BMS files, and checksum them. Then, run the provided
+	// function on each checksum. If the function returns false, stop iteration early.
+	// Useful for existence checks before creating the proper zip.
+	template<callable<bool(array<byte, 16>)> Func>
+	static void for_each_chart_checksum_in_archive(fs::path const&, Func&&);
+
+	// Iterate over the directory, find all BMS files, and checksum them. Then, run the provided
+	// function on each checksum. If the function returns false, stop iteration early.
+	// Useful for existence checks before creating the proper zip.
+	// Requirement for the path is the same as in zip_from_directory.
+	template<callable<bool(array<byte, 16>)> Func>
+	static void for_each_chart_checksum_in_directory(fs::path const&, Func&&);
+
 	// Create a Song-compatible zip archive from an arbitrary archive. Subfolders inside the archive
 	// are handled.
 	// Throws runtime_error on failure.
@@ -91,6 +104,31 @@ private:
 	[[nodiscard]] static auto is_audio_ext(string_view) -> bool;
 	[[nodiscard]] static auto type_from_ext(string_view) -> FileType;
 };
+
+template<callable<bool(array<byte, 16>)> Func>
+void Song::for_each_chart_checksum_in_archive(fs::path const& path, Func&& func)
+{
+	auto ar_file = read_file(path);
+	auto ar = lib::archive::open_read(ar_file.contents);
+	lib::archive::for_each_entry(ar, [&](string_view pathname) {
+		auto const ext = fs::path{pathname}.extension().string();
+		if (!is_bms_ext(ext)) return true;
+		auto data = lib::archive::read_data(ar);
+		return func(lib::openssl::md5(data));
+	});
+}
+
+template<callable<bool(array<byte, 16>)> Func>
+void Song::for_each_chart_checksum_in_directory(fs::path const& path, Func&& func)
+{
+	for (auto const& entry: fs::directory_iterator{path}) {
+		if (!entry.is_regular_file()) continue;
+		auto const ext = entry.path().extension().string();
+		if (!is_bms_ext(ext)) continue;
+		auto data = read_file(entry);
+		if (!func(lib::openssl::md5(data.contents))) break;
+	}
+}
 
 template<callable<void(span<byte const>)> Func>
 void Song::for_each_chart(Func&& func)

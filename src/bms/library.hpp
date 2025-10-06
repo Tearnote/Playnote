@@ -212,6 +212,24 @@ inline auto Library::import_song(fs::path const& path) -> pair<usize, string> tr
 {
 	auto const is_archive = fs::is_regular_file(path);
 
+	// First, determine if we're creating a new song or extending an existing song
+	// We checksum all the charts and check if any of them already exist
+	bool extending = false;
+	auto process_checksums = [&](array<byte, 16> md5) {
+		lib::sqlite::query(chart_exists, [&] { extending = true; }, md5);
+		if (extending) return false;
+		return true;
+	};
+	if (is_archive)
+		io::Song::for_each_chart_checksum_in_archive(path, process_checksums);
+	else
+		io::Song::for_each_chart_checksum_in_directory(path, process_checksums);
+
+	if (extending) {
+		WARN("TODO archive extension");
+		return {};
+	}
+
 	auto out_filename = is_archive? path.stem().string() : path.filename().string();
 	if (out_filename.empty())
 		throw runtime_error_fmt("Failed to import \"{}\": invalid filename", path);
