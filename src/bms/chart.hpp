@@ -8,8 +8,8 @@ A definite, playable rhythm game chart optimized for playback.
 
 #pragma once
 #include "preamble.hpp"
+#include "lib/openssl.hpp"
 #include "dev/audio.hpp"
-#include "bms/ir_legacy.hpp"
 
 namespace playnote::bms {
 
@@ -69,7 +69,14 @@ struct Metadata {
 		_5K, _7K, _9K, _10K, _14K,
 	};
 
-	using Difficulty = IR::HeaderEvent::Difficulty::Level;
+	enum class Difficulty {
+		Unknown = 0,
+		Beginner,
+		Normal,
+		Hyper,
+		Another,
+		Insane,
+	};
 
 	// Features used by the chart that the player might want to know about ahead of time.
 	struct Features {
@@ -139,7 +146,7 @@ struct Media {
 
 // A complete chart. Immutable; a chart is played by creating and advancing a Cursor from it.
 struct Chart: enable_shared_from_this<Chart> {
-	array<byte, 16> md5;
+	lib::openssl::MD5 md5;
 	Metadata metadata;
 	Timeline timeline;
 	Media media;

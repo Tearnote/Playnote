@@ -1031,7 +1031,7 @@ try {
 		WARN("L{}: Difficulty header has an invalid value: {}", cmd.line_num, level);
 		return;
 	}
-	chart.metadata.difficulty = static_cast<IR::HeaderEvent::Difficulty::Level>(level);
+	chart.metadata.difficulty = static_cast<Difficulty>(level);
 }
 catch (exception const&) {
 	WARN("L{}: Difficulty header has an invalid value: {}", cmd.line_num, cmd.value);

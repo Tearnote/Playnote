@@ -68,15 +68,7 @@ public:
 			float bpm;
 		};
 		struct Difficulty {
-			enum class Level {
-				Unknown = 0,
-				Beginner,
-				Normal,
-				Hyper,
-				Another,
-				Insane,
-			};
-			Level level;
+			Metadata::Difficulty level;
 		};
 		// As header params are all differently-sized structs, they are stored on heap
 		using ParamsType = variant<
@@ -155,7 +147,7 @@ public:
 	void each_channel_event(Func&& func) const { for (auto const& event: channel_events) func(event); }
 
 	// Get the MD5 of the original BMS file.
-	[[nodiscard]] auto get_md5() const -> array<byte, 16> { return md5; }
+	[[nodiscard]] auto get_md5() const -> lib::openssl::MD5 { return md5; }
 
 	// Get the total number of WAV slots referenced by the headers and channels.
 	[[nodiscard]] auto get_wav_slot_count() const -> usize { return wav_slot_count; }
@@ -168,7 +160,7 @@ private:
 	unique_ptr<pmr::monotonic_buffer_resource> buffer_resource; // unique_ptr makes it moveable
 	pmr::polymorphic_allocator<byte> allocator;
 
-	array<byte, 16> md5;
+	lib::openssl::MD5 md5;
 	pmr::vector<HeaderEvent> header_events;
 	pmr::vector<ChannelEvent> channel_events;
 
@@ -709,7 +701,7 @@ try {
 
 	TRACE_AS(cat, "L{}: Difficulty: {}", cmd.line, level);
 	ir.add_header_event(IR::HeaderEvent::Difficulty{
-		.level = static_cast<IR::HeaderEvent::Difficulty::Level>(level),
+		.level = static_cast<Difficulty>(level),
 	});
 }
 catch (exception const&) {

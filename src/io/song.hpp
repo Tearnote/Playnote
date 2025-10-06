@@ -9,6 +9,7 @@ An abstraction for an imported BMS song. Wraps a zip archive with accelerated fi
 #pragma once
 #include "preamble.hpp"
 #include "lib/archive.hpp"
+#include "lib/openssl.hpp"
 #include "lib/sqlite.hpp"
 #include "lib/ffmpeg.hpp"
 #include "dev/audio.hpp"
@@ -26,14 +27,14 @@ public:
 	// Iterate over the archive, find all BMS files, and checksum them. Then, run the provided
 	// function on each checksum. If the function returns false, stop iteration early.
 	// Useful for existence checks before creating the proper zip.
-	template<callable<bool(array<byte, 16>)> Func>
+	template<callable<bool(lib::openssl::MD5)> Func>
 	static void for_each_chart_checksum_in_archive(fs::path const&, Func&&);
 
 	// Iterate over the directory, find all BMS files, and checksum them. Then, run the provided
 	// function on each checksum. If the function returns false, stop iteration early.
 	// Useful for existence checks before creating the proper zip.
 	// Requirement for the path is the same as in zip_from_directory.
-	template<callable<bool(array<byte, 16>)> Func>
+	template<callable<bool(lib::openssl::MD5)> Func>
 	static void for_each_chart_checksum_in_directory(fs::path const&, Func&&);
 
 	// Create a Song-compatible zip archive from an arbitrary archive. Subfolders inside the archive

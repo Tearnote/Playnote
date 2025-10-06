@@ -11,7 +11,9 @@ Wrapper for mio file mapping.
 
 namespace playnote::lib::openssl {
 
+using MD5 = array<byte, 16>;
+
 // Calculate and return the MD5 hash of provided data.
-auto md5(span<byte const> data) -> array<byte, 16>;
+auto md5(span<byte const> data) -> MD5;
 
 }
