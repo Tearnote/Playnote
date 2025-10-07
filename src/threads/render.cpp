@@ -28,6 +28,7 @@ Implementation file for threads/render.hpp.
 namespace playnote::threads {
 
 enum class State {
+	None,
 	Library,
 	Gameplay,
 };
@@ -41,6 +42,12 @@ struct GameplayContext {
 	gfx::Playfield playfield;
 	double scroll_speed;
 	milliseconds offset;
+};
+
+struct GameState {
+	State current;
+	State requested;
+	variant<monostate, LibraryContext, GameplayContext> context;
 };
 
 static auto ns_to_minsec(nanoseconds duration) -> string
@@ -81,7 +88,7 @@ static void show_metadata(bms::Cursor const& cursor, bms::Metadata const& meta)
 	}, 120, true);
 }
 
-static void show_playback_controls(Broadcaster& broadcaster)
+static void show_playback_controls(Broadcaster& broadcaster, GameState& state)
 {
 	if (lib::imgui::button("Play")) broadcaster.shout(PlayerControl::Play);
 	lib::imgui::same_line();
@@ -90,6 +97,8 @@ static void show_playback_controls(Broadcaster& broadcaster)
 	if (lib::imgui::button("Restart")) broadcaster.shout(PlayerControl::Restart);
 	lib::imgui::same_line();
 	if (lib::imgui::button("Autoplay")) broadcaster.shout(PlayerControl::Autoplay);
+	lib::imgui::same_line();
+	if (lib::imgui::button("Back")) state.requested = State::Library;
 }
 
 static void show_scroll_speed_controls(double& scroll_speed)
@@ -119,8 +128,9 @@ static void show_results(bms::Cursor const& cursor)
 	lib::imgui::text(" Rank: {}", enum_name(cursor.get_rank()));
 }
 
-static void render_library(Broadcaster& broadcaster, LibraryContext& context)
+static void render_library(Broadcaster& broadcaster, GameState& state)
 {
+	auto& context = get<LibraryContext>(state.context);
 	lib::imgui::begin_window("library", {8, 8}, 800, lib::imgui::WindowStyle::Static);
 	if (context.charts.empty()) {
 		lib::imgui::text("The library is empty. Drag a song folder or archive onto the game window to import.");
@@ -133,14 +143,15 @@ static void render_library(Broadcaster& broadcaster, LibraryContext& context)
 	lib::imgui::end_window();
 }
 
-static void render_gameplay(Broadcaster& broadcaster, gfx::Renderer::Queue& queue, GameplayContext& context)
+static void render_gameplay(Broadcaster& broadcaster, gfx::Renderer::Queue& queue, GameState& state)
 {
+	auto& context = get<GameplayContext>(state.context);
 	auto const cursor = context.player->get_audio_cursor();
 	auto const& chart = cursor.get_chart();
 	lib::imgui::begin_window("info", {860, 8}, 412, lib::imgui::WindowStyle::Static);
 	show_metadata(cursor, chart.metadata);
 	lib::imgui::text("");
-	show_playback_controls(broadcaster);
+	show_playback_controls(broadcaster, state);
 	lib::imgui::text("");
 	show_scroll_speed_controls(context.scroll_speed);
 	context.playfield.enqueue_from_cursor(queue, cursor, context.scroll_speed, context.offset);
@@ -161,20 +172,25 @@ static void render_gameplay(Broadcaster& broadcaster, gfx::Renderer::Queue& queu
 
 static void run_render(Broadcaster& broadcaster, dev::Window const& window, gfx::Renderer& renderer)
 {
-	auto state = State::Library;
-	auto library_context = optional{LibraryContext{}};
-	auto gameplay_context = optional<GameplayContext>{nullopt};
-	broadcaster.shout<LibraryRefreshRequest>({});
+	auto state = GameState{};
+	state.requested = State::Library;
 
 	while (!window.is_closing()) {
+		if (state.requested == State::Library) {
+			state.current = State::Library;
+			state.requested = State::None;
+			state.context = LibraryContext{};
+			broadcaster.shout<LibraryRefreshRequest>({});
+		}
 		broadcaster.receive_all<vector<bms::Library::ChartEntry>>([&](auto list) {
-			library_context->charts = move(list);
+			if (state.current != State::Library) return;
+			get<LibraryContext>(state.context).charts = move(list);
 		});
-		broadcaster.receive_all<ChartLoaded>([&](auto ev) {
-			state = State::Gameplay;
+		broadcaster.receive_all<ChartLoaded>([&](auto const& ev) {
+			state.current = State::Gameplay;
 			auto player = ev.player.lock();
 			auto& chart = player->get_chart();
-			gameplay_context = GameplayContext{
+			state.context = GameplayContext{
 				.player = move(player),
 				.playfield = gfx::Playfield{{44, 0}, 545, chart.metadata.playstyle},
 				.scroll_speed = globals::config->get_entry<double>("gameplay", "scroll_speed"),
@@ -186,11 +202,14 @@ static void run_render(Broadcaster& broadcaster, dev::Window const& window, gfx:
 			// Background
 			queue.enqueue_rect("bg"_id, {{0, 0}, {1280, 720}, {0.060f, 0.060f, 0.060f, 1.000f}});
 
-			switch (state) {
-			case State::Library: render_library(broadcaster, *library_context); break;
-			case State::Gameplay: render_gameplay(broadcaster, queue, *gameplay_context); break;
+			switch (state.current) {
+			case State::Library: render_library(broadcaster, state); break;
+			case State::Gameplay: render_gameplay(broadcaster, queue, state); break;
 			}
 		});
+
+		if (state.requested == State::Library)
+			broadcaster.shout(PlayerControl::Stop);
 	}
 }
 

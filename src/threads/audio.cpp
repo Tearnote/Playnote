@@ -53,6 +53,9 @@ static void run_audio(Broadcaster& broadcaster, dev::Window& window, audio::Mixe
 			case PlayerControl::Autoplay:
 				player->play(player->get_chart(), true);
 				break;
+			case PlayerControl::Stop:
+				player->stop();
+				break;
 			default: PANIC();
 			}
 		});
