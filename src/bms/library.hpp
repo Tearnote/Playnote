@@ -248,7 +248,7 @@ inline auto Library::load_chart(lib::openssl::MD5 md5) -> shared_ptr<Chart const
 		span<const byte> density_ln
 	) {
 		auto deserialize_density = [](span<byte const> v) {
-			auto [data, in] = lib::bits::data_in();
+			auto in = lib::bits::in(v);
 			auto vec = vector<float>{};
 			in(vec).or_throw();
 			return vec;
