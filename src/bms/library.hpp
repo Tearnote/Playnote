@@ -133,6 +133,11 @@ private:
 		INSERT INTO chart_densities(md5, resolution, key, scratch, ln) VALUES(?1, ?2, ?3, ?4, ?5)
 	)"sv;
 
+	// language=SQLite
+	static constexpr auto GetSongFromChartQuery = R"(
+		SELECT songs.id, songs.path FROM songs INNER JOIN charts ON songs.id = charts.song_id WHERE charts.md5 = ?1
+	)"sv;
+
 	lib::sqlite::DB db;
 	lib::sqlite::Statement song_exists;
 	lib::sqlite::Statement insert_song;
@@ -140,6 +145,7 @@ private:
 	lib::sqlite::Statement chart_exists;
 	lib::sqlite::Statement insert_chart;
 	lib::sqlite::Statement insert_chart_density;
+	lib::sqlite::Statement get_song_from_chart;
 
 	Builder builder;
 
@@ -161,6 +167,7 @@ inline Library::Library(fs::path const& path):
 	chart_exists = lib::sqlite::prepare(db, ChartExistsQuery);
 	insert_chart = lib::sqlite::prepare(db, InsertChartQuery);
 	insert_chart_density = lib::sqlite::prepare(db, InsertChartDensityQuery);
+	get_song_from_chart = lib::sqlite::prepare(db, GetSongFromChartQuery);
 	fs::create_directory(LibraryPath);
 	INFO("Opened song library at \"{}\"", path);
 }
@@ -214,10 +221,10 @@ inline auto Library::import_song(fs::path const& path) -> pair<usize, string> tr
 
 	// First, determine if we're creating a new song or extending an existing song
 	// We checksum all the charts and check if any of them already exist
-	bool extending = false;
-	auto process_checksums = [&](array<byte, 16> md5) {
-		lib::sqlite::query(chart_exists, [&] { extending = true; }, md5);
-		if (extending) return false;
+	auto existing_song = optional<pair<usize, string>>{nullopt};
+	auto process_checksums = [&](lib::openssl::MD5 md5) {
+		lib::sqlite::query(get_song_from_chart, [&](isize id, string_view path) { existing_song.emplace(id, path); }, md5);
+		if (existing_song) return false;
 		return true;
 	};
 	if (is_archive)
@@ -225,24 +232,34 @@ inline auto Library::import_song(fs::path const& path) -> pair<usize, string> tr
 	else
 		io::Song::for_each_chart_checksum_in_directory(path, process_checksums);
 
-	if (extending) {
-		WARN("TODO archive extension");
-		return {};
+	if (existing_song) { // Extending
+		auto existing_song_id = get<0>(*existing_song);
+		auto existing_song_path = fs::path{LibraryPath} / get<1>(*existing_song);
+
+		auto tmp_path = existing_song_path;
+		tmp_path.concat(".tmp");
+		if (is_archive)
+			io::Song::extend_zip_from_archive(existing_song_path, path, tmp_path);
+		else
+			io::Song::extend_zip_from_directory(existing_song_path, path, tmp_path);
+
+		fs::rename(tmp_path, existing_song_path);
+		return {existing_song_id, existing_song_path.string()};
+	} else { // New song
+		auto out_filename = is_archive? path.stem().string() : path.filename().string();
+		if (out_filename.empty())
+			throw runtime_error_fmt("Failed to import \"{}\": invalid filename", path);
+		out_filename = find_available_song_filename(out_filename);
+
+		auto const out_path = fs::path{LibraryPath} / out_filename;
+		if (is_archive)
+			io::Song::zip_from_archive(path, out_path);
+		else
+			io::Song::zip_from_directory(path, out_path);
+
+		auto const song_id = lib::sqlite::insert(insert_song, out_filename);
+		return {song_id, out_path.string()};
 	}
-
-	auto out_filename = is_archive? path.stem().string() : path.filename().string();
-	if (out_filename.empty())
-		throw runtime_error_fmt("Failed to import \"{}\": invalid filename", path);
-	out_filename = find_available_song_filename(out_filename);
-
-	auto const out_path = fs::path{LibraryPath} / out_filename;
-	if (is_archive)
-		io::Song::zip_from_archive(path, out_path);
-	else
-		io::Song::zip_from_directory(path, out_path);
-
-	auto const song_id = lib::sqlite::insert(insert_song, out_filename);
-	return {song_id, out_path.string()};
 } catch (exception const&) {
 	fs::remove(path);
 	throw;

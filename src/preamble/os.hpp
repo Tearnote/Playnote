@@ -26,6 +26,7 @@ namespace fs {
 	using std::filesystem::directory_entry;
 	using std::filesystem::relative;
 	using std::filesystem::remove;
+	using std::filesystem::rename;
 }
 using std::jthread;
 using std::this_thread::sleep_for;

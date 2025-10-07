@@ -47,6 +47,18 @@ public:
 	// Throws runtime_error on failure.
 	static void zip_from_directory(fs::path const& src, fs::path const& dst);
 
+	// Create a Song-compatible zip from a union of an archive and another archive.
+	// Base archive is assumed to be in a Song-compatible format, while the extension archive is
+	// arbitrary, as for zip_from_archive().
+	// Throws runtime_error on failure.
+	static void extend_zip_from_archive(fs::path const& base, fs::path const& ext, fs::path const& dst);
+
+	// Create a Song-compatible zip from a union of an archive and a directory.
+	// Base archive is assumed to be in a Song-compatible format, and the directory
+	// is subject to the same requirements as zip_from_directory().
+	// Throws runtime_error on failure.
+	static void extend_zip_from_directory(fs::path const& base, fs::path const& ext, fs::path const& dst);
+
 	// Create a Song from a zip archive. The zip must be Song-compatible.
 	// Throws runtime_error on failure.
 	static auto from_zip(fs::path const&) -> Song;
@@ -106,7 +118,7 @@ private:
 	[[nodiscard]] static auto type_from_ext(string_view) -> FileType;
 };
 
-template<callable<bool(array<byte, 16>)> Func>
+template<callable<bool(lib::openssl::MD5)> Func>
 void Song::for_each_chart_checksum_in_archive(fs::path const& path, Func&& func)
 {
 	auto ar_file = read_file(path);
@@ -119,7 +131,7 @@ void Song::for_each_chart_checksum_in_archive(fs::path const& path, Func&& func)
 	});
 }
 
-template<callable<bool(array<byte, 16>)> Func>
+template<callable<bool(lib::openssl::MD5)> Func>
 void Song::for_each_chart_checksum_in_directory(fs::path const& path, Func&& func)
 {
 	for (auto const& entry: fs::directory_iterator{path}) {
@@ -173,6 +185,57 @@ inline void Song::zip_from_directory(fs::path const& src, fs::path const& dst)
 	}
 	if (!wrote_something)
 		throw runtime_error_fmt("Failed to create library zip from \"{}\": empty archive", src);
+}
+
+inline void Song::extend_zip_from_archive(fs::path const& base, fs::path const& ext, fs::path const& dst)
+{
+	auto dst_ar = lib::archive::open_write(dst);
+	auto written_paths = unordered_set<string_view>{};
+
+	// Copy over contents of base
+	auto src_file = read_file(base);
+	auto src_ar = lib::archive::open_read(src_file.contents);
+	lib::archive::for_each_entry(src_ar, [&](string_view pathname) {
+		auto data = lib::archive::read_data(src_ar);
+		lib::archive::write_entry(dst_ar, pathname, data);
+		written_paths.emplace(pathname);
+		return true;
+	});
+
+	// Append missing files from extension
+	auto ext_file = read_file(ext);
+	auto ext_ar = lib::archive::open_read(ext_file.contents);
+	auto const prefix = find_prefix(src_file.contents);
+	lib::archive::for_each_entry(ext_ar, [&](string_view pathname) {
+		if (written_paths.contains(pathname)) return true;
+		auto data = lib::archive::read_data(ext_ar);
+		lib::archive::write_entry(dst_ar, fs::relative(pathname, prefix), data);
+		return true;
+	});
+}
+
+inline void Song::extend_zip_from_directory(fs::path const& base, fs::path const& ext, fs::path const& dst)
+{
+	auto dst_ar = lib::archive::open_write(dst);
+	auto written_paths = unordered_set<string_view>{};
+
+	// Copy over contents of base
+	auto src_file = read_file(base);
+	auto src_ar = lib::archive::open_read(src_file.contents);
+	lib::archive::for_each_entry(src_ar, [&](string_view pathname) {
+		auto data = lib::archive::read_data(src_ar);
+		lib::archive::write_entry(dst_ar, pathname, data);
+		written_paths.emplace(pathname);
+		return true;
+	});
+
+	// Append missing files from extension
+	for (auto const& entry: fs::recursive_directory_iterator{ext}) {
+		if (!entry.is_regular_file()) continue;
+		auto const rel_path = fs::relative(entry.path(), ext);
+		if (written_paths.contains(rel_path.string())) continue;
+		lib::archive::write_entry(dst_ar, rel_path, read_file(entry.path()).contents);
+	}
 }
 
 inline auto Song::from_zip(fs::path const& path) -> Song
