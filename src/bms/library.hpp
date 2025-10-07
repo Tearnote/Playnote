@@ -123,7 +123,7 @@ private:
 	)"sv;
 	// language=SQLite
 	static constexpr auto ChartListingQuery = R"(
-		SELECT md5, path FROM charts
+		SELECT md5, title, difficulty FROM charts
 	)"sv;
 	// language=SQLite
 	static constexpr auto InsertChartQuery = R"(
@@ -225,10 +225,10 @@ inline void Library::import(fs::path const& path)
 inline auto Library::list_charts() -> vector<ChartEntry>
 {
 	auto result = vector<ChartEntry>{};
-	lib::sqlite::query(chart_listing, [&](span<byte const> md5, string_view title) {
+	lib::sqlite::query(chart_listing, [&](span<byte const> md5, string_view title, int difficulty) {
 		auto entry = ChartEntry{};
 		copy(md5, entry.md5.begin());
-		entry.title = title;
+		entry.title = format("{} [{}]", title, enum_name(static_cast<Difficulty>(difficulty)));
 		result.emplace_back(move(entry));
 	});
 	return result;
