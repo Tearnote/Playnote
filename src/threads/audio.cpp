@@ -78,6 +78,7 @@ static void run_audio(Broadcaster& broadcaster, dev::Window& window, audio::Mixe
 		});
 		broadcaster.receive_all<FileDrop>([&](auto ev) {
 			for (auto const& path: ev.paths) library.import(path);
+			broadcaster.shout(library.list_charts());
 		});
 		if (player->is_playing()) {
 			auto inputs = mapper.from_axis_state(window.get_glfw(), player->get_chart().metadata.playstyle);
