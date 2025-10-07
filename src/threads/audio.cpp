@@ -18,6 +18,7 @@ Implementation file for threads/audio.hpp.
 #include "bms/library.hpp"
 #include "bms/input.hpp"
 #include "threads/render_shouts.hpp"
+#include "threads/audio_shouts.hpp"
 #include "threads/input_shouts.hpp"
 #include "threads/broadcaster.hpp"
 
@@ -36,6 +37,7 @@ static void run_audio(Broadcaster& broadcaster, dev::Window& window, audio::Mixe
 		broadcaster.receive_all<LoadChart>([&](auto ev) {
 			auto chart = library.load_chart(ev);
 			player->play(*chart, false);
+			broadcaster.shout(ChartLoaded{weak_ptr{player}});
 		});
 		broadcaster.receive_all<PlayerControl>([&](auto ev) {
 			switch (ev) {

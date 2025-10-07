@@ -176,7 +176,7 @@ static void run_render(Broadcaster& broadcaster, dev::Window const& window, gfx:
 			auto& chart = player->get_chart();
 			gameplay_context = GameplayContext{
 				.player = move(player),
-				.playfield = gfx::Playfield{{44, 0}, 545, player->get_chart().metadata.playstyle},
+				.playfield = gfx::Playfield{{44, 0}, 545, chart.metadata.playstyle},
 				.scroll_speed = globals::config->get_entry<double>("gameplay", "scroll_speed"),
 				.offset = milliseconds{globals::config->get_entry<int32>("gameplay", "note_offset")},
 			};
