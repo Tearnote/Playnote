@@ -258,8 +258,13 @@ void text_styled(string_view str, optional<vec4> color, float size, TextAlignmen
 	if (size != 1.0f) ImGui::SetWindowFontScale(1.0f);
 }
 
+auto selectable(char const* str) -> bool
+{
+	return ImGui::Selectable(str);
+}
+
 void input_float(char const* str, float& value, float step, float step_fast,
-	char const* format)
+                 char const* format)
 {
 	ImGui::InputFloat(str, &value, step, step_fast, format);
 }

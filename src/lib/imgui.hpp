@@ -79,6 +79,9 @@ enum class TextAlignment {
 // Styled static text.
 void text_styled(string_view str, optional<vec4> color, float size = 1.0f, TextAlignment = TextAlignment::Left);
 
+// A line of text that can be clicked like a button.
+auto selectable(char const* str) -> bool;
+
 // A control for a float variable, with +/- buttons and direct value input via keyboard.
 void input_float(char const* str, float& value,
 float step = 0.0f, float step_fast = 0.0f, char const* format = "%.3f");

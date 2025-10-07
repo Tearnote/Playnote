@@ -34,7 +34,6 @@ enum class State {
 
 struct LibraryContext {
 	vector<bms::Library::ChartEntry> charts;
-	usize selected_chart = 0;
 };
 
 struct GameplayContext {
@@ -120,13 +119,16 @@ static void show_results(bms::Cursor const& cursor)
 	lib::imgui::text(" Rank: {}", enum_name(cursor.get_rank()));
 }
 
-static void render_library(LibraryContext& context)
+static void render_library(Broadcaster& broadcaster, LibraryContext& context)
 {
 	lib::imgui::begin_window("library", {8, 8}, 800, lib::imgui::WindowStyle::Static);
 	if (context.charts.empty()) {
 		lib::imgui::text("The library is empty. Drag a song folder or archive onto the game window to import.");
 	} else {
-		lib::imgui::text("Hello World");
+		for (auto const& chart: context.charts) {
+			if (lib::imgui::selectable(chart.title.c_str()))
+				broadcaster.shout(chart.md5);
+		}
 	}
 	lib::imgui::end_window();
 }
@@ -185,7 +187,7 @@ static void run_render(Broadcaster& broadcaster, dev::Window const& window, gfx:
 			queue.enqueue_rect("bg"_id, {{0, 0}, {1280, 720}, {0.060f, 0.060f, 0.060f, 1.000f}});
 
 			switch (state) {
-			case State::Library: render_library(*library_context); break;
+			case State::Library: render_library(broadcaster, *library_context); break;
 			case State::Gameplay: render_gameplay(broadcaster, queue, *gameplay_context); break;
 			}
 		});
