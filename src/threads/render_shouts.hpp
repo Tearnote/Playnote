@@ -13,6 +13,9 @@ Shouts that can be spawned by the render thread.
 
 namespace playnote::threads {
 
+// Request for the current contents of the library.
+struct LibraryRefreshRequest {};
+
 // User wants to play a chart.
 using LoadChart = lib::openssl::MD5;
 

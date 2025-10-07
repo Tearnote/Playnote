@@ -30,6 +30,9 @@ static void run_audio(Broadcaster& broadcaster, dev::Window& window, audio::Mixe
 	auto player = make_shared<audio::Player>(window.get_glfw(), mixer);
 
 	while (!window.is_closing()) {
+		broadcaster.receive_all<LibraryRefreshRequest>([&](auto) {
+			broadcaster.shout(library.list_charts());
+		});
 		broadcaster.receive_all<LoadChart>([&](auto ev) {
 			auto chart = library.load_chart(ev);
 			player->play(*chart, false);
@@ -84,6 +87,7 @@ void audio(Broadcaster& broadcaster, Barriers<3>& barriers, dev::Window& window)
 try {
 	dev::name_current_thread("audio");
 	broadcaster.register_as_endpoint();
+	broadcaster.subscribe<LibraryRefreshRequest>();
 	broadcaster.subscribe<LoadChart>();
 	broadcaster.subscribe<PlayerControl>();
 	broadcaster.subscribe<KeyInput>();

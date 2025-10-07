@@ -20,11 +20,20 @@ namespace playnote::bms {
 
 class Library {
 public:
+	// Minimal metadata about a chart in the library.
+	struct ChartEntry {
+		lib::openssl::MD5 md5;
+		string title;
+	};
+
 	// Open an existing library, or create an empty one at the provided path.
 	explicit Library(fs::path const&);
 
 	// Import a song and all its charts into the library.
 	void import(fs::path const&);
+
+	// Return a list of all available charts.
+	[[nodiscard]] auto list_charts() -> vector<ChartEntry>;
 
 	// Load a chart from the library.
 	auto load_chart(lib::openssl::MD5) -> shared_ptr<Chart const>;
@@ -113,6 +122,10 @@ private:
 		SELECT 1 FROM charts WHERE md5 = ?1
 	)"sv;
 	// language=SQLite
+	static constexpr auto ChartListingQuery = R"(
+		SELECT md5, path FROM charts
+	)"sv;
+	// language=SQLite
 	static constexpr auto InsertChartQuery = R"(
 		INSERT INTO charts(md5, song_id, path, title, subtitle, artist, subartist, genre, url,
 			email, difficulty, playstyle, has_ln, has_soflan, note_count, chart_duration,
@@ -160,6 +173,7 @@ private:
 	lib::sqlite::Statement insert_song;
 	lib::sqlite::Statement delete_song;
 	lib::sqlite::Statement chart_exists;
+	lib::sqlite::Statement chart_listing;
 	lib::sqlite::Statement insert_chart;
 	lib::sqlite::Statement insert_chart_density;
 	lib::sqlite::Statement get_song_from_chart;
@@ -183,6 +197,7 @@ inline Library::Library(fs::path const& path):
 	insert_song = lib::sqlite::prepare(db, InsertSongQuery);
 	delete_song = lib::sqlite::prepare(db, DeleteSongQuery);
 	chart_exists = lib::sqlite::prepare(db, ChartExistsQuery);
+	chart_listing = lib::sqlite::prepare(db, ChartListingQuery);
 	insert_chart = lib::sqlite::prepare(db, InsertChartQuery);
 	insert_chart_density = lib::sqlite::prepare(db, InsertChartDensityQuery);
 	get_song_from_chart = lib::sqlite::prepare(db, GetSongFromChartQuery);
@@ -205,6 +220,18 @@ inline void Library::import(fs::path const& path)
 	} else {
 		throw runtime_error_fmt("Failed to import \"{}\": unknown type of file", path);
 	}
+}
+
+inline auto Library::list_charts() -> vector<ChartEntry>
+{
+	auto result = vector<ChartEntry>{};
+	lib::sqlite::query(chart_listing, [&](span<byte const> md5, string_view title) {
+		auto entry = ChartEntry{};
+		copy(md5, entry.md5.begin());
+		entry.title = title;
+		result.emplace_back(move(entry));
+	});
+	return result;
 }
 
 inline auto Library::load_chart(lib::openssl::MD5 md5) -> shared_ptr<Chart const>

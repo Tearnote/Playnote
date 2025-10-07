@@ -18,6 +18,7 @@ Implementation file for threads/render.hpp.
 #include "gfx/playfield.hpp"
 #include "gfx/renderer.hpp"
 #include "audio/player.hpp"
+#include "bms/library.hpp"
 #include "bms/cursor.hpp"
 #include "bms/chart.hpp"
 #include "threads/render_shouts.hpp"
@@ -29,6 +30,11 @@ namespace playnote::threads {
 enum class State {
 	Library,
 	Gameplay,
+};
+
+struct LibraryContext {
+	vector<bms::Library::ChartEntry> charts;
+	usize selected_chart = 0;
 };
 
 struct GameplayContext {
@@ -114,9 +120,14 @@ static void show_results(bms::Cursor const& cursor)
 	lib::imgui::text(" Rank: {}", enum_name(cursor.get_rank()));
 }
 
-static void render_library()
+static void render_library(LibraryContext& context)
 {
 	lib::imgui::begin_window("library", {8, 8}, 800, lib::imgui::WindowStyle::Static);
+	if (context.charts.empty()) {
+		lib::imgui::text("The library is empty. Drag a song folder or archive onto the game window to import.");
+	} else {
+		lib::imgui::text("Hello World");
+	}
 	lib::imgui::end_window();
 }
 
@@ -149,9 +160,14 @@ static void render_gameplay(Broadcaster& broadcaster, gfx::Renderer::Queue& queu
 static void run_render(Broadcaster& broadcaster, dev::Window const& window, gfx::Renderer& renderer)
 {
 	auto state = State::Library;
+	auto library_context = optional{LibraryContext{}};
 	auto gameplay_context = optional<GameplayContext>{nullopt};
+	broadcaster.shout<LibraryRefreshRequest>({});
 
 	while (!window.is_closing()) {
+		broadcaster.receive_all<vector<bms::Library::ChartEntry>>([&](auto list) {
+			library_context->charts = move(list);
+		});
 		broadcaster.receive_all<ChartLoaded>([&](auto ev) {
 			state = State::Gameplay;
 			auto player = ev.player.lock();
@@ -169,7 +185,7 @@ static void run_render(Broadcaster& broadcaster, dev::Window const& window, gfx:
 			queue.enqueue_rect("bg"_id, {{0, 0}, {1280, 720}, {0.060f, 0.060f, 0.060f, 1.000f}});
 
 			switch (state) {
-			case State::Library: render_library(); break;
+			case State::Library: render_library(*library_context); break;
 			case State::Gameplay: render_gameplay(broadcaster, queue, *gameplay_context); break;
 			}
 		});
@@ -180,6 +196,7 @@ void render(Broadcaster& broadcaster, Barriers<3>& barriers, dev::Window& window
 try {
 	dev::name_current_thread("render");
 	broadcaster.register_as_endpoint();
+	broadcaster.subscribe<vector<bms::Library::ChartEntry>>();
 	broadcaster.subscribe<ChartLoaded>();
 	barriers.startup.arrive_and_wait();
 	auto renderer = gfx::Renderer{window};
