@@ -28,6 +28,9 @@ public:
 	// Attach a chart to the player. A new cursor will be created for it.
 	void play(bms::Chart const&, bool autoplay, bool paused = false);
 
+	// Return true if a chart is playing (or paused).
+	[[nodiscard]] auto is_playing() const -> bool { return cursor.has_value(); }
+
 	// Register a player input to be processed when its timestamp arrives.
 	void enqueue_input(bms::Input input);
 

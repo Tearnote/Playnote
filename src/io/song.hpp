@@ -64,8 +64,11 @@ public:
 	static auto from_zip(fs::path const&) -> Song;
 
 	// Call the provided function for each chart of the song.
-	template<callable<void(span<byte const>)> Func>
+	template<callable<void(string_view, span<byte const>)> Func>
 	void for_each_chart(Func&&);
+
+	// Load the requested file.
+	auto load_file(string_view filepath) -> span<byte const>;
 
 	// Load the requested audio file, decode it, and resample to current device sample rate.
 	auto load_audio_file(string_view filepath) -> vector<dev::Sample>;
@@ -100,7 +103,11 @@ private:
 	)"sv;
 	// language=SQLite
 	static constexpr auto SelectChartsQuery = R"(
-		SELECT ptr, size FROM contents WHERE type = 1
+		SELECT path, ptr, size FROM contents WHERE type = 1
+	)"sv;
+	// language=SQLite
+	static constexpr auto SelectFileQuery = R"(
+		SELECT ptr, size FROM contents WHERE path = ?1
 	)"sv;
 	// language=SQLite
 	static constexpr auto SelectAudioFileQuery = R"(
@@ -110,6 +117,7 @@ private:
 	ReadFile file;
 	lib::sqlite::DB db;
 	lib::sqlite::Statement select_charts;
+	lib::sqlite::Statement select_file;
 	lib::sqlite::Statement select_audio_file;
 
 	Song(ReadFile&&, lib::sqlite::DB&&); // Use factory methods
@@ -143,11 +151,11 @@ void Song::for_each_chart_checksum_in_directory(fs::path const& path, Func&& fun
 	}
 }
 
-template<callable<void(span<byte const>)> Func>
+template<callable<void(string_view, span<byte const>)> Func>
 void Song::for_each_chart(Func&& func)
 {
-	lib::sqlite::query(select_charts, [&](void const* ptr, isize size) {
-		func(span{static_cast<byte const*>(ptr), static_cast<usize>(size)});
+	lib::sqlite::query(select_charts, [&](string_view path, void const* ptr, isize size) {
+		func(path, span{static_cast<byte const*>(ptr), static_cast<usize>(size)});
 	});
 }
 
@@ -251,13 +259,25 @@ inline auto Song::from_zip(fs::path const& path) -> Song
 		auto const ext = entry_path.extension().string();
 		auto const data = *lib::archive::read_data_block(archive);
 		auto const type = type_from_ext(ext);
-		if (type != FileType::Unknown) entry_path.replace_extension();
+		if (type == FileType::Audio) entry_path.replace_extension();
 		lib::sqlite::execute(insert_contents, entry_path.string(), +type, static_cast<void const*>(data.data()), data.size());
 		return true;
 	});
 
 	auto song = Song(move(file), move(db));
 	return song;
+}
+
+inline auto Song::load_file(string_view filepath) -> span<byte const>
+{
+	auto file = span<byte const>{};
+	lib::sqlite::query(select_file, [&](void const* ptr, isize size) {
+		file = span{static_cast<byte const*>(ptr), static_cast<usize>(size)};
+		return false;
+	}, filepath);
+	if (!file.data())
+		throw runtime_error_fmt("File \"{}\" doesn't exist within the song archive", filepath);
+	return file;
 }
 
 inline auto Song::load_audio_file(string_view filepath) -> vector<dev::Sample>
@@ -282,6 +302,7 @@ inline Song::Song(ReadFile&& file, lib::sqlite::DB&& db):
 	db{move(db)}
 {
 	select_charts = lib::sqlite::prepare(this->db, SelectChartsQuery);
+	select_file = lib::sqlite::prepare(this->db, SelectFileQuery);
 	select_audio_file = lib::sqlite::prepare(this->db, SelectAudioFileQuery);
 }
 

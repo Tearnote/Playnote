@@ -14,7 +14,6 @@ Implementation file for threads/render.hpp.
 #include "config.hpp"
 #include "lib/imgui.hpp"
 #include "dev/window.hpp"
-#include "dev/audio.hpp"
 #include "dev/os.hpp"
 #include "gfx/playfield.hpp"
 #include "gfx/renderer.hpp"
@@ -26,6 +25,18 @@ Implementation file for threads/render.hpp.
 #include "threads/broadcaster.hpp"
 
 namespace playnote::threads {
+
+enum class State {
+	Library,
+	Gameplay,
+};
+
+struct GameplayContext {
+	shared_ptr<audio::Player const> player;
+	gfx::Playfield playfield;
+	double scroll_speed;
+	milliseconds offset;
+};
 
 static auto ns_to_minsec(nanoseconds duration) -> string
 {
@@ -103,118 +114,63 @@ static void show_results(bms::Cursor const& cursor)
 	lib::imgui::text(" Rank: {}", enum_name(cursor.get_rank()));
 }
 
-struct LoadingToast {
-	fs::path path;
-	string phase;
-	optional<float> progress;
-	optional<string> progress_text;
-};
-
-template<callable<void(shared_ptr<audio::Player const>)> Func>
-void receive_loading_shouts(Broadcaster& broadcaster, optional<LoadingToast>& loading_toast, Func&& on_finish)
+static void render_library()
 {
-	broadcaster.receive_all<ChartLoadProgress>([&](auto&& recv) {
-		visit(visitor {
-			[&](ChartLoadProgress::CompilingIR& msg) {
-				if (!loading_toast) loading_toast.emplace();
-				loading_toast->path = msg.chart_path;
-				loading_toast->phase = "Compiling IR";
-				loading_toast->progress = nullopt;
-				loading_toast->progress_text = nullopt;
-			},
-			[&](ChartLoadProgress::Building& msg) {
-				if (!loading_toast) loading_toast.emplace();
-				loading_toast->path = msg.chart_path;
-				loading_toast->phase = "Building";
-				loading_toast->progress = nullopt;
-				loading_toast->progress_text = nullopt;
-			},
-			[&](ChartLoadProgress::LoadingFiles& msg) {
-				if (!loading_toast) loading_toast.emplace();
-				loading_toast->path = msg.chart_path;
-				loading_toast->phase = "Loading files";
-				loading_toast->progress = static_cast<float>(msg.loaded) / static_cast<float>(msg.total);
-				loading_toast->progress_text = format("{} / {}", msg.loaded, msg.total);
-			},
-			[&](ChartLoadProgress::Measuring& msg) {
-				if (!loading_toast) loading_toast.emplace();
-				loading_toast->path = msg.chart_path;
-				loading_toast->phase = "Measuring loudness";
-				loading_toast->progress = nullopt;
-				loading_toast->progress_text = ns_to_minsec(msg.progress);
-			},
-			[&](ChartLoadProgress::DensityCalculation& msg) {
-				if (!loading_toast) loading_toast.emplace();
-				loading_toast->path = msg.chart_path;
-				loading_toast->phase = "Calculating density";
-				loading_toast->progress = nullopt;
-				loading_toast->progress_text = ns_to_minsec(msg.progress);
-			},
-			[&](ChartLoadProgress::Finished& msg) {
-				loading_toast.reset();
-				on_finish(msg.player.lock());
-			},
-			[&](ChartLoadProgress::Failed& msg) {
-				loading_toast->path = msg.chart_path;
-				loading_toast->phase = format("Loading failed\n{}", msg.message);
-				loading_toast->progress = nullopt;
-				loading_toast->progress_text = nullopt;
-			},
-			[](auto&&) {}
-		}, recv.type);
-	});
+	lib::imgui::begin_window("library", {8, 8}, 800, lib::imgui::WindowStyle::Static);
+	lib::imgui::end_window();
 }
 
-static void enqueue_loading_toast(LoadingToast const& toast)
+static void render_gameplay(Broadcaster& broadcaster, gfx::Renderer::Queue& queue, GameplayContext& context)
 {
-	lib::imgui::begin_window("loading", {420, 300}, 440, lib::imgui::WindowStyle::Static);
-	lib::imgui::text("Loading {}", toast.path);
-	lib::imgui::text(toast.phase);
-	if (toast.progress_text) {
-		lib::imgui::progress_bar(toast.progress, *toast.progress_text);
-	}
+	auto const cursor = context.player->get_audio_cursor();
+	auto const& chart = cursor.get_chart();
+	lib::imgui::begin_window("info", {860, 8}, 412, lib::imgui::WindowStyle::Static);
+	show_metadata(cursor, chart.metadata);
+	lib::imgui::text("");
+	show_playback_controls(broadcaster);
+	lib::imgui::text("");
+	show_scroll_speed_controls(context.scroll_speed);
+	context.playfield.enqueue_from_cursor(queue, cursor, context.scroll_speed, context.offset);
+	lib::imgui::end_window();
+
+	lib::imgui::begin_window("judgements", {860, 436}, 120, lib::imgui::WindowStyle::Static);
+	show_judgments(cursor.get_judge_totals());
+	lib::imgui::end_window();
+
+	lib::imgui::begin_window("earlylate", {860, 558}, 120, lib::imgui::WindowStyle::Static);
+	show_earlylate(cursor.get_judge_totals());
+	lib::imgui::end_window();
+
+	lib::imgui::begin_window("results", {988, 436}, 120, lib::imgui::WindowStyle::Static);
+	show_results(cursor);
 	lib::imgui::end_window();
 }
 
 static void run_render(Broadcaster& broadcaster, dev::Window const& window, gfx::Renderer& renderer)
 {
-	auto player = shared_ptr<audio::Player const>{};
-	auto playfield = optional<gfx::Playfield>{};
-	auto loading_toast = optional<LoadingToast>{};
-	auto scroll_speed = globals::config->get_entry<double>("gameplay", "scroll_speed");
-	auto offset = milliseconds{globals::config->get_entry<int32>("gameplay", "note_offset")};
+	auto state = State::Library;
+	auto gameplay_context = optional<GameplayContext>{nullopt};
 
 	while (!window.is_closing()) {
-		receive_loading_shouts(broadcaster, loading_toast, [&](auto finished_player) {
-			player = move(finished_player);
-			playfield = gfx::Playfield{{44, 0}, 545, player->get_chart().metadata.playstyle};
+		broadcaster.receive_all<ChartLoaded>([&](auto ev) {
+			state = State::Gameplay;
+			auto player = ev.player.lock();
+			auto& chart = player->get_chart();
+			gameplay_context = GameplayContext{
+				.player = move(player),
+				.playfield = gfx::Playfield{{44, 0}, 545, player->get_chart().metadata.playstyle},
+				.scroll_speed = globals::config->get_entry<double>("gameplay", "scroll_speed"),
+				.offset = milliseconds{globals::config->get_entry<int32>("gameplay", "note_offset")},
+			};
 		});
+
 		renderer.frame({"bg"_id, "frame"_id, "measure"_id, "judgment_line"_id, "notes"_id, "pressed"_id}, [&](gfx::Renderer::Queue& queue) {
+			// Background
 			queue.enqueue_rect("bg"_id, {{0, 0}, {1280, 720}, {0.060f, 0.060f, 0.060f, 1.000f}});
-			if (loading_toast) enqueue_loading_toast(*loading_toast);
-			if (player) {
-				auto const cursor = player->get_audio_cursor();
-				auto const& chart = cursor.get_chart();
-				lib::imgui::begin_window("info", {860, 8}, 412, lib::imgui::WindowStyle::Static);
-				show_metadata(cursor, chart.metadata);
-				lib::imgui::text("");
-				show_playback_controls(broadcaster);
-				lib::imgui::text("");
-				show_scroll_speed_controls(scroll_speed);
-				playfield->enqueue_from_cursor(queue, cursor, scroll_speed, offset);
-				lib::imgui::end_window();
 
-				lib::imgui::begin_window("judgements", {860, 436}, 120, lib::imgui::WindowStyle::Static);
-				show_judgments(cursor.get_judge_totals());
-				lib::imgui::end_window();
-
-				lib::imgui::begin_window("earlylate", {860, 558}, 120, lib::imgui::WindowStyle::Static);
-				show_earlylate(cursor.get_judge_totals());
-				lib::imgui::end_window();
-
-				lib::imgui::begin_window("results", {988, 436}, 120, lib::imgui::WindowStyle::Static);
-				show_results(cursor);
-				lib::imgui::end_window();
+			switch (state) {
+			case State::Library: render_library(); break;
+			case State::Gameplay: render_gameplay(broadcaster, queue, *gameplay_context); break;
 			}
 		});
 	}
@@ -224,7 +180,7 @@ void render(Broadcaster& broadcaster, Barriers<3>& barriers, dev::Window& window
 try {
 	dev::name_current_thread("render");
 	broadcaster.register_as_endpoint();
-	broadcaster.subscribe<ChartLoadProgress>();
+	broadcaster.subscribe<ChartLoaded>();
 	barriers.startup.arrive_and_wait();
 	auto renderer = gfx::Renderer{window};
 	run_render(broadcaster, window, renderer);

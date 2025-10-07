@@ -13,106 +13,68 @@ Implementation file for threads/audio.hpp.
 #include "logger.hpp"
 #include "dev/window.hpp"
 #include "dev/os.hpp"
-#include "io/song_legacy.hpp"
 #include "audio/player.hpp"
 #include "audio/mixer.hpp"
 #include "bms/library.hpp"
-#include "bms/build_legacy.hpp"
 #include "bms/input.hpp"
-#include "bms/ir_legacy.hpp"
 #include "threads/render_shouts.hpp"
-#include "threads/audio_shouts.hpp"
 #include "threads/input_shouts.hpp"
 #include "threads/broadcaster.hpp"
 
 namespace playnote::threads {
 
-static auto load_bms(bms::IRCompiler& compiler, io::SongLegacy const& song, string_view filename) -> bms::IR
-{
-	INFO("Loading BMS file \"{}\"", filename);
-	auto const file = song.load_bms(filename);
-	auto ir = compiler.compile(file);
-	INFO("Loaded BMS file \"{}\" successfully", filename);
-	return ir;
-}
-
 static void run_audio(Broadcaster& broadcaster, dev::Window& window, audio::Mixer& mixer)
 {
-	auto request = ChartRequest{};
-	broadcaster.await<ChartRequest>(
-		[&](auto&& req) { request = move(req); },
-		[]() { yield(); });
-
 	auto library = bms::Library{LibraryDBPath};
-	auto song = io::SongLegacy{request.domain};
-	broadcaster.make_shout<ChartLoadProgress>(ChartLoadProgress::CompilingIR{request.filename});
-	auto bms_compiler = bms::IRCompiler{};
-	auto try_bms_ir = optional<bms::IR>{};
-	try {
-		try_bms_ir.emplace(load_bms(bms_compiler, song, request.filename));
-	} catch (exception const& e) {
-		broadcaster.make_shout<ChartLoadProgress>(ChartLoadProgress::Failed{
-			.chart_path = request.filename,
-			.message = e.what(),
-		});
-		return;
-	}
-	auto bms_ir = move(*try_bms_ir);
-	broadcaster.make_shout<ChartLoadProgress>(ChartLoadProgress::Building{request.filename});
-	auto const bms_chart = chart_from_ir(bms_ir, song, [&](ChartLoadProgress::Type progress) {
-		visit(visitor {
-			[&](ChartLoadProgress::LoadingFiles& msg) { msg.chart_path = request.filename; },
-			[&](ChartLoadProgress::Measuring& msg) { msg.chart_path = request.filename; },
-			[&](ChartLoadProgress::DensityCalculation& msg) { msg.chart_path = request.filename; },
-			[](auto&&){}
-		}, progress);
-		broadcaster.make_shout<ChartLoadProgress>(move(progress));
-	});
-	auto bms_player = make_shared<audio::Player>(window.get_glfw(), mixer);
-	bms_player->play(*bms_chart, false);
-	broadcaster.make_shout<ChartLoadProgress>(ChartLoadProgress::Finished{
-		.chart_path = request.filename,
-		.player = weak_ptr{bms_player},
-	});
 	auto mapper = bms::Mapper{};
+	auto player = make_shared<audio::Player>(window.get_glfw(), mixer);
 
 	while (!window.is_closing()) {
+		broadcaster.receive_all<LoadChart>([&](auto ev) {
+			auto chart = library.load_chart(ev);
+			player->play(*chart, false);
+		});
 		broadcaster.receive_all<PlayerControl>([&](auto ev) {
 			switch (ev) {
 			case PlayerControl::Play:
-				bms_player->resume();
+				player->resume();
 				break;
 			case PlayerControl::Pause:
-				bms_player->pause();
+				player->pause();
 				break;
 			case PlayerControl::Restart:
-				bms_player->play(*bms_chart, false);
+				player->play(player->get_chart(), false);
 				break;
 			case PlayerControl::Autoplay:
-				bms_player->play(*bms_chart, true);
+				player->play(player->get_chart(), true);
 				break;
 			default: PANIC();
 			}
 		});
 		broadcaster.receive_all<KeyInput>([&](auto ev) {
-			auto input = mapper.from_key(ev, bms_player->get_chart().metadata.playstyle);
+			if (!player->is_playing()) return;
+			auto input = mapper.from_key(ev, player->get_chart().metadata.playstyle);
 			if (!input) return;
-			bms_player->enqueue_input(*input);
+			player->enqueue_input(*input);
 		});
 		broadcaster.receive_all<ButtonInput>([&](auto ev) {
-			auto input = mapper.from_button(ev, bms_player->get_chart().metadata.playstyle);
+			if (!player->is_playing()) return;
+			auto input = mapper.from_button(ev, player->get_chart().metadata.playstyle);
 			if (!input) return;
-			bms_player->enqueue_input(*input);
+			player->enqueue_input(*input);
 		});
 		broadcaster.receive_all<AxisInput>([&](auto ev) {
-			auto inputs = mapper.submit_axis_input(ev, bms_player->get_chart().metadata.playstyle);
-			for (auto const& input: inputs) bms_player->enqueue_input(input);
+			if (!player->is_playing()) return;
+			auto inputs = mapper.submit_axis_input(ev, player->get_chart().metadata.playstyle);
+			for (auto const& input: inputs) player->enqueue_input(input);
 		});
 		broadcaster.receive_all<FileDrop>([&](auto ev) {
 			for (auto const& path: ev.paths) library.import(path);
 		});
-		auto inputs = mapper.from_axis_state(window.get_glfw(), bms_player->get_chart().metadata.playstyle);
-		for (auto const& input: inputs) bms_player->enqueue_input(input);
+		if (player->is_playing()) {
+			auto inputs = mapper.from_axis_state(window.get_glfw(), player->get_chart().metadata.playstyle);
+			for (auto const& input: inputs) player->enqueue_input(input);
+		}
 
 		yield();
 	}
@@ -122,8 +84,8 @@ void audio(Broadcaster& broadcaster, Barriers<3>& barriers, dev::Window& window)
 try {
 	dev::name_current_thread("audio");
 	broadcaster.register_as_endpoint();
+	broadcaster.subscribe<LoadChart>();
 	broadcaster.subscribe<PlayerControl>();
-	broadcaster.subscribe<ChartRequest>();
 	broadcaster.subscribe<KeyInput>();
 	broadcaster.subscribe<ButtonInput>();
 	broadcaster.subscribe<AxisInput>();

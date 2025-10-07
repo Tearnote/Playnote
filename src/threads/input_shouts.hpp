@@ -12,12 +12,6 @@ Shouts that can be spawned by the input thread. Typically messages from the OS m
 
 namespace playnote::threads {
 
-// A request for a chart to be loaded and played.
-struct ChartRequest {
-	fs::path domain;
-	string filename;
-};
-
 // File drop event.
 struct FileDrop {
 	vector<fs::path> paths;

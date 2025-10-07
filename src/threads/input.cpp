@@ -18,7 +18,7 @@ Implementation file for threads/audio.hpp.
 
 namespace playnote::threads {
 
-static void run_input(Broadcaster& broadcaster, dev::Window& window, ChartRequest const& request)
+static void run_input(Broadcaster& broadcaster, dev::Window& window)
 {
 	auto& glfw = window.get_glfw();
 	window.register_key_callback([&](dev::Window::KeyCode keycode, bool state) {
@@ -34,7 +34,6 @@ static void run_input(Broadcaster& broadcaster, dev::Window& window, ChartReques
 		broadcaster.shout(move(event));
 	});
 	auto con_dispatcher = dev::ControllerDispatcher{glfw};
-	broadcaster.shout(request);
 	while (!window.is_closing()) {
 		glfw.poll();
 		con_dispatcher.poll([&](auto event) {
@@ -44,12 +43,12 @@ static void run_input(Broadcaster& broadcaster, dev::Window& window, ChartReques
 	}
 }
 
-void input(Broadcaster& broadcaster, Barriers<3>& barriers, dev::Window& window, ChartRequest const& request)
+void input(Broadcaster& broadcaster, Barriers<3>& barriers, dev::Window& window)
 try {
 	dev::name_current_thread("input");
 	broadcaster.register_as_endpoint();
 	barriers.startup.arrive_and_wait();
-	run_input(broadcaster, window, request);
+	run_input(broadcaster, window);
 	barriers.shutdown.arrive_and_wait();
 }
 catch (exception const& e) {

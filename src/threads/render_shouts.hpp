@@ -8,7 +8,13 @@ Shouts that can be spawned by the render thread.
 
 #pragma once
 
+#include "preamble.hpp"
+#include "lib/openssl.hpp"
+
 namespace playnote::threads {
+
+// User wants to play a chart.
+using LoadChart = lib::openssl::MD5;
 
 // User requested an action on the playing chart.
 enum class PlayerControl {

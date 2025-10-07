@@ -16,6 +16,6 @@ Only the process's main thread can be the input thread.
 namespace playnote::threads {
 
 // Input thread entry point.
-void input(Broadcaster&, Barriers<3>&, dev::Window&, ChartRequest const&);
+void input(Broadcaster&, Barriers<3>&, dev::Window&);
 
 }

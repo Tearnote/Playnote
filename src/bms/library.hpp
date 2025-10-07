@@ -26,6 +26,9 @@ public:
 	// Import a song and all its charts into the library.
 	void import(fs::path const&);
 
+	// Load a chart from the library.
+	auto load_chart(lib::openssl::MD5) -> shared_ptr<Chart const>;
+
 	Library(Library const&) = delete;
 	auto operator=(Library const&) -> Library& = delete;
 	Library(Library&&) = delete;
@@ -57,6 +60,7 @@ private:
 		CREATE TABLE IF NOT EXISTS charts(
 			md5 BLOB PRIMARY KEY NOT NULL CHECK(length(md5) == 16),
 			song_id INTEGER NOT NULL REFERENCES songs ON DELETE CASCADE,
+			path TEXT NOT NULL,
 			date_imported INTEGER DEFAULT(unixepoch()),
 			title TEXT NOT NULL,
 			subtitle TEXT,
@@ -110,10 +114,10 @@ private:
 	)"sv;
 	// language=SQLite
 	static constexpr auto InsertChartQuery = R"(
-		INSERT INTO charts(md5, song_id, title, subtitle, artist, subartist, genre, url,
+		INSERT INTO charts(md5, song_id, path, title, subtitle, artist, subartist, genre, url,
 			email, difficulty, playstyle, has_ln, has_soflan, note_count, chart_duration,
 			audio_duration, loudness, average_nps, peak_nps, min_bpm, max_bpm, main_bpm)
-			VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22)
+			VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23)
 	)"sv;
 
 	// language=SQLite
@@ -137,6 +141,19 @@ private:
 	static constexpr auto GetSongFromChartQuery = R"(
 		SELECT songs.id, songs.path FROM songs INNER JOIN charts ON songs.id = charts.song_id WHERE charts.md5 = ?1
 	)"sv;
+	// language=SQLite
+	static constexpr auto SelectSongChartQuery = R"(
+		SELECT
+			songs.path, charts.path, charts.date_imported, charts.title, charts.subtitle, charts.artist,
+			charts.subartist, charts.genre, charts.url, charts.email, charts.difficulty, charts.playstyle,
+			charts.has_ln, charts.has_soflan, charts.note_count, charts.chart_duration, charts.audio_duration,
+			charts.loudness, charts.average_nps, charts.peak_nps, charts.min_bpm, charts.max_bpm, charts.main_bpm,
+			chart_densities.resolution, chart_densities.key, chart_densities.scratch, chart_densities.ln
+			FROM charts
+			INNER JOIN songs ON songs.id = charts.song_id
+			INNER JOIN chart_densities ON charts.md5 = chart_densities.md5
+			WHERE charts.md5 = ?1
+	)"sv;
 
 	lib::sqlite::DB db;
 	lib::sqlite::Statement song_exists;
@@ -146,13 +163,14 @@ private:
 	lib::sqlite::Statement insert_chart;
 	lib::sqlite::Statement insert_chart_density;
 	lib::sqlite::Statement get_song_from_chart;
+	lib::sqlite::Statement select_song_chart;
 
 	Builder builder;
 
 	[[nodiscard]] auto find_available_song_filename(string_view name) -> string;
 	void import_one(fs::path const&);
 	auto import_song(fs::path const&) -> pair<usize, string>;
-	auto import_chart(io::Song& song, usize song_id, span<byte const>) -> bool;
+	auto import_chart(io::Song& song, usize song_id, string_view chart_path, span<byte const>) -> bool;
 };
 
 inline Library::Library(fs::path const& path):
@@ -168,6 +186,7 @@ inline Library::Library(fs::path const& path):
 	insert_chart = lib::sqlite::prepare(db, InsertChartQuery);
 	insert_chart_density = lib::sqlite::prepare(db, InsertChartDensityQuery);
 	get_song_from_chart = lib::sqlite::prepare(db, GetSongFromChartQuery);
+	select_song_chart = lib::sqlite::prepare(db, SelectSongChartQuery);
 	fs::create_directory(LibraryPath);
 	INFO("Opened song library at \"{}\"", path);
 }
@@ -188,6 +207,70 @@ inline void Library::import(fs::path const& path)
 	}
 }
 
+inline auto Library::load_chart(lib::openssl::MD5 md5) -> shared_ptr<Chart const>
+{
+	auto cache = optional<Metadata>{nullopt};
+	auto song_path = fs::path{};
+	auto chart_path = string{};
+	lib::sqlite::query(select_song_chart, [&](
+		string_view song_path_sv, string_view chart_path_sv, int64 date_imported, string_view title, string_view subtitle,
+		string_view artist, string_view subartist, string_view genre, string_view url, string_view email,
+		int difficulty, int playstyle, int has_ln, int has_soflan, int note_count, int64 chart_duration,
+		int64 audio_duration, double loudness, double average_nps, double peak_nps, double min_bpm, double max_bpm,
+		double main_bpm, int density_resolution, span<const byte> density_key, span<const byte> density_scratch,
+		span<const byte> density_ln
+	) {
+		auto deserialize_density = [](span<byte const> v) {
+			auto [data, in] = lib::bits::data_in();
+			auto vec = vector<float>{};
+			in(vec).or_throw();
+			return vec;
+		};
+		song_path = fs::path{LibraryPath} / song_path_sv;
+		chart_path = chart_path_sv;
+		cache = Metadata{
+			.title = string{title},
+			.subtitle = string{subtitle},
+			.artist = string{artist},
+			.subartist = string{subartist},
+			.genre = string{genre},
+			.url = string{url},
+			.email = string{email},
+			.difficulty = static_cast<Difficulty>(difficulty),
+			.playstyle = static_cast<Playstyle>(playstyle),
+			.features = Metadata::Features{
+				.has_ln = has_ln != 0,
+				.has_soflan = has_soflan != 0,
+			},
+			.note_count = static_cast<uint32>(note_count),
+			.chart_duration = nanoseconds{chart_duration},
+			.audio_duration = nanoseconds{audio_duration},
+			.loudness = loudness,
+			.density = Metadata::Density{
+				.resolution = nanoseconds{density_resolution},
+				.key = deserialize_density(density_key),
+				.scratch = deserialize_density(density_scratch),
+				.ln = deserialize_density(density_ln),
+			},
+			.nps = Metadata::NPS{
+				.average = average_nps,
+				.peak = peak_nps,
+			},
+			.bpm_range = Metadata::BPMRange{
+				.min = min_bpm,
+				.max = max_bpm,
+				.main = main_bpm,
+			},
+		};
+		return false;
+	}, md5);
+	if (!cache) throw runtime_error{"Chart not found"};
+
+	auto song = io::Song::from_zip(song_path);
+	auto chart_raw = song.load_file(chart_path);
+	return builder.build(chart_raw, song, *cache);
+}
+
 inline auto Library::find_available_song_filename(string_view name) -> string
 {
 	for (auto i: views::iota(0u)) {
@@ -206,8 +289,8 @@ inline void Library::import_one(fs::path const& path)
 	auto [song_id, song_path] = import_song(path);
 	auto song = io::Song::from_zip(song_path);
 	auto imported_count = 0u;
-	song.for_each_chart([&](auto chart) {
-		imported_count += import_chart(song, song_id, chart)? 1 : 0;
+	song.for_each_chart([&](auto path, auto chart) {
+		imported_count += import_chart(song, song_id, path, chart)? 1 : 0;
 	});
 	if (imported_count == 0) {
 		lib::sqlite::execute(delete_song, song_id);
@@ -234,7 +317,7 @@ inline auto Library::import_song(fs::path const& path) -> pair<usize, string> tr
 
 	if (existing_song) { // Extending
 		auto existing_song_id = get<0>(*existing_song);
-		auto existing_song_path = fs::path{LibraryPath} / get<1>(*existing_song);
+		auto const existing_song_path = fs::path{LibraryPath} / get<1>(*existing_song);
 
 		auto tmp_path = existing_song_path;
 		tmp_path.concat(".tmp");
@@ -265,7 +348,7 @@ inline auto Library::import_song(fs::path const& path) -> pair<usize, string> tr
 	throw;
 }
 
-inline auto Library::import_chart(io::Song& song, usize song_id, span<byte const> chart_raw) -> bool
+inline auto Library::import_chart(io::Song& song, usize song_id, string_view chart_path, span<byte const> chart_raw) -> bool
 {
 	auto const md5 = lib::openssl::md5(chart_raw);
 	auto exists = false;
@@ -274,7 +357,7 @@ inline auto Library::import_chart(io::Song& song, usize song_id, span<byte const
 
 	auto chart = builder.build(chart_raw, song);
     lib::sqlite::transaction(db, [&] {
-        lib::sqlite::execute(insert_chart, chart->md5, song_id, chart->metadata.title,
+        lib::sqlite::execute(insert_chart, chart->md5, song_id, chart_path, chart->metadata.title,
 			chart->metadata.subtitle, chart->metadata.artist, chart->metadata.subartist,
 			chart->metadata.genre, chart->metadata.url, chart->metadata.email,
 			+chart->metadata.difficulty, +chart->metadata.playstyle, chart->metadata.features.has_ln,

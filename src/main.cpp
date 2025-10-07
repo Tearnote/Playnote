@@ -22,34 +22,7 @@ Entry point. Initializes basic facilities, spawns threads.
 
 using namespace playnote; // Can't namespace main()
 
-auto parse_arguments(int argc, char** argv) -> threads::ChartRequest
-{
-	auto const actual_args = argc - 1;
-	constexpr auto usage_str = "Usage:\nplaynote <BMS file path>\nor\nplaynote <archive path> <BMS file name>";
-	if (actual_args == 0) {
-		dev::syserror("{}", usage_str);
-		exit(EXIT_SUCCESS);
-	}
-	if (actual_args > 2) {
-		dev::syserror("Invalid number of arguments: expected 1 or 2, received {}\n\n{}", actual_args, usage_str);
-		exit(EXIT_FAILURE);
-	}
-
-	if (actual_args == 2) {
-		return threads::ChartRequest{
-			.domain = fs::path{argv[1]},
-			.filename = argv[2],
-		};
-	}
-	// 1 arg, split into location and filename
-	auto const path = fs::path{argv[1]};
-	return threads::ChartRequest{
-		.domain = path.parent_path(),
-		.filename = path.filename().string(),
-	};
-}
-
-auto run(threads::ChartRequest const& song_request) -> int
+auto run() -> int
 {
 	auto const scheduler_period = dev::SchedulerPeriod{1ms};
 	auto glfw = dev::GLFW{};
@@ -61,31 +34,26 @@ auto run(threads::ChartRequest const& song_request) -> int
 	auto barriers = threads::Barriers<3>{};
 	auto audio_thread_stub = jthread{threads::audio, ref(broadcaster), ref(barriers), ref(window)};
 	auto render_thread_stub = jthread{threads::render, ref(broadcaster), ref(barriers), ref(window)};
-	threads::input(broadcaster, barriers, window, song_request);
+	threads::input(broadcaster, barriers, window);
 
 	return EXIT_SUCCESS;
 }
 
 #ifdef TARGET_LINUX
-auto main(int argc, char** argv) -> int
+auto main() -> int
 #elifdef TARGET_WINDOWS
 auto WinMain(HINSTANCE, HINSTANCE, LPSTR, int) -> int
 #endif
 try {
-	std::setlocale(LC_ALL, "en_US.UTF-8");
-#ifdef TARGET_WINDOWS
-	auto const argc = __argc;
-	auto** argv = __argv;
-#endif
+	std::setlocale(LC_ALL, "en_US.UTF-8"); //TODO remove after forking libarchive
 	lib::dbg::set_assert_handler();
 	auto config_stub = globals::config.provide();
 	if (globals::config->get_entry<bool>("system", "attach_console")) lib::dbg::attach_console();
 	auto logger_stub = globals::logger.provide(LogfilePath,
 		*enum_cast<Logger::Level>(globals::config->get_entry<string>("logging", "global")));
 	globals::config->load_from_file();
-	auto const song_request = parse_arguments(argc, argv);
 	INFO("{} {}.{}.{} starting up", AppTitle, AppVersion[0], AppVersion[1], AppVersion[2]);
-	return run(song_request);
+	return run();
 }
 catch (exception const& e) {
 	// Handle any exception that happened outside of threads::input()
