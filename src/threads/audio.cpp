@@ -28,6 +28,7 @@ static void run_audio(Broadcaster& broadcaster, dev::Window& window, audio::Mixe
 {
 	auto library = bms::Library{LibraryDBPath};
 	auto mapper = bms::Mapper{};
+	auto chart = shared_ptr<bms::Chart const>{};
 	auto player = make_shared<audio::Player>(window.get_glfw(), mixer);
 
 	while (!window.is_closing()) {
@@ -35,9 +36,12 @@ static void run_audio(Broadcaster& broadcaster, dev::Window& window, audio::Mixe
 			broadcaster.shout(library.list_charts());
 		});
 		broadcaster.receive_all<LoadChart>([&](auto ev) {
-			auto chart = library.load_chart(ev);
+			chart = library.load_chart(ev);
 			player->play(*chart, false);
-			broadcaster.shout(ChartLoaded{weak_ptr{player}});
+			broadcaster.shout(ChartLoaded{
+				.player = weak_ptr{player},
+				.chart = weak_ptr{chart},
+			});
 		});
 		broadcaster.receive_all<PlayerControl>([&](auto ev) {
 			switch (ev) {
@@ -48,10 +52,10 @@ static void run_audio(Broadcaster& broadcaster, dev::Window& window, audio::Mixe
 				player->pause();
 				break;
 			case PlayerControl::Restart:
-				player->play(player->get_chart(), false);
+				player->play(*chart, false);
 				break;
 			case PlayerControl::Autoplay:
-				player->play(player->get_chart(), true);
+				player->play(*chart, true);
 				break;
 			case PlayerControl::Stop:
 				player->stop();
@@ -61,19 +65,19 @@ static void run_audio(Broadcaster& broadcaster, dev::Window& window, audio::Mixe
 		});
 		broadcaster.receive_all<KeyInput>([&](auto ev) {
 			if (!player->is_playing()) return;
-			auto input = mapper.from_key(ev, player->get_chart().metadata.playstyle);
+			auto input = mapper.from_key(ev, chart->metadata.playstyle);
 			if (!input) return;
 			player->enqueue_input(*input);
 		});
 		broadcaster.receive_all<ButtonInput>([&](auto ev) {
 			if (!player->is_playing()) return;
-			auto input = mapper.from_button(ev, player->get_chart().metadata.playstyle);
+			auto input = mapper.from_button(ev, chart->metadata.playstyle);
 			if (!input) return;
 			player->enqueue_input(*input);
 		});
 		broadcaster.receive_all<AxisInput>([&](auto ev) {
 			if (!player->is_playing()) return;
-			auto inputs = mapper.submit_axis_input(ev, player->get_chart().metadata.playstyle);
+			auto inputs = mapper.submit_axis_input(ev, chart->metadata.playstyle);
 			for (auto const& input: inputs) player->enqueue_input(input);
 		});
 		broadcaster.receive_all<FileDrop>([&](auto ev) {
@@ -81,7 +85,7 @@ static void run_audio(Broadcaster& broadcaster, dev::Window& window, audio::Mixe
 			broadcaster.shout(library.list_charts());
 		});
 		if (player->is_playing()) {
-			auto inputs = mapper.from_axis_state(window.get_glfw(), player->get_chart().metadata.playstyle);
+			auto inputs = mapper.from_axis_state(window.get_glfw(), chart->metadata.playstyle);
 			for (auto const& input: inputs) player->enqueue_input(input);
 		}
 

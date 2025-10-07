@@ -28,24 +28,24 @@ public:
 	// Attach a chart to the player. A new cursor will be created for it.
 	void play(bms::Chart const&, bool autoplay, bool paused = false);
 
-	// Return true if a chart is playing (or paused).
+	// Return true if a chart is currently attached.
 	[[nodiscard]] auto is_playing() const -> bool { return cursor.has_value(); }
 
 	// Register a player input to be processed when its timestamp arrives.
 	void enqueue_input(bms::Input input);
 
 	// Return the currently playing chart. Requires that a chart is attached.
-	[[nodiscard]] auto get_chart() const -> bms::Chart const& { return cursor->get_chart(); }
+	[[nodiscard]] auto get_chart() const -> optional<reference_wrapper<bms::Chart const>>;
 
 	// Return a cursor that's at the same position as the sample playing from the speakers
 	// right now. This is a best guess estimate based on time elapsed since the last audio buffer.
-	[[nodiscard]] auto get_audio_cursor() const -> bms::Cursor;
+	[[nodiscard]] auto get_audio_cursor() const -> optional<bms::Cursor>;
 
 	// Convert an absolute timestamp to one relative to the chart's start time.
 	[[nodiscard]] auto chart_relative_timestamp(nanoseconds) const -> nanoseconds;
 
 	// Detach the cursor, stopping all playback.
-	void stop() { paused = true; cursor.reset(); }
+	void stop();
 
 	// Pause playback. Cursor will not advance.
 	void pause() { paused = true; }
@@ -67,9 +67,19 @@ public:
 	auto operator=(Player&&) -> Player& = delete;
 
 private:
+	struct PendingCommand {
+		enum class Type {
+			Start,
+			Stop,
+		};
+		Type type;
+		optional<bms::Cursor> new_cursor;
+		optional<bool> new_paused;
+	};
 	dev::GLFW const& glfw;
 	Mixer& mixer;
 	optional<bms::Cursor> cursor;
+	optional<PendingCommand> pending_command;
 	atomic<bool> paused = true;
 	float gain;
 	nanoseconds timer_slop; // Chart start time according to the CPU timer. Adjusted over time to maintain sync
@@ -78,11 +88,11 @@ private:
 
 inline void Player::play(bms::Chart const& chart, bool autoplay, bool paused)
 {
-	cursor.emplace(chart, autoplay);
-	gain = dev::lufs_to_gain(chart.metadata.loudness);
-	ASSERT(gain > 0);
-	timer_slop = glfw.get_time();
-	this->paused = paused;
+	pending_command = PendingCommand{
+		.type = PendingCommand::Type::Start,
+		.new_cursor = bms::Cursor{chart, autoplay},
+		.new_paused = paused,
+	};
 }
 
 inline void Player::enqueue_input(bms::Input input)
@@ -92,8 +102,15 @@ inline void Player::enqueue_input(bms::Input input)
 	inputs.emplace_back(input);
 }
 
-inline auto Player::get_audio_cursor() const -> bms::Cursor
+inline auto Player::get_chart() const -> optional<reference_wrapper<bms::Chart const>>
 {
+	if (!cursor) return nullopt;
+	return cursor->get_chart();
+}
+
+inline auto Player::get_audio_cursor() const -> optional<bms::Cursor>
+{
+	if (!cursor) return nullopt;
 	auto const buffer_start_progress =
 		cursor->get_progress_ns() > Mixer::get_latency()?
 		cursor->get_progress_ns() - Mixer::get_latency() :
@@ -111,8 +128,30 @@ inline auto Player::chart_relative_timestamp(nanoseconds time) const -> nanoseco
 	return time - timer_slop;
 }
 
+inline void Player::stop()
+{
+	pending_command = PendingCommand{ .type = PendingCommand::Type::Stop };
+}
+
 inline void Player::begin_buffer()
 {
+	if (pending_command) {
+		switch (pending_command->type) {
+		case PendingCommand::Type::Start:
+			cursor = pending_command->new_cursor;
+			paused = *pending_command->new_paused;
+			gain = dev::lufs_to_gain(cursor->get_chart().metadata.loudness);
+			ASSERT(gain > 0);
+			timer_slop = glfw.get_time();
+			break;
+		case PendingCommand::Type::Stop:
+			cursor = nullopt;
+			paused = true;
+			break;
+		}
+		pending_command = nullopt;
+	}
+
 	if (paused) return;
 	auto const estimated = timer_slop + dev::Audio::samples_to_ns(cursor->get_progress());
 	auto const now = glfw.get_time();

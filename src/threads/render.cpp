@@ -39,6 +39,7 @@ struct LibraryContext {
 
 struct GameplayContext {
 	shared_ptr<audio::Player const> player;
+	shared_ptr<bms::Chart const> chart;
 	gfx::Playfield playfield;
 	double scroll_speed;
 	milliseconds offset;
@@ -147,26 +148,26 @@ static void render_gameplay(Broadcaster& broadcaster, gfx::Renderer::Queue& queu
 {
 	auto& context = get<GameplayContext>(state.context);
 	auto const cursor = context.player->get_audio_cursor();
-	auto const& chart = cursor.get_chart();
+	if (!cursor) return;
 	lib::imgui::begin_window("info", {860, 8}, 412, lib::imgui::WindowStyle::Static);
-	show_metadata(cursor, chart.metadata);
+	show_metadata(*cursor, context.chart->metadata);
 	lib::imgui::text("");
 	show_playback_controls(broadcaster, state);
 	lib::imgui::text("");
 	show_scroll_speed_controls(context.scroll_speed);
-	context.playfield.enqueue_from_cursor(queue, cursor, context.scroll_speed, context.offset);
+	context.playfield.enqueue_from_cursor(queue, *cursor, context.scroll_speed, context.offset);
 	lib::imgui::end_window();
 
 	lib::imgui::begin_window("judgements", {860, 436}, 120, lib::imgui::WindowStyle::Static);
-	show_judgments(cursor.get_judge_totals());
+	show_judgments(cursor->get_judge_totals());
 	lib::imgui::end_window();
 
 	lib::imgui::begin_window("earlylate", {860, 558}, 120, lib::imgui::WindowStyle::Static);
-	show_earlylate(cursor.get_judge_totals());
+	show_earlylate(cursor->get_judge_totals());
 	lib::imgui::end_window();
 
 	lib::imgui::begin_window("results", {988, 436}, 120, lib::imgui::WindowStyle::Static);
-	show_results(cursor);
+	show_results(*cursor);
 	lib::imgui::end_window();
 }
 
@@ -188,11 +189,12 @@ static void run_render(Broadcaster& broadcaster, dev::Window const& window, gfx:
 		});
 		broadcaster.receive_all<ChartLoaded>([&](auto const& ev) {
 			state.current = State::Gameplay;
-			auto player = ev.player.lock();
-			auto& chart = player->get_chart();
+			auto chart = ev.chart.lock();
+			auto playstyle = chart->metadata.playstyle;
 			state.context = GameplayContext{
-				.player = move(player),
-				.playfield = gfx::Playfield{{44, 0}, 545, chart.metadata.playstyle},
+				.player = ev.player.lock(),
+				.chart = move(chart),
+				.playfield = gfx::Playfield{{44, 0}, 545, playstyle},
 				.scroll_speed = globals::config->get_entry<double>("gameplay", "scroll_speed"),
 				.offset = milliseconds{globals::config->get_entry<int32>("gameplay", "note_offset")},
 			};

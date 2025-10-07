@@ -9,11 +9,13 @@ Shouts that can be spawned by the audio thread.
 #pragma once
 #include "preamble.hpp"
 #include "audio/player.hpp"
+#include "bms/chart.hpp"
 
 namespace playnote::threads {
 
 struct ChartLoaded {
 	weak_ptr<audio::Player const> player;
+	weak_ptr<bms::Chart const> chart;
 };
 
 }
