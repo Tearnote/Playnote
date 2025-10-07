@@ -123,7 +123,7 @@ private:
 	)"sv;
 	// language=SQLite
 	static constexpr auto ChartListingQuery = R"(
-		SELECT md5, title, difficulty FROM charts
+		SELECT md5, title, playstyle, difficulty FROM charts
 	)"sv;
 	// language=SQLite
 	static constexpr auto InsertChartQuery = R"(
@@ -225,10 +225,12 @@ inline void Library::import(fs::path const& path)
 inline auto Library::list_charts() -> vector<ChartEntry>
 {
 	auto result = vector<ChartEntry>{};
-	lib::sqlite::query(chart_listing, [&](span<byte const> md5, string_view title, int difficulty) {
+	lib::sqlite::query(chart_listing, [&](span<byte const> md5, string_view title, int playstyle, int difficulty) {
 		auto entry = ChartEntry{};
 		copy(md5, entry.md5.begin());
-		entry.title = format("{} [{}]", title, enum_name(static_cast<Difficulty>(difficulty)));
+		auto const difficulty_str = enum_name(static_cast<Difficulty>(difficulty));
+		auto const playstyle_str = enum_name(static_cast<Playstyle>(playstyle));
+		entry.title = format("{} [{}] [{}]", title, difficulty_str, playstyle_str.substr(1));
 		result.emplace_back(move(entry));
 	});
 	return result;
@@ -280,13 +282,13 @@ inline auto Library::load_chart(lib::openssl::MD5 md5) -> shared_ptr<Chart const
 				.ln = deserialize_density(density_ln),
 			},
 			.nps = Metadata::NPS{
-				.average = average_nps,
-				.peak = peak_nps,
+				.average = static_cast<float>(average_nps),
+				.peak = static_cast<float>(peak_nps),
 			},
 			.bpm_range = Metadata::BPMRange{
-				.min = min_bpm,
-				.max = max_bpm,
-				.main = main_bpm,
+				.min = static_cast<float>(min_bpm),
+				.max = static_cast<float>(max_bpm),
+				.main = static_cast<float>(main_bpm),
 			},
 		};
 		return false;
