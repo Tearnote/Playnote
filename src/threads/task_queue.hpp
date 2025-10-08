@@ -35,14 +35,14 @@ public:
 	class Task {
 	public:
 		// Retrieve the return value or exception by blocking until the task is complete.
-		auto get() -> T { return future.get(); }
+		auto get() -> T { return fut.get(); }
 
 		// Check if the task is complete.
-		[[nodiscard]] auto is_ready() const -> bool { return future.wait_for(0s) == future_status::ready; }
+		[[nodiscard]] auto is_ready() const -> bool { return fut.wait_for(0s) == future_status::ready; }
 
 	private:
 		friend class TaskQueue;
-		future<T> future;
+		future<T> fut;
 	};
 
 private:
@@ -58,7 +58,7 @@ auto TaskQueue::enqueue(Func&& func, Args&&... args) -> Task<invoke_result_t<Fun
 
 	auto ret = promise<Ret>{};
 	auto task_stub = Task<Ret>{};
-	task_stub.future = ret.get_future();
+	task_stub.fut = ret.get_future();
 	queue.enqueue([
 		func = decay_t<Func>(func),
 		args = tuple(decay_t<Args>(args)...),
