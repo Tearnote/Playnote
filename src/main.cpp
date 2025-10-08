@@ -16,6 +16,7 @@ Entry point. Initializes basic facilities, spawns threads.
 #include "dev/os.hpp"
 #include "threads/input_shouts.hpp"
 #include "threads/broadcaster.hpp"
+#include "threads/task_queue.hpp"
 #include "threads/render.hpp"
 #include "threads/audio.hpp"
 #include "threads/input.hpp"
@@ -53,6 +54,7 @@ try {
 		*enum_cast<Logger::Level>(globals::config->get_entry<string>("logging", "global")));
 	globals::config->load_from_file();
 	INFO("{} {}.{}.{} starting up", AppTitle, AppVersion[0], AppVersion[1], AppVersion[2]);
+	auto task_queue_stub = globals::task_queue.provide();
 	return run();
 }
 catch (exception const& e) {

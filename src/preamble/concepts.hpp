@@ -15,6 +15,7 @@ namespace playnote {
 
 using std::same_as;
 using std::convertible_to;
+using std::invocable;
 
 template<typename T, typename Base>
 concept implements = std::derived_from<T, Base>;

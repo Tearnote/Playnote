@@ -8,6 +8,7 @@ Imports of OS-specific functionality.
 
 #pragma once
 #include <filesystem>
+#include <future>
 #include <thread>
 #include <latch>
 #include "msd/channel.hpp"
@@ -35,6 +36,9 @@ using std::atomic;
 using std::mutex;
 using std::lock_guard;
 using std::latch;
+using std::promise;
+using std::future;
+using std::future_status;
 using msd::channel;
 
 }

@@ -56,6 +56,8 @@ using std::ranges::max_element;
 
 using std::distance;
 using std::function;
+using std::move_only_function;
+using std::apply;
 using std::invoke;
 
 }

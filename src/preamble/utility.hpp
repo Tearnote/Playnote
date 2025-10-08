@@ -55,6 +55,8 @@ using boost::scope::unique_resource;
 using std::type_index;
 using std::decay_t;
 using std::remove_cvref_t;
+using std::invoke_result_t;
+using std::is_void_v;
 using std::bit_cast;
 using std::index_sequence;
 using std::make_index_sequence;
