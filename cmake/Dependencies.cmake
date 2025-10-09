@@ -172,9 +172,3 @@ FetchContent_Declare(zpp_bits # Serialization
 FetchContent_MakeAvailable(zpp_bits)
 add_library(zpp_bits INTERFACE ${zpp_bits_SOURCE_DIR}/zpp_bits.h)
 target_include_directories(zpp_bits INTERFACE ${zpp_bits_SOURCE_DIR})
-
-FetchContent_Declare(concurrentqueue # Lock-free queue
-	GIT_REPOSITORY https://github.com/cameron314/concurrentqueue
-	GIT_TAG v1.0.4
-)
-FetchContent_MakeAvailable(concurrentqueue)

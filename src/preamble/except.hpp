@@ -18,7 +18,6 @@ Additional exception types, adding formatting and convenience wrappers.
 namespace playnote {
 
 using std::exception;
-using std::current_exception;
 using std::logic_error;
 using std::runtime_error;
 
