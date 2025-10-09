@@ -172,3 +172,10 @@ FetchContent_Declare(zpp_bits # Serialization
 FetchContent_MakeAvailable(zpp_bits)
 add_library(zpp_bits INTERFACE ${zpp_bits_SOURCE_DIR}/zpp_bits.h)
 target_include_directories(zpp_bits INTERFACE ${zpp_bits_SOURCE_DIR})
+
+FetchContent_Declare(libcoro # Coroutine primitives
+	GIT_REPOSITORY https://github.com/jbaldwin/libcoro
+	GIT_TAG 749e5b47414d28a658ed3015321d2539fab56c1b
+)
+set(LIBCORO_FEATURE_NETWORKING OFF CACHE BOOL "")
+FetchContent_MakeAvailable(libcoro)
