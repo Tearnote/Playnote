@@ -88,7 +88,7 @@ static void show_metadata(bms::Cursor const& cursor, bms::Metadata const& meta)
 		{"LN", meta.density.ln, {0.1f, 0.1f, 1.0f, 1.0f}},
 		{"Key", meta.density.key, {1.0f, 1.0f, 1.0f, 1.0f}},
 	}, {
-		{lib::imgui::PlotMarker::Type::Vertical, static_cast<float>(cursor.get_progress_ns() / 125ms), {1.0f, 0.0f, 0.0f, 1.0f}},
+		{lib::imgui::PlotMarker::Type::Vertical,static_cast<float>(min(cursor.get_progress_ns(), meta.chart_duration) / 125ms), {1.0f, 0.0f, 0.0f, 1.0f}},
 		{lib::imgui::PlotMarker::Type::Horizontal, meta.nps.average, {0.0f, 0.0f, 1.0f, 1.0f}},
 		{lib::imgui::PlotMarker::Type::Horizontal, meta.nps.peak, {1.0f, 0.0f, 1.0f, 1.0f}}
 	}, 120, true);
