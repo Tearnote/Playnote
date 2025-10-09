@@ -12,12 +12,11 @@ Entry point. Initializes basic facilities, spawns threads.
 #include "config.hpp"
 #include "logger.hpp"
 #include "lib/debug.hpp"
+#include "lib/coro.hpp"
 #include "dev/window.hpp"
 #include "dev/os.hpp"
-#include "threads/input_shouts.hpp"
-#include "threads/broadcaster.hpp"
 #include "threads/render.hpp"
-#include "threads/audio.hpp"
+#include "threads/tools.hpp"
 #include "threads/input.hpp"
 
 using namespace playnote; // Can't namespace main()
@@ -28,13 +27,13 @@ auto run() -> int
 	auto glfw = dev::GLFW{};
 	auto window = dev::Window{glfw, AppTitle, {1280, 720}};
 
+	auto tools = threads::Tools{};
+	tools.coro_pool = coro::thread_pool::make_shared();
+
 	// Spawn all threads. Every thread is assumed to eventually finish
 	// once window.is_closing() is true
-	auto broadcaster = threads::Broadcaster{};
-	auto barriers = threads::Barriers<3>{};
-	auto audio_thread_stub = jthread{threads::audio, ref(broadcaster), ref(barriers), ref(window)};
-	auto render_thread_stub = jthread{threads::render, ref(broadcaster), ref(barriers), ref(window)};
-	threads::input(broadcaster, barriers, window);
+	auto render_thread_stub = jthread{threads::render, ref(tools), ref(window)};
+	threads::input(tools, window);
 
 	return EXIT_SUCCESS;
 }

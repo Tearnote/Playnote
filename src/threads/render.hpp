@@ -9,11 +9,11 @@ Presents current game state onto the window at the screen's refresh rate.
 #pragma once
 #include "preamble.hpp"
 #include "dev/window.hpp"
-#include "threads/broadcaster.hpp"
+#include "threads/tools.hpp"
 
 namespace playnote::threads {
 
 // Render thread entry point.
-void render(Broadcaster& broadcaster, Barriers<3>& barriers, dev::Window& window);
+void render(Tools& tools, dev::Window& window);
 
 }

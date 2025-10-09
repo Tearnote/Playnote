@@ -18,12 +18,13 @@ Implementation file for threads/render.hpp.
 #include "gfx/playfield.hpp"
 #include "gfx/renderer.hpp"
 #include "audio/player.hpp"
+#include "audio/mixer.hpp"
 #include "bms/library.hpp"
 #include "bms/cursor.hpp"
 #include "bms/chart.hpp"
-#include "threads/render_shouts.hpp"
-#include "threads/audio_shouts.hpp"
-#include "threads/broadcaster.hpp"
+#include "bms/input.hpp"
+#include "threads/input_shouts.hpp"
+#include "threads/tools.hpp"
 
 namespace playnote::threads {
 
@@ -38,9 +39,9 @@ struct LibraryContext {
 };
 
 struct GameplayContext {
-	shared_ptr<audio::Player const> player;
+	optional<audio::Player> player;
 	shared_ptr<bms::Chart const> chart;
-	gfx::Playfield playfield;
+	optional<gfx::Playfield> playfield;
 	double scroll_speed;
 	milliseconds offset;
 };
@@ -48,7 +49,11 @@ struct GameplayContext {
 struct GameState {
 	State current;
 	State requested;
+	lib::openssl::MD5 requested_chart;
 	variant<monostate, LibraryContext, GameplayContext> context;
+
+	[[nodiscard]] auto library_context() -> LibraryContext& { return get<LibraryContext>(context); }
+	[[nodiscard]] auto gameplay_context() -> GameplayContext& { return get<GameplayContext>(context); }
 };
 
 static auto ns_to_minsec(nanoseconds duration) -> string
@@ -89,15 +94,16 @@ static void show_metadata(bms::Cursor const& cursor, bms::Metadata const& meta)
 	}, 120, true);
 }
 
-static void show_playback_controls(Broadcaster& broadcaster, GameState& state)
+static void show_playback_controls(GameState& state)
 {
-	if (lib::imgui::button("Play")) broadcaster.shout(PlayerControl::Play);
+	auto& context = state.gameplay_context();
+	if (lib::imgui::button("Play")) context.player->resume();
 	lib::imgui::same_line();
-	if (lib::imgui::button("Pause")) broadcaster.shout(PlayerControl::Pause);
+	if (lib::imgui::button("Pause")) context.player->pause();
 	lib::imgui::same_line();
-	if (lib::imgui::button("Restart")) broadcaster.shout(PlayerControl::Restart);
+	if (lib::imgui::button("Restart")) context.player->play(*context.chart, false);
 	lib::imgui::same_line();
-	if (lib::imgui::button("Autoplay")) broadcaster.shout(PlayerControl::Autoplay);
+	if (lib::imgui::button("Autoplay")) context.player->play(*context.chart, true);
 	lib::imgui::same_line();
 	if (lib::imgui::button("Back")) state.requested = State::Library;
 }
@@ -129,33 +135,35 @@ static void show_results(bms::Cursor const& cursor)
 	lib::imgui::text(" Rank: {}", enum_name(cursor.get_rank()));
 }
 
-static void render_library(Broadcaster& broadcaster, GameState& state)
+static void render_library(gfx::Renderer::Queue&, GameState& state)
 {
-	auto& context = get<LibraryContext>(state.context);
+	auto& context = state.library_context();
 	lib::imgui::begin_window("library", {8, 8}, 800, lib::imgui::WindowStyle::Static);
 	if (context.charts.empty()) {
 		lib::imgui::text("The library is empty. Drag a song folder or archive onto the game window to import.");
 	} else {
 		for (auto const& chart: context.charts) {
-			if (lib::imgui::selectable(chart.title.c_str()))
-				broadcaster.shout(chart.md5);
+			if (lib::imgui::selectable(chart.title.c_str())) {
+				state.requested = State::Gameplay;
+				state.requested_chart = chart.md5;
+			}
 		}
 	}
 	lib::imgui::end_window();
 }
 
-static void render_gameplay(Broadcaster& broadcaster, gfx::Renderer::Queue& queue, GameState& state)
+static void render_gameplay(gfx::Renderer::Queue& queue, GameState& state)
 {
-	auto& context = get<GameplayContext>(state.context);
+	auto& context = state.gameplay_context();
 	auto const cursor = context.player->get_audio_cursor();
 	if (!cursor) return;
 	lib::imgui::begin_window("info", {860, 8}, 412, lib::imgui::WindowStyle::Static);
 	show_metadata(*cursor, context.chart->metadata);
 	lib::imgui::text("");
-	show_playback_controls(broadcaster, state);
+	show_playback_controls(state);
 	lib::imgui::text("");
 	show_scroll_speed_controls(context.scroll_speed);
-	context.playfield.enqueue_from_cursor(queue, *cursor, context.scroll_speed, context.offset);
+	context.playfield->enqueue_from_cursor(queue, *cursor, context.scroll_speed, context.offset);
 	lib::imgui::end_window();
 
 	lib::imgui::begin_window("judgements", {860, 436}, 120, lib::imgui::WindowStyle::Static);
@@ -171,65 +179,96 @@ static void render_gameplay(Broadcaster& broadcaster, gfx::Renderer::Queue& queu
 	lib::imgui::end_window();
 }
 
-static void run_render(Broadcaster& broadcaster, dev::Window const& window, gfx::Renderer& renderer)
+static void run_render(Tools& tools, dev::Window& window)
 {
+	// Init devices
+	auto mixer = audio::Mixer{};
+	auto renderer = gfx::Renderer{window};
+
+	// Init game systems
+	auto mapper = bms::Mapper{};
+	auto library = bms::Library{LibraryDBPath};
 	auto state = GameState{};
 	state.requested = State::Library;
 
 	while (!window.is_closing()) {
+		// Handle state changes
 		if (state.requested == State::Library) {
+			state.context = LibraryContext{};
+			state.library_context().charts = library.list_charts(); //TODO convert to coro
 			state.current = State::Library;
 			state.requested = State::None;
-			state.context = LibraryContext{};
-			broadcaster.shout<LibraryRefreshRequest>({});
 		}
-		broadcaster.receive_all<vector<bms::Library::ChartEntry>>([&](auto list) {
-			if (state.current != State::Library) return;
-			get<LibraryContext>(state.context).charts = move(list);
-		});
-		broadcaster.receive_all<ChartLoaded>([&](auto const& ev) {
+		if (state.requested == State::Gameplay) {
+			state.context.emplace<GameplayContext>();
+			auto& context = state.gameplay_context();
+			context.player.emplace(window.get_glfw(), mixer);
+			context.chart = library.load_chart(state.requested_chart); //TODO convert to coro
+			context.playfield = gfx::Playfield{{44, 0}, 545, context.chart->metadata.playstyle};
+			context.scroll_speed = globals::config->get_entry<double>("gameplay", "scroll_speed"),
+			context.offset = milliseconds{globals::config->get_entry<int32>("gameplay", "note_offset")};
+			context.player->play(*context.chart, false);
 			state.current = State::Gameplay;
-			auto chart = ev.chart.lock();
-			auto playstyle = chart->metadata.playstyle;
-			state.context = GameplayContext{
-				.player = ev.player.lock(),
-				.chart = move(chart),
-				.playfield = gfx::Playfield{{44, 0}, 545, playstyle},
-				.scroll_speed = globals::config->get_entry<double>("gameplay", "scroll_speed"),
-				.offset = milliseconds{globals::config->get_entry<int32>("gameplay", "note_offset")},
-			};
-		});
+			state.requested = State::None;
+		}
 
+		// Handle user inputs
+		tools.broadcaster.receive_all<KeyInput>([&](auto ev) {
+			if (state.current != State::Gameplay) return;
+			auto input = mapper.from_key(ev, state.gameplay_context().chart->metadata.playstyle);
+			if (!input) return;
+			state.gameplay_context().player->enqueue_input(*input);
+		});
+		tools.broadcaster.receive_all<ButtonInput>([&](auto ev) {
+			if (state.current != State::Gameplay) return;
+			auto input = mapper.from_button(ev, state.gameplay_context().chart->metadata.playstyle);
+			if (!input) return;
+			state.gameplay_context().player->enqueue_input(*input);
+		});
+		tools.broadcaster.receive_all<AxisInput>([&](auto ev) {
+			if (state.current != State::Gameplay) return;
+			auto inputs = mapper.submit_axis_input(ev, state.gameplay_context().chart->metadata.playstyle);
+			for (auto const& input: inputs) state.gameplay_context().player->enqueue_input(input);
+		});
+		tools.broadcaster.receive_all<FileDrop>([&](auto ev) {
+			for (auto const& path: ev.paths) library.import(path);
+			state.library_context().charts = library.list_charts(); //TODO convert to coro
+		});
+		if (state.current == State::Gameplay) {
+			auto inputs = mapper.from_axis_state(window.get_glfw(), state.gameplay_context().chart->metadata.playstyle);
+			for (auto const& input: inputs) state.gameplay_context().player->enqueue_input(input);
+		}
+
+		// Render a frame
 		renderer.frame({"bg"_id, "frame"_id, "measure"_id, "judgment_line"_id, "notes"_id, "pressed"_id}, [&](gfx::Renderer::Queue& queue) {
 			// Background
 			queue.enqueue_rect("bg"_id, {{0, 0}, {1280, 720}, {0.060f, 0.060f, 0.060f, 1.000f}});
 
 			switch (state.current) {
-			case State::Library: render_library(broadcaster, state); break;
-			case State::Gameplay: render_gameplay(broadcaster, queue, state); break;
+			case State::Library: render_library(queue, state); break;
+			case State::Gameplay: render_gameplay(queue, state); break;
+			default: break;
 			}
 		});
-
-		if (state.requested == State::Library)
-			broadcaster.shout(PlayerControl::Stop);
 	}
 }
 
-void render(Broadcaster& broadcaster, Barriers<3>& barriers, dev::Window& window)
+void render(Tools& tools, dev::Window& window)
 try {
 	dev::name_current_thread("render");
-	broadcaster.register_as_endpoint();
-	broadcaster.subscribe<vector<bms::Library::ChartEntry>>();
-	broadcaster.subscribe<ChartLoaded>();
-	barriers.startup.arrive_and_wait();
-	auto renderer = gfx::Renderer{window};
-	run_render(broadcaster, window, renderer);
-	barriers.shutdown.arrive_and_wait();
+	tools.broadcaster.register_as_endpoint();
+	tools.broadcaster.subscribe<KeyInput>();
+	tools.broadcaster.subscribe<ButtonInput>();
+	tools.broadcaster.subscribe<AxisInput>();
+	tools.broadcaster.subscribe<FileDrop>();
+	tools.barriers.startup.arrive_and_wait();
+	run_render(tools, window);
+	tools.barriers.shutdown.arrive_and_wait();
 }
 catch (exception const& e) {
 	CRIT("Uncaught exception: {}", e.what());
 	window.request_close();
-	barriers.shutdown.arrive_and_wait();
+	tools.barriers.shutdown.arrive_and_wait();
 }
 
 }
