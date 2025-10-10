@@ -22,7 +22,7 @@ class PlayerLegacy: public Generator {
 public:
 	// Create the audio player with no cursor attached. Will begin to immediately generate blank
 	// samples.
-	explicit PlayerLegacy(dev::GLFW const& glfw, Mixer& mixer): glfw{glfw}, mixer{mixer} { mixer.add_generator(*this); }
+	explicit PlayerLegacy(Mixer& mixer): mixer{mixer} { mixer.add_generator(*this); }
 	~PlayerLegacy() { mixer.remove_generator(*this); }
 
 	// Attach a chart to the player. A new cursor will be created for it.
@@ -76,7 +76,6 @@ private:
 		optional<bms::CursorLegacy> new_cursor;
 		optional<bool> new_paused;
 	};
-	dev::GLFW const& glfw;
 	Mixer& mixer;
 	optional<bms::CursorLegacy> cursor;
 	optional<PendingCommand> pending_command;
@@ -116,7 +115,7 @@ inline auto PlayerLegacy::get_audio_cursor() const -> optional<bms::CursorLegacy
 		cursor->get_progress_ns() - Mixer::get_latency() :
 		0ns;
 	auto const last_buffer_start = timer_slop + buffer_start_progress;
-	auto const elapsed = glfw.get_time() - last_buffer_start;
+	auto const elapsed = globals::glfw->get_time() - last_buffer_start;
 	auto const elapsed_samples = dev::Audio::ns_to_samples(elapsed);
 	auto result = bms::CursorLegacy{*cursor};
 	result.fast_forward(clamp(elapsed_samples, 0z, dev::Audio::ns_to_samples(Mixer::get_latency())));
@@ -142,7 +141,7 @@ inline void PlayerLegacy::begin_buffer()
 			paused = *pending_command->new_paused;
 			gain = dev::lufs_to_gain(cursor->get_chart().metadata.loudness);
 			ASSERT(gain > 0);
-			timer_slop = glfw.get_time();
+			timer_slop = globals::glfw->get_time();
 			break;
 		case PendingCommand::Type::Stop:
 			cursor = nullopt;
@@ -154,7 +153,7 @@ inline void PlayerLegacy::begin_buffer()
 
 	if (paused) return;
 	auto const estimated = timer_slop + dev::Audio::samples_to_ns(cursor->get_progress());
-	auto const now = glfw.get_time();
+	auto const now = globals::glfw->get_time();
 	auto const difference = now - estimated;
 	timer_slop += difference;
 	if (difference > 5ms) WARN("Audio timer was late by {}ms", difference / 1ms);

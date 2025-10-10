@@ -202,7 +202,7 @@ static void run_render(Tools& tools, dev::Window& window)
 		if (state.requested == State::Gameplay) {
 			state.context.emplace<GameplayContext>();
 			auto& context = state.gameplay_context();
-			context.player.emplace(window.get_glfw(), mixer);
+			context.player.emplace(mixer);
 			context.chart = library.load_chart(state.requested_chart); //TODO convert to coro
 			context.playfield = gfx::Playfield{{44, 0}, 545, context.chart->metadata.playstyle};
 			context.scroll_speed = globals::config->get_entry<double>("gameplay", "scroll_speed"),
@@ -235,7 +235,7 @@ static void run_render(Tools& tools, dev::Window& window)
 			state.library_context().charts = library.list_charts(); //TODO convert to coro
 		});
 		if (state.current == State::Gameplay) {
-			auto inputs = mapper.from_axis_state(window.get_glfw(), state.gameplay_context().chart->metadata.playstyle);
+			auto inputs = mapper.from_axis_state(state.gameplay_context().chart->metadata.playstyle);
 			for (auto const& input: inputs) state.gameplay_context().player->enqueue_input(input);
 		}
 

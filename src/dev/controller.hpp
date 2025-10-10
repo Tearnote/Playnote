@@ -19,7 +19,7 @@ namespace playnote::dev {
 
 class ControllerDispatcher {
 public:
-	explicit ControllerDispatcher(dev::GLFW&);
+	ControllerDispatcher();
 
 	using ControllerEvent = variant<threads::ButtonInput, threads::AxisInput>;
 	template<callable<void(ControllerEvent)> Func>
@@ -28,8 +28,6 @@ public:
 private:
 	InstanceLimit<ControllerDispatcher, 1> instance_limit;
 	static inline ControllerDispatcher* instance;
-
-	dev::GLFW& glfw;
 
 	struct Controller {
 		threads::ControllerID id;
@@ -42,9 +40,7 @@ private:
 	static void joystick_event_callback(int jid, int event);
 };
 
-inline ControllerDispatcher::ControllerDispatcher(dev::GLFW& glfw):
-	glfw{glfw}
-{
+inline ControllerDispatcher::ControllerDispatcher() {
 	instance = this;
 	for (auto jid: views::iota(GLFW_JOYSTICK_1, GLFW_JOYSTICK_LAST + 1))
 		if (glfwJoystickPresent(jid)) joystick_event_callback(jid, GLFW_CONNECTED);
@@ -66,7 +62,7 @@ void ControllerDispatcher::poll(Func&& func)
 			if (previous == current) continue;
 			func(ControllerEvent{threads::ButtonInput{
 				.controller = controller.id,
-				.timestamp = glfw.get_time(),
+				.timestamp = globals::glfw->get_time(),
 				.button = idx,
 				.state = current,
 			}});
@@ -80,7 +76,7 @@ void ControllerDispatcher::poll(Func&& func)
 			if (previous == current) continue;
 			func(ControllerEvent{threads::AxisInput{
 				.controller = controller.id,
-				.timestamp = glfw.get_time(),
+				.timestamp = globals::glfw->get_time(),
 				.axis = idx,
 				.value = current,
 			}});

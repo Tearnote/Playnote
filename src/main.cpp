@@ -24,8 +24,8 @@ using namespace playnote; // Can't namespace main()
 auto run() -> int
 {
 	auto const scheduler_period = dev::SchedulerPeriod{1ms};
-	auto glfw = dev::GLFW{};
-	auto window = dev::Window{glfw, AppTitle, {1280, 720}};
+	auto glfw_stub = globals::glfw.provide();
+	auto window = dev::Window{AppTitle, {1280, 720}};
 
 	auto tools = threads::Tools{};
 	tools.coro_pool = coro::thread_pool::make_shared();

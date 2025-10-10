@@ -9,6 +9,7 @@ Initializes GLFW and manages windows. Windows handle keyboard and mouse input, a
 
 #pragma once
 #include "preamble.hpp"
+#include "service.hpp"
 #include "assert.hpp"
 #include "logger.hpp"
 #include "lib/vulkan.hpp"
@@ -46,9 +47,7 @@ public:
 	using MouseButton = lib::glfw::MouseButton;
 	using MouseButtonAction = lib::glfw::MouseButtonAction;
 
-	Window(GLFW&, string_view title, uvec2 size);  // GLFW parameter is a semantic dependency
-
-	[[nodiscard]] auto get_glfw() -> GLFW& { return glfw; }
+	Window(string_view title, uvec2 size);
 
 	// true if application close was requested (the X was pressed, or triggered manually from code
 	// to mark a user-requested quit event).
@@ -111,9 +110,7 @@ private:
 		INFO("Window closed");
 	})>;
 
-	GLFW& glfw;
 	WindowHandle window_handle{};
-
 	vector<function<void(KeyCode, bool)>> key_callbacks;
 	vector<function<void(vec2)>> cursor_motion_callbacks;
 	vector<function<void(MouseButton, bool)>> mouse_button_callbacks;
@@ -135,9 +132,7 @@ inline GLFW::~GLFW() noexcept
 	INFO("GLFW cleaned up");
 }
 
-inline Window::Window(GLFW& glfw, string_view title, uvec2 size):
-	glfw{glfw}
-{
+inline Window::Window(string_view title, uvec2 size) {
 	ASSERT(size.x() > 0 && size.y() > 0);
 
 	window_handle = WindowHandle{lib::glfw::create_window(size, title)};
@@ -193,4 +188,8 @@ inline auto Window::create_surface(lib::vk::Instance const& instance) -> lib::vk
 	return lib::glfw::create_window_surface(window_handle.get(), instance);
 }
 
+}
+
+namespace playnote::globals {
+inline auto glfw = Service<dev::GLFW>{};
 }

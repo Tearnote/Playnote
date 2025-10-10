@@ -20,10 +20,9 @@ namespace playnote::threads {
 
 static void run_input(Tools& tools, dev::Window& window)
 {
-	auto& glfw = window.get_glfw();
 	window.register_key_callback([&](dev::Window::KeyCode keycode, bool state) {
 		tools.broadcaster.shout(KeyInput{
-			.timestamp = glfw.get_time(),
+			.timestamp = globals::glfw->get_time(),
 			.code = keycode,
 			.state = state,
 		});
@@ -33,9 +32,9 @@ static void run_input(Tools& tools, dev::Window& window)
 		copy(paths, back_inserter(event.paths));
 		tools.broadcaster.shout(move(event));
 	});
-	auto con_dispatcher = dev::ControllerDispatcher{glfw};
+	auto con_dispatcher = dev::ControllerDispatcher{};
 	while (!window.is_closing()) {
-		glfw.poll();
+		globals::glfw->poll();
 		con_dispatcher.poll([&](auto event) {
 			visit([&](auto&& e){ tools.broadcaster.shout(move(e)); }, event);
 		});

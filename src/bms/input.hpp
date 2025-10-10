@@ -28,7 +28,7 @@ public:
 	[[nodiscard]] auto from_key(threads::KeyInput const&, Playstyle) -> optional<Input>;
 	[[nodiscard]] auto from_button(threads::ButtonInput const&, Playstyle) -> optional<Input>;
 	[[nodiscard]] auto submit_axis_input(threads::AxisInput const&, Playstyle) -> vector<Input>;
-	[[nodiscard]] auto from_axis_state(dev::GLFW const& glfw, Playstyle) -> vector<Input>;
+	[[nodiscard]] auto from_axis_state(Playstyle) -> vector<Input>;
 
 private:
 	struct ConBinding {
@@ -264,7 +264,7 @@ inline auto Mapper::submit_axis_input(threads::AxisInput const& axis, Playstyle 
 	return inputs;
 }
 
-inline auto Mapper::from_axis_state(dev::GLFW const& glfw, Playstyle playstyle) -> vector<Input>
+inline auto Mapper::from_axis_state(Playstyle playstyle) -> vector<Input>
 {
 	auto& turntables = turntable_states[+playstyle];
 	auto inputs = vector<Input>{};
@@ -274,7 +274,7 @@ inline auto Mapper::from_axis_state(dev::GLFW const& glfw, Playstyle playstyle) 
 		views::iota(0u) | views::transform([](auto idx) { return idx == 0? Lane::Type::P1_KeyS : Lane::Type::P2_KeyS; }),
 		turntables)) {
 		if (tt.direction == TurntableState::Direction::None) continue;
-		auto now = glfw.get_time();
+		auto now = globals::glfw->get_time();
 		auto elapsed = now - tt.last_stopped;
 		if (elapsed <= milliseconds{globals::config->get_entry<int32>("controls", "turntable_stop_timeout")}) continue;
 
