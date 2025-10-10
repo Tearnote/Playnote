@@ -9,9 +9,8 @@ Representation of a moment in chart's playback.
 #pragma once
 #include "preamble.hpp"
 #include "assert.hpp"
-#include "bms/chart.hpp"
-#include "dev/audio.hpp"
 #include "audio/mixer.hpp"
+#include "bms/chart.hpp"
 
 namespace playnote::bms {
 
@@ -78,7 +77,7 @@ public:
 	[[nodiscard]] auto get_progress() const -> usize { return sample_progress; }
 
 	// Return the current position of the cursor in nanoseconds.
-	[[nodiscard]] auto get_progress_ns() const -> nanoseconds { return dev::Audio::samples_to_ns(get_progress()); }
+	[[nodiscard]] auto get_progress_ns() const -> nanoseconds { return globals::mixer->get_audio().samples_to_ns(get_progress()); }
 
 	// Return the number of playable notes that were already judged.
 	[[nodiscard]] auto get_judged_notes() const -> usize { return notes_judged; }
@@ -305,7 +304,7 @@ auto CursorLegacy::advance_one_sample(Func&& func, span<LaneInput const> inputs)
 {
 	auto chart_ended = (notes_judged >= chart->metadata.note_count);
 	sample_progress += 1;
-	auto const progress_ns = dev::Audio::samples_to_ns(sample_progress);
+	auto const progress_ns = globals::mixer->get_audio().samples_to_ns(sample_progress);
 
 	// Trigger inputs if unplayable or autoplay
 	for (auto [type, lane, progress]: views::zip(
@@ -368,8 +367,8 @@ auto CursorLegacy::advance_one_sample(Func&& func, span<LaneInput const> inputs)
 template<callable<void(Note const&, Lane::Type, float)> Func>
 void CursorLegacy::upcoming_notes(float max_units, Func&& func, nanoseconds offset, bool adjust_for_latency) const
 {
-	auto const latency_adjustment = adjust_for_latency? -audio::Mixer::get_latency() : 0ns;
-	auto const progress_timestamp = dev::Audio::samples_to_ns(sample_progress) + latency_adjustment - offset;
+	auto const latency_adjustment = adjust_for_latency? -globals::mixer->get_latency() : 0ns;
+	auto const progress_timestamp = globals::mixer->get_audio().samples_to_ns(sample_progress) + latency_adjustment - offset;
 	auto const& bpm_section = get_bpm_section(progress_timestamp, chart->timeline.bpm_sections);
 	auto const section_progress = progress_timestamp - bpm_section.position;
 	auto const beat_duration = duration<double>{60.0 / chart->metadata.bpm_range.main};

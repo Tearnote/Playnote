@@ -22,8 +22,8 @@ class PlayerLegacy: public Generator {
 public:
 	// Create the audio player with no cursor attached. Will begin to immediately generate blank
 	// samples.
-	explicit PlayerLegacy(Mixer& mixer): mixer{mixer} { mixer.add_generator(*this); }
-	~PlayerLegacy() { mixer.remove_generator(*this); }
+	PlayerLegacy() { globals::mixer->add_generator(*this); }
+	~PlayerLegacy() { globals::mixer->remove_generator(*this); }
 
 	// Attach a chart to the player. A new cursor will be created for it.
 	void play(bms::Chart const&, bool autoplay, bool paused = false);
@@ -76,7 +76,6 @@ private:
 		optional<bms::CursorLegacy> new_cursor;
 		optional<bool> new_paused;
 	};
-	Mixer& mixer;
 	optional<bms::CursorLegacy> cursor;
 	optional<PendingCommand> pending_command;
 	atomic<bool> paused = true;
@@ -97,7 +96,7 @@ inline void PlayerLegacy::play(bms::Chart const& chart, bool autoplay, bool paus
 inline void PlayerLegacy::enqueue_input(bms::Input input)
 {
 	if (!cursor) return;
-	input.timestamp = chart_relative_timestamp(input.timestamp) + Mixer::get_latency();
+	input.timestamp = chart_relative_timestamp(input.timestamp) + globals::mixer->get_latency();
 	inputs.emplace_back(input);
 }
 
@@ -111,14 +110,14 @@ inline auto PlayerLegacy::get_audio_cursor() const -> optional<bms::CursorLegacy
 {
 	if (!cursor) return nullopt;
 	auto const buffer_start_progress =
-		cursor->get_progress_ns() > Mixer::get_latency()?
-		cursor->get_progress_ns() - Mixer::get_latency() :
+		cursor->get_progress_ns() > globals::mixer->get_latency()?
+		cursor->get_progress_ns() - globals::mixer->get_latency() :
 		0ns;
 	auto const last_buffer_start = timer_slop + buffer_start_progress;
 	auto const elapsed = globals::glfw->get_time() - last_buffer_start;
-	auto const elapsed_samples = dev::Audio::ns_to_samples(elapsed);
+	auto const elapsed_samples = globals::mixer->get_audio().ns_to_samples(elapsed);
 	auto result = bms::CursorLegacy{*cursor};
-	result.fast_forward(clamp(elapsed_samples, 0z, dev::Audio::ns_to_samples(Mixer::get_latency())));
+	result.fast_forward(clamp(elapsed_samples, 0z, globals::mixer->get_audio().ns_to_samples(globals::mixer->get_latency())));
 	return result;
 }
 
@@ -152,7 +151,7 @@ inline void PlayerLegacy::begin_buffer()
 	}
 
 	if (paused) return;
-	auto const estimated = timer_slop + dev::Audio::samples_to_ns(cursor->get_progress());
+	auto const estimated = timer_slop + globals::mixer->get_audio().samples_to_ns(cursor->get_progress());
 	auto const now = globals::glfw->get_time();
 	auto const difference = now - estimated;
 	timer_slop += difference;
@@ -164,7 +163,7 @@ inline auto PlayerLegacy::next_sample() -> dev::Sample
 {
 	static auto new_inputs = vector<bms::CursorLegacy::LaneInput>{};
 	if (paused) {
-		timer_slop += dev::Audio::samples_to_ns(1);
+		timer_slop += globals::mixer->get_audio().samples_to_ns(1);
 		return {};
 	}
 

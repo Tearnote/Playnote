@@ -34,9 +34,12 @@ public:
 	template<implements<Generator> T>
 	void remove_generator(T& generator);
 
+	// Return the dev::Audio instance internally managed by the mixer.
+	[[nodiscard]] auto get_audio() -> dev::Audio& { return audio; }
+
 	// Return current latency of the mixer, which includes both the audio device latency
 	// and the latency of any active effects.
-	[[nodiscard]] static auto get_latency() -> nanoseconds { return dev::Audio::get_latency() + 1ms; }
+	[[nodiscard]] auto get_latency() -> nanoseconds { return audio.get_latency() + 1ms; }
 
 private:
 	dev::Audio audio;
@@ -96,4 +99,8 @@ inline void Mixer::mix(span<dev::Sample> buffer)
 	}
 }
 
+}
+
+namespace playnote::globals {
+inline auto mixer = Service<audio::Mixer>{};
 }

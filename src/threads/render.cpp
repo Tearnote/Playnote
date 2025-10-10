@@ -182,7 +182,7 @@ static void render_gameplay(gfx::Renderer::Queue& queue, GameState& state)
 static void run_render(Tools& tools, dev::Window& window)
 {
 	// Init devices
-	auto mixer = audio::Mixer{};
+	auto mixer_stub = globals::mixer.provide();
 	auto renderer = gfx::Renderer{window};
 
 	// Init game systems
@@ -202,7 +202,7 @@ static void run_render(Tools& tools, dev::Window& window)
 		if (state.requested == State::Gameplay) {
 			state.context.emplace<GameplayContext>();
 			auto& context = state.gameplay_context();
-			context.player.emplace(mixer);
+			context.player.emplace();
 			context.chart = library.load_chart(state.requested_chart); //TODO convert to coro
 			context.playfield = gfx::Playfield{{44, 0}, 545, context.chart->metadata.playstyle};
 			context.scroll_speed = globals::config->get_entry<double>("gameplay", "scroll_speed"),

@@ -289,7 +289,7 @@ inline auto Song::load_audio_file(string_view filepath) -> vector<dev::Sample>
 	}, filepath);
 	if (!file.data())
 		throw runtime_error_fmt("Audio file \"{}\" doesn't exist within the song archive", filepath);
-	return lib::ffmpeg::decode_and_resample_file_buffer(file, dev::Audio::get_sampling_rate());
+	return lib::ffmpeg::decode_and_resample_file_buffer(file, globals::mixer->get_audio().get_sampling_rate());
 }
 
 inline void Song::remove() && noexcept

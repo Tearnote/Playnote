@@ -655,7 +655,7 @@ inline auto Builder::build(span<byte const> bms_raw, io::Song& song, optional<re
 	auto [loudness, audio_duration] = [&] {
 		static constexpr auto BufferSize = 4096zu / sizeof(dev::Sample); // One memory page
 		auto cursor = CursorLegacy{*chart, true};
-		auto ctx = lib::ebur128::init(dev::Audio::get_sampling_rate());
+		auto ctx = lib::ebur128::init(globals::mixer->get_audio().get_sampling_rate());
 		auto buffer = vector<dev::Sample>{};
 		buffer.reserve(BufferSize);
 

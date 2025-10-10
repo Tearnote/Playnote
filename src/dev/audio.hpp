@@ -27,21 +27,22 @@ using lib::ChannelCount;
 
 class Audio {
 public:
+	// Initialize the audio device. The provider generator function is called repeatedly to fill in the sample buffer.
 	template<callable<void(span<Sample>)> Func>
 	explicit Audio(Func&& generator);
 	~Audio();
 
 	// Return current sampling rate. The value is only valid while an Audio instance exists.
-	[[nodiscard]] static auto get_sampling_rate() -> uint32 { return ASSERT_VAL(context->properties.sampling_rate); }
+	[[nodiscard]] auto get_sampling_rate() -> uint32 { return ASSERT_VAL(context->properties.sampling_rate); }
 
 	// Return current latency of the audio device.
-	[[nodiscard]] static auto get_latency() -> nanoseconds { return samples_to_ns(context->properties.buffer_size); }
+	[[nodiscard]] auto get_latency() -> nanoseconds { return samples_to_ns(context->properties.buffer_size); }
 
 	// Convert a count of samples to their duration.
-	[[nodiscard]] static auto samples_to_ns(isize) -> nanoseconds;
+	[[nodiscard]] auto samples_to_ns(isize) -> nanoseconds;
 
 	// Convert a duration to a number of full audio samples.
-	[[nodiscard]] static auto ns_to_samples(nanoseconds) -> isize;
+	[[nodiscard]] auto ns_to_samples(nanoseconds) -> isize;
 
 	Audio(Audio const&) = delete;
 	auto operator=(Audio const&) -> Audio& = delete;
@@ -52,9 +53,9 @@ private:
 	InstanceLimit<Audio, 1> instance_limit;
 
 #ifdef TARGET_LINUX
-	static inline lib::pw::Context context;
+	lib::pw::Context context;
 #elifdef TARGET_WINDOWS
-	static inline lib::wasapi::Context context;
+	lib::wasapi::Context context;
 #endif
 
 	function<void(span<Sample>)> generator;
