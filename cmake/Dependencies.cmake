@@ -179,3 +179,9 @@ FetchContent_Declare(libcoro # Coroutine primitives
 )
 set(LIBCORO_FEATURE_NETWORKING OFF CACHE BOOL "")
 FetchContent_MakeAvailable(libcoro)
+
+FetchContent_Declare(concurrentqueue # Lock-free MPMC queue
+	GIT_REPOSITORY https://github.com/cameron314/concurrentqueue
+	GIT_TAG v1.0.4
+)
+FetchContent_MakeAvailable(concurrentqueue)

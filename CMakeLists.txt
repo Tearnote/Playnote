@@ -44,6 +44,7 @@ target_include_directories(Playnote PRIVATE src) # All includes start from src a
 target_compile_definitions(Playnote PRIVATE "$<$<CONFIG:Debug>:BUILD_DEBUG>$<$<CONFIG:RelWithDebInfo>:BUILD_RELDEB>$<$<CONFIG:Release>:BUILD_RELEASE>")
 
 target_link_libraries(Playnote PRIVATE signalsmith-basics)
+target_link_libraries(Playnote PRIVATE concurrentqueue)
 target_link_libraries(Playnote PRIVATE tomlplusplus::tomlplusplus)
 target_link_libraries(Playnote PRIVATE vk-bootstrap)
 target_link_libraries(Playnote PRIVATE msd_channel)
