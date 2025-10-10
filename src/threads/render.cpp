@@ -17,10 +17,10 @@ Implementation file for threads/render.hpp.
 #include "dev/os.hpp"
 #include "gfx/playfield.hpp"
 #include "gfx/renderer.hpp"
-#include "audio/player.hpp"
+#include "audio/player_legacy.hpp"
 #include "audio/mixer.hpp"
 #include "bms/library.hpp"
-#include "bms/cursor.hpp"
+#include "bms/cursor_legacy.hpp"
 #include "bms/chart.hpp"
 #include "bms/input.hpp"
 #include "threads/input_shouts.hpp"
@@ -39,7 +39,7 @@ struct LibraryContext {
 };
 
 struct GameplayContext {
-	optional<audio::Player> player;
+	optional<audio::PlayerLegacy> player;
 	shared_ptr<bms::Chart const> chart;
 	optional<gfx::Playfield> playfield;
 	double scroll_speed;
@@ -61,7 +61,7 @@ static auto ns_to_minsec(nanoseconds duration) -> string
 	return format("{}:{:02}", duration / 60s, duration % 60s / 1s);
 }
 
-static void show_metadata(bms::Cursor const& cursor, bms::Metadata const& meta)
+static void show_metadata(bms::CursorLegacy const& cursor, bms::Metadata const& meta)
 {
 	lib::imgui::text(meta.title);
 	if (!meta.subtitle.empty()) lib::imgui::text(meta.subtitle);
@@ -113,22 +113,22 @@ static void show_scroll_speed_controls(double& scroll_speed)
 	lib::imgui::input_double("Scroll speed", scroll_speed, 0.25f, 1.0f, "%.2f");
 }
 
-static void show_judgments(bms::Cursor::JudgeTotals judgments)
+static void show_judgments(bms::CursorLegacy::JudgeTotals judgments)
 {
-	lib::imgui::text("PGREAT: {}", judgments.types[+bms::Cursor::Judgment::Type::PGreat]);
-	lib::imgui::text(" GREAT: {}", judgments.types[+bms::Cursor::Judgment::Type::Great]);
-	lib::imgui::text("  GOOD: {}", judgments.types[+bms::Cursor::Judgment::Type::Good]);
-	lib::imgui::text("   BAD: {}", judgments.types[+bms::Cursor::Judgment::Type::Bad]);
-	lib::imgui::text("  POOR: {}", judgments.types[+bms::Cursor::Judgment::Type::Poor]);
+	lib::imgui::text("PGREAT: {}", judgments.types[+bms::CursorLegacy::Judgment::Type::PGreat]);
+	lib::imgui::text(" GREAT: {}", judgments.types[+bms::CursorLegacy::Judgment::Type::Great]);
+	lib::imgui::text("  GOOD: {}", judgments.types[+bms::CursorLegacy::Judgment::Type::Good]);
+	lib::imgui::text("   BAD: {}", judgments.types[+bms::CursorLegacy::Judgment::Type::Bad]);
+	lib::imgui::text("  POOR: {}", judgments.types[+bms::CursorLegacy::Judgment::Type::Poor]);
 }
 
-static void show_earlylate(bms::Cursor::JudgeTotals judgments)
+static void show_earlylate(bms::CursorLegacy::JudgeTotals judgments)
 {
-	lib::imgui::text(" Early: {}", judgments.timings[+bms::Cursor::Judgment::Timing::Early]);
-	lib::imgui::text("  Late: {}", judgments.timings[+bms::Cursor::Judgment::Timing::Late]);
+	lib::imgui::text(" Early: {}", judgments.timings[+bms::CursorLegacy::Judgment::Timing::Early]);
+	lib::imgui::text("  Late: {}", judgments.timings[+bms::CursorLegacy::Judgment::Timing::Late]);
 }
 
-static void show_results(bms::Cursor const& cursor)
+static void show_results(bms::CursorLegacy const& cursor)
 {
 	lib::imgui::text("Score: {}", cursor.get_score());
 	lib::imgui::text("Combo: {}", cursor.get_combo());

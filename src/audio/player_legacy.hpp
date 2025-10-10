@@ -12,18 +12,18 @@ A cursor wrapper that sends audio samples to the audio device.
 #include "logger.hpp"
 #include "dev/window.hpp"
 #include "audio/mixer.hpp"
-#include "bms/cursor.hpp"
+#include "bms/cursor_legacy.hpp"
 #include "bms/chart.hpp"
 #include "bms/input.hpp"
 
 namespace playnote::audio {
 
-class Player: public Generator {
+class PlayerLegacy: public Generator {
 public:
 	// Create the audio player with no cursor attached. Will begin to immediately generate blank
 	// samples.
-	explicit Player(dev::GLFW const& glfw, Mixer& mixer): glfw{glfw}, mixer{mixer} { mixer.add_generator(*this); }
-	~Player() { mixer.remove_generator(*this); }
+	explicit PlayerLegacy(dev::GLFW const& glfw, Mixer& mixer): glfw{glfw}, mixer{mixer} { mixer.add_generator(*this); }
+	~PlayerLegacy() { mixer.remove_generator(*this); }
 
 	// Attach a chart to the player. A new cursor will be created for it.
 	void play(bms::Chart const&, bool autoplay, bool paused = false);
@@ -39,7 +39,7 @@ public:
 
 	// Return a cursor that's at the same position as the sample playing from the speakers
 	// right now. This is a best guess estimate based on time elapsed since the last audio buffer.
-	[[nodiscard]] auto get_audio_cursor() const -> optional<bms::Cursor>;
+	[[nodiscard]] auto get_audio_cursor() const -> optional<bms::CursorLegacy>;
 
 	// Convert an absolute timestamp to one relative to the chart's start time.
 	[[nodiscard]] auto chart_relative_timestamp(nanoseconds) const -> nanoseconds;
@@ -61,10 +61,10 @@ public:
 	// returning the mix of all playing sounds.
 	auto next_sample() -> dev::Sample;
 
-	Player(Player const&) = delete;
-	auto operator=(Player const&) -> Player& = delete;
-	Player(Player&&) = delete;
-	auto operator=(Player&&) -> Player& = delete;
+	PlayerLegacy(PlayerLegacy const&) = delete;
+	auto operator=(PlayerLegacy const&) -> PlayerLegacy& = delete;
+	PlayerLegacy(PlayerLegacy&&) = delete;
+	auto operator=(PlayerLegacy&&) -> PlayerLegacy& = delete;
 
 private:
 	struct PendingCommand {
@@ -73,12 +73,12 @@ private:
 			Stop,
 		};
 		Type type;
-		optional<bms::Cursor> new_cursor;
+		optional<bms::CursorLegacy> new_cursor;
 		optional<bool> new_paused;
 	};
 	dev::GLFW const& glfw;
 	Mixer& mixer;
-	optional<bms::Cursor> cursor;
+	optional<bms::CursorLegacy> cursor;
 	optional<PendingCommand> pending_command;
 	atomic<bool> paused = true;
 	float gain;
@@ -86,29 +86,29 @@ private:
 	vector<bms::Input> inputs;
 };
 
-inline void Player::play(bms::Chart const& chart, bool autoplay, bool paused)
+inline void PlayerLegacy::play(bms::Chart const& chart, bool autoplay, bool paused)
 {
 	pending_command = PendingCommand{
 		.type = PendingCommand::Type::Start,
-		.new_cursor = bms::Cursor{chart, autoplay},
+		.new_cursor = bms::CursorLegacy{chart, autoplay},
 		.new_paused = paused,
 	};
 }
 
-inline void Player::enqueue_input(bms::Input input)
+inline void PlayerLegacy::enqueue_input(bms::Input input)
 {
 	if (!cursor) return;
 	input.timestamp = chart_relative_timestamp(input.timestamp) + Mixer::get_latency();
 	inputs.emplace_back(input);
 }
 
-inline auto Player::get_chart() const -> optional<reference_wrapper<bms::Chart const>>
+inline auto PlayerLegacy::get_chart() const -> optional<reference_wrapper<bms::Chart const>>
 {
 	if (!cursor) return nullopt;
 	return cursor->get_chart();
 }
 
-inline auto Player::get_audio_cursor() const -> optional<bms::Cursor>
+inline auto PlayerLegacy::get_audio_cursor() const -> optional<bms::CursorLegacy>
 {
 	if (!cursor) return nullopt;
 	auto const buffer_start_progress =
@@ -118,22 +118,22 @@ inline auto Player::get_audio_cursor() const -> optional<bms::Cursor>
 	auto const last_buffer_start = timer_slop + buffer_start_progress;
 	auto const elapsed = glfw.get_time() - last_buffer_start;
 	auto const elapsed_samples = dev::Audio::ns_to_samples(elapsed);
-	auto result = bms::Cursor{*cursor};
+	auto result = bms::CursorLegacy{*cursor};
 	result.fast_forward(clamp(elapsed_samples, 0z, dev::Audio::ns_to_samples(Mixer::get_latency())));
 	return result;
 }
 
-inline auto Player::chart_relative_timestamp(nanoseconds time) const -> nanoseconds
+inline auto PlayerLegacy::chart_relative_timestamp(nanoseconds time) const -> nanoseconds
 {
 	return time - timer_slop;
 }
 
-inline void Player::stop()
+inline void PlayerLegacy::stop()
 {
 	pending_command = PendingCommand{ .type = PendingCommand::Type::Stop };
 }
 
-inline void Player::begin_buffer()
+inline void PlayerLegacy::begin_buffer()
 {
 	if (pending_command) {
 		switch (pending_command->type) {
@@ -161,9 +161,9 @@ inline void Player::begin_buffer()
 	if (difference < -5ms) WARN("Audio timer was early by {}ms", -difference / 1ms);
 }
 
-inline auto Player::next_sample() -> dev::Sample
+inline auto PlayerLegacy::next_sample() -> dev::Sample
 {
-	static auto new_inputs = vector<bms::Cursor::LaneInput>{};
+	static auto new_inputs = vector<bms::CursorLegacy::LaneInput>{};
 	if (paused) {
 		timer_slop += dev::Audio::samples_to_ns(1);
 		return {};
@@ -174,7 +174,7 @@ inline auto Player::next_sample() -> dev::Sample
 		if (input.timestamp <= cursor->get_progress_ns()) {
 			if (cursor->get_progress_ns() - input.timestamp > 5ms)
 				WARN("Input event timestamp more than 5ms in the past");
-			new_inputs.emplace_back(bms::Cursor::LaneInput{
+			new_inputs.emplace_back(bms::CursorLegacy::LaneInput{
 				.lane = input.lane,
 				.state = input.state,
 			});

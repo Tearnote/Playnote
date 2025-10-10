@@ -17,7 +17,7 @@ namespace playnote::bms {
 
 // A cursor allows for playing back an immutable Chart, tracking all state related to note progress
 // and audio playback progress.
-class Cursor {
+class CursorLegacy {
 public:
 	static constexpr auto   PGreatWindow =  18ms;
 	static constexpr auto    GreatWindow =  36ms;
@@ -69,7 +69,7 @@ public:
 	};
 
 	// Create a cursor for the given chart. The chart's lifetime will be extended by the cursor's.
-	explicit Cursor(Chart const& chart, bool autoplay);
+	explicit CursorLegacy(Chart const& chart, bool autoplay);
 
 	// Return the chart the cursor is attached to.
 	[[nodiscard]] auto get_chart() const -> Chart const& { return *chart; }
@@ -157,7 +157,7 @@ private:
 	return *bpm_section.begin();
 }
 
-inline Cursor::Cursor(Chart const& chart, bool autoplay):
+inline CursorLegacy::CursorLegacy(Chart const& chart, bool autoplay):
 	chart{chart.shared_from_this()},
 	autoplay{autoplay}
 {
@@ -165,7 +165,7 @@ inline Cursor::Cursor(Chart const& chart, bool autoplay):
 	restart();
 }
 
-inline auto Cursor::get_rank() const -> Rank
+inline auto CursorLegacy::get_rank() const -> Rank
 {
 	if (notes_judged == 0) return Rank::AAA;
 	auto const acc = static_cast<double>(score) / static_cast<double>(notes_judged * 2);
@@ -179,12 +179,12 @@ inline auto Cursor::get_rank() const -> Rank
 	return Rank::F;
 }
 
-inline auto Cursor::is_pressed(Lane::Type type) const -> bool
+inline auto CursorLegacy::is_pressed(Lane::Type type) const -> bool
 {
 	return lane_progress[+type].pressed;
 }
 
-inline void Cursor::restart()
+inline void CursorLegacy::restart()
 {
 	sample_progress = 0zu;
 	notes_judged = 0zu;
@@ -200,12 +200,12 @@ inline void Cursor::restart()
 	}
 }
 
-inline void Cursor::fast_forward(usize samples)
+inline void CursorLegacy::fast_forward(usize samples)
 {
 	for (auto const i: views::iota(0zu, samples)) advance_one_sample([](dev::Sample){});
 }
 
-inline void Cursor::trigger_lane_input(Lane const& lane, Lane::Type type, LaneProgress& progress, bool state)
+inline void CursorLegacy::trigger_lane_input(Lane const& lane, Lane::Type type, LaneProgress& progress, bool state)
 {
 	if (progress.pressed == state) return;
 
@@ -272,7 +272,7 @@ inline void Cursor::trigger_lane_input(Lane const& lane, Lane::Type type, LanePr
 	progress.pressed = state;
 }
 
-inline void Cursor::apply_judgment(Judgment judgment, Lane::Type lane)
+inline void CursorLegacy::apply_judgment(Judgment judgment, Lane::Type lane)
 {
 	judgment.timestamp = get_progress_ns();
 	judge_totals.types[+judgment.type] += 1;
@@ -301,7 +301,7 @@ inline void Cursor::apply_judgment(Judgment judgment, Lane::Type lane)
 }
 
 template<callable<void(dev::Sample)> Func>
-auto Cursor::advance_one_sample(Func&& func, span<LaneInput const> inputs) -> bool
+auto CursorLegacy::advance_one_sample(Func&& func, span<LaneInput const> inputs) -> bool
 {
 	auto chart_ended = (notes_judged >= chart->metadata.note_count);
 	sample_progress += 1;
@@ -366,7 +366,7 @@ auto Cursor::advance_one_sample(Func&& func, span<LaneInput const> inputs) -> bo
 }
 
 template<callable<void(Note const&, Lane::Type, float)> Func>
-void Cursor::upcoming_notes(float max_units, Func&& func, nanoseconds offset, bool adjust_for_latency) const
+void CursorLegacy::upcoming_notes(float max_units, Func&& func, nanoseconds offset, bool adjust_for_latency) const
 {
 	auto const latency_adjustment = adjust_for_latency? -audio::Mixer::get_latency() : 0ns;
 	auto const progress_timestamp = dev::Audio::samples_to_ns(sample_progress) + latency_adjustment - offset;

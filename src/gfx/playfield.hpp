@@ -12,7 +12,7 @@ A renderable visual representation of a BMS chart playfield.
 #include "config.hpp"
 #include "lib/imgui.hpp"
 #include "gfx/renderer.hpp"
-#include "bms/cursor.hpp"
+#include "bms/cursor_legacy.hpp"
 #include "bms/chart.hpp"
 
 namespace playnote::gfx {
@@ -26,7 +26,7 @@ public:
 
 	Playfield(ivec2 position, int32 length, bms::Playstyle);
 
-	void enqueue_from_cursor(Renderer::Queue&, bms::Cursor const&, float scroll_speed, nanoseconds offset);
+	void enqueue_from_cursor(Renderer::Queue&, bms::CursorLegacy const&, float scroll_speed, nanoseconds offset);
 
 private:
 	struct Note {
@@ -70,14 +70,14 @@ private:
 	[[nodiscard]] static auto lane_width(Lane::Visual) -> int32;
 	[[nodiscard]] static auto lane_background_color(Lane::Visual) -> vec4;
 	[[nodiscard]] static auto lane_note_color(Lane::Visual) -> vec4;
-	[[nodiscard]] static auto judgement_color(bms::Cursor::Judgment::Type) -> vec4;
-	[[nodiscard]] static auto timing_color(bms::Cursor::Judgment::Timing) -> vec4;
+	[[nodiscard]] static auto judgement_color(bms::CursorLegacy::Judgment::Type) -> vec4;
+	[[nodiscard]] static auto timing_color(bms::CursorLegacy::Judgment::Timing) -> vec4;
 
 	static auto make_field(bms::Playstyle, Side = Side::Left) -> vector<Lane>;
 	static void enqueue_field_border(Renderer::Queue&, ivec2 position, ivec2 size);
 	static void enqueue_lane(Renderer::Queue&, ivec2 position, int32 length, Lane const&, bool left_border, bool pressed);
 	static void enqueue_measure_lines(Renderer::Queue&, span<float const> measure_lines, ivec2 position, ivec2 size);
-	static void enqueue_judgment(bms::Cursor::Judgment const&, uint32 field_id, ivec2 position, ivec2 size);
+	static void enqueue_judgment(bms::CursorLegacy::Judgment const&, uint32 field_id, ivec2 position, ivec2 size);
 };
 
 inline Playfield::Playfield(ivec2 position, int32 length, bms::Playstyle playstyle):
@@ -106,7 +106,7 @@ inline Playfield::Playfield(ivec2 position, int32 length, bms::Playstyle playsty
 	}
 }
 
-inline void Playfield::enqueue_from_cursor(Renderer::Queue& queue, bms::Cursor const& cursor, float scroll_speed, nanoseconds offset)
+inline void Playfield::enqueue_from_cursor(Renderer::Queue& queue, bms::CursorLegacy const& cursor, float scroll_speed, nanoseconds offset)
 {
 	for (auto& field: fields)
 		for (auto& lane: field)
@@ -220,22 +220,22 @@ inline auto Playfield::lane_note_color(Lane::Visual visual) -> vec4
 	}
 }
 
-inline auto Playfield::judgement_color(bms::Cursor::Judgment::Type judge) -> vec4
+inline auto Playfield::judgement_color(bms::CursorLegacy::Judgment::Type judge) -> vec4
 {
 	switch (judge) {
-	case bms::Cursor::Judgment::Type::PGreat: return {0.533f, 0.859f, 0.961f, 1.000f};
-	case bms::Cursor::Judgment::Type::Great:  return {0.980f, 0.863f, 0.380f, 1.000f};
-	case bms::Cursor::Judgment::Type::Good:   return {0.796f, 0.576f, 0.191f, 1.000f};
-	case bms::Cursor::Judgment::Type::Bad:    return {0.933f, 0.525f, 0.373f, 1.000f};
-	case bms::Cursor::Judgment::Type::Poor:   return {0.606f, 0.207f, 0.171f, 1.000f};
+	case bms::CursorLegacy::Judgment::Type::PGreat: return {0.533f, 0.859f, 0.961f, 1.000f};
+	case bms::CursorLegacy::Judgment::Type::Great:  return {0.980f, 0.863f, 0.380f, 1.000f};
+	case bms::CursorLegacy::Judgment::Type::Good:   return {0.796f, 0.576f, 0.191f, 1.000f};
+	case bms::CursorLegacy::Judgment::Type::Bad:    return {0.933f, 0.525f, 0.373f, 1.000f};
+	case bms::CursorLegacy::Judgment::Type::Poor:   return {0.606f, 0.207f, 0.171f, 1.000f};
 	}
 }
 
-inline auto Playfield::timing_color(bms::Cursor::Judgment::Timing timing) -> vec4
+inline auto Playfield::timing_color(bms::CursorLegacy::Judgment::Timing timing) -> vec4
 {
 	switch (timing) {
-	case bms::Cursor::Judgment::Timing::Early: return {0.200f, 0.400f, 0.961f, 1.000f};
-	case bms::Cursor::Judgment::Timing::Late:  return {0.933f, 0.300f, 0.300f, 1.000f};
+	case bms::CursorLegacy::Judgment::Timing::Early: return {0.200f, 0.400f, 0.961f, 1.000f};
+	case bms::CursorLegacy::Judgment::Timing::Late:  return {0.933f, 0.300f, 0.300f, 1.000f};
 	}
 	return {1.000f, 1.000f, 1.000f, 1.000f};
 }
@@ -357,7 +357,7 @@ inline void Playfield::enqueue_measure_lines(Renderer::Queue& queue, span<float 
 	}
 }
 
-inline void Playfield::enqueue_judgment(bms::Cursor::Judgment const& judgment, uint32 field_id, ivec2 position, ivec2 size)
+inline void Playfield::enqueue_judgment(bms::CursorLegacy::Judgment const& judgment, uint32 field_id, ivec2 position, ivec2 size)
 {
 	constexpr auto JudgeWidth = 200;
 	constexpr auto JudgeY = 332;
@@ -374,7 +374,7 @@ inline void Playfield::enqueue_judgment(bms::Cursor::Judgment const& judgment, u
 	lib::imgui::text_styled(judge_str, judge_color, 3.0f, lib::imgui::TextAlignment::Center);
 	lib::imgui::end_window();
 
-	if (judgment.timing == bms::Cursor::Judgment::Timing::None || judgment.timing == bms::Cursor::Judgment::Timing::OnTime) return;
+	if (judgment.timing == bms::CursorLegacy::Judgment::Timing::None || judgment.timing == bms::CursorLegacy::Judgment::Timing::OnTime) return;
 	auto const timing_name = format("timing{}", field_id);
 	auto timing_str = string{enum_name(judgment.timing)};
 	to_upper(timing_str);

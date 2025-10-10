@@ -3,7 +3,7 @@ This software is dual-licensed. For more details, please consult LICENSE.txt.
 Copyright (c) 2025 Tearnote (Hubert Maraszek)
 
 audio/mixer.hpp:
-Wrapper over an Audio instance that provides playback of BMS charts and other audio.
+Wrapper over an Audio instance that provides simultaneous playback of multiple sound sources.
 */
 
 #pragma once

@@ -11,7 +11,7 @@ Parsing of BMS chart data into a Chart object.
 #include "lib/ebur128.hpp"
 #include "lib/icu.hpp"
 #include "io/song.hpp"
-#include "bms/cursor.hpp"
+#include "bms/cursor_legacy.hpp"
 #include "bms/chart.hpp"
 
 namespace playnote::bms {
@@ -654,7 +654,7 @@ inline auto Builder::build(span<byte const> bms_raw, io::Song& song, optional<re
 	// Offline audio render pass, handling all related statistics in one sweep
 	auto [loudness, audio_duration] = [&] {
 		static constexpr auto BufferSize = 4096zu / sizeof(dev::Sample); // One memory page
-		auto cursor = Cursor{*chart, true};
+		auto cursor = CursorLegacy{*chart, true};
 		auto ctx = lib::ebur128::init(dev::Audio::get_sampling_rate());
 		auto buffer = vector<dev::Sample>{};
 		buffer.reserve(BufferSize);
