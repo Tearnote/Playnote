@@ -48,4 +48,7 @@ struct AxisInput {
 	float value;
 };
 
+// Any user input event.
+using UserInput = variant<KeyInput, ButtonInput, AxisInput>;
+
 }
