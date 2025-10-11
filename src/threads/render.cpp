@@ -105,13 +105,13 @@ static void show_playback_controls(GameState& state)
 	lib::imgui::same_line();
 	if (lib::imgui::button("Restart")) {
 		context.player.remove_cursor(context.cursor);
-		context.cursor = make_shared<bms::CursorLegacy>(*context.chart, false);
+		context.cursor = make_shared<bms::CursorLegacy>(context.chart, false);
 		context.player.add_cursor(context.cursor, bms::Mapper{});
 	}
 	lib::imgui::same_line();
 	if (lib::imgui::button("Autoplay")) {
 		context.player.remove_cursor(context.cursor);
-		context.cursor = make_shared<bms::CursorLegacy>(*context.chart, true);
+		context.cursor = make_shared<bms::CursorLegacy>(context.chart, true);
 		context.player.add_cursor(context.cursor, bms::Mapper{});
 	}
 	lib::imgui::same_line();
@@ -216,7 +216,7 @@ static void run_render(Tools& tools, dev::Window& window)
 			state.context.emplace<GameplayContext>();
 			auto& context = state.gameplay_context();
 			context.chart = library.load_chart(state.requested_chart); //TODO convert to coro
-			context.cursor = make_shared<bms::CursorLegacy>(*context.chart, false);
+			context.cursor = make_shared<bms::CursorLegacy>(context.chart, false);
 			tools.broadcaster.shout(RegisterInputQueue{
 				.queue = weak_ptr{context.player.get_input_queue()},
 			});

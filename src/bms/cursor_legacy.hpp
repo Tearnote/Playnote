@@ -68,7 +68,7 @@ public:
 	};
 
 	// Create a cursor for the given chart. The chart's lifetime will be extended by the cursor's.
-	explicit CursorLegacy(Chart const& chart, bool autoplay);
+	explicit CursorLegacy(shared_ptr<Chart const> chart, bool autoplay);
 
 	// Return the chart the cursor is attached to.
 	[[nodiscard]] auto get_chart() const -> Chart const& { return *chart; }
@@ -156,11 +156,11 @@ private:
 	return *bpm_section.begin();
 }
 
-inline CursorLegacy::CursorLegacy(Chart const& chart, bool autoplay):
-	chart{chart.shared_from_this()},
+inline CursorLegacy::CursorLegacy(shared_ptr<Chart const> chart, bool autoplay):
+	chart{move(chart)},
 	autoplay{autoplay}
 {
-	wav_slot_progress.resize(chart.media.wav_slots.size());
+	wav_slot_progress.resize(this->chart->media.wav_slots.size());
 	restart();
 }
 

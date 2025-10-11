@@ -145,7 +145,7 @@ struct Media {
 };
 
 // A complete chart. Immutable; a chart is played by creating and advancing a Cursor from it.
-struct Chart: enable_shared_from_this<Chart> {
+struct Chart {
 	lib::openssl::MD5 md5;
 	Metadata metadata;
 	Timeline timeline;

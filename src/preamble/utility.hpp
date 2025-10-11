@@ -48,8 +48,6 @@ using std::unique_ptr;
 using std::make_unique;
 using std::shared_ptr;
 using std::make_shared;
-using std::static_pointer_cast;
-using std::enable_shared_from_this;
 using std::weak_ptr;
 using boost::scope::unique_resource;
 using std::type_index;
