@@ -134,17 +134,21 @@ auto Cursor::advance_one_sample(Func&& func, span<LaneInput const> inputs) -> bo
 
 	for (auto [type, lane, progress]: views::zip(
 		views::iota(0u) | views::transform([](auto i) { return static_cast<Lane::Type>(i); }),
-		chart->timeline.lanes,
-		lane_progress)) {
-		if (progress.next_note >= lane.notes.size()) continue;
-		Note const& note = lane.notes[progress.next_note];
-
+		chart->timeline.lanes,lane_progress))
+	{
 		// Missed notes
-		if (lane.playable && get_progress_ns() - note.timestamp > HitWindow && !progress.ln_timing)
-			trigger_miss(type);
+		{
+			if (progress.next_note >= lane.notes.size()) continue;
+			Note const& note = lane.notes[progress.next_note];
+			if (lane.playable && get_progress_ns() - note.timestamp > HitWindow && !progress.ln_timing)
+				trigger_miss(type);
+		}
 
 		// Autoplay and unplayable inputs
 		if (autoplay || !lane.playable) {
+			if (progress.next_note >= lane.notes.size()) continue;
+			Note const& note = lane.notes[progress.next_note];
+
 			// The note just started
 			if (get_progress_ns() >= note.timestamp && !progress.ln_timing) {
 				trigger_input({type, true}, func);
@@ -157,12 +161,16 @@ auto Cursor::advance_one_sample(Func&& func, span<LaneInput const> inputs) -> bo
 		}
 
 		// Auto-completed LNs
-		if (lane.playable && note.type_is<Note::LN>() && note.timestamp + note.params<Note::LN>().length <= get_progress_ns())
-			trigger_ln_release(type);
+		{
+			if (progress.next_note >= lane.notes.size()) continue;
+			Note const& note = lane.notes[progress.next_note];
+			if (lane.playable && note.type_is<Note::LN>() && note.timestamp + note.params<Note::LN>().length <= get_progress_ns())
+				trigger_ln_release(type);
+		}
 	}
 
 	sample_progress += 1;
-	return true;
+	return get_progress_ns() < chart->metadata.chart_duration;
 }
 
 template<callable<void(Note const&, Lane::Type, float)> Func>
