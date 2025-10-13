@@ -12,7 +12,7 @@ to them and translated by their associated Input handlers.
 #include "lib/mpmc.hpp"
 #include "dev/window.hpp"
 #include "audio/mixer.hpp"
-#include "bms/cursor_legacy.hpp"
+#include "bms/cursor.hpp"
 #include "bms/input.hpp"
 #include "threads/input_shouts.hpp"
 
@@ -30,14 +30,14 @@ public:
 	auto get_input_queue() -> shared_ptr<lib::mpmc::Queue<threads::UserInput>> { return inbound_inputs; }
 
 	// Register a cursor with the player. From now on, the cursor will be driven by the audio device and user inputs.
-	void add_cursor(shared_ptr<bms::CursorLegacy>, bms::Mapper&&);
+	void add_cursor(shared_ptr<bms::Cursor>, bms::Mapper&&);
 
 	// Unregister a cursor.
-	void remove_cursor(shared_ptr<bms::CursorLegacy> const&);
+	void remove_cursor(shared_ptr<bms::Cursor> const&);
 
 	// Return a copy of a cursor advanced to the same position as the sample playing from the speakers right now.
 	// This is a best guess estimate based on time elapsed since the last audio buffer.
-	[[nodiscard]] auto get_audio_cursor(shared_ptr<bms::CursorLegacy> const&) const -> bms::CursorLegacy;
+	[[nodiscard]] auto get_audio_cursor(shared_ptr<bms::Cursor> const&) const -> bms::Cursor;
 
 	void pause() { paused = true; }
 	void resume() { paused = false; }
@@ -52,18 +52,25 @@ public:
 
 private:
 	struct PlayableCursor {
-		shared_ptr<bms::CursorLegacy> cursor;
+		shared_ptr<bms::Cursor> cursor;
 		bms::Mapper mapper;
 		float gain;
 		usize sample_offset; // Sample count at the time the cursor was started
 	};
+	struct ActiveSound {
+		lib::openssl::MD5 md5;
+		usize channel;
+		span<dev::Sample const> audio;
+		usize position;
+	};
 	mutex cursors_lock;
-	vector<PlayableCursor> cursors;
+	small_vector<PlayableCursor, 4> cursors;
 	nanoseconds timer_slop; // Player start time according to the CPU timer. Adjusted over time to maintain sync
 	usize samples_processed = 0;
 	shared_ptr<lib::mpmc::Queue<threads::UserInput>> inbound_inputs;
-	vector<threads::UserInput> pending_inputs;
+	small_vector<threads::UserInput, 16> pending_inputs;
 	bool paused = false;
+	small_vector<ActiveSound, 128> active_sounds;
 };
 
 inline Player::Player()
@@ -73,7 +80,7 @@ inline Player::Player()
 	inbound_inputs = make_shared<lib::mpmc::Queue<threads::UserInput>>();
 }
 
-inline void Player::add_cursor(shared_ptr<bms::CursorLegacy> cursor, bms::Mapper&& mapper)
+inline void Player::add_cursor(shared_ptr<bms::Cursor> cursor, bms::Mapper&& mapper)
 {
 	auto lock = lock_guard{cursors_lock};
 	auto gain = dev::lufs_to_gain(cursor->get_chart().metadata.loudness);
@@ -85,14 +92,14 @@ inline void Player::add_cursor(shared_ptr<bms::CursorLegacy> cursor, bms::Mapper
 	});
 }
 
-inline void Player::remove_cursor(shared_ptr<bms::CursorLegacy> const& cursor)
+inline void Player::remove_cursor(shared_ptr<bms::Cursor> const& cursor)
 {
 	auto lock = lock_guard{cursors_lock};
 	auto const it = find(cursors, cursor, &PlayableCursor::cursor);
 	if (it != cursors.end()) cursors.erase(it);
 }
 
-inline auto Player::get_audio_cursor(shared_ptr<bms::CursorLegacy> const& cursor) const -> bms::CursorLegacy
+inline auto Player::get_audio_cursor(shared_ptr<bms::Cursor> const& cursor) const -> bms::Cursor
 {
 	auto const it = find(cursors, cursor, &PlayableCursor::cursor);
 	if (it != cursors.end()) {
@@ -104,7 +111,7 @@ inline auto Player::get_audio_cursor(shared_ptr<bms::CursorLegacy> const& cursor
 		auto const last_buffer_start = timer_slop + buffer_start_progress;
 		auto const elapsed = globals::glfw->get_time() - last_buffer_start;
 		auto const elapsed_samples = globals::mixer->get_audio().ns_to_samples(elapsed);
-		auto result = bms::CursorLegacy{*it->cursor};
+		auto result = bms::Cursor{*it->cursor};
 		result.fast_forward(clamp(elapsed_samples, 0z, globals::mixer->get_audio().ns_to_samples(globals::mixer->get_latency())));
 		return result;
 	}
@@ -155,15 +162,14 @@ inline auto Player::next_sample() -> dev::Sample
 	});
 	pending_inputs.erase(removed.begin(), removed.end());
 
-	auto sample_mix = dev::Sample{};
 	for (auto& cursor: cursors) {
 		// Convert inputs with this cursor's mapping
-		auto converted_inputs = small_vector<bms::CursorLegacy::LaneInput, 16>{};
+		auto converted_inputs = small_vector<bms::Cursor::LaneInput, 16>{};
 		for (auto const& input: relevant_inputs) {
 			visit(visitor{
 				[&](threads::KeyInput const& i) {
 					if (auto const converted = cursor.mapper.from_key(i, cursor.cursor->get_chart().metadata.playstyle)) {
-						converted_inputs.emplace_back(bms::CursorLegacy::LaneInput{
+						converted_inputs.emplace_back(bms::Cursor::LaneInput{
 							.lane = converted->lane,
 							.state = converted->state,
 						});
@@ -171,7 +177,7 @@ inline auto Player::next_sample() -> dev::Sample
 				},
 				[&](threads::ButtonInput const& i) {
 					if (auto const converted = cursor.mapper.from_button(i, cursor.cursor->get_chart().metadata.playstyle)) {
-						converted_inputs.emplace_back(bms::CursorLegacy::LaneInput{
+						converted_inputs.emplace_back(bms::Cursor::LaneInput{
 							.lane = converted->lane,
 							.state = converted->state,
 						});
@@ -180,7 +186,7 @@ inline auto Player::next_sample() -> dev::Sample
 				[&](threads::AxisInput const& i) {
 					auto const converteds = cursor.mapper.submit_axis_input(i, cursor.cursor->get_chart().metadata.playstyle);
 					for (auto const& converted: converteds) {
-						converted_inputs.emplace_back(bms::CursorLegacy::LaneInput{
+						converted_inputs.emplace_back(bms::Cursor::LaneInput{
 							.lane = converted.lane,
 							.state = converted.state,
 						});
@@ -190,19 +196,44 @@ inline auto Player::next_sample() -> dev::Sample
 		}
 		auto converteds = cursor.mapper.from_axis_state(cursor.cursor->get_chart().metadata.playstyle);
 		for (auto const& converted: converteds) {
-			converted_inputs.emplace_back(bms::CursorLegacy::LaneInput{
+			converted_inputs.emplace_back(bms::Cursor::LaneInput{
 				.lane = converted.lane,
 				.state = converted.state,
 			});
 		}
 
 		// Advance the cursor
-		cursor.cursor->advance_one_sample([&](auto sample) {
-			sample_mix.left += sample.left * cursor.gain;
-			sample_mix.right += sample.right * cursor.gain;
+		cursor.cursor->advance_one_sample([&](auto ev) {
+			auto it = find_if(active_sounds, [&](auto const& s) {
+				return s.md5 == cursor.cursor->get_chart().md5 && s.channel == ev.channel;
+			});
+			if (it == active_sounds.end()) {
+				active_sounds.emplace_back(ActiveSound{
+					.md5 = cursor.cursor->get_chart().md5,
+					.channel = ev.channel,
+					.audio = ev.audio,
+					.position = 0,
+				});
+			} else {
+				it->position = 0;
+			}
 		}, converted_inputs);
 	}
 
+	auto sample_mix = dev::Sample{};
+	for (auto i = 0zu; i < active_sounds.size();) {
+		auto& sound = active_sounds[i];
+		sample_mix.left += sound.audio[sound.position].left;
+		sample_mix.right += sound.audio[sound.position].right;
+		sound.position += 1;
+		if (sound.position >= sound.audio.size()) {
+			// Swap-and-pop erase
+			active_sounds[i] = move(active_sounds.back());
+			active_sounds.pop_back();
+		} else {
+			i += 1;
+		}
+	}
 	return sample_mix;
 }
 

@@ -41,7 +41,7 @@ public:
 	};
 
 	// An audio playback trigger event.
-	struct AudioEvent {
+	struct SoundEvent {
 		usize channel; // BMS channel index; the event should interrupt playback of any samples on the same channel
 		span<dev::Sample const> audio;
 	};
@@ -69,8 +69,8 @@ public:
 	// Can be optionally provided with inputs that will affect chart playback (ignored if autoplay).
 	// Returns false if the chart has ended. In this state no more new audio will be triggered,
 	// and the fate of all notes has been determined.
-	template<callable<void(AudioEvent)> Func>
-	auto advance_one_sample(Func&& func = [](AudioEvent){}, span<LaneInput const> inputs = {}) -> bool;
+	template<callable<void(SoundEvent)> Func>
+	auto advance_one_sample(Func&& func, span<LaneInput const> inputs = {}) -> bool;
 
 	// Progress by the given number of samples, without generating any audio.
 	void fast_forward(usize samples);
@@ -78,6 +78,9 @@ public:
 	// Call the provided function for every note less than max_units away from current position.
 	template<callable<void(Note const&, Lane::Type, float)> Func>
 	void upcoming_notes(float max_units, Func&& func, nanoseconds offset = 0ns, bool adjust_for_latency = false) const;
+
+	Cursor(Cursor const& other) { *this = other; }
+	auto operator=(Cursor const&) -> Cursor&;
 
 private:
 	struct LaneProgress {
@@ -93,7 +96,7 @@ private:
 	array<LaneProgress, enum_count<Lane::Type>()> lane_progress = {};
 	lib::mpmc::Queue<JudgmentEvent> judgment_events;
 
-	template<callable<void(AudioEvent)> Func>
+	template<callable<void(SoundEvent)> Func>
 	void trigger_input(LaneInput, Func&&);
 	void trigger_miss(Lane::Type);
 	void trigger_ln_release(Lane::Type);
@@ -119,11 +122,9 @@ void Cursor::each_judgment_event(Func&& func)
 		func(move(event));
 }
 
-template<callable<void(Cursor::AudioEvent)> Func>
+template<callable<void(Cursor::SoundEvent)> Func>
 auto Cursor::advance_one_sample(Func&& func, span<LaneInput const> inputs) -> bool
 {
-	if (get_progress_ns() > chart->metadata.chart_duration) return false;
-
 	// Manual inputs
 	if (!autoplay) {
 		for (auto const& input: inputs)
@@ -185,10 +186,19 @@ void Cursor::upcoming_notes(float max_units, Func&& func, nanoseconds offset, bo
 
 inline void Cursor::fast_forward(usize samples)
 {
-	for (auto const _: views::iota(0zu, samples)) advance_one_sample();
+	for (auto const _: views::iota(0zu, samples)) advance_one_sample([](SoundEvent){});
 }
 
-template<callable<void(Cursor::AudioEvent)> Func>
+inline auto Cursor::operator=(Cursor const& other) -> Cursor&
+{
+	chart = other.chart;
+	autoplay = other.autoplay;
+	sample_progress = other.sample_progress;
+	lane_progress = other.lane_progress;
+	return *this;
+}
+
+template<callable<void(Cursor::SoundEvent)> Func>
 void Cursor::trigger_input(LaneInput input, Func&& func)
 {
 	auto& progress = lane_progress[+input.lane];
@@ -208,10 +218,12 @@ void Cursor::trigger_input(LaneInput input, Func&& func)
 					.lane = input.lane,
 					.timing = get_progress_ns() - note.timestamp,
 				});
-				func(AudioEvent{
-					.channel = note.wav_slot,
-					.audio = chart->media.wav_slots[note.wav_slot],
-				});
+				if (lane.audible && note.wav_slot != -1u) {
+					func(SoundEvent{
+						.channel = note.wav_slot,
+						.audio = chart->media.wav_slots[note.wav_slot],
+					});
+				}
 
 				progress.active_slot = note.wav_slot;
 				if (note.type_is<Note::Simple>())
@@ -220,10 +232,12 @@ void Cursor::trigger_input(LaneInput input, Func&& func)
 					progress.ln_timing = get_progress_ns() - note.timestamp;
 			} else {
 				// Press is too early to affect the note
-				func(AudioEvent{
-					.channel = progress.active_slot,
-					.audio = chart->media.wav_slots[progress.active_slot],
-				});
+				if (lane.audible && note.wav_slot != -1u) {
+					func(SoundEvent{
+						.channel = progress.active_slot,
+						.audio = chart->media.wav_slots[progress.active_slot],
+					});
+				}
 			}
 		}
 
@@ -231,11 +245,15 @@ void Cursor::trigger_input(LaneInput input, Func&& func)
 		if (!input.state && progress.ln_timing)
 			trigger_ln_release(input.lane);
 	} else {
-		// Chart over, player is just pressing things for fun
-		func(AudioEvent{
-			.channel = progress.active_slot,
-			.audio = chart->media.wav_slots[progress.active_slot],
-		});
+		if (input.state) {
+			// Chart over, player is just pressing things for fun
+			if (lane.audible && progress.active_slot != -1u) {
+				func(SoundEvent{
+					.channel = progress.active_slot,
+					.audio = chart->media.wav_slots[progress.active_slot],
+				});
+			}
+		}
 	}
 
 	progress.pressed = input.state;

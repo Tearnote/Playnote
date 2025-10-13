@@ -11,7 +11,7 @@ Parsing of BMS chart data into a Chart object.
 #include "lib/ebur128.hpp"
 #include "lib/icu.hpp"
 #include "io/song.hpp"
-#include "bms/cursor_legacy.hpp"
+#include "audio/renderer.hpp"
 #include "bms/chart.hpp"
 
 namespace playnote::bms {
@@ -654,7 +654,7 @@ inline auto Builder::build(span<byte const> bms_raw, io::Song& song, optional<re
 	// Offline audio render pass, handling all related statistics in one sweep
 	auto [loudness, audio_duration] = [&] {
 		static constexpr auto BufferSize = 4096zu / sizeof(dev::Sample); // One memory page
-		auto cursor = CursorLegacy{chart, true};
+		auto renderer = audio::Renderer{chart};
 		auto ctx = lib::ebur128::init(globals::mixer->get_audio().get_sampling_rate());
 		auto buffer = vector<dev::Sample>{};
 		buffer.reserve(BufferSize);
@@ -662,17 +662,18 @@ inline auto Builder::build(span<byte const> bms_raw, io::Song& song, optional<re
 		auto processing = true;
 		while (processing) {
 			for (auto _: views::iota(0zu, BufferSize)) {
-				auto& sample = buffer.emplace_back();
-				processing = !cursor.advance_one_sample([&](auto new_sample) {
-					sample.left += new_sample.left;
-					sample.right += new_sample.right;
-				});
-				if (!processing) break;
+				auto const sample = renderer.advance_one_sample();
+				if (sample) {
+					buffer.emplace_back(*sample);
+				} else {
+					processing = false;
+					break;
+				}
 			}
 			lib::ebur128::add_frames(ctx, buffer);
 			buffer.clear();
 		}
-		return pair{lib::ebur128::get_loudness(ctx), cursor.get_progress_ns()};
+		return pair{lib::ebur128::get_loudness(ctx), renderer.get_cursor().get_progress_ns()};
 	}();
 	chart->metadata.loudness = loudness;
 	chart->metadata.audio_duration = audio_duration;
