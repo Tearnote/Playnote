@@ -70,6 +70,10 @@ public:
 	// Load the requested file.
 	auto load_file(string_view filepath) -> span<byte const>;
 
+	// Preload all audio files to an internal cache. This cache will be used in any later load_audio_file() calls.
+	// Useful when loading multiple charts of the same song.
+	void preload_audio_files();
+
 	// Load the requested audio file, decode it, and resample to current device sample rate.
 	auto load_audio_file(string_view filepath) -> vector<dev::Sample>;
 
@@ -113,12 +117,18 @@ private:
 	static constexpr auto SelectAudioFileQuery = R"(
 		SELECT ptr, size FROM contents WHERE type = 2 AND path = ?1
 	)"sv;
+	// language=SQLite
+	static constexpr auto SelectAudioFilesQuery = R"(
+		SELECT path, ptr, size FROM contents WHERE type = 2
+	)"sv;
 
 	ReadFile file;
 	lib::sqlite::DB db;
 	lib::sqlite::Statement select_charts;
 	lib::sqlite::Statement select_file;
 	lib::sqlite::Statement select_audio_file;
+	lib::sqlite::Statement select_audio_files;
+	unordered_map<string, vector<dev::Sample>, string_hash> audio_cache;
 
 	Song(ReadFile&&, lib::sqlite::DB&&); // Use factory methods
 	[[nodiscard]] static auto find_prefix(span<byte const> const&) -> fs::path;
@@ -280,8 +290,27 @@ inline auto Song::load_file(string_view filepath) -> span<byte const>
 	return file;
 }
 
+inline void Song::preload_audio_files()
+{
+	lib::sqlite::query(select_audio_files, [&](string_view filepath, void const* ptr, isize size) {
+		// Normally the db collation handles case-insensitive lookup for us, but we need to do it manually for the cache
+		auto filepath_low = string{filepath};
+		to_lower(filepath_low);
+		auto file = span{static_cast<byte const*>(ptr), static_cast<usize>(size)};
+		audio_cache.emplace(filepath_low, lib::ffmpeg::decode_and_resample_file_buffer(file, globals::mixer->get_audio().get_sampling_rate()));
+	});
+}
+
 inline auto Song::load_audio_file(string_view filepath) -> vector<dev::Sample>
 {
+	if (!audio_cache.empty()) {
+		auto filepath_low = string{filepath};
+		to_lower(filepath_low);
+		auto it = audio_cache.find(filepath_low);
+		if (it != audio_cache.end())
+			return it->second;
+	}
+
 	auto file = span<byte const>{};
 	lib::sqlite::query(select_audio_file, [&](void const* ptr, isize size) {
 		file = span{static_cast<byte const*>(ptr), static_cast<usize>(size)};
@@ -304,6 +333,7 @@ inline Song::Song(ReadFile&& file, lib::sqlite::DB&& db):
 	select_charts = lib::sqlite::prepare(this->db, SelectChartsQuery);
 	select_file = lib::sqlite::prepare(this->db, SelectFileQuery);
 	select_audio_file = lib::sqlite::prepare(this->db, SelectAudioFileQuery);
+	select_audio_files = lib::sqlite::prepare(this->db, SelectAudioFilesQuery);
 }
 
 inline auto Song::find_prefix(span<byte const> const& archive_data) -> fs::path

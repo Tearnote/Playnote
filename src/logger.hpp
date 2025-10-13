@@ -63,7 +63,7 @@ private:
 
 	shared_ptr<quill::ConsoleSink> console_sink;
 	shared_ptr<quill::FileSink> file_sink;
-	unordered_map<string_view, Category*> categories;
+	unordered_map<string, Category*, string_hash> categories;
 };
 
 inline Logger::Logger(string_view log_file_path, Level global_log_level)

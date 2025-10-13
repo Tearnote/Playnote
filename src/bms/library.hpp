@@ -317,6 +317,7 @@ inline void Library::import_one(fs::path const& path)
 {
 	auto [song_id, song_path] = import_song(path);
 	auto song = io::Song::from_zip(song_path);
+	song.preload_audio_files();
 	auto imported_count = 0u;
 	song.for_each_chart([&](auto path, auto chart) {
 		imported_count += import_chart(song, song_id, path, chart)? 1 : 0;
