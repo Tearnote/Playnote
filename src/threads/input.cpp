@@ -21,7 +21,7 @@ namespace playnote::threads {
 
 static void run_input(Tools& tools, dev::Window& window)
 {
-	auto input_queues = vector<shared_ptr<lib::mpmc::Queue<UserInput>>>{};
+	auto input_queues = vector<shared_ptr<mpmc_queue<UserInput>>>{};
 	window.register_key_callback([&](dev::Window::KeyCode keycode, bool state) {
 		for (auto& queue: input_queues) {
 			queue->enqueue(KeyInput{

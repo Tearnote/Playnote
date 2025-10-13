@@ -9,7 +9,6 @@ to them and translated by their associated Input handlers.
 
 #pragma once
 #include "preamble.hpp"
-#include "lib/mpmc.hpp"
 #include "dev/window.hpp"
 #include "audio/mixer.hpp"
 #include "bms/cursor.hpp"
@@ -27,7 +26,7 @@ public:
 	~Player() { globals::mixer->remove_generator(*this); }
 
 	// Retrieve the input queue. Input events should be pushed to this queue.
-	auto get_input_queue() -> shared_ptr<lib::mpmc::Queue<threads::UserInput>> { return inbound_inputs; }
+	auto get_input_queue() -> shared_ptr<mpmc_queue<threads::UserInput>> { return inbound_inputs; }
 
 	// Register a cursor with the player. From now on, the cursor will be driven by the audio device and user inputs.
 	void add_cursor(shared_ptr<bms::Cursor>, bms::Mapper&&);
@@ -68,7 +67,7 @@ private:
 	small_vector<PlayableCursor, 4> cursors;
 	nanoseconds timer_slop; // Player start time according to the CPU timer. Adjusted over time to maintain sync
 	usize samples_processed = 0;
-	shared_ptr<lib::mpmc::Queue<threads::UserInput>> inbound_inputs;
+	shared_ptr<mpmc_queue<threads::UserInput>> inbound_inputs;
 	small_vector<threads::UserInput, 16> pending_inputs;
 	bool paused = false;
 	small_vector<ActiveSound, 128> active_sounds;
@@ -78,7 +77,7 @@ inline Player::Player()
 {
 	globals::mixer->add_generator(*this);
 	timer_slop = globals::glfw->get_time();
-	inbound_inputs = make_shared<lib::mpmc::Queue<threads::UserInput>>();
+	inbound_inputs = make_shared<mpmc_queue<threads::UserInput>>();
 }
 
 inline void Player::add_cursor(shared_ptr<bms::Cursor> cursor, bms::Mapper&& mapper)

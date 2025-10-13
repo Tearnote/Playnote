@@ -20,6 +20,7 @@ Imports and helpers for container types.
 #include <boost/container/static_vector.hpp>
 #include <boost/container/small_vector.hpp>
 #include <boost/container/vector.hpp>
+#include "concurrentqueue.h"
 #include "preamble/types.hpp"
 
 namespace playnote {
@@ -40,6 +41,10 @@ namespace pmr {
 	using boost::container::pmr::monotonic_buffer_resource;
 	using boost::container::pmr::polymorphic_allocator;
 }
+
+// Lock-free containers
+template<typename T>
+using mpmc_queue = moodycamel::ConcurrentQueue<T>;
 
 // Custom hash function that enables heterogenous lookup.
 // https://www.cppstories.com/2021/heterogeneous-access-cpp20/

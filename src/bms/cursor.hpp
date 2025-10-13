@@ -9,7 +9,6 @@ and note hit events.
 
 #pragma once
 #include "preamble.hpp"
-#include "lib/mpmc.hpp"
 #include "audio/mixer.hpp"
 #include "bms/chart.hpp"
 
@@ -95,7 +94,7 @@ private:
 	bool autoplay;
 	usize sample_progress = 0;
 	array<LaneProgress, enum_count<Lane::Type>()> lane_progress = {};
-	lib::mpmc::Queue<JudgmentEvent> judgment_events;
+	mpmc_queue<JudgmentEvent> judgment_events;
 
 	template<callable<void(SoundEvent)> Func>
 	void trigger_input(LaneInput, Func&&);
