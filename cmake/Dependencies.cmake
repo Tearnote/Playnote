@@ -169,7 +169,7 @@ target_include_directories(zpp_bits INTERFACE ${zpp_bits_SOURCE_DIR})
 
 FetchContent_Declare(libcoro # Coroutine primitives
 	GIT_REPOSITORY https://github.com/jbaldwin/libcoro
-	GIT_TAG 749e5b47414d28a658ed3015321d2539fab56c1b
+	GIT_TAG 7e0ce982405fb26b6ca8af97f40a8eaa2b78c4fa
 )
 set(LIBCORO_FEATURE_NETWORKING OFF CACHE BOOL "")
 FetchContent_MakeAvailable(libcoro)

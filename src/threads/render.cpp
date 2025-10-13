@@ -207,6 +207,7 @@ static void run_render(Tools& tools, dev::Window& window)
 
 	// Init game systems
 	auto library = bms::Library{LibraryDBPath};
+	auto task_pool_stub = globals::task_pool.provide(coro::thread_pool::make_unique());
 	auto state = GameState{};
 	state.requested = State::Library;
 

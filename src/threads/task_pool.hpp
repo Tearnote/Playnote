@@ -12,6 +12,6 @@ The global coroutine executor, implemented as a thread pool.
 #include "lib/coro.hpp"
 
 namespace playnote::globals {
-inline auto task_pool = Service<shared_ptr<coro::thread_pool>>{};
+inline auto task_pool = Service<unique_ptr<coro::thread_pool>>{};
 inline auto pool() -> coro::thread_pool& { return **task_pool; }
 }
