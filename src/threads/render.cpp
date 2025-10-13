@@ -259,6 +259,8 @@ static void run_render(Tools& tools, dev::Window& window)
 			}
 		});
 	}
+
+	library.stop_imports();
 }
 
 void render(Tools& tools, dev::Window& window)

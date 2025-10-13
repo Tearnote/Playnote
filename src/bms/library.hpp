@@ -33,6 +33,9 @@ public:
 	// Import a song and all its charts into the library. Coroutine.
 	auto import(fs::path) -> coro::task<>;
 
+	// Signal any running import tasks to stop spawning new jobs to prepare for shutdown.
+	void stop_imports();
+
 	// Return a list of all available charts.
 	[[nodiscard]] auto list_charts() -> vector<ChartEntry>;
 
@@ -185,6 +188,7 @@ private:
 
 	coro::mutex song_lock;
 	atomic<bool> dirty = true;
+	atomic<bool> stopping = false;
 	Builder builder;
 
 	[[nodiscard]] auto find_available_song_filename(string_view name) -> string;
@@ -229,6 +233,11 @@ inline auto Library::import(fs::path path) -> coro::task<>
 	} else {
 		throw runtime_error_fmt("Failed to import \"{}\": unknown type of file", path);
 	}
+}
+
+inline void Library::stop_imports()
+{
+	stopping.store(true);
 }
 
 inline auto Library::list_charts() -> vector<ChartEntry>
@@ -324,6 +333,7 @@ inline auto Library::find_available_song_filename(string_view name) -> string
 
 inline auto Library::import_one(fs::path path) -> coro::task<>
 {
+	if (stopping.load()) co_return;
 	auto lock = co_await song_lock.scoped_lock();
 	auto [song_id, song_path] = import_song(path);
 	auto song = io::Song::from_zip(song_path);
@@ -390,6 +400,7 @@ inline auto Library::import_song(fs::path const& path) -> pair<usize, string> tr
 
 inline auto Library::import_chart(io::Song& song, usize song_id, string_view chart_path, span<byte const> chart_raw) -> bool
 {
+	if (stopping.load()) return false;
 	auto const md5 = lib::openssl::md5(chart_raw);
 	auto exists = false;
 	lib::sqlite::query(chart_exists, [&] { exists = true; }, md5);
