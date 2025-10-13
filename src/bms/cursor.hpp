@@ -222,12 +222,14 @@ void Cursor::trigger_input(LaneInput input, Func&& func)
 		if (input.state) {
 			if (note.timestamp - get_progress_ns() <= HitWindow) {
 				// A note is in range and was hit
-				judgment_events.enqueue(JudgmentEvent{
-					.type = note.type_is<Note::Simple>()? JudgmentEvent::Type::Note : JudgmentEvent::Type::LNStart,
-					.lane = input.lane,
-					.timestamp = get_progress_ns(),
-					.timing = get_progress_ns() - note.timestamp,
-				});
+				if (lane.playable) {
+					judgment_events.enqueue(JudgmentEvent{
+						.type = note.type_is<Note::Simple>()? JudgmentEvent::Type::Note : JudgmentEvent::Type::LNStart,
+						.lane = input.lane,
+						.timestamp = get_progress_ns(),
+						.timing = get_progress_ns() - note.timestamp,
+					});
+				}
 				if (lane.audible && note.wav_slot != -1u) {
 					func(SoundEvent{
 						.channel = note.wav_slot,
@@ -275,10 +277,12 @@ inline void Cursor::trigger_miss(Lane::Type type)
 	auto const& lane = chart->timeline.lanes[+type];
 	auto const& note = lane.notes[progress.next_note];
 
-	judgment_events.enqueue(JudgmentEvent{
-		.type = note.type_is<Note::Simple>()? JudgmentEvent::Type::Note : JudgmentEvent::Type::LN,
-		.lane = type,
-	});
+	if (lane.playable) {
+		judgment_events.enqueue(JudgmentEvent{
+			.type = note.type_is<Note::Simple>()? JudgmentEvent::Type::Note : JudgmentEvent::Type::LN,
+			.lane = type,
+		});
+	}
 	progress.active_slot = note.wav_slot;
 	progress.next_note += 1;
 }
@@ -289,12 +293,14 @@ inline void Cursor::trigger_ln_release(Lane::Type type)
 	auto const& lane = chart->timeline.lanes[+type];
 	auto const& note = lane.notes[progress.next_note];
 
-	judgment_events.enqueue(JudgmentEvent{
-		.type = JudgmentEvent::Type::LN,
-		.lane = type,
-		.timing = *progress.ln_timing,
-		.release_timing = get_progress_ns() - (note.timestamp + note.params<Note::LN>().length),
-	});
+	if (lane.playable) {
+		judgment_events.enqueue(JudgmentEvent{
+			.type = JudgmentEvent::Type::LN,
+			.lane = type,
+			.timing = *progress.ln_timing,
+			.release_timing = get_progress_ns() - (note.timestamp + note.params<Note::LN>().length),
+		});
+	}
 	progress.ln_timing = nullopt;
 	progress.next_note += 1;
 }
