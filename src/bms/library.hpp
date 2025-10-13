@@ -13,6 +13,7 @@ A cache of song and chart metadata. Handles import events.
 #include "lib/openssl.hpp"
 #include "lib/sqlite.hpp"
 #include "lib/bits.hpp"
+#include "lib/coro.hpp"
 #include "io/song.hpp"
 #include "bms/builder.hpp"
 
@@ -29,11 +30,14 @@ public:
 	// Open an existing library, or create an empty one at the provided path.
 	explicit Library(fs::path const&);
 
-	// Import a song and all its charts into the library.
-	void import(fs::path const&);
+	// Import a song and all its charts into the library. Coroutine.
+	auto import(fs::path) -> coro::task<>;
 
 	// Return a list of all available charts.
 	[[nodiscard]] auto list_charts() -> vector<ChartEntry>;
+
+	// Returns true if the library has changed since the last call to list_charts().
+	[[nodiscard]] auto is_dirty() const -> bool { return dirty.load(); }
 
 	// Load a chart from the library.
 	auto load_chart(lib::openssl::MD5) -> shared_ptr<Chart const>;
@@ -179,6 +183,7 @@ private:
 	lib::sqlite::Statement get_song_from_chart;
 	lib::sqlite::Statement select_song_chart;
 
+	atomic<bool> dirty = true;
 	Builder builder;
 
 	[[nodiscard]] auto find_available_song_filename(string_view name) -> string;
@@ -206,17 +211,20 @@ inline Library::Library(fs::path const& path):
 	INFO("Opened song library at \"{}\"", path);
 }
 
-inline void Library::import(fs::path const& path)
+inline auto Library::import(fs::path path) -> coro::task<>
 {
 	if (is_regular_file(path)) {
 		import_one(path);
 	} else if (is_directory(path)) {
 		auto contents = vector<fs::directory_entry>{};
 		copy(fs::directory_iterator{path}, back_inserter(contents));
-		if (any_of(contents, [&](auto const& entry) { return fs::is_regular_file(entry) && io::Song::is_bms_ext(entry.path().extension().string()); }))
+		if (any_of(contents, [&](auto const& entry) { return fs::is_regular_file(entry) && io::Song::is_bms_ext(entry.path().extension().string()); })) {
 			import_one(path);
-		else
-			for (auto const& entry: contents) import(entry);
+		} else {
+			auto subimports = vector<coro::task<>>{};
+			for (auto const& entry: contents) subimports.emplace_back(import(entry));
+			co_await coro::when_all(move(subimports));
+		}
 	} else {
 		throw runtime_error_fmt("Failed to import \"{}\": unknown type of file", path);
 	}
@@ -408,6 +416,7 @@ inline auto Library::import_chart(io::Song& song, usize song_id, string_view cha
 			serialize_density(chart->metadata.density.scratch),
 			serialize_density(chart->metadata.density.ln));
     });
+	dirty.store(true);
 	return true;
 }
 

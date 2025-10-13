@@ -26,6 +26,7 @@ Implementation file for threads/render.hpp.
 #include "bms/input.hpp"
 #include "threads/render_shouts.hpp"
 #include "threads/input_shouts.hpp"
+#include "threads/task_pool.hpp"
 #include "threads/tools.hpp"
 
 namespace playnote::threads {
@@ -239,11 +240,11 @@ static void run_render(Tools& tools, dev::Window& window)
 			state.requested = State::None;
 		}
 
-		// Handle import request
+		// Handle chart library
 		tools.broadcaster.receive_all<FileDrop>([&](auto const& ev) {
-			for (auto const& path: ev.paths) library.import(path);
-			state.library_context().charts = library.list_charts(); //TODO convert to coro
+			for (auto const& path: ev.paths) globals::pool().spawn(library.import(path));
 		});
+		if (state.current == State::Library && library.is_dirty()) state.library_context().charts = library.list_charts(); //TODO convert to coro
 
 		// Render a frame
 		renderer.frame({"bg"_id, "frame"_id, "measure"_id, "judgment_line"_id, "notes"_id, "pressed"_id}, [&](gfx::Renderer::Queue& queue) {
