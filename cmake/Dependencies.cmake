@@ -94,12 +94,6 @@ endif()
 target_compile_definitions(vuk PUBLIC VUK_CUSTOM_VULKAN_HEADER=<volk.h>)
 target_link_libraries(vuk PRIVATE volk)
 
-FetchContent_Declare(cpp-channels # Threaded data sharing
-	GIT_REPOSITORY https://github.com/andreiavrammsd/cpp-channel
-	GIT_TAG v1.3.1
-)
-FetchContent_MakeAvailable(cpp-channels)
-
 FetchContent_Declare(ebur128 # Volume normalization
 	GIT_REPOSITORY https://github.com/jiixyj/libebur128
 	GIT_TAG v1.2.6

@@ -10,7 +10,6 @@ Imports of OS-specific functionality.
 #include <filesystem>
 #include <thread>
 #include <latch>
-#include "msd/channel.hpp"
 
 namespace playnote {
 
@@ -35,6 +34,5 @@ using std::atomic;
 using std::mutex;
 using std::lock_guard;
 using std::latch;
-using msd::channel;
 
 }

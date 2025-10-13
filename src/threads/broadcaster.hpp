@@ -54,15 +54,15 @@ public:
 private:
 	inline static thread_local auto endpoint_id = -1zu;
 	mutex register_lock;
-	vector<unordered_map<type_index, shared_ptr<void>>> channels;
+	vector<unordered_map<type_index, shared_ptr<void>>> queues;
 };
 
 inline void Broadcaster::register_as_endpoint()
 {
 	ASSUME(endpoint_id == -1zu);
 	auto lock = lock_guard{register_lock};
-	endpoint_id = channels.size();
-	channels.emplace_back();
+	endpoint_id = queues.size();
+	queues.emplace_back();
 }
 
 template<typename T>
@@ -71,8 +71,8 @@ void Broadcaster::subscribe()
 	using Type = remove_cvref_t<T>;
 	ASSUME(endpoint_id != -1zu);
 	auto lock = lock_guard{register_lock};
-	ASSUME(!channels[endpoint_id].contains(typeid(Type)));
-	channels[endpoint_id][typeid(Type)] = make_shared<channel<Type>>();
+	ASSUME(!queues[endpoint_id].contains(typeid(Type)));
+	queues[endpoint_id][typeid(Type)] = make_shared<mpmc_queue<Type>>();
 }
 
 template<typename T, typename... Args>
@@ -80,10 +80,10 @@ void Broadcaster::make_shout(Args&&... args)
 {
 	using Type = remove_cvref_t<T>;
 	ASSUME(endpoint_id != -1zu);
-	for (auto [idx, in_channel]: channels | views::enumerate) {
+	for (auto [idx, in_channel]: queues | views::enumerate) {
 		if (endpoint_id == idx) continue;
 		if (!in_channel.contains(typeid(Type))) continue;
-		(*static_pointer_cast<channel<Type>>(in_channel[typeid(Type)])) << T{forward<Args>(args)...};
+		(*static_pointer_cast<mpmc_queue<Type>>(in_channel[typeid(Type)])).enqueue(T{forward<Args>(args)...});
 	}
 }
 
@@ -92,14 +92,15 @@ auto Broadcaster::receive_all(Func&& func) -> bool
 {
 	using Type = remove_cvref_t<T>;
 	ASSUME(endpoint_id != -1zu);
-	ASSUME(channels[endpoint_id].contains(typeid(Type)));
-	auto& out_channel = *static_pointer_cast<channel<Type>>(channels[endpoint_id][typeid(Type)]);
-	if (out_channel.empty()) return false;
-	for (auto message: out_channel) {
+	ASSUME(queues[endpoint_id].contains(typeid(Type)));
+	auto& out_queue = *static_pointer_cast<mpmc_queue<Type>>(queues[endpoint_id][typeid(Type)]);
+	auto message = Type{};
+	auto processed = 0zu;
+	while (out_queue.try_dequeue(message)) {
 		func(move(message));
-		if (out_channel.empty()) return true;
+		processed += 1;
 	}
-	return false;
+	return processed;
 }
 
 template<typename T, callable<void(T&&)> Func, callable<void()> SleepFunc>
