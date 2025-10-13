@@ -35,6 +35,7 @@ public:
 		};
 		Type type;
 		Lane::Type lane;
+		nanoseconds timestamp;
 		// In the fields below, positive value means the player was late, negative means the player was early.
 		optional<nanoseconds> timing; // nullopt: note was missed entirely. Note: timing of the note hit. LNStart, LN: timing of LN start
 		optional<nanoseconds> release_timing; // Note, LNStart: irrelevant, nullopt. LN: timing of the release against LN end
@@ -216,6 +217,7 @@ void Cursor::trigger_input(LaneInput input, Func&& func)
 				judgment_events.enqueue(JudgmentEvent{
 					.type = note.type_is<Note::Simple>()? JudgmentEvent::Type::Note : JudgmentEvent::Type::LNStart,
 					.lane = input.lane,
+					.timestamp = get_progress_ns(),
 					.timing = get_progress_ns() - note.timestamp,
 				});
 				if (lane.audible && note.wav_slot != -1u) {
