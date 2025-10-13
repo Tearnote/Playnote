@@ -42,7 +42,7 @@ inline Renderer::Renderer(shared_ptr<bms::Chart const> chart):
 
 inline auto Renderer::advance_one_sample() -> optional<dev::Sample>
 {
-	auto const chart_ended = cursor->advance_one_sample([&](auto ev) {
+	auto const chart_ended = !cursor->advance_one_sample([&](auto ev) {
 		auto it = find_if(active_sounds, [&](auto const& s) {
 			return s.channel == ev.channel;
 		});
@@ -58,7 +58,7 @@ inline auto Renderer::advance_one_sample() -> optional<dev::Sample>
 	});
 	if (chart_ended && active_sounds.empty()) return nullopt;
 	auto sample_mix = dev::Sample{};
-	for (auto i = 0zu; i <= active_sounds.size();) {
+	for (auto i = 0zu; i < active_sounds.size();) {
 		auto& sound = active_sounds[i];
 		sample_mix.left += sound.audio[sound.position].left;
 		sample_mix.right += sound.audio[sound.position].right;
