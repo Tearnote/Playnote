@@ -1,6 +1,6 @@
 # Playnote
 
-The next generation [BMS](https://en.wikipedia.org/wiki/Be-Music_Source) player for Windows and Linux. **Work in progress**; currently capable of manual play and autoplay of one chart at a time, with placeholder UI.
+The next generation [BMS](https://en.wikipedia.org/wiki/Be-Music_Source) player for Windows and Linux. **Work in progress**.
 
 ![screenshot.png](screenshot.png)
 
