@@ -62,6 +62,7 @@ private:
 		usize channel;
 		span<dev::Sample const> audio;
 		usize position;
+		float gain;
 	};
 	mutex cursors_lock;
 	small_vector<PlayableCursor, 4> cursors;
@@ -107,7 +108,6 @@ inline auto Player::get_audio_cursor(shared_ptr<bms::Cursor> const& cursor) cons
 {
 	auto const it = find(cursors, cursor, &PlayableCursor::cursor);
 	if (it != cursors.end()) {
-		auto const& playable_cursor = *it;
 		auto const buffer_start_progress =
 			globals::mixer->get_audio().samples_to_ns(samples_processed) > globals::mixer->get_latency()?
 			globals::mixer->get_audio().samples_to_ns(samples_processed) - globals::mixer->get_latency() :
@@ -217,6 +217,7 @@ inline auto Player::next_sample() -> dev::Sample
 					.channel = ev.channel,
 					.audio = ev.audio,
 					.position = 0,
+					.gain = cursor.gain,
 				});
 			} else {
 				it->position = 0;
@@ -227,8 +228,8 @@ inline auto Player::next_sample() -> dev::Sample
 	auto sample_mix = dev::Sample{};
 	for (auto i = 0zu; i < active_sounds.size();) {
 		auto& sound = active_sounds[i];
-		sample_mix.left += sound.audio[sound.position].left;
-		sample_mix.right += sound.audio[sound.position].right;
+		sample_mix.left += sound.audio[sound.position].left * sound.gain;
+		sample_mix.right += sound.audio[sound.position].right * sound.gain;
 		sound.position += 1;
 		if (sound.position >= sound.audio.size()) {
 			// Swap-and-pop erase
