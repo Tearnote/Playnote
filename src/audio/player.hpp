@@ -96,7 +96,11 @@ inline void Player::remove_cursor(shared_ptr<bms::Cursor> const& cursor)
 {
 	auto lock = lock_guard{cursors_lock};
 	auto const it = find(cursors, cursor, &PlayableCursor::cursor);
-	if (it != cursors.end()) cursors.erase(it);
+	if (it != cursors.end()) {
+		auto range = remove_if(active_sounds, [&](auto const& item) { return item.md5 == it->cursor->get_chart().md5; });
+		active_sounds.erase(range.begin(), range.end());
+		cursors.erase(it);
+	}
 }
 
 inline auto Player::get_audio_cursor(shared_ptr<bms::Cursor> const& cursor) const -> bms::Cursor
