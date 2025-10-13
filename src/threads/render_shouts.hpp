@@ -13,11 +13,11 @@ Shouts that can be spawned by the render thread.
 namespace playnote::threads {
 
 struct RegisterInputQueue {
-	weak_ptr<mpmc_queue<UserInput>> queue;
+	weak_ptr<spsc_queue<UserInput>> queue;
 };
 
 struct UnregisterInputQueue {
-	weak_ptr<mpmc_queue<UserInput>> queue;
+	weak_ptr<spsc_queue<UserInput>> queue;
 };
 
 }

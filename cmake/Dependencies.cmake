@@ -180,6 +180,12 @@ FetchContent_Declare(libcoro # Coroutine primitives
 set(LIBCORO_FEATURE_NETWORKING OFF CACHE BOOL "")
 FetchContent_MakeAvailable(libcoro)
 
+FetchContent_Declare(readerwriterqueue # Lock-free SPSC queue
+	GIT_REPOSITORY https://github.com/cameron314/readerwriterqueue
+	GIT_TAG v1.0.7
+)
+FetchContent_MakeAvailable(readerwriterqueue)
+
 FetchContent_Declare(concurrentqueue # Lock-free MPMC queue
 	GIT_REPOSITORY https://github.com/cameron314/concurrentqueue
 	GIT_TAG v1.0.4

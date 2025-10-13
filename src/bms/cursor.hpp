@@ -94,7 +94,7 @@ private:
 	bool autoplay;
 	usize sample_progress = 0;
 	array<LaneProgress, enum_count<Lane::Type>()> lane_progress = {};
-	mpmc_queue<JudgmentEvent> judgment_events;
+	spsc_queue<JudgmentEvent> judgment_events;
 
 	template<callable<void(SoundEvent)> Func>
 	void trigger_input(LaneInput, Func&&);

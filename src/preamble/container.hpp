@@ -20,6 +20,7 @@ Imports and helpers for container types.
 #include <boost/container/static_vector.hpp>
 #include <boost/container/small_vector.hpp>
 #include <boost/container/vector.hpp>
+#include "readerwriterqueue.h"
 #include "concurrentqueue.h"
 #include "preamble/types.hpp"
 
@@ -43,6 +44,8 @@ namespace pmr {
 }
 
 // Lock-free containers
+template<typename T>
+using spsc_queue = moodycamel::ReaderWriterQueue<T>;
 template<typename T>
 using mpmc_queue = moodycamel::ConcurrentQueue<T>;
 
