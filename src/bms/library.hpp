@@ -183,11 +183,12 @@ private:
 	lib::sqlite::Statement get_song_from_chart;
 	lib::sqlite::Statement select_song_chart;
 
+	coro::mutex song_lock;
 	atomic<bool> dirty = true;
 	Builder builder;
 
 	[[nodiscard]] auto find_available_song_filename(string_view name) -> string;
-	void import_one(fs::path const&);
+	auto import_one(fs::path) -> coro::task<>;
 	auto import_song(fs::path const&) -> pair<usize, string>;
 	auto import_chart(io::Song& song, usize song_id, string_view chart_path, span<byte const>) -> bool;
 };
@@ -214,12 +215,12 @@ inline Library::Library(fs::path const& path):
 inline auto Library::import(fs::path path) -> coro::task<>
 {
 	if (is_regular_file(path)) {
-		import_one(path);
+		co_await import_one(path);
 	} else if (is_directory(path)) {
 		auto contents = vector<fs::directory_entry>{};
 		copy(fs::directory_iterator{path}, back_inserter(contents));
 		if (any_of(contents, [&](auto const& entry) { return fs::is_regular_file(entry) && io::Song::is_bms_ext(entry.path().extension().string()); })) {
-			import_one(path);
+			co_await import_one(path);
 		} else {
 			auto subimports = vector<coro::task<>>{};
 			for (auto const& entry: contents) subimports.emplace_back(import(entry));
@@ -321,8 +322,9 @@ inline auto Library::find_available_song_filename(string_view name) -> string
 	unreachable();
 }
 
-inline void Library::import_one(fs::path const& path)
+inline auto Library::import_one(fs::path path) -> coro::task<>
 {
+	auto lock = co_await song_lock.scoped_lock();
 	auto [song_id, song_path] = import_song(path);
 	auto song = io::Song::from_zip(song_path);
 	song.preload_audio_files();
