@@ -22,6 +22,7 @@ Implementation file for threads/render.hpp.
 #include "bms/library.hpp"
 #include "bms/cursor.hpp"
 #include "bms/chart.hpp"
+#include "bms/score.hpp"
 #include "bms/input.hpp"
 #include "threads/render_shouts.hpp"
 #include "threads/input_shouts.hpp"
@@ -42,6 +43,7 @@ struct LibraryContext {
 struct GameplayContext {
 	shared_ptr<bms::Chart const> chart;
 	shared_ptr<bms::Cursor> cursor;
+	optional<bms::Score> score;
 	audio::Player player;
 	optional<gfx::Playfield> playfield;
 	double scroll_speed;
@@ -63,8 +65,9 @@ static auto ns_to_minsec(nanoseconds duration) -> string
 	return format("{}:{:02}", duration / 60s, duration % 60s / 1s);
 }
 
-static void show_metadata(bms::Cursor const& cursor, bms::Metadata const& meta)
+static void show_metadata(GameplayContext const& context)
 {
+	auto const& meta = context.chart->metadata;
 	lib::imgui::text(meta.title);
 	if (!meta.subtitle.empty()) lib::imgui::text(meta.subtitle);
 	lib::imgui::text(meta.artist);
@@ -76,12 +79,11 @@ static void show_metadata(bms::Cursor const& cursor, bms::Metadata const& meta)
 
 	lib::imgui::text("");
 
-	auto const progress = ns_to_minsec(cursor.get_progress_ns());
+	auto const progress = ns_to_minsec(context.cursor->get_progress_ns());
 	auto const chart_duration = ns_to_minsec(meta.chart_duration);
 	auto const audio_duration = ns_to_minsec(meta.audio_duration);
 	lib::imgui::text("Progress: {} / {} ({})", progress, chart_duration, audio_duration);
-	// lib::imgui::text("Notes: {} / {}", cursor.get_judged_notes(), meta.note_count);
-	lib::imgui::text("Notes: {}", meta.note_count);
+	lib::imgui::text("Notes: {} / {}", context.score->get_judged_notes(), meta.note_count);
 	if (meta.bpm_range.main == meta.bpm_range.min && meta.bpm_range.main == meta.bpm_range.max)
 		lib::imgui::text("BPM: {}", meta.bpm_range.main);
 	else
@@ -91,7 +93,7 @@ static void show_metadata(bms::Cursor const& cursor, bms::Metadata const& meta)
 		{"LN", meta.density.ln, {0.1f, 0.1f, 1.0f, 1.0f}},
 		{"Key", meta.density.key, {1.0f, 1.0f, 1.0f, 1.0f}},
 	}, {
-		{lib::imgui::PlotMarker::Type::Vertical,static_cast<float>(min(cursor.get_progress_ns(), meta.chart_duration) / 125ms), {1.0f, 0.0f, 0.0f, 1.0f}},
+		{lib::imgui::PlotMarker::Type::Vertical,static_cast<float>(min(context.cursor->get_progress_ns(), meta.chart_duration) / 125ms), {1.0f, 0.0f, 0.0f, 1.0f}},
 		{lib::imgui::PlotMarker::Type::Horizontal, meta.nps.average, {0.0f, 0.0f, 1.0f, 1.0f}},
 		{lib::imgui::PlotMarker::Type::Horizontal, meta.nps.peak, {1.0f, 0.0f, 1.0f, 1.0f}}
 	}, 120, true);
@@ -108,12 +110,14 @@ static void show_playback_controls(GameState& state)
 		context.player.remove_cursor(context.cursor);
 		context.cursor = make_shared<bms::Cursor>(context.chart, false);
 		context.player.add_cursor(context.cursor, bms::Mapper{});
+		context.score = bms::Score{*context.chart};
 	}
 	lib::imgui::same_line();
 	if (lib::imgui::button("Autoplay")) {
 		context.player.remove_cursor(context.cursor);
 		context.cursor = make_shared<bms::Cursor>(context.chart, true);
 		context.player.add_cursor(context.cursor, bms::Mapper{});
+		context.score = bms::Score{*context.chart};
 	}
 	lib::imgui::same_line();
 	if (lib::imgui::button("Back")) state.requested = State::Library;
@@ -123,29 +127,29 @@ static void show_scroll_speed_controls(double& scroll_speed)
 {
 	lib::imgui::input_double("Scroll speed", scroll_speed, 0.25f, 1.0f, "%.2f");
 }
-/*
-static void show_judgments(bms::Cursor::JudgeTotals judgments)
+
+static void show_judgments(bms::Score::JudgeTotals const& judgments)
 {
-	lib::imgui::text("PGREAT: {}", judgments.types[+bms::Cursor::Judgment::Type::PGreat]);
-	lib::imgui::text(" GREAT: {}", judgments.types[+bms::Cursor::Judgment::Type::Great]);
-	lib::imgui::text("  GOOD: {}", judgments.types[+bms::Cursor::Judgment::Type::Good]);
-	lib::imgui::text("   BAD: {}", judgments.types[+bms::Cursor::Judgment::Type::Bad]);
-	lib::imgui::text("  POOR: {}", judgments.types[+bms::Cursor::Judgment::Type::Poor]);
+	lib::imgui::text("PGREAT: {}", judgments.types[+bms::Score::JudgmentType::PGreat]);
+	lib::imgui::text(" GREAT: {}", judgments.types[+bms::Score::JudgmentType::Great]);
+	lib::imgui::text("  GOOD: {}", judgments.types[+bms::Score::JudgmentType::Good]);
+	lib::imgui::text("   BAD: {}", judgments.types[+bms::Score::JudgmentType::Bad]);
+	lib::imgui::text("  POOR: {}", judgments.types[+bms::Score::JudgmentType::Poor]);
 }
 
-static void show_earlylate(bms::Cursor::JudgeTotals judgments)
+static void show_earlylate(bms::Score::JudgeTotals const& judgments)
 {
-	lib::imgui::text(" Early: {}", judgments.timings[+bms::Cursor::Judgment::Timing::Early]);
-	lib::imgui::text("  Late: {}", judgments.timings[+bms::Cursor::Judgment::Timing::Late]);
+	lib::imgui::text(" Early: {}", judgments.timings[+bms::Score::Timing::Early]);
+	lib::imgui::text("  Late: {}", judgments.timings[+bms::Score::Timing::Late]);
 }
 
-static void show_results(bms::Cursor const& cursor)
+static void show_results(bms::Score const& score)
 {
-	lib::imgui::text("Score: {}", cursor.get_score());
-	lib::imgui::text("Combo: {}", cursor.get_combo());
-	lib::imgui::text(" Rank: {}", enum_name(cursor.get_rank()));
+	lib::imgui::text("Score: {}", score.get_score());
+	lib::imgui::text("Combo: {}", score.get_combo());
+	lib::imgui::text(" Rank: {}", enum_name(score.get_rank()));
 }
-*/
+
 static void render_library(gfx::Renderer::Queue&, GameState& state)
 {
 	auto& context = state.library_context();
@@ -167,27 +171,32 @@ static void render_gameplay(gfx::Renderer::Queue& queue, GameState& state)
 {
 	auto& context = state.gameplay_context();
 	auto const cursor = context.player.get_audio_cursor(context.cursor);
+	auto& score = *context.score;
+
+	// Update scoring
+	context.cursor->each_judgment_event([&](auto&& ev) { score.submit_judgment_event(move(ev)); });
+
 	lib::imgui::begin_window("info", {860, 8}, 412, lib::imgui::WindowStyle::Static);
-	show_metadata(cursor, context.cursor->get_chart().metadata);
+	show_metadata(context);
 	lib::imgui::text("");
 	show_playback_controls(state);
 	lib::imgui::text("");
 	show_scroll_speed_controls(context.scroll_speed);
-	context.playfield->enqueue_from_cursor(queue, cursor, context.scroll_speed, context.offset);
+	context.playfield->enqueue_from_cursor(queue, cursor, score, context.scroll_speed, context.offset);
 	lib::imgui::end_window();
-/*
+
 	lib::imgui::begin_window("judgements", {860, 436}, 120, lib::imgui::WindowStyle::Static);
-	show_judgments(cursor.get_judge_totals());
+	show_judgments(score.get_judge_totals());
 	lib::imgui::end_window();
 
 	lib::imgui::begin_window("earlylate", {860, 558}, 120, lib::imgui::WindowStyle::Static);
-	show_earlylate(cursor.get_judge_totals());
+	show_earlylate(score.get_judge_totals());
 	lib::imgui::end_window();
 
 	lib::imgui::begin_window("results", {988, 436}, 120, lib::imgui::WindowStyle::Static);
-	show_results(cursor);
+	show_results(score);
 	lib::imgui::end_window();
-*/}
+}
 
 static void run_render(Tools& tools, dev::Window& window)
 {
@@ -208,7 +217,7 @@ static void run_render(Tools& tools, dev::Window& window)
 					.queue = weak_ptr{state.gameplay_context().player.get_input_queue()},
 				});
 			}
-			state.context = LibraryContext{};
+			state.context.emplace<LibraryContext>();
 			state.library_context().charts = library.list_charts(); //TODO convert to coro
 			state.current = State::Library;
 			state.requested = State::None;
@@ -218,6 +227,7 @@ static void run_render(Tools& tools, dev::Window& window)
 			auto& context = state.gameplay_context();
 			context.chart = library.load_chart(state.requested_chart); //TODO convert to coro
 			context.cursor = make_shared<bms::Cursor>(context.chart, false);
+			context.score = bms::Score{*context.chart};
 			tools.broadcaster.shout(RegisterInputQueue{
 				.queue = weak_ptr{context.player.get_input_queue()},
 			});
