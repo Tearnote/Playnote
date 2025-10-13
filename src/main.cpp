@@ -15,6 +15,7 @@ Entry point. Initializes basic facilities, spawns threads.
 #include "lib/coro.hpp"
 #include "dev/window.hpp"
 #include "dev/os.hpp"
+#include "threads/task_pool.hpp"
 #include "threads/render.hpp"
 #include "threads/tools.hpp"
 #include "threads/input.hpp"
@@ -26,9 +27,9 @@ auto run() -> int
 	auto const scheduler_period = dev::SchedulerPeriod{1ms};
 	auto glfw_stub = globals::glfw.provide();
 	auto window = dev::Window{AppTitle, {1280, 720}};
+	auto task_pool_stub = globals::task_pool.provide(coro::thread_pool::make_shared());
 
 	auto tools = threads::Tools{};
-	tools.coro_pool = coro::thread_pool::make_shared();
 
 	// Spawn all threads. Every thread is assumed to eventually finish
 	// once window.is_closing() is true

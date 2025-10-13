@@ -8,7 +8,6 @@ A package of communication and task processing utilities for threads to utilize.
 
 #pragma once
 #include "preamble.hpp"
-#include "lib/coro.hpp"
 #include "threads/broadcaster.hpp"
 
 namespace playnote::threads {
@@ -16,7 +15,6 @@ namespace playnote::threads {
 struct Tools {
 	Broadcaster broadcaster;
 	Barriers<2> barriers;
-	shared_ptr<coro::thread_pool> coro_pool;
 };
 
 }
