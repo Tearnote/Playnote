@@ -197,7 +197,7 @@ private:
 	auto import_many(fs::path) -> coro::task<>;
 	auto import_one(fs::path) -> coro::task<>;
 	auto import_song(fs::path const&) -> pair<usize, string>;
-	auto import_chart(io::Song& song, usize song_id, string_view chart_path, span<byte const>) -> bool;
+	auto import_chart(io::Song& song, usize song_id, string chart_path, span<byte const>) -> coro::task<>;
 };
 
 inline Library::Library(fs::path const& path):
@@ -324,12 +324,12 @@ inline auto Library::find_available_song_filename(string_view name) -> string
 inline auto Library::import_many(fs::path path) -> coro::task<>
 {
 	if (is_regular_file(path)) {
-		co_await import_one(path);
+		co_await globals::pool().schedule(import_one(path));
 	} else if (is_directory(path)) {
 		auto contents = vector<fs::directory_entry>{};
 		copy(fs::directory_iterator{path}, back_inserter(contents));
 		if (any_of(contents, [&](auto const& entry) { return fs::is_regular_file(entry) && io::Song::is_bms_ext(entry.path().extension().string()); })) {
-			co_await import_one(path);
+			co_await globals::pool().schedule(import_one(path));
 		} else {
 			for (auto const& entry: contents) import_tasks.start(import_many(entry));
 		}
@@ -345,18 +345,20 @@ inline auto Library::import_one(fs::path path) -> coro::task<>
 	auto [song_id, song_path] = import_song(path);
 	auto song = io::Song::from_zip(song_path);
 	song.preload_audio_files();
-	auto imported_count = 0u;
+
+	auto chart_import_tasks = vector<coro::task<>>{};
 	song.for_each_chart([&](auto path, auto chart) {
-		imported_count += import_chart(song, song_id, path, chart)? 1 : 0;
+		chart_import_tasks.emplace_back(globals::pool().schedule(import_chart(song, song_id, string{path}, chart)));
 	});
-	if (imported_count == 0) {
+	co_await coro::when_all(move(chart_import_tasks));
+	/*if (imported_count == 0) {
 		lib::sqlite::execute(delete_song, song_id);
 		move(song).remove();
-	}
+	}*/
 }
 
-inline auto Library::import_song(fs::path const& path) -> pair<usize, string> try
-{
+inline auto Library::import_song(fs::path const& path) -> pair<usize, string>
+try {
 	auto const is_archive = fs::is_regular_file(path);
 
 	// First, determine if we're creating a new song or extending an existing song
@@ -400,18 +402,19 @@ inline auto Library::import_song(fs::path const& path) -> pair<usize, string> tr
 		auto const song_id = lib::sqlite::insert(insert_song, out_filename);
 		return {song_id, out_path.string()};
 	}
-} catch (exception const&) {
+}
+catch (...) {
 	fs::remove(path);
 	throw;
 }
 
-inline auto Library::import_chart(io::Song& song, usize song_id, string_view chart_path, span<byte const> chart_raw) -> bool
+inline auto Library::import_chart(io::Song& song, usize song_id, string chart_path, span<byte const> chart_raw) -> coro::task<>
 {
-	if (stopping.load()) return false;
+	if (stopping.load()) co_return;
 	auto const md5 = lib::openssl::md5(chart_raw);
 	auto exists = false;
 	lib::sqlite::query(chart_exists, [&] { exists = true; }, md5);
-	if (exists) return false;
+	if (exists) co_return;
 
 	auto chart = builder.build(chart_raw, song);
     lib::sqlite::transaction(db, [&] {
@@ -437,7 +440,6 @@ inline auto Library::import_chart(io::Song& song, usize song_id, string_view cha
 			serialize_density(chart->metadata.density.ln));
     });
 	dirty.store(true);
-	return true;
 }
 
 }
