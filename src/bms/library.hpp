@@ -16,6 +16,7 @@ A cache of song and chart metadata. Handles import events.
 #include "lib/coro.hpp"
 #include "io/song.hpp"
 #include "bms/builder.hpp"
+#include "threads/task_pool.hpp"
 
 namespace playnote::bms {
 
@@ -29,12 +30,11 @@ public:
 
 	// Open an existing library, or create an empty one at the provided path.
 	explicit Library(fs::path const&);
+	~Library();
 
-	// Import a song and all its charts into the library. Coroutine.
-	auto import(fs::path) -> coro::task<>;
-
-	// Signal any running import tasks to stop spawning new jobs to prepare for shutdown.
-	void stop_imports();
+	// Import a song and all its charts into the library. Returns instantly; the import happens in the background.
+	// All other methods are safe to call while an import is in progress.
+	void import(fs::path const&);
 
 	// Return a list of all available charts.
 	[[nodiscard]] auto list_charts() -> vector<ChartEntry>;
@@ -186,19 +186,23 @@ private:
 	lib::sqlite::Statement get_song_from_chart;
 	lib::sqlite::Statement select_song_chart;
 
+	coro::task_container<coro::thread_pool> import_tasks;
 	coro::mutex song_lock;
 	atomic<bool> dirty = true;
 	atomic<bool> stopping = false;
+
 	Builder builder;
 
 	[[nodiscard]] auto find_available_song_filename(string_view name) -> string;
+	auto import_many(fs::path) -> coro::task<>;
 	auto import_one(fs::path) -> coro::task<>;
 	auto import_song(fs::path const&) -> pair<usize, string>;
 	auto import_chart(io::Song& song, usize song_id, string_view chart_path, span<byte const>) -> bool;
 };
 
 inline Library::Library(fs::path const& path):
-	db{lib::sqlite::open(path)}
+	db{lib::sqlite::open(path)},
+	import_tasks{*globals::task_pool}
 {
 	lib::sqlite::execute(db, SongsSchema);
 	lib::sqlite::execute(db, ChartsSchema);
@@ -216,28 +220,14 @@ inline Library::Library(fs::path const& path):
 	INFO("Opened song library at \"{}\"", path);
 }
 
-inline auto Library::import(fs::path path) -> coro::task<>
-{
-	if (is_regular_file(path)) {
-		co_await import_one(path);
-	} else if (is_directory(path)) {
-		auto contents = vector<fs::directory_entry>{};
-		copy(fs::directory_iterator{path}, back_inserter(contents));
-		if (any_of(contents, [&](auto const& entry) { return fs::is_regular_file(entry) && io::Song::is_bms_ext(entry.path().extension().string()); })) {
-			co_await import_one(path);
-		} else {
-			auto subimports = vector<coro::task<>>{};
-			for (auto const& entry: contents) subimports.emplace_back(import(entry));
-			co_await coro::when_all(move(subimports));
-		}
-	} else {
-		throw runtime_error_fmt("Failed to import \"{}\": unknown type of file", path);
-	}
-}
-
-inline void Library::stop_imports()
+inline Library::~Library()
 {
 	stopping.store(true);
+}
+
+inline void Library::import(fs::path const& path)
+{
+	import_tasks.start(import_many(path));
 }
 
 inline auto Library::list_charts() -> vector<ChartEntry>
@@ -329,6 +319,23 @@ inline auto Library::find_available_song_filename(string_view name) -> string
 		if (!exists) return test;
 	}
 	unreachable();
+}
+
+inline auto Library::import_many(fs::path path) -> coro::task<>
+{
+	if (is_regular_file(path)) {
+		co_await import_one(path);
+	} else if (is_directory(path)) {
+		auto contents = vector<fs::directory_entry>{};
+		copy(fs::directory_iterator{path}, back_inserter(contents));
+		if (any_of(contents, [&](auto const& entry) { return fs::is_regular_file(entry) && io::Song::is_bms_ext(entry.path().extension().string()); })) {
+			co_await import_one(path);
+		} else {
+			for (auto const& entry: contents) import_tasks.start(import_many(entry));
+		}
+	} else {
+		throw runtime_error_fmt("Failed to import \"{}\": unknown type of file", path);
+	}
 }
 
 inline auto Library::import_one(fs::path path) -> coro::task<>

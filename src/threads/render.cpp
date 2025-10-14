@@ -201,13 +201,13 @@ static void render_gameplay(gfx::Renderer::Queue& queue, GameState& state)
 
 static void run_render(Tools& tools, dev::Window& window)
 {
-	// Init devices
+	// Init subsystems
+	auto task_pool_stub = globals::task_pool.provide(coro::thread_pool::make_unique());
 	auto mixer_stub = globals::mixer.provide();
 	auto renderer = gfx::Renderer{window};
 
-	// Init game systems
+	// Init game state
 	auto library = bms::Library{LibraryDBPath};
-	auto task_pool_stub = globals::task_pool.provide(coro::thread_pool::make_unique());
 	auto state = GameState{};
 	state.requested = State::Library;
 
@@ -243,7 +243,7 @@ static void run_render(Tools& tools, dev::Window& window)
 
 		// Handle chart library
 		tools.broadcaster.receive_all<FileDrop>([&](auto const& ev) {
-			for (auto const& path: ev.paths) globals::pool().spawn(library.import(path));
+			for (auto const& path: ev.paths) library.import(path);
 		});
 		if (state.current == State::Library && library.is_dirty()) state.library_context().charts = library.list_charts(); //TODO convert to coro
 
@@ -259,8 +259,6 @@ static void run_render(Tools& tools, dev::Window& window)
 			}
 		});
 	}
-
-	library.stop_imports();
 }
 
 void render(Tools& tools, dev::Window& window)
