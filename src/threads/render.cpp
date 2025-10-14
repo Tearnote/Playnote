@@ -227,7 +227,9 @@ static void run_render(Tools& tools, dev::Window& window)
 		if (state.requested == State::Gameplay) {
 			state.context.emplace<GameplayContext>();
 			auto& context = state.gameplay_context();
+			INFO("Loading chart");
 			context.chart = library.load_chart(state.requested_chart); //TODO convert to coro
+			INFO("Chart loaded");
 			context.cursor = make_shared<bms::Cursor>(context.chart, false);
 			context.score = bms::Score{*context.chart};
 			tools.broadcaster.shout(RegisterInputQueue{

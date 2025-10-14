@@ -9,10 +9,12 @@ Parsing of BMS chart data into a Chart object.
 #pragma once
 #include "preamble.hpp"
 #include "lib/ebur128.hpp"
+#include "lib/coro.hpp"
 #include "lib/icu.hpp"
 #include "io/song.hpp"
 #include "audio/renderer.hpp"
 #include "bms/chart.hpp"
+#include "threads/task_pool.hpp"
 
 namespace playnote::bms {
 
@@ -357,13 +359,17 @@ inline auto Builder::build(span<byte const> bms_raw, io::Song& song, optional<re
 	//   of the chart, relative to 1.0 being the on-screen height of one initial-BPM beat.
 
 	// Load used audio samples
-	//TODO multi-thread this again
 	chart->media.wav_slots.resize(parse_state.wav.size());
+	auto tasks = vector<coro::task<>>{};
 	for (auto const& parsed_slot: parse_state.wav | views::values) {
 		if (!parsed_slot.used) continue;
 		auto& slot = chart->media.wav_slots[parsed_slot.idx];
-		slot = song.load_audio_file(parsed_slot.filename);
+		tasks.emplace_back(globals::pool().schedule([](io::Song& song, vector<lib::Sample>& slot, string filename) -> coro::task<> {
+			slot = move(song.load_audio_file(filename));
+			co_return;
+		}(song, slot, parsed_slot.filename)));
 	}
+	coro::sync_wait(coro::when_all(move(tasks)));
 
 	// chart.media is now complete
 

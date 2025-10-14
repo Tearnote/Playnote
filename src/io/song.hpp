@@ -19,7 +19,7 @@ An abstraction for an imported BMS song. Wraps a zip archive with accelerated fi
 namespace playnote::io {
 
 // A song archive optimized for file lookup and zero-copy access.
-// Once opened the contents are immutable, so all file loading methods are thread-safe.
+// Once opened the contents are immutable, but only specified methods are thread-safe due to sqlite state.
 class Song {
 public:
 	// Return true if the provided extension matches a known BMS extension.
@@ -75,7 +75,7 @@ public:
 	// The loads are performed in parallel. Useful when loading multiple charts of the same song.
 	void preload_audio_files();
 
-	// Load the requested audio file, decode it, and resample to current device sample rate.
+	// Load the requested audio file, decode it, and resample to current device sample rate. Thread-safe.
 	auto load_audio_file(string_view filepath) -> vector<dev::Sample>;
 
 	// Destroy the song and delete the underlying zip file on disk.
@@ -127,7 +127,6 @@ private:
 	lib::sqlite::DB db;
 	lib::sqlite::Statement select_charts;
 	lib::sqlite::Statement select_file;
-	lib::sqlite::Statement select_audio_file;
 	lib::sqlite::Statement select_audio_files;
 	unordered_map<string, vector<dev::Sample>, string_hash> audio_cache;
 
@@ -322,6 +321,7 @@ inline auto Song::load_audio_file(string_view filepath) -> vector<dev::Sample>
 	}
 
 	auto file = span<byte const>{};
+	auto select_audio_file = lib::sqlite::prepare(this->db, SelectAudioFileQuery);
 	lib::sqlite::query(select_audio_file, [&](void const* ptr, isize size) {
 		file = span{static_cast<byte const*>(ptr), static_cast<usize>(size)};
 		return false;
@@ -342,7 +342,6 @@ inline Song::Song(ReadFile&& file, lib::sqlite::DB&& db):
 {
 	select_charts = lib::sqlite::prepare(this->db, SelectChartsQuery);
 	select_file = lib::sqlite::prepare(this->db, SelectFileQuery);
-	select_audio_file = lib::sqlite::prepare(this->db, SelectAudioFileQuery);
 	select_audio_files = lib::sqlite::prepare(this->db, SelectAudioFilesQuery);
 }
 

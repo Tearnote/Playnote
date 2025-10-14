@@ -254,8 +254,8 @@ inline auto Library::load_chart(lib::openssl::MD5 md5) -> shared_ptr<Chart const
 		string_view artist, string_view subartist, string_view genre, string_view url, string_view email,
 		int difficulty, int playstyle, int has_ln, int has_soflan, int note_count, int64 chart_duration,
 		int64 audio_duration, double loudness, double average_nps, double peak_nps, double min_bpm, double max_bpm,
-		double main_bpm, int density_resolution, span<const byte> density_key, span<const byte> density_scratch,
-		span<const byte> density_ln
+		double main_bpm, int density_resolution, span<byte const> density_key, span<byte const> density_scratch,
+		span<byte const> density_ln
 	) {
 		auto deserialize_density = [](span<byte const> v) {
 			auto in = lib::bits::in(v);
