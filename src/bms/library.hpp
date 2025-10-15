@@ -242,6 +242,7 @@ inline auto Library::list_charts() -> vector<ChartEntry>
 		result.emplace_back(move(entry));
 	});
 	return result;
+	dirty.store(false);
 }
 
 inline auto Library::load_chart(lib::openssl::MD5 md5) -> shared_ptr<Chart const>
