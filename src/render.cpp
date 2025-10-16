@@ -177,9 +177,14 @@ static void render_library(gfx::Renderer::Queue&, GameState& state, bms::Library
 			lib::imgui::text("Import in progress...");
 		else
 			lib::imgui::text("Import complete!");
-
-		if (context.import_status->complete)
-			if (lib::imgui::button("Okay")) context.import_status = nullopt;
+		lib::imgui::text("Songs imported: {} / {}", library.get_import_songs_processed(), library.get_import_songs_total());
+		lib::imgui::text("Charts imported: {}", library.get_import_charts_processed());
+		if (context.import_status->complete) {
+			if (lib::imgui::button("Okay")) {
+				library.reset_import_stats();
+				context.import_status = nullopt;
+			}
+		}
 		lib::imgui::end_window();
 	}
 }

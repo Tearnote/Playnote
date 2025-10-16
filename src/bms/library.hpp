@@ -44,6 +44,18 @@ public:
 	// Return true if the library has changed since the last call to list_charts().
 	[[nodiscard]] auto is_dirty() const -> bool { return dirty.load(); }
 
+	// Return the number of songs that were imported so far.
+	[[nodiscard]] auto get_import_songs_processed() const -> size_t { return import_stats.songs_processed.load(); }
+
+	// Return the number of songs discovered during import so far.
+	[[nodiscard]] auto get_import_songs_total() const -> size_t { return import_stats.songs_total.load(); }
+
+	// Return the number of charts that were imported so far.
+	[[nodiscard]] auto get_import_charts_processed() const -> size_t { return import_stats.charts_processed.load(); }
+
+	// Set all import statistics to zero. Can be used during an import, but the values might be inconsistent afterwards.
+	void reset_import_stats();
+
 	// Load a chart from the library.
 	auto load_chart(lib::openssl::MD5) -> shared_ptr<Chart const>;
 
@@ -177,11 +189,18 @@ private:
 			WHERE charts.md5 = ?1
 	)"sv;
 
+	struct ImportStats {
+		atomic<uint32> songs_processed = 0;
+		atomic<uint32> songs_total = 0;
+		atomic<uint32> charts_processed = 0;
+	};
+
 	lib::sqlite::DB db;
 	task_container import_tasks;
 	coro_mutex song_lock;
 	atomic<bool> dirty = true;
 	atomic<bool> stopping = false;
+	ImportStats import_stats;
 
 	Builder builder;
 
@@ -227,6 +246,13 @@ inline auto Library::list_charts() -> task<vector<ChartEntry>>
 	});
 	dirty.store(false);
 	co_return result;
+}
+
+inline void Library::reset_import_stats()
+{
+	import_stats.songs_processed.store(0);
+	import_stats.songs_total.store(0);
+	import_stats.charts_processed.store(0);
 }
 
 inline auto Library::load_chart(lib::openssl::MD5 md5) -> shared_ptr<Chart const>
@@ -311,11 +337,13 @@ inline auto Library::find_available_song_filename(string_view name) -> string
 inline auto Library::import_many(fs::path path) -> task<>
 {
 	if (is_regular_file(path)) {
+		import_stats.songs_total.fetch_add(1);
 		co_await schedule_task(import_one(path));
 	} else if (is_directory(path)) {
 		auto contents = vector<fs::directory_entry>{};
 		copy(fs::directory_iterator{path}, back_inserter(contents));
 		if (any_of(contents, [&](auto const& entry) { return fs::is_regular_file(entry) && io::Song::is_bms_ext(entry.path().extension().string()); })) {
+		import_stats.songs_total.fetch_add(1);
 			co_await schedule_task(import_one(path));
 		} else {
 			for (auto const& entry: contents) import_tasks.start(import_many(entry));
@@ -343,6 +371,7 @@ inline auto Library::import_one(fs::path path) -> task<>
 		lib::sqlite::execute(delete_song, song_id);
 		move(song).remove();
 	}*/
+	import_stats.songs_processed.fetch_add(1);
 }
 
 inline auto Library::import_song(fs::path const& path) -> pair<usize, string>
@@ -434,6 +463,7 @@ inline auto Library::import_chart(io::Song& song, usize song_id, string chart_pa
 			serialize_density(chart->metadata.density.ln));
     });
 	dirty.store(true);
+	import_stats.charts_processed.fetch_add(1);
 }
 
 }
