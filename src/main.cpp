@@ -15,8 +15,8 @@ Entry point. Initializes basic facilities, spawns threads.
 #include "lib/debug.hpp"
 #include "dev/window.hpp"
 #include "dev/os.hpp"
-#include "threads/render.hpp"
-#include "threads/input.hpp"
+#include "render.hpp"
+#include "input.hpp"
 
 using namespace playnote; // Can't namespace main()
 

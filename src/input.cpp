@@ -6,7 +6,7 @@ threads/input.cpp:
 Implementation file for threads/audio.hpp.
 */
 
-#include "threads/input.hpp"
+#include "input.hpp"
 
 #include "preamble.hpp"
 #include "utils/logger.hpp"

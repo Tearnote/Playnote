@@ -2,7 +2,7 @@
 This software is dual-licensed. For more details, please consult LICENSE.txt.
 Copyright (c) 2025 Tearnote (Hubert Maraszek)
 
-bms/input.hpp:
+bms/mapper.hpp:
 A timestamped BMS chart input, and conversion to it via a predefined mapping.
 */
 
@@ -11,7 +11,7 @@ A timestamped BMS chart input, and conversion to it via a predefined mapping.
 #include "utils/config.hpp"
 #include "utils/logger.hpp"
 #include "bms/chart.hpp"
-#include "threads/input.hpp"
+#include "input.hpp"
 
 namespace playnote::bms {
 

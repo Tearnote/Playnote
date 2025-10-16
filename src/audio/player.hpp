@@ -12,8 +12,8 @@ to them and translated by their associated Input handlers.
 #include "dev/window.hpp"
 #include "audio/mixer.hpp"
 #include "bms/cursor.hpp"
-#include "bms/input.hpp"
-#include "threads/input.hpp"
+#include "bms/mapper.hpp"
+#include "input.hpp"
 
 namespace playnote::audio {
 

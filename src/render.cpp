@@ -6,7 +6,7 @@ threads/render.cpp:
 Implementation file for threads/render.hpp.
 */
 
-#include "threads/render.hpp"
+#include "render.hpp"
 
 #include "preamble.hpp"
 #include "utils/task_pool.hpp"
@@ -22,10 +22,10 @@ Implementation file for threads/render.hpp.
 #include "audio/mixer.hpp"
 #include "bms/library.hpp"
 #include "bms/cursor.hpp"
+#include "bms/mapper.hpp"
 #include "bms/chart.hpp"
 #include "bms/score.hpp"
-#include "bms/input.hpp"
-#include "threads/input.hpp"
+#include "input.hpp"
 
 namespace playnote::threads {
 
