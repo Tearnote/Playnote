@@ -150,7 +150,7 @@ static void show_results(bms::Score const& score)
 	lib::imgui::text(" Rank: {}", enum_name(score.get_rank()));
 }
 
-static void render_library(gfx::Renderer::Queue&, GameState& state)
+static void render_library(gfx::Renderer::Queue&, GameState& state, bms::Library& library)
 {
 	auto& context = state.library_context();
 	lib::imgui::begin_window("library", {8, 8}, 800, lib::imgui::WindowStyle::Static);
@@ -165,6 +165,12 @@ static void render_library(gfx::Renderer::Queue&, GameState& state)
 		}
 	}
 	lib::imgui::end_window();
+
+	if (library.is_importing()) {
+		lib::imgui::begin_window("import_status", {860, 600}, 412, lib::imgui::WindowStyle::Static);
+		lib::imgui::text("Import in progress...");
+		lib::imgui::end_window();
+	}
 }
 
 static void render_gameplay(gfx::Renderer::Queue& queue, GameState& state)
@@ -270,7 +276,7 @@ static void run_render(Broadcaster& broadcaster, dev::Window& window)
 			queue.enqueue_rect("bg"_id, {{0, 0}, {1280, 720}, {0.060f, 0.060f, 0.060f, 1.000f}});
 
 			switch (state.current) {
-			case State::Library: render_library(queue, state); break;
+			case State::Library: render_library(queue, state, *library); break;
 			case State::Gameplay: render_gameplay(queue, state); break;
 			default: break;
 			}

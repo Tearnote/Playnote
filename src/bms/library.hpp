@@ -35,10 +35,13 @@ public:
 	// All other methods are safe to call while an import is in progress.
 	void import(fs::path const&);
 
+	// Return true if an import is ongoing.
+	[[nodiscard]] auto is_importing() const -> bool { return !import_tasks.empty(); }
+
 	// Return a list of all available charts. Thread-safe.
 	[[nodiscard]] auto list_charts() -> task<vector<ChartEntry>>;
 
-	// Returns true if the library has changed since the last call to list_charts().
+	// Return true if the library has changed since the last call to list_charts().
 	[[nodiscard]] auto is_dirty() const -> bool { return dirty.load(); }
 
 	// Load a chart from the library.
