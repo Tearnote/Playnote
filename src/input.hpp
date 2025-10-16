@@ -11,7 +11,7 @@ Main thread. Spins on the OS message queue as much possible without saturating t
 #include "dev/window.hpp"
 #include "utils/broadcaster.hpp"
 
-namespace playnote::threads {
+namespace playnote {
 
 // File drop event.
 struct FileDrop {
@@ -63,6 +63,6 @@ struct UnregisterInputQueue {
 };
 
 // Input thread entry point.
-void input(Broadcaster& broadcaster, Barriers<2>& barriers, dev::Window&);
+void input_thread(Broadcaster& broadcaster, Barriers<2>& barriers, dev::Window&);
 
 }

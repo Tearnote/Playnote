@@ -14,7 +14,7 @@ Implementation file for threads/audio.hpp.
 #include "dev/window.hpp"
 #include "dev/os.hpp"
 
-namespace playnote::threads {
+namespace playnote {
 
 static void run_input(Broadcaster& broadcaster, dev::Window& window)
 {
@@ -60,7 +60,7 @@ static void run_input(Broadcaster& broadcaster, dev::Window& window)
 	}
 }
 
-void input(Broadcaster& broadcaster, Barriers<2>& barriers, dev::Window& window)
+void input_thread(Broadcaster& broadcaster, Barriers<2>& barriers, dev::Window& window)
 try {
 	dev::name_current_thread("input");
 	broadcaster.register_as_endpoint();

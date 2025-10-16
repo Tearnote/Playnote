@@ -28,10 +28,10 @@ auto run() -> int
 
 	// Spawn all threads. Every thread is assumed to eventually finish
 	// once window.is_closing() is true
-	auto broadcaster = threads::Broadcaster{};
-	auto barriers = threads::Barriers<2>{};
-	auto render_thread_stub = jthread{threads::render, ref(broadcaster), ref(barriers), ref(window)};
-	threads::input(broadcaster, barriers, window);
+	auto broadcaster = Broadcaster{};
+	auto barriers = Barriers<2>{};
+	auto render_thread_stub = jthread{render_thread, ref(broadcaster), ref(barriers), ref(window)};
+	input_thread(broadcaster, barriers, window);
 
 	return EXIT_SUCCESS;
 }

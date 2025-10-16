@@ -27,7 +27,7 @@ Implementation file for threads/render.hpp.
 #include "bms/score.hpp"
 #include "input.hpp"
 
-namespace playnote::threads {
+namespace playnote {
 
 enum class State {
 	None,
@@ -278,7 +278,7 @@ static void run_render(Broadcaster& broadcaster, dev::Window& window)
 	}
 }
 
-void render(Broadcaster& broadcaster, Barriers<2>& barriers, dev::Window& window)
+void render_thread(Broadcaster& broadcaster, Barriers<2>& barriers, dev::Window& window)
 try {
 	dev::name_current_thread("render");
 	broadcaster.register_as_endpoint();

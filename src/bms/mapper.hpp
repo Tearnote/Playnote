@@ -25,14 +25,14 @@ struct Input {
 class Mapper {
 public:
 	Mapper();
-	[[nodiscard]] auto from_key(threads::KeyInput const&, Playstyle) -> optional<Input>;
-	[[nodiscard]] auto from_button(threads::ButtonInput const&, Playstyle) -> optional<Input>;
-	[[nodiscard]] auto submit_axis_input(threads::AxisInput const&, Playstyle) -> vector<Input>;
+	[[nodiscard]] auto from_key(KeyInput const&, Playstyle) -> optional<Input>;
+	[[nodiscard]] auto from_button(ButtonInput const&, Playstyle) -> optional<Input>;
+	[[nodiscard]] auto submit_axis_input(AxisInput const&, Playstyle) -> vector<Input>;
 	[[nodiscard]] auto from_axis_state(Playstyle) -> vector<Input>;
 
 private:
 	struct ConBinding {
-		threads::ControllerID controller;
+		ControllerID controller;
 		uint32 idx;
 		auto operator==(ConBinding const&) const -> bool = default;
 	};
@@ -44,7 +44,7 @@ private:
 		nanoseconds last_stopped;
 	};
 
-	array<array<threads::KeyInput::Code, enum_count<Lane::Type>()>, enum_count<Playstyle>()> key_bindings;
+	array<array<KeyInput::Code, enum_count<Lane::Type>()>, enum_count<Playstyle>()> key_bindings;
 	array<array<optional<ConBinding>, enum_count<Lane::Type>()>, enum_count<Playstyle>()> button_bindings;
 	array<array<optional<ConBinding>, 2>, enum_count<Playstyle>()> axis_bindings;
 	array<array<TurntableState, 2>, enum_count<Playstyle>()> turntable_states;
@@ -56,9 +56,9 @@ private:
 
 inline Mapper::Mapper()
 {
-	auto get_key = [](string_view conf) -> threads::KeyInput::Code {
+	auto get_key = [](string_view conf) -> KeyInput::Code {
 		auto conf_entry = globals::config->get_entry<string>("controls", conf);
-		return *enum_cast<threads::KeyInput::Code>(conf_entry).or_else([&]() -> optional<threads::KeyInput::Code> {
+		return *enum_cast<KeyInput::Code>(conf_entry).or_else([&]() -> optional<KeyInput::Code> {
 			throw runtime_error_fmt("Unknown keycode: {}", conf_entry);
 		});
 	};
@@ -176,7 +176,7 @@ inline Mapper::Mapper()
 	axis_bindings[+Playstyle::_14K][1] = get_con("con_14k_p2_s_analog");
 }
 
-inline auto Mapper::from_key(threads::KeyInput const& key, Playstyle playstyle) -> optional<Input>
+inline auto Mapper::from_key(KeyInput const& key, Playstyle playstyle) -> optional<Input>
 {
 	auto const& playstyle_binds = key_bindings[+playstyle];
 	auto const match = find(playstyle_binds, key.code);
@@ -195,7 +195,7 @@ inline auto Mapper::from_key(threads::KeyInput const& key, Playstyle playstyle) 
 	};
 }
 
-inline auto Mapper::from_button(threads::ButtonInput const& button, Playstyle playstyle) -> optional<Input>
+inline auto Mapper::from_button(ButtonInput const& button, Playstyle playstyle) -> optional<Input>
 {
 	auto const& playstyle_binds = button_bindings[+playstyle];
 	auto input = ConBinding{button.controller, button.button};
@@ -218,7 +218,7 @@ inline auto Mapper::from_button(threads::ButtonInput const& button, Playstyle pl
 	};
 }
 
-inline auto Mapper::submit_axis_input(threads::AxisInput const& axis, Playstyle playstyle) -> vector<Input>
+inline auto Mapper::submit_axis_input(AxisInput const& axis, Playstyle playstyle) -> vector<Input>
 {
 	auto const& playstyle_binds = axis_bindings[+playstyle];
 	auto input = ConBinding{axis.controller, axis.axis};

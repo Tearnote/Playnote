@@ -20,7 +20,7 @@ class ControllerDispatcher {
 public:
 	ControllerDispatcher();
 
-	using ControllerEvent = variant<threads::ButtonInput, threads::AxisInput>;
+	using ControllerEvent = variant<ButtonInput, AxisInput>;
 	template<callable<void(ControllerEvent)> Func>
 	void poll(Func&&);
 
@@ -29,7 +29,7 @@ private:
 	static inline ControllerDispatcher* instance;
 
 	struct Controller {
-		threads::ControllerID id;
+		ControllerID id;
 		string name;
 		vector<bool> buttons;
 		vector<float> axes;
@@ -59,7 +59,7 @@ void ControllerDispatcher::poll(Func&& func)
 		for (auto [idx, previous, current_raw]: views::zip(views::iota(0u), controller.buttons, buttons)) {
 			auto current = current_raw == +lib::glfw::Action::Press;
 			if (previous == current) continue;
-			func(ControllerEvent{threads::ButtonInput{
+			func(ControllerEvent{ButtonInput{
 				.controller = controller.id,
 				.timestamp = globals::glfw->get_time(),
 				.button = idx,
@@ -73,7 +73,7 @@ void ControllerDispatcher::poll(Func&& func)
 		auto axes = span{axes_ptr, static_cast<uint32>(axes_count)};
 		for (auto [idx, previous, current]: views::zip(views::iota(0u), controller.axes, axes)) {
 			if (previous == current) continue;
-			func(ControllerEvent{threads::AxisInput{
+			func(ControllerEvent{AxisInput{
 				.controller = controller.id,
 				.timestamp = globals::glfw->get_time(),
 				.axis = idx,

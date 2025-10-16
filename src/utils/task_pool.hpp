@@ -14,7 +14,7 @@ namespace playnote::globals {
 inline auto task_pool = Service<unique_ptr<thread_pool>>{};
 }
 
-namespace playnote::threads {
+namespace playnote {
 
 // Launch a fire-and-forget task on the thread pool.
 inline void launch_task(task<>&& t)

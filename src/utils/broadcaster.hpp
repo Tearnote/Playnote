@@ -10,7 +10,7 @@ Allows threads to subscribe to events and receive messages from other threads.
 #include "preamble.hpp"
 #include "utils/assert.hpp"
 
-namespace playnote::threads {
+namespace playnote {
 
 // Simple shared struct for controlling thread lifetime.
 template<usize N>

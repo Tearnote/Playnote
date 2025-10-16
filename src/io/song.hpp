@@ -299,7 +299,7 @@ inline void Song::preload_audio_files()
 		auto filepath_low = string{filepath};
 		to_lower(filepath_low);
 		auto file = span{static_cast<byte const*>(ptr), static_cast<usize>(size)};
-		tasks.emplace_back(threads::schedule_task([](span<byte const> file) -> task<vector<dev::Sample>> {
+		tasks.emplace_back(schedule_task([](span<byte const> file) -> task<vector<dev::Sample>> {
 			co_return lib::ffmpeg::decode_and_resample_file_buffer(file, globals::mixer->get_audio().get_sampling_rate());
 		}(file)));
 		paths.emplace_back(move(filepath_low));

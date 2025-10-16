@@ -26,7 +26,7 @@ public:
 	~Player() { globals::mixer->remove_generator(*this); }
 
 	// Retrieve the input queue. Input events should be pushed to this queue.
-	auto get_input_queue() -> shared_ptr<spsc_queue<threads::UserInput>> { return inbound_inputs; }
+	auto get_input_queue() -> shared_ptr<spsc_queue<UserInput>> { return inbound_inputs; }
 
 	// Register a cursor with the player. From now on, the cursor will be driven by the audio device and user inputs.
 	void add_cursor(shared_ptr<bms::Cursor>, bms::Mapper&&);
@@ -67,8 +67,8 @@ private:
 	small_vector<PlayableCursor, 4> cursors;
 	nanoseconds timer_slop; // Player start time according to the CPU timer. Adjusted over time to maintain sync
 	usize samples_processed = 0;
-	shared_ptr<spsc_queue<threads::UserInput>> inbound_inputs;
-	small_vector<threads::UserInput, 16> pending_inputs;
+	shared_ptr<spsc_queue<UserInput>> inbound_inputs;
+	small_vector<UserInput, 16> pending_inputs;
 	bool paused = false;
 	small_vector<ActiveSound, 128> active_sounds;
 };
@@ -77,7 +77,7 @@ inline Player::Player()
 {
 	globals::mixer->add_generator(*this);
 	timer_slop = globals::glfw->get_time();
-	inbound_inputs = make_shared<spsc_queue<threads::UserInput>>();
+	inbound_inputs = make_shared<spsc_queue<UserInput>>();
 }
 
 inline void Player::add_cursor(shared_ptr<bms::Cursor> cursor, bms::Mapper&& mapper)
@@ -124,7 +124,7 @@ inline auto Player::get_audio_cursor(shared_ptr<bms::Cursor> const& cursor) cons
 inline void Player::begin_buffer()
 {
 	// Retrieve new inputs
-	auto input = threads::UserInput{};
+	auto input = UserInput{};
 	while (inbound_inputs->try_dequeue(input)) {
 		// Delay to ensure input is in the future
 		visit([](auto& i) { i.timestamp += globals::mixer->get_latency(); }, input);
@@ -151,7 +151,7 @@ inline auto Player::next_sample() -> dev::Sample
 
 	// Collect inputs happening at this exact sample
 	auto const sample_timestamp = timer_slop + globals::mixer->get_audio().samples_to_ns(samples_processed++);
-	auto relevant_inputs = small_vector<threads::UserInput, 16>{};
+	auto relevant_inputs = small_vector<UserInput, 16>{};
 	auto removed = remove_if(pending_inputs, [&](auto const& input) {
 		auto input_timestamp = 0ns;
 		visit([&](auto const& i) { input_timestamp = i.timestamp; }, input);
@@ -170,7 +170,7 @@ inline auto Player::next_sample() -> dev::Sample
 		auto converted_inputs = small_vector<bms::Cursor::LaneInput, 16>{};
 		for (auto const& input: relevant_inputs) {
 			visit(visitor{
-				[&](threads::KeyInput const& i) {
+				[&](KeyInput const& i) {
 					if (auto const converted = cursor.mapper.from_key(i, cursor.cursor->get_chart().metadata.playstyle)) {
 						converted_inputs.emplace_back(bms::Cursor::LaneInput{
 							.lane = converted->lane,
@@ -178,7 +178,7 @@ inline auto Player::next_sample() -> dev::Sample
 						});
 					}
 				},
-				[&](threads::ButtonInput const& i) {
+				[&](ButtonInput const& i) {
 					if (auto const converted = cursor.mapper.from_button(i, cursor.cursor->get_chart().metadata.playstyle)) {
 						converted_inputs.emplace_back(bms::Cursor::LaneInput{
 							.lane = converted->lane,
@@ -186,7 +186,7 @@ inline auto Player::next_sample() -> dev::Sample
 						});
 					}
 				},
-				[&](threads::AxisInput const& i) {
+				[&](AxisInput const& i) {
 					auto const converteds = cursor.mapper.submit_axis_input(i, cursor.cursor->get_chart().metadata.playstyle);
 					for (auto const& converted: converteds) {
 						converted_inputs.emplace_back(bms::Cursor::LaneInput{

@@ -11,9 +11,9 @@ A thread that manages game state and presents it into the window.
 #include "dev/window.hpp"
 #include "utils/broadcaster.hpp"
 
-namespace playnote::threads {
+namespace playnote {
 
 // Render thread entry point.
-void render(Broadcaster& broadcaster, Barriers<2>& barriers, dev::Window& window);
+void render_thread(Broadcaster& broadcaster, Barriers<2>& barriers, dev::Window& window);
 
 }

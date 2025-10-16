@@ -308,12 +308,12 @@ inline auto Library::find_available_song_filename(string_view name) -> string
 inline auto Library::import_many(fs::path path) -> task<>
 {
 	if (is_regular_file(path)) {
-		co_await threads::schedule_task(import_one(path));
+		co_await schedule_task(import_one(path));
 	} else if (is_directory(path)) {
 		auto contents = vector<fs::directory_entry>{};
 		copy(fs::directory_iterator{path}, back_inserter(contents));
 		if (any_of(contents, [&](auto const& entry) { return fs::is_regular_file(entry) && io::Song::is_bms_ext(entry.path().extension().string()); })) {
-			co_await threads::schedule_task(import_one(path));
+			co_await schedule_task(import_one(path));
 		} else {
 			for (auto const& entry: contents) import_tasks.start(import_many(entry));
 		}
@@ -332,7 +332,7 @@ inline auto Library::import_one(fs::path path) -> task<>
 
 	auto chart_import_tasks = vector<task<>>{};
 	song.for_each_chart([&](auto path, auto chart) {
-		chart_import_tasks.emplace_back(threads::schedule_task(import_chart(song, song_id, string{path}, chart)));
+		chart_import_tasks.emplace_back(schedule_task(import_chart(song, song_id, string{path}, chart)));
 	});
 	co_await when_all(move(chart_import_tasks));
 	/*if (imported_count == 0) {
