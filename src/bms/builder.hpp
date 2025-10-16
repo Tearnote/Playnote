@@ -363,7 +363,7 @@ inline auto Builder::build(span<byte const> bms_raw, io::Song& song, optional<re
 	for (auto const& parsed_slot: parse_state.wav | views::values) {
 		if (!parsed_slot.used) continue;
 		auto& slot = chart->media.wav_slots[parsed_slot.idx];
-		tasks.emplace_back(globals::pool().schedule([](io::Song& song, vector<lib::Sample>& slot, string filename) -> task<> {
+		tasks.emplace_back(threads::schedule_task([](io::Song& song, vector<lib::Sample>& slot, string filename) -> task<> {
 			slot = move(song.load_audio_file(filename));
 			co_return;
 		}(song, slot, parsed_slot.filename)));

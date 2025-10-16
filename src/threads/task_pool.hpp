@@ -12,17 +12,29 @@ The global coroutine executor, implemented as a thread pool.
 
 namespace playnote::globals {
 inline auto task_pool = Service<unique_ptr<thread_pool>>{};
-inline auto pool() -> thread_pool& { return **task_pool; }
 }
 
 namespace playnote::threads {
+
+// Launch a fire-and-forget task on the thread pool.
+inline void launch_task(task<>&& t)
+{
+	(*globals::task_pool)->spawn(move(t));
+}
+
+// Schedule a task on the thread pool. The task will execute once the returned task is awaited.
+template<typename T>
+auto schedule_task(task<T>&& t) -> task<T>
+{
+	return (*globals::task_pool)->schedule(move(t));
+}
 
 // Launch a task on the thread pool and return a future to its result, so that its result can be polled synchronously.
 template<typename T>
 auto launch_pollable(task<T>&& t) -> future<T> {
 	auto result_promise = promise<T>{};
 	auto result_future = result_promise.get_future();
-	globals::pool().spawn([](promise<T> p, task<T> t) -> task<> {
+	launch_task([](promise<T> p, task<T> t) -> task<> {
 		try {
 			p.set_value(move(co_await t));
 		}
