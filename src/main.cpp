@@ -8,6 +8,7 @@ Entry point. Initializes basic facilities, spawns threads.
 
 #include <clocale>
 #include "preamble.hpp"
+#include "utils/broadcaster.hpp"
 #include "utils/assert.hpp"
 #include "utils/config.hpp"
 #include "utils/logger.hpp"
@@ -15,7 +16,6 @@ Entry point. Initializes basic facilities, spawns threads.
 #include "dev/window.hpp"
 #include "dev/os.hpp"
 #include "threads/render.hpp"
-#include "threads/tools.hpp"
 #include "threads/input.hpp"
 
 using namespace playnote; // Can't namespace main()
@@ -28,9 +28,10 @@ auto run() -> int
 
 	// Spawn all threads. Every thread is assumed to eventually finish
 	// once window.is_closing() is true
-	auto tools = threads::Tools{};
-	auto render_thread_stub = jthread{threads::render, ref(tools), ref(window)};
-	threads::input(tools, window);
+	auto broadcaster = threads::Broadcaster{};
+	auto barriers = threads::Barriers<2>{};
+	auto render_thread_stub = jthread{threads::render, ref(broadcaster), ref(barriers), ref(window)};
+	threads::input(broadcaster, barriers, window);
 
 	return EXIT_SUCCESS;
 }

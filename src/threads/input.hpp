@@ -9,7 +9,7 @@ Main thread. Spins on the OS message queue as much possible without saturating t
 #pragma once
 #include "preamble.hpp"
 #include "dev/window.hpp"
-#include "threads/tools.hpp"
+#include "utils/broadcaster.hpp"
 
 namespace playnote::threads {
 
@@ -63,6 +63,6 @@ struct UnregisterInputQueue {
 };
 
 // Input thread entry point.
-void input(Tools&, dev::Window&);
+void input(Broadcaster& broadcaster, Barriers<2>& barriers, dev::Window&);
 
 }

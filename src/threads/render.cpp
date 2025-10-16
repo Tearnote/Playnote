@@ -26,7 +26,6 @@ Implementation file for threads/render.hpp.
 #include "bms/score.hpp"
 #include "bms/input.hpp"
 #include "threads/input.hpp"
-#include "threads/tools.hpp"
 
 namespace playnote::threads {
 
@@ -199,7 +198,7 @@ static void render_gameplay(gfx::Renderer::Queue& queue, GameState& state)
 	lib::imgui::end_window();
 }
 
-static void run_render(Tools& tools, dev::Window& window)
+static void run_render(Broadcaster& broadcaster, dev::Window& window)
 {
 	// Init subsystems
 	auto task_pool_stub = globals::task_pool.provide(thread_pool::make_unique({
@@ -218,7 +217,7 @@ static void run_render(Tools& tools, dev::Window& window)
 		// Handle state changes
 		if (state.requested == State::Library) {
 			if (holds_alternative<GameplayContext>(state.context)) {
-				tools.broadcaster.shout(UnregisterInputQueue{
+				broadcaster.shout(UnregisterInputQueue{
 					.queue = weak_ptr{state.gameplay_context().player.get_input_queue()},
 				});
 			}
@@ -236,7 +235,7 @@ static void run_render(Tools& tools, dev::Window& window)
 			context.chart = library->load_chart(state.requested_chart); //TODO convert to coro
 			context.cursor = make_shared<bms::Cursor>(context.chart, false);
 			context.score = bms::Score{*context.chart};
-			tools.broadcaster.shout(RegisterInputQueue{
+			broadcaster.shout(RegisterInputQueue{
 				.queue = weak_ptr{context.player.get_input_queue()},
 			});
 			context.player.add_cursor(context.cursor, bms::Mapper{});
@@ -248,7 +247,7 @@ static void run_render(Tools& tools, dev::Window& window)
 		}
 
 		// Handle chart library
-		tools.broadcaster.receive_all<FileDrop>([&](auto const& ev) {
+		broadcaster.receive_all<FileDrop>([&](auto const& ev) {
 			for (auto const& path: ev.paths) library->import(path);
 		});
 		if (state.current == State::Library) {
@@ -279,19 +278,19 @@ static void run_render(Tools& tools, dev::Window& window)
 	}
 }
 
-void render(Tools& tools, dev::Window& window)
+void render(Broadcaster& broadcaster, Barriers<2>& barriers, dev::Window& window)
 try {
 	dev::name_current_thread("render");
-	tools.broadcaster.register_as_endpoint();
-	tools.broadcaster.subscribe<FileDrop>();
-	tools.barriers.startup.arrive_and_wait();
-	run_render(tools, window);
-	tools.barriers.shutdown.arrive_and_wait();
+	broadcaster.register_as_endpoint();
+	broadcaster.subscribe<FileDrop>();
+	barriers.startup.arrive_and_wait();
+	run_render(broadcaster, window);
+	barriers.shutdown.arrive_and_wait();
 }
 catch (exception const& e) {
 	CRIT("Uncaught exception: {}", e.what());
 	window.request_close();
-	tools.barriers.shutdown.arrive_and_wait();
+	barriers.shutdown.arrive_and_wait();
 }
 
 }
