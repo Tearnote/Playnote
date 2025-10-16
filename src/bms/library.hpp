@@ -8,6 +8,7 @@ A cache of song and chart metadata. Handles import events.
 
 #pragma once
 #include "preamble.hpp"
+#include "utils/task_pool.hpp"
 #include "utils/config.hpp"
 #include "utils/logger.hpp"
 #include "lib/openssl.hpp"
@@ -15,7 +16,6 @@ A cache of song and chart metadata. Handles import events.
 #include "lib/bits.hpp"
 #include "io/song.hpp"
 #include "bms/builder.hpp"
-#include "utils/task_pool.hpp"
 
 namespace playnote::bms {
 

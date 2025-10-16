@@ -11,7 +11,7 @@ Implementation file for config.hpp.
 #include <toml++/toml.hpp>
 #include <sstream>
 #include "preamble.hpp"
-#include "logger.hpp"
+#include "utils/logger.hpp"
 #include "io/file.hpp"
 
 namespace playnote {

@@ -8,13 +8,13 @@ An abstraction for an imported BMS song. Wraps a zip archive with accelerated fi
 
 #pragma once
 #include "preamble.hpp"
+#include "utils/task_pool.hpp"
 #include "lib/archive.hpp"
 #include "lib/openssl.hpp"
 #include "lib/sqlite.hpp"
 #include "lib/ffmpeg.hpp"
 #include "dev/audio.hpp"
 #include "io/file.hpp"
-#include "utils/task_pool.hpp"
 
 namespace playnote::io {
 

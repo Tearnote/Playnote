@@ -8,7 +8,7 @@ Allows threads to subscribe to events and receive messages from other threads.
 
 #pragma once
 #include "preamble.hpp"
-#include "assert.hpp"
+#include "utils/assert.hpp"
 
 namespace playnote::threads {
 

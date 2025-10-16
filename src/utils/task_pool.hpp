@@ -8,7 +8,7 @@ The global coroutine executor, implemented as a thread pool.
 
 #pragma once
 #include "preamble.hpp"
-#include "service.hpp"
+#include "utils/service.hpp"
 
 namespace playnote::globals {
 inline auto task_pool = Service<unique_ptr<thread_pool>>{};

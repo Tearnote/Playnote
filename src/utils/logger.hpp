@@ -14,7 +14,7 @@ Wrapper for the Quill threaded async logging library.
 #include "quill/Backend.h"
 #include "quill/Logger.h"
 #include "preamble.hpp"
-#include "service.hpp"
+#include "utils/service.hpp"
 
 // Workaround for compiler warning on Windows
 #ifdef ERROR

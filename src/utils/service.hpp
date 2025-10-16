@@ -8,7 +8,7 @@ A wrapper for existing classes to make them into lifetime-managed singletons.
 
 #pragma once
 #include "preamble.hpp"
-#include "assert.hpp"
+#include "utils/assert.hpp"
 
 namespace playnote {
 

@@ -8,8 +8,8 @@ Global game configuration, both compile-time and runtime.
 
 #pragma once
 #include "preamble.hpp"
-#include "service.hpp"
-#include "logger.hpp"
+#include "utils/service.hpp"
+#include "utils/logger.hpp"
 
 namespace playnote {
 inline constexpr auto AppTitle = "Playnote";

@@ -7,7 +7,6 @@ Definitions used by every audio backend.
 */
 
 #pragma once
-
 #include "preamble.hpp"
 
 namespace playnote::lib {
