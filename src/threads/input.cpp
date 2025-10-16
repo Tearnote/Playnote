@@ -13,8 +13,6 @@ Implementation file for threads/audio.hpp.
 #include "dev/controller.hpp"
 #include "dev/window.hpp"
 #include "dev/os.hpp"
-#include "threads/render_shouts.hpp"
-#include "threads/input_shouts.hpp"
 #include "threads/tools.hpp"
 
 namespace playnote::threads {

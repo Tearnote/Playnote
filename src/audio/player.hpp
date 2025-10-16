@@ -13,7 +13,7 @@ to them and translated by their associated Input handlers.
 #include "audio/mixer.hpp"
 #include "bms/cursor.hpp"
 #include "bms/input.hpp"
-#include "threads/input_shouts.hpp"
+#include "threads/input.hpp"
 
 namespace playnote::audio {
 

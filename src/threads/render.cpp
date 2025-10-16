@@ -25,8 +25,7 @@ Implementation file for threads/render.hpp.
 #include "bms/chart.hpp"
 #include "bms/score.hpp"
 #include "bms/input.hpp"
-#include "threads/render_shouts.hpp"
-#include "threads/input_shouts.hpp"
+#include "threads/input.hpp"
 #include "threads/tools.hpp"
 
 namespace playnote::threads {

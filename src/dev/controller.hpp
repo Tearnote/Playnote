@@ -13,7 +13,6 @@ Handling of controller input devices.
 #include "utils/logger.hpp"
 #include "lib/glfw.hpp"
 #include "dev/window.hpp"
-#include "threads/input_shouts.hpp"
 
 namespace playnote::dev {
 

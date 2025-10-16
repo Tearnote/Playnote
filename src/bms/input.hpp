@@ -11,7 +11,7 @@ A timestamped BMS chart input, and conversion to it via a predefined mapping.
 #include "utils/config.hpp"
 #include "utils/logger.hpp"
 #include "bms/chart.hpp"
-#include "threads/input_shouts.hpp"
+#include "threads/input.hpp"
 
 namespace playnote::bms {
 
