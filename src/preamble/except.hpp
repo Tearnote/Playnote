@@ -20,6 +20,7 @@ namespace playnote {
 using std::exception;
 using std::logic_error;
 using std::runtime_error;
+using std::current_exception;
 
 // An arbitrary exception type with a formatted message
 template<typename Err, typename... Args>
