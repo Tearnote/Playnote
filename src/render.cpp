@@ -37,12 +37,14 @@ enum class State {
 
 struct ImportStatus {
 	bool complete;
+	uint32 songs_processed;
+	uint32 songs_total;
+	uint32 charts_processed;
 };
 
 struct LibraryContext {
 	vector<bms::Library::ChartEntry> charts;
 	optional<future<vector<bms::Library::ChartEntry>>> chart_reload_result;
-	optional<ImportStatus> import_status;
 };
 
 struct GameplayContext {
@@ -60,6 +62,7 @@ struct GameState {
 	State requested;
 	lib::openssl::MD5 requested_chart;
 	variant<monostate, LibraryContext, GameplayContext> context;
+	optional<ImportStatus> import_status;
 
 	[[nodiscard]] auto library_context() -> LibraryContext& { return get<LibraryContext>(context); }
 	[[nodiscard]] auto gameplay_context() -> GameplayContext& { return get<GameplayContext>(context); }
@@ -155,7 +158,7 @@ static void show_results(bms::Score const& score)
 	lib::imgui::text(" Rank: {}", enum_name(score.get_rank()));
 }
 
-static void render_library(gfx::Renderer::Queue&, GameState& state, bms::Library& library)
+static void render_library(gfx::Renderer::Queue&, GameState& state)
 {
 	auto& context = state.library_context();
 	lib::imgui::begin_window("library", {8, 8}, 800, lib::imgui::WindowStyle::Static);
@@ -170,23 +173,6 @@ static void render_library(gfx::Renderer::Queue&, GameState& state, bms::Library
 		}
 	}
 	lib::imgui::end_window();
-
-	if (context.import_status) {
-		lib::imgui::begin_window("import_status", {860, 600}, 412, lib::imgui::WindowStyle::Static);
-		if (!context.import_status->complete)
-			lib::imgui::text("Import in progress...");
-		else
-			lib::imgui::text("Import complete!");
-		lib::imgui::text("Songs imported: {} / {}", library.get_import_songs_processed(), library.get_import_songs_total());
-		lib::imgui::text("Charts imported: {}", library.get_import_charts_processed());
-		if (context.import_status->complete) {
-			if (lib::imgui::button("Okay")) {
-				library.reset_import_stats();
-				context.import_status = nullopt;
-			}
-		}
-		lib::imgui::end_window();
-	}
 }
 
 static void render_gameplay(gfx::Renderer::Queue& queue, GameState& state)
@@ -218,6 +204,25 @@ static void render_gameplay(gfx::Renderer::Queue& queue, GameState& state)
 	lib::imgui::begin_window("results", {988, 436}, 120, lib::imgui::WindowStyle::Static);
 	show_results(score);
 	lib::imgui::end_window();
+}
+
+static auto render_import_status(ImportStatus const& status) -> bool
+{
+	auto reset = false;
+	lib::imgui::begin_window("import_status", {860, 600}, 412, lib::imgui::WindowStyle::Static);
+	if (!status.complete)
+		lib::imgui::text("Import in progress...");
+	else
+		lib::imgui::text("Import complete!");
+	if (!status.complete)
+		lib::imgui::text("Songs imported: {} / {}", status.songs_processed, status.songs_total);
+	else
+		lib::imgui::text("Songs imported: {}", status.songs_processed);
+	lib::imgui::text("Charts imported: {}", status.charts_processed);
+	if (status.complete)
+		if (lib::imgui::button("Okay")) reset = true;
+	lib::imgui::end_window();
+	return reset;
 }
 
 static void run_render(Broadcaster& broadcaster, dev::Window& window)
@@ -284,12 +289,19 @@ static void run_render(Broadcaster& broadcaster, dev::Window& window)
 				context.charts = move(context.chart_reload_result->get());
 				context.chart_reload_result = nullopt;
 			}
-
-			if (library->is_importing()) {
-				if (!context.import_status) context.import_status = ImportStatus{};
-				context.import_status->complete = false;
-			} else {
-				if (context.import_status) context.import_status->complete = true;
+		}
+		if (library->is_importing()) {
+			if (!state.import_status) state.import_status = ImportStatus{};
+			state.import_status->complete = false;
+			state.import_status->songs_processed = library->get_import_songs_processed();
+			state.import_status->songs_total = library->get_import_songs_total();
+			state.import_status->charts_processed = library->get_import_charts_processed();
+		} else {
+			if (state.import_status) {
+				state.import_status->complete = true;
+				state.import_status->songs_processed = library->get_import_songs_processed();
+				state.import_status->songs_total = library->get_import_songs_total();
+				state.import_status->charts_processed = library->get_import_charts_processed();
 			}
 		}
 
@@ -299,9 +311,15 @@ static void run_render(Broadcaster& broadcaster, dev::Window& window)
 			queue.enqueue_rect("bg"_id, {{0, 0}, {1280, 720}, {0.060f, 0.060f, 0.060f, 1.000f}});
 
 			switch (state.current) {
-			case State::Library: render_library(queue, state, *library); break;
+			case State::Library: render_library(queue, state); break;
 			case State::Gameplay: render_gameplay(queue, state); break;
 			default: break;
+			}
+			if (state.import_status) {
+				if (render_import_status(*state.import_status)) {
+					library->reset_import_stats();
+					state.import_status = nullopt;
+				}
 			}
 		});
 	}
