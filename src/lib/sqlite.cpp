@@ -7,7 +7,7 @@ Implementation file for lib/sqlite.hpp.
 */
 
 #include "lib/sqlite.hpp"
-#include "assert.hpp"
+#include "utils/assert.hpp"
 
 #include <sqlite3.h>
 

@@ -11,7 +11,7 @@ Implementation file for lib/archive.hpp.
 #include <archive_entry.h>
 #include <archive.h>
 #include "preamble.hpp"
-#include "logger.hpp"
+#include "utils/logger.hpp"
 
 namespace playnote::lib::archive {
 

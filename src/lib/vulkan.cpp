@@ -13,9 +13,9 @@ Implementation file for lib/vulkan.hpp.
 #include "volk.h"
 #include "VkBootstrap.h"
 #include "preamble.hpp"
-#include "assert.hpp"
-#include "config.hpp"
-#include "logger.hpp"
+#include "utils/assert.hpp"
+#include "utils/config.hpp"
+#include "utils/logger.hpp"
 
 namespace playnote::lib::vk {
 

@@ -8,8 +8,8 @@ A timestamped BMS chart input, and conversion to it via a predefined mapping.
 
 #pragma once
 #include "preamble.hpp"
-#include "config.hpp"
-#include "logger.hpp"
+#include "utils/config.hpp"
+#include "utils/logger.hpp"
 #include "bms/chart.hpp"
 #include "threads/input_shouts.hpp"
 

@@ -8,7 +8,7 @@ Various OS-specific utilities.
 
 #pragma once
 #include "preamble.hpp"
-#include "config.hpp"
+#include "utils/config.hpp"
 #include "lib/os.hpp"
 
 namespace playnote::dev {

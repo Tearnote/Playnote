@@ -8,9 +8,9 @@ Entry point. Initializes basic facilities, spawns threads.
 
 #include <clocale>
 #include "preamble.hpp"
-#include "assert.hpp"
-#include "config.hpp"
-#include "logger.hpp"
+#include "utils/assert.hpp"
+#include "utils/config.hpp"
+#include "utils/logger.hpp"
 #include "lib/debug.hpp"
 #include "dev/window.hpp"
 #include "dev/os.hpp"

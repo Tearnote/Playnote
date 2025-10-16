@@ -8,7 +8,7 @@ Implementation file for lib/thread.hpp.
 
 #include "lib/os.hpp"
 
-#include "config.hpp"
+#include "utils/config.hpp"
 #ifdef TARGET_WINDOWS
 #ifndef NOMINMAX
 #define NOMINMAX

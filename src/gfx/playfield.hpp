@@ -8,8 +8,8 @@ A renderable visual representation of a BMS chart playfield.
 
 #pragma once
 #include "preamble.hpp"
-#include "assert.hpp"
-#include "config.hpp"
+#include "utils/assert.hpp"
+#include "utils/config.hpp"
 #include "lib/imgui.hpp"
 #include "gfx/renderer.hpp"
 #include "bms/cursor.hpp"

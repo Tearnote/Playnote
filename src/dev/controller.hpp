@@ -10,7 +10,7 @@ Handling of controller input devices.
 
 #include <GLFW/glfw3.h>
 #include "preamble.hpp"
-#include "logger.hpp"
+#include "utils/logger.hpp"
 #include "lib/glfw.hpp"
 #include "dev/window.hpp"
 #include "threads/input_shouts.hpp"

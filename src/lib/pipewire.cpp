@@ -12,8 +12,8 @@ Implementation file for lib/pipewire.hpp.
 #include <spa/param/latency-utils.h>
 #include <pipewire/pipewire.h>
 #include "preamble.hpp"
-#include "assert.hpp"
-#include "logger.hpp"
+#include "utils/assert.hpp"
+#include "utils/logger.hpp"
 
 namespace playnote::lib::pw {
 

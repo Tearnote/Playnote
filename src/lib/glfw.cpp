@@ -11,7 +11,7 @@ Implementation file for lib/glfw.hpp.
 #include <vulkan/vulkan_core.h>
 #include "GLFW/glfw3.h"
 #include "preamble.hpp"
-#include "assert.hpp"
+#include "utils/assert.hpp"
 #include "lib/vulkan.hpp"
 
 namespace playnote::lib::glfw {

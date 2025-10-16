@@ -27,7 +27,7 @@ add_executable(Playnote WIN32
 	src/lib/os.cpp
 	src/threads/render.cpp
 	src/threads/input.cpp
-	src/config.cpp
+	src/utils/config.cpp
 	src/main.cpp
 )
 if(UNIX)

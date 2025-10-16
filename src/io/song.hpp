@@ -14,7 +14,7 @@ An abstraction for an imported BMS song. Wraps a zip archive with accelerated fi
 #include "lib/ffmpeg.hpp"
 #include "dev/audio.hpp"
 #include "io/file.hpp"
-#include "threads/task_pool.hpp"
+#include "utils/task_pool.hpp"
 
 namespace playnote::io {
 

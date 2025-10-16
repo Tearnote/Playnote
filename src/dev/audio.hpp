@@ -8,9 +8,9 @@ Abstraction over the available audio backends.
 
 #pragma once
 #include "preamble.hpp"
-#include "assert.hpp"
-#include "config.hpp"
-#include "logger.hpp"
+#include "utils/assert.hpp"
+#include "utils/config.hpp"
+#include "utils/logger.hpp"
 #include "lib/audio_common.hpp"
 #ifdef TARGET_WINDOWS
 #include "lib/wasapi.hpp"

@@ -9,9 +9,10 @@ Implementation file for threads/render.hpp.
 #include "threads/render.hpp"
 
 #include "preamble.hpp"
-#include "assert.hpp"
-#include "logger.hpp"
-#include "config.hpp"
+#include "utils/task_pool.hpp"
+#include "utils/assert.hpp"
+#include "utils/logger.hpp"
+#include "utils/config.hpp"
 #include "lib/imgui.hpp"
 #include "dev/window.hpp"
 #include "dev/os.hpp"
@@ -26,7 +27,6 @@ Implementation file for threads/render.hpp.
 #include "bms/input.hpp"
 #include "threads/render_shouts.hpp"
 #include "threads/input_shouts.hpp"
-#include "threads/task_pool.hpp"
 #include "threads/tools.hpp"
 
 namespace playnote::threads {

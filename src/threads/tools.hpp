@@ -8,7 +8,7 @@ A package of communication and task processing utilities for threads to utilize.
 
 #pragma once
 #include "preamble.hpp"
-#include "threads/broadcaster.hpp"
+#include "utils/broadcaster.hpp"
 
 namespace playnote::threads {
 

@@ -13,7 +13,7 @@ Parsing of BMS chart data into a Chart object.
 #include "io/song.hpp"
 #include "audio/renderer.hpp"
 #include "bms/chart.hpp"
-#include "threads/task_pool.hpp"
+#include "utils/task_pool.hpp"
 
 namespace playnote::bms {
 

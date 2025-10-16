@@ -9,9 +9,9 @@ Initializes GLFW and manages windows. Windows handle keyboard and mouse input, a
 
 #pragma once
 #include "preamble.hpp"
-#include "service.hpp"
-#include "assert.hpp"
-#include "logger.hpp"
+#include "utils/service.hpp"
+#include "utils/assert.hpp"
+#include "utils/logger.hpp"
 #include "lib/vulkan.hpp"
 #include "lib/glfw.hpp"
 

@@ -8,14 +8,14 @@ A cache of song and chart metadata. Handles import events.
 
 #pragma once
 #include "preamble.hpp"
-#include "config.hpp"
-#include "logger.hpp"
+#include "utils/config.hpp"
+#include "utils/logger.hpp"
 #include "lib/openssl.hpp"
 #include "lib/sqlite.hpp"
 #include "lib/bits.hpp"
 #include "io/song.hpp"
 #include "bms/builder.hpp"
-#include "threads/task_pool.hpp"
+#include "utils/task_pool.hpp"
 
 namespace playnote::bms {
 

@@ -16,8 +16,8 @@ extern "C" {
 }
 #include <cerrno>
 #include "preamble.hpp"
-#include "assert.hpp"
-#include "logger.hpp"
+#include "utils/assert.hpp"
+#include "utils/logger.hpp"
 #include "lib/audio_common.hpp"
 
 namespace playnote::lib::ffmpeg {

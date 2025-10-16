@@ -8,9 +8,9 @@ Initializes Vulkan and the rendergraph.
 
 #pragma once
 #include "preamble.hpp"
-#include "assert.hpp"
-#include "config.hpp"
-#include "logger.hpp"
+#include "utils/assert.hpp"
+#include "utils/config.hpp"
+#include "utils/logger.hpp"
 #include "lib/vulkan.hpp"
 #include "lib/vuk.hpp"
 #include "dev/window.hpp"

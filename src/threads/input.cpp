@@ -9,7 +9,7 @@ Implementation file for threads/audio.hpp.
 #include "threads/input.hpp"
 
 #include "preamble.hpp"
-#include "logger.hpp"
+#include "utils/logger.hpp"
 #include "dev/controller.hpp"
 #include "dev/window.hpp"
 #include "dev/os.hpp"

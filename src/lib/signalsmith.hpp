@@ -9,7 +9,7 @@ Wrapper for signalsmith-basics, a DSP library.
 #pragma once
 #include "signalsmith-basics/limiter.h"
 #include "preamble.hpp"
-#include "assert.hpp"
+#include "utils/assert.hpp"
 #include "lib/audio_common.hpp"
 
 namespace playnote::lib::dsp {

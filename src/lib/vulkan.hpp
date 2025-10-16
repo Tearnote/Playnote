@@ -8,7 +8,7 @@ Imports of Vulkan and helper libraries.
 
 #pragma once
 #include "preamble.hpp"
-#include "logger.hpp"
+#include "utils/logger.hpp"
 
 // Forward declarations
 
