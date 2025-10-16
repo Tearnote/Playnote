@@ -13,7 +13,6 @@ A cache of song and chart metadata. Handles import events.
 #include "lib/openssl.hpp"
 #include "lib/sqlite.hpp"
 #include "lib/bits.hpp"
-#include "lib/coro.hpp"
 #include "io/song.hpp"
 #include "bms/builder.hpp"
 #include "threads/task_pool.hpp"
@@ -37,7 +36,7 @@ public:
 	void import(fs::path const&);
 
 	// Return a list of all available charts. Thread-safe.
-	[[nodiscard]] auto list_charts() -> coro::task<vector<ChartEntry>>;
+	[[nodiscard]] auto list_charts() -> task<vector<ChartEntry>>;
 
 	// Returns true if the library has changed since the last call to list_charts().
 	[[nodiscard]] auto is_dirty() const -> bool { return dirty.load(); }
@@ -176,18 +175,18 @@ private:
 	)"sv;
 
 	lib::sqlite::DB db;
-	coro::task_container<coro::thread_pool> import_tasks;
-	coro::mutex song_lock;
+	task_container import_tasks;
+	coro_mutex song_lock;
 	atomic<bool> dirty = true;
 	atomic<bool> stopping = false;
 
 	Builder builder;
 
 	[[nodiscard]] auto find_available_song_filename(string_view name) -> string;
-	auto import_many(fs::path) -> coro::task<>;
-	auto import_one(fs::path) -> coro::task<>;
+	auto import_many(fs::path) -> task<>;
+	auto import_one(fs::path) -> task<>;
 	auto import_song(fs::path const&) -> pair<usize, string>;
-	auto import_chart(io::Song& song, usize song_id, string chart_path, span<byte const>) -> coro::task<>;
+	auto import_chart(io::Song& song, usize song_id, string chart_path, span<byte const>) -> task<>;
 };
 
 inline Library::Library(fs::path const& path):
@@ -211,7 +210,7 @@ inline void Library::import(fs::path const& path)
 	import_tasks.start(import_many(path));
 }
 
-inline auto Library::list_charts() -> coro::task<vector<ChartEntry>>
+inline auto Library::list_charts() -> task<vector<ChartEntry>>
 {
 	auto chart_listing = lib::sqlite::prepare(db, ChartListingQuery);
 	auto result = vector<ChartEntry>{};
@@ -306,7 +305,7 @@ inline auto Library::find_available_song_filename(string_view name) -> string
 	unreachable();
 }
 
-inline auto Library::import_many(fs::path path) -> coro::task<>
+inline auto Library::import_many(fs::path path) -> task<>
 {
 	if (is_regular_file(path)) {
 		co_await globals::pool().schedule(import_one(path));
@@ -323,7 +322,7 @@ inline auto Library::import_many(fs::path path) -> coro::task<>
 	}
 }
 
-inline auto Library::import_one(fs::path path) -> coro::task<>
+inline auto Library::import_one(fs::path path) -> task<>
 {
 	if (stopping.load()) co_return;
 	auto lock = co_await song_lock.scoped_lock();
@@ -331,11 +330,11 @@ inline auto Library::import_one(fs::path path) -> coro::task<>
 	auto song = io::Song::from_zip(song_path);
 	song.preload_audio_files();
 
-	auto chart_import_tasks = vector<coro::task<>>{};
+	auto chart_import_tasks = vector<task<>>{};
 	song.for_each_chart([&](auto path, auto chart) {
 		chart_import_tasks.emplace_back(globals::pool().schedule(import_chart(song, song_id, string{path}, chart)));
 	});
-	co_await coro::when_all(move(chart_import_tasks));
+	co_await when_all(move(chart_import_tasks));
 	/*if (imported_count == 0) {
 		auto delete_song = lib::sqlite::prepare(db, DeleteSongQuery);
 		lib::sqlite::execute(delete_song, song_id);
@@ -396,7 +395,7 @@ catch (...) {
 	throw;
 }
 
-inline auto Library::import_chart(io::Song& song, usize song_id, string chart_path, span<byte const> chart_raw) -> coro::task<>
+inline auto Library::import_chart(io::Song& song, usize song_id, string chart_path, span<byte const> chart_raw) -> task<>
 {
 	if (stopping.load()) co_return;
 

@@ -292,20 +292,20 @@ inline auto Song::load_file(string_view filepath) -> span<byte const>
 
 inline void Song::preload_audio_files()
 {
-	auto tasks = vector<coro::task<vector<dev::Sample>>>{};
+	auto tasks = vector<task<vector<dev::Sample>>>{};
 	auto paths = vector<string>{};
 	lib::sqlite::query(select_audio_files, [&](string_view filepath, void const* ptr, isize size) {
 		// Normally the db collation handles case-insensitive lookup for us, but we need to do it manually for the cache
 		auto filepath_low = string{filepath};
 		to_lower(filepath_low);
 		auto file = span{static_cast<byte const*>(ptr), static_cast<usize>(size)};
-		tasks.emplace_back(globals::pool().schedule([](span<byte const> file) -> coro::task<vector<dev::Sample>> {
+		tasks.emplace_back(globals::pool().schedule([](span<byte const> file) -> task<vector<dev::Sample>> {
 			co_return lib::ffmpeg::decode_and_resample_file_buffer(file, globals::mixer->get_audio().get_sampling_rate());
 		}(file)));
 		paths.emplace_back(move(filepath_low));
 	});
 
-	auto results = coro::sync_wait(coro::when_all(move(tasks)));
+	auto results = sync_wait(when_all(move(tasks)));
 	for (auto [result, path]: views::zip(results, paths))
 		audio_cache.emplace(path, move(result.return_value()));
 }

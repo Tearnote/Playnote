@@ -203,7 +203,7 @@ static void render_gameplay(gfx::Renderer::Queue& queue, GameState& state)
 static void run_render(Tools& tools, dev::Window& window)
 {
 	// Init subsystems
-	auto task_pool_stub = globals::task_pool.provide(coro::thread_pool::make_unique(coro::thread_pool::options{
+	auto task_pool_stub = globals::task_pool.provide(thread_pool::make_unique({
 		.on_thread_start_functor =
 			[](auto worker_idx) { dev::name_current_thread(format("pool_worker{}", worker_idx)); },
 	}));
@@ -225,7 +225,7 @@ static void run_render(Tools& tools, dev::Window& window)
 			}
 			state.context.emplace<LibraryContext>();
 			state.library_context().chart_reload_result = launch_pollable(
-				[](shared_ptr<bms::Library> library) -> coro::task<vector<bms::Library::ChartEntry>> {
+				[](shared_ptr<bms::Library> library) -> task<vector<bms::Library::ChartEntry>> {
 					co_return co_await library->list_charts();
 				}(library));
 			state.current = State::Library;
@@ -256,7 +256,7 @@ static void run_render(Tools& tools, dev::Window& window)
 			auto& context = state.library_context();
 			if (library->is_dirty() && !context.chart_reload_result) {
 				state.library_context().chart_reload_result = launch_pollable(
-				[](shared_ptr<bms::Library> library) -> coro::task<vector<bms::Library::ChartEntry>> {
+				[](shared_ptr<bms::Library> library) -> task<vector<bms::Library::ChartEntry>> {
 					co_return co_await library->list_charts();
 				}(library));
 			}

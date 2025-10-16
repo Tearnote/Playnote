@@ -12,7 +12,6 @@ Entry point. Initializes basic facilities, spawns threads.
 #include "config.hpp"
 #include "logger.hpp"
 #include "lib/debug.hpp"
-#include "lib/coro.hpp"
 #include "dev/window.hpp"
 #include "dev/os.hpp"
 #include "threads/render.hpp"

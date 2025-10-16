@@ -16,6 +16,7 @@ of the project.
 #include "preamble/string.hpp"
 #include "preamble/except.hpp"
 #include "preamble/types.hpp"
+#include "preamble/coro.hpp"
 #include "preamble/math.hpp"
 #include "preamble/time.hpp"
 #include "preamble/id.hpp"
