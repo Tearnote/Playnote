@@ -36,7 +36,8 @@ auto open(fs::path const& path) -> DB
 			ret_check(ret);
 		}
 	};
-	check(sqlite3_open(path.string().c_str(), &db_raw));
+	check(sqlite3_open_v2(path.string().c_str(), &db_raw,
+		SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX, nullptr));
 	ASSUME(db_raw);
 
 	auto db = DB{db_raw};
