@@ -176,15 +176,6 @@ private:
 	)"sv;
 
 	lib::sqlite::DB db;
-	lib::sqlite::Statement song_exists;
-	lib::sqlite::Statement insert_song;
-	lib::sqlite::Statement delete_song;
-	lib::sqlite::Statement chart_exists;
-	lib::sqlite::Statement insert_chart;
-	lib::sqlite::Statement insert_chart_density;
-	lib::sqlite::Statement get_song_from_chart;
-	lib::sqlite::Statement select_song_chart;
-
 	coro::task_container<coro::thread_pool> import_tasks;
 	coro::mutex song_lock;
 	atomic<bool> dirty = true;
@@ -206,14 +197,6 @@ inline Library::Library(fs::path const& path):
 	lib::sqlite::execute(db, SongsSchema);
 	lib::sqlite::execute(db, ChartsSchema);
 	lib::sqlite::execute(db, ChartDensitiesSchema);
-	song_exists = lib::sqlite::prepare(db, SongExistsQuery);
-	insert_song = lib::sqlite::prepare(db, InsertSongQuery);
-	delete_song = lib::sqlite::prepare(db, DeleteSongQuery);
-	chart_exists = lib::sqlite::prepare(db, ChartExistsQuery);
-	insert_chart = lib::sqlite::prepare(db, InsertChartQuery);
-	insert_chart_density = lib::sqlite::prepare(db, InsertChartDensityQuery);
-	get_song_from_chart = lib::sqlite::prepare(db, GetSongFromChartQuery);
-	select_song_chart = lib::sqlite::prepare(db, SelectSongChartQuery);
 	fs::create_directory(LibraryPath);
 	INFO("Opened song library at \"{}\"", path);
 }
@@ -249,6 +232,7 @@ inline auto Library::load_chart(lib::openssl::MD5 md5) -> shared_ptr<Chart const
 	auto cache = optional<Metadata>{nullopt};
 	auto song_path = fs::path{};
 	auto chart_path = string{};
+	auto select_song_chart = lib::sqlite::prepare(db, SelectSongChartQuery);
 	lib::sqlite::query(select_song_chart, [&](
 		string_view song_path_sv, string_view chart_path_sv, int64 date_imported, string_view title, string_view subtitle,
 		string_view artist, string_view subartist, string_view genre, string_view url, string_view email,
@@ -315,6 +299,7 @@ inline auto Library::find_available_song_filename(string_view name) -> string
 			format("{}.zip", name) :
 			format("{}-{}.zip", name, i);
 		auto exists = false;
+		auto song_exists = lib::sqlite::prepare(db, SongExistsQuery);
 		lib::sqlite::query(song_exists, [&] { exists = true; }, test);
 		if (!exists) return test;
 	}
@@ -352,6 +337,7 @@ inline auto Library::import_one(fs::path path) -> coro::task<>
 	});
 	co_await coro::when_all(move(chart_import_tasks));
 	/*if (imported_count == 0) {
+		auto delete_song = lib::sqlite::prepare(db, DeleteSongQuery);
 		lib::sqlite::execute(delete_song, song_id);
 		move(song).remove();
 	}*/
@@ -364,6 +350,7 @@ try {
 	// First, determine if we're creating a new song or extending an existing song
 	// We checksum all the charts and check if any of them already exist
 	auto existing_song = optional<pair<usize, string>>{nullopt};
+	auto get_song_from_chart = lib::sqlite::prepare(db, GetSongFromChartQuery);
 	auto process_checksums = [&](lib::openssl::MD5 md5) {
 		lib::sqlite::query(get_song_from_chart, [&](isize id, string_view path) { existing_song.emplace(id, path); }, md5);
 		if (existing_song) return false;
@@ -399,6 +386,7 @@ try {
 		else
 			io::Song::zip_from_directory(path, out_path);
 
+		auto insert_song = lib::sqlite::prepare(db, InsertSongQuery);
 		auto const song_id = lib::sqlite::insert(insert_song, out_filename);
 		return {song_id, out_path.string()};
 	}
@@ -411,11 +399,15 @@ catch (...) {
 inline auto Library::import_chart(io::Song& song, usize song_id, string chart_path, span<byte const> chart_raw) -> coro::task<>
 {
 	if (stopping.load()) co_return;
+
+	auto chart_exists = lib::sqlite::prepare(db, ChartExistsQuery);
 	auto const md5 = lib::openssl::md5(chart_raw);
 	auto exists = false;
 	lib::sqlite::query(chart_exists, [&] { exists = true; }, md5);
 	if (exists) co_return;
 
+	auto insert_chart = lib::sqlite::prepare(db, InsertChartQuery);
+	auto insert_chart_density = lib::sqlite::prepare(db, InsertChartDensityQuery);
 	auto chart = builder.build(chart_raw, song);
     lib::sqlite::transaction(db, [&] {
         lib::sqlite::execute(insert_chart, chart->md5, song_id, chart_path, chart->metadata.title,
