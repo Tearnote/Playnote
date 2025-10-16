@@ -197,19 +197,19 @@ static void render_gameplay(gfx::Renderer::Queue& queue, GameState& state)
 	show_judgments(score.get_judge_totals());
 	lib::imgui::end_window();
 
-	lib::imgui::begin_window("earlylate", {860, 558}, 120, lib::imgui::WindowStyle::Static);
-	show_earlylate(score.get_judge_totals());
-	lib::imgui::end_window();
-
 	lib::imgui::begin_window("results", {988, 436}, 120, lib::imgui::WindowStyle::Static);
 	show_results(score);
+	lib::imgui::end_window();
+
+	lib::imgui::begin_window("earlylate", {1116, 436}, 120, lib::imgui::WindowStyle::Static);
+	show_earlylate(score.get_judge_totals());
 	lib::imgui::end_window();
 }
 
 static auto render_import_status(ImportStatus const& status) -> bool
 {
 	auto reset = false;
-	lib::imgui::begin_window("import_status", {860, 600}, 412, lib::imgui::WindowStyle::Static);
+	lib::imgui::begin_window("import_status", {860, 560}, 412, lib::imgui::WindowStyle::Static);
 	if (!status.complete)
 		lib::imgui::text("Import in progress...");
 	else
