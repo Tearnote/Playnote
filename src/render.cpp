@@ -35,9 +35,14 @@ enum class State {
 	Gameplay,
 };
 
+struct ImportStatus {
+	bool complete;
+};
+
 struct LibraryContext {
 	vector<bms::Library::ChartEntry> charts;
 	optional<future<vector<bms::Library::ChartEntry>>> chart_reload_result;
+	optional<ImportStatus> import_status;
 };
 
 struct GameplayContext {
@@ -166,9 +171,15 @@ static void render_library(gfx::Renderer::Queue&, GameState& state, bms::Library
 	}
 	lib::imgui::end_window();
 
-	if (library.is_importing()) {
+	if (context.import_status) {
 		lib::imgui::begin_window("import_status", {860, 600}, 412, lib::imgui::WindowStyle::Static);
-		lib::imgui::text("Import in progress...");
+		if (!context.import_status->complete)
+			lib::imgui::text("Import in progress...");
+		else
+			lib::imgui::text("Import complete!");
+
+		if (context.import_status->complete)
+			if (lib::imgui::button("Okay")) context.import_status = nullopt;
 		lib::imgui::end_window();
 	}
 }
@@ -267,6 +278,13 @@ static void run_render(Broadcaster& broadcaster, dev::Window& window)
 			if (context.chart_reload_result && context.chart_reload_result->wait_for(0s) == future_status::ready) {
 				context.charts = move(context.chart_reload_result->get());
 				context.chart_reload_result = nullopt;
+			}
+
+			if (library->is_importing()) {
+				if (!context.import_status) context.import_status = ImportStatus{};
+				context.import_status->complete = false;
+			} else {
+				if (context.import_status) context.import_status->complete = true;
 			}
 		}
 
