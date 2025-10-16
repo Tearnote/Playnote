@@ -36,8 +36,8 @@ public:
 	// All other methods are safe to call while an import is in progress.
 	void import(fs::path const&);
 
-	// Return a list of all available charts.
-	[[nodiscard]] auto list_charts() -> vector<ChartEntry>;
+	// Return a list of all available charts. Thread-safe.
+	[[nodiscard]] auto list_charts() -> coro::task<vector<ChartEntry>>;
 
 	// Returns true if the library has changed since the last call to list_charts().
 	[[nodiscard]] auto is_dirty() const -> bool { return dirty.load(); }
@@ -180,7 +180,6 @@ private:
 	lib::sqlite::Statement insert_song;
 	lib::sqlite::Statement delete_song;
 	lib::sqlite::Statement chart_exists;
-	lib::sqlite::Statement chart_listing;
 	lib::sqlite::Statement insert_chart;
 	lib::sqlite::Statement insert_chart_density;
 	lib::sqlite::Statement get_song_from_chart;
@@ -211,7 +210,6 @@ inline Library::Library(fs::path const& path):
 	insert_song = lib::sqlite::prepare(db, InsertSongQuery);
 	delete_song = lib::sqlite::prepare(db, DeleteSongQuery);
 	chart_exists = lib::sqlite::prepare(db, ChartExistsQuery);
-	chart_listing = lib::sqlite::prepare(db, ChartListingQuery);
 	insert_chart = lib::sqlite::prepare(db, InsertChartQuery);
 	insert_chart_density = lib::sqlite::prepare(db, InsertChartDensityQuery);
 	get_song_from_chart = lib::sqlite::prepare(db, GetSongFromChartQuery);
@@ -230,8 +228,9 @@ inline void Library::import(fs::path const& path)
 	import_tasks.start(import_many(path));
 }
 
-inline auto Library::list_charts() -> vector<ChartEntry>
+inline auto Library::list_charts() -> coro::task<vector<ChartEntry>>
 {
+	auto chart_listing = lib::sqlite::prepare(db, ChartListingQuery);
 	auto result = vector<ChartEntry>{};
 	lib::sqlite::query(chart_listing, [&](span<byte const> md5, string_view title, int playstyle, int difficulty) {
 		auto entry = ChartEntry{};
@@ -241,8 +240,8 @@ inline auto Library::list_charts() -> vector<ChartEntry>
 		entry.title = format("{} [{}] [{}]", title, difficulty_str, playstyle_str.substr(1));
 		result.emplace_back(move(entry));
 	});
-	return result;
 	dirty.store(false);
+	co_return result;
 }
 
 inline auto Library::load_chart(lib::openssl::MD5 md5) -> shared_ptr<Chart const>

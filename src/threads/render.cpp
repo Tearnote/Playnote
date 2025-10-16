@@ -39,6 +39,7 @@ enum class State {
 
 struct LibraryContext {
 	vector<bms::Library::ChartEntry> charts;
+	optional<future<vector<bms::Library::ChartEntry>>> chart_reload_result;
 };
 
 struct GameplayContext {
@@ -202,12 +203,15 @@ static void render_gameplay(gfx::Renderer::Queue& queue, GameState& state)
 static void run_render(Tools& tools, dev::Window& window)
 {
 	// Init subsystems
-	auto task_pool_stub = globals::task_pool.provide(coro::thread_pool::make_unique());
+	auto task_pool_stub = globals::task_pool.provide(coro::thread_pool::make_unique(coro::thread_pool::options{
+		.on_thread_start_functor =
+			[](auto worker_idx) { dev::name_current_thread(format("pool_worker{}", worker_idx)); },
+	}));
 	auto mixer_stub = globals::mixer.provide();
 	auto renderer = gfx::Renderer{window};
 
 	// Init game state
-	auto library = bms::Library{LibraryDBPath};
+	auto library = make_shared<bms::Library>(LibraryDBPath);
 	auto state = GameState{};
 	state.requested = State::Library;
 
@@ -220,16 +224,17 @@ static void run_render(Tools& tools, dev::Window& window)
 				});
 			}
 			state.context.emplace<LibraryContext>();
-			state.library_context().charts = library.list_charts(); //TODO convert to coro
+			state.library_context().chart_reload_result = launch_pollable(
+				[](shared_ptr<bms::Library> library) -> coro::task<vector<bms::Library::ChartEntry>> {
+					co_return co_await library->list_charts();
+				}(library));
 			state.current = State::Library;
 			state.requested = State::None;
 		}
 		if (state.requested == State::Gameplay) {
 			state.context.emplace<GameplayContext>();
 			auto& context = state.gameplay_context();
-			INFO("Loading chart");
-			context.chart = library.load_chart(state.requested_chart); //TODO convert to coro
-			INFO("Chart loaded");
+			context.chart = library->load_chart(state.requested_chart); //TODO convert to coro
 			context.cursor = make_shared<bms::Cursor>(context.chart, false);
 			context.score = bms::Score{*context.chart};
 			tools.broadcaster.shout(RegisterInputQueue{
@@ -245,9 +250,21 @@ static void run_render(Tools& tools, dev::Window& window)
 
 		// Handle chart library
 		tools.broadcaster.receive_all<FileDrop>([&](auto const& ev) {
-			for (auto const& path: ev.paths) library.import(path);
+			for (auto const& path: ev.paths) library->import(path);
 		});
-		if (state.current == State::Library && library.is_dirty()) state.library_context().charts = library.list_charts(); //TODO convert to coro
+		if (state.current == State::Library) {
+			auto& context = state.library_context();
+			if (library->is_dirty() && !context.chart_reload_result) {
+				state.library_context().chart_reload_result = launch_pollable(
+				[](shared_ptr<bms::Library> library) -> coro::task<vector<bms::Library::ChartEntry>> {
+					co_return co_await library->list_charts();
+				}(library));
+			}
+			if (context.chart_reload_result && context.chart_reload_result->wait_for(0s) == future_status::ready) {
+				context.charts = move(context.chart_reload_result->get());
+				context.chart_reload_result = nullopt;
+			}
+		}
 
 		// Render a frame
 		renderer.frame({"bg"_id, "frame"_id, "measure"_id, "judgment_line"_id, "notes"_id, "pressed"_id}, [&](gfx::Renderer::Queue& queue) {
