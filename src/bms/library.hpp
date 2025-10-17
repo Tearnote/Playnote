@@ -305,7 +305,7 @@ inline auto Library::load_chart(lib::openssl::MD5 md5) -> shared_ptr<Chart const
 
 	auto song = io::Song::from_zip(song_path);
 	auto chart_raw = song.load_file(chart_path);
-	return builder.build(chart_raw, song, *cache);
+	return sync_wait(builder.build(chart_raw, song, *cache));
 }
 
 inline auto Library::find_available_song_filename(string_view name) -> string
@@ -427,7 +427,7 @@ inline auto Library::import_chart(io::Song& song, usize song_id, string chart_pa
 
 	auto insert_chart = lib::sqlite::prepare(db, InsertChartQuery);
 	auto insert_chart_density = lib::sqlite::prepare(db, InsertChartDensityQuery);
-	auto chart = builder.build(chart_raw, song);
+	auto chart = co_await builder.build(chart_raw, song);
     lib::sqlite::transaction(db, [&] {
         lib::sqlite::execute(insert_chart, chart->md5, song_id, chart_path, chart->metadata.title,
 			chart->metadata.subtitle, chart->metadata.artist, chart->metadata.subartist,

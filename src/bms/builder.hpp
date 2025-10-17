@@ -21,7 +21,7 @@ class Builder {
 public:
 	Builder();
 
-	auto build(span<byte const> bms, io::Song&, optional<reference_wrapper<Metadata>> cache = nullopt) -> shared_ptr<Chart const>;
+	auto build(span<byte const> bms, io::Song&, optional<reference_wrapper<Metadata>> cache = nullopt) -> task<shared_ptr<Chart const>>;
 
 private:
 	// Text encodings expected to be found in BMS files.
@@ -301,7 +301,7 @@ inline Builder::Builder()
 	channel_handlers.emplace("A6" /* Play option         */, &Builder::handle_channel_ignored_log);
 }
 
-inline auto Builder::build(span<byte const> bms_raw, io::Song& song, optional<reference_wrapper<Metadata>> cache) -> shared_ptr<Chart const>
+inline auto Builder::build(span<byte const> bms_raw, io::Song& song, optional<reference_wrapper<Metadata>> cache) -> task<shared_ptr<Chart const>>
 {
 	auto chart = make_shared<Chart>();
 	chart->md5 = lib::openssl::md5(bms_raw);
@@ -368,7 +368,7 @@ inline auto Builder::build(span<byte const> bms_raw, io::Song& song, optional<re
 			co_return;
 		}(song, slot, parsed_slot.filename)));
 	}
-	sync_wait(when_all(move(tasks)));
+	co_await when_all(move(tasks));
 
 	// chart.media is now complete
 
@@ -613,7 +613,7 @@ inline auto Builder::build(span<byte const> bms_raw, io::Song& song, optional<re
 	// the BMS file. If a cache of these values was provided, we're good to go; otherwise, they
 	// will be calculated now.
 
-	if (cache) return chart; // We applied the cache already at the start
+	if (cache) co_return chart; // We applied the cache already at the start
 
 	// Yeah, the *playstyle* needs to be heuristically determined. Seriously. BMS is not a good format.
 	chart->metadata.playstyle = [&] {
@@ -816,7 +816,7 @@ inline auto Builder::build(span<byte const> bms_raw, io::Song& song, optional<re
 		};
 	}();
 
-	return chart;
+	co_return chart;
 }
 
 inline auto Builder::slot_hex_to_int(string_view hex) -> usize
