@@ -16,6 +16,7 @@ A cache of song and chart metadata. Handles import events.
 #include "lib/bits.hpp"
 #include "io/song.hpp"
 #include "bms/builder.hpp"
+#include "bms/chart.hpp"
 
 namespace playnote::bms {
 
@@ -45,19 +46,19 @@ public:
 	[[nodiscard]] auto is_dirty() const -> bool { return dirty.load(); }
 
 	// Return the number of songs that were imported so far.
-	[[nodiscard]] auto get_import_songs_processed() const -> size_t { return import_stats.songs_processed.load(); }
+	[[nodiscard]] auto get_import_songs_processed() const -> isize { return import_stats.songs_processed.load(); }
 
 	// Return the number of songs discovered during import so far.
-	[[nodiscard]] auto get_import_songs_total() const -> size_t { return import_stats.songs_total.load(); }
+	[[nodiscard]] auto get_import_songs_total() const -> isize { return import_stats.songs_total.load(); }
 
 	// Return the number of charts that were imported so far.
-	[[nodiscard]] auto get_import_charts_added() const -> size_t { return import_stats.charts_added.load(); }
+	[[nodiscard]] auto get_import_charts_added() const -> isize { return import_stats.charts_added.load(); }
 
 	// Return the number of charts that were skipped as duplicates.
-	[[nodiscard]] auto get_import_charts_skipped() const -> size_t { return import_stats.charts_skipped.load(); }
+	[[nodiscard]] auto get_import_charts_skipped() const -> isize { return import_stats.charts_skipped.load(); }
 
 	// Return the number of charts that failed to import.
-	[[nodiscard]] auto get_import_charts_failed() const -> size_t { return import_stats.charts_failed.load(); }
+	[[nodiscard]] auto get_import_charts_failed() const -> isize { return import_stats.charts_failed.load(); }
 
 	// Set all import statistics to zero. Can be used during an import, but the values might be inconsistent afterwards.
 	void reset_import_stats();
@@ -184,11 +185,11 @@ private:
 	)sql"sv;
 
 	struct ImportStats {
-		atomic<uint32> songs_processed = 0;
-		atomic<uint32> songs_total = 0;
-		atomic<uint32> charts_added = 0;
-		atomic<uint32> charts_skipped = 0;
-		atomic<uint32> charts_failed = 0;
+		atomic<isize> songs_processed = 0;
+		atomic<isize> songs_total = 0;
+		atomic<isize> charts_added = 0;
+		atomic<isize> charts_skipped = 0;
+		atomic<isize> charts_failed = 0;
 	};
 
 	lib::sqlite::DB db;
@@ -203,8 +204,8 @@ private:
 	[[nodiscard]] auto find_available_song_filename(string_view name) -> string;
 	auto import_many(fs::path) -> task<>;
 	auto import_one(fs::path) -> task<>;
-	auto import_song(fs::path const&) -> pair<usize, string>;
-	auto import_chart(io::Song& song, usize song_id, string chart_path, span<byte const>) -> task<>;
+	auto import_song(fs::path const&) -> pair<isize, string>;
+	auto import_chart(io::Song& song, isize song_id, string chart_path, span<byte const>) -> task<>;
 };
 
 inline Library::Library(fs::path const& path):
@@ -260,7 +261,7 @@ inline auto Library::load_chart(lib::openssl::MD5 md5) -> shared_ptr<Chart const
 	auto chart_path = string{};
 	auto select_song_chart = lib::sqlite::prepare(db, SelectSongChartQuery);
 	lib::sqlite::query(select_song_chart, [&](
-		string_view song_path_sv, string_view chart_path_sv, int64 date_imported, string_view title, string_view subtitle,
+		string_view song_path_sv, string_view chart_path_sv, [[maybe_unused]] int64 date_imported, string_view title, string_view subtitle,
 		string_view artist, string_view subartist, string_view genre, string_view url, string_view email,
 		int difficulty, int playstyle, int has_ln, int has_soflan, int note_count, int64 chart_duration,
 		int64 audio_duration, double loudness, double average_nps, double peak_nps, double min_bpm, double max_bpm,
@@ -334,10 +335,10 @@ inline auto Library::find_available_song_filename(string_view name) -> string
 
 inline auto Library::import_many(fs::path path) -> task<>
 {
-	if (is_regular_file(path)) {
+	if (fs::is_regular_file(path)) {
 		import_stats.songs_total.fetch_add(1);
 		co_await schedule_task(import_one(path));
-	} else if (is_directory(path)) {
+	} else if (fs::is_directory(path)) {
 		auto contents = vector<fs::directory_entry>{};
 		copy(fs::directory_iterator{path}, back_inserter(contents));
 		if (any_of(contents, [&](auto const& entry) { return fs::is_regular_file(entry) && io::Song::is_bms_ext(entry.path().extension().string()); })) {
@@ -365,7 +366,7 @@ inline auto Library::import_one(fs::path path) -> task<>
 	});
 	auto results = co_await when_all(move(chart_import_tasks));
 
-	auto imported_count = 0zu;
+	auto imported_count = 0z;
 	for (auto& result: results) {
 		try {
 			result.return_value();
@@ -382,13 +383,13 @@ inline auto Library::import_one(fs::path path) -> task<>
 	import_stats.songs_processed.fetch_add(1);
 }
 
-inline auto Library::import_song(fs::path const& path) -> pair<usize, string>
+inline auto Library::import_song(fs::path const& path) -> pair<isize, string>
 try {
 	auto const is_archive = fs::is_regular_file(path);
 
 	// First, determine if we're creating a new song or extending an existing song
 	// We checksum all the charts and check if any of them already exist
-	auto existing_song = optional<pair<usize, string>>{nullopt};
+	auto existing_song = optional<pair<isize, string>>{nullopt};
 	auto get_song_from_chart = lib::sqlite::prepare(db, GetSongFromChartQuery);
 	auto process_checksums = [&](lib::openssl::MD5 md5) {
 		lib::sqlite::query(get_song_from_chart, [&](isize id, string_view path) { existing_song.emplace(id, path); }, md5);
@@ -435,7 +436,7 @@ catch (...) {
 	throw;
 }
 
-inline auto Library::import_chart(io::Song& song, usize song_id, string chart_path, span<byte const> chart_raw) -> task<>
+inline auto Library::import_chart(io::Song& song, isize song_id, string chart_path, span<byte const> chart_raw) -> task<>
 {
 	if (stopping.load()) co_return;
 

@@ -136,7 +136,7 @@ inline void Playfield::enqueue_from_cursor(Renderer::Queue& queue, bms::Cursor c
 		for (auto [l_idx, lane]: field | views::enumerate) {
 			enqueue_lane(queue, {x_advance + field_x_advance, position.y()}, length, lane,
 				l_idx != 0, cursor.is_pressed(lane.type));
-			field_x_advance += lane_width(lane.visual) + (l_idx != field.size() - 1? LaneSeparatorWidth : 0);
+			field_x_advance += lane_width(lane.visual) + (l_idx != static_cast<isize>(field.size()) - 1? LaneSeparatorWidth : 0);
 		}
 		enqueue_measure_lines(queue, measure_lines, {x_advance, position.y()}, {field_x_advance, length});
 		enqueue_field_border(queue, {x_advance, position.y()}, {field_x_advance, length});

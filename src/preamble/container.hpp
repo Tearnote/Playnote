@@ -8,10 +8,12 @@ Imports and helpers for container types.
 
 #pragma once
 #include <string_view>
+#include <functional>
 #include <iterator>
 #include <string>
 #include <array>
 #include <span>
+#include <boost/container_hash/hash.hpp>
 #include <boost/unordered/unordered_flat_map.hpp>
 #include <boost/unordered/unordered_flat_set.hpp>
 #include <boost/container/pmr/monotonic_buffer_resource.hpp>
@@ -53,13 +55,13 @@ using mpmc_queue = moodycamel::ConcurrentQueue<T>;
 // https://www.cppstories.com/2021/heterogeneous-access-cpp20/
 struct string_hash {
 	using is_transparent = void;
-	[[nodiscard]] usize operator()(char const* text) const {
+	[[nodiscard]] auto operator()(char const* text) const -> usize {
 		return boost::hash<std::string_view>{}(text);
 	}
-	[[nodiscard]] usize operator()(std::string_view text) const {
+	[[nodiscard]] auto operator()(std::string_view text) const -> usize {
 		return boost::hash<std::string_view>{}(text);
 	}
-	[[nodiscard]] usize operator()(std::string const& text) const {
+	[[nodiscard]] auto operator()(std::string const& text) const -> usize {
 		return boost::hash<std::string>{}(text);
 	}
 };

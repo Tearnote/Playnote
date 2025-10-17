@@ -9,6 +9,7 @@ Implementation file for lib/sqlite.hpp.
 #include "lib/sqlite.hpp"
 
 #include <sqlite3.h>
+#include "preamble.hpp"
 #include "utils/assert.hpp"
 
 namespace playnote::lib::sqlite {

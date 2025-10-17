@@ -49,6 +49,7 @@ using std::make_unique;
 using std::shared_ptr;
 using std::make_shared;
 using std::weak_ptr;
+using std::static_pointer_cast;
 using boost::scope::unique_resource;
 using std::type_index;
 using std::decay_t;

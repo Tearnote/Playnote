@@ -8,6 +8,7 @@ Raw file I/O utilities.
 
 #pragma once
 #include <fstream>
+#include <ios>
 #include "preamble.hpp"
 #include "lib/mio.hpp"
 

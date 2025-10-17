@@ -8,16 +8,16 @@ of the project.
 */
 
 #pragma once
-#include "preamble/algorithm.hpp"
-#include "preamble/container.hpp"
-#include "preamble/concepts.hpp"
-#include "preamble/math_ext.hpp"
-#include "preamble/utility.hpp"
-#include "preamble/string.hpp"
-#include "preamble/except.hpp"
-#include "preamble/types.hpp"
-#include "preamble/coro.hpp"
-#include "preamble/math.hpp"
-#include "preamble/time.hpp"
-#include "preamble/id.hpp"
-#include "preamble/os.hpp"
+#include "preamble/algorithm.hpp" // IWYU pragma: export
+#include "preamble/container.hpp" // IWYU pragma: export
+#include "preamble/concepts.hpp" // IWYU pragma: export
+#include "preamble/math_ext.hpp" // IWYU pragma: export
+#include "preamble/utility.hpp" // IWYU pragma: export
+#include "preamble/string.hpp" // IWYU pragma: export
+#include "preamble/except.hpp" // IWYU pragma: export
+#include "preamble/types.hpp" // IWYU pragma: export
+#include "preamble/coro.hpp" // IWYU pragma: export
+#include "preamble/math.hpp" // IWYU pragma: export
+#include "preamble/time.hpp" // IWYU pragma: export
+#include "preamble/id.hpp" // IWYU pragma: export
+#include "preamble/os.hpp" // IWYU pragma: export

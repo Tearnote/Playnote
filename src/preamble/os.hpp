@@ -8,8 +8,10 @@ Imports of OS-specific functionality.
 
 #pragma once
 #include <filesystem>
+#include <atomic>
 #include <future>
 #include <thread>
+#include <mutex>
 #include <latch>
 
 namespace playnote {

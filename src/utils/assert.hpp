@@ -7,8 +7,7 @@ Wrapper for assert macros of libassert. Registers the assert handler, ensures co
 */
 
 #pragma once
-#include <stdexcept>
-#include "libassert/assert.hpp"
+#include "libassert/assert.hpp" // IWYU pragma: export
 
 // ASSERT() - checked in both debug and release
 // ASSUME() - checked in debug only

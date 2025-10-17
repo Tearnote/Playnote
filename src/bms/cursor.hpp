@@ -9,6 +9,8 @@ and note hit events.
 
 #pragma once
 #include "preamble.hpp"
+#include "utils/assert.hpp"
+#include "dev/audio.hpp"
 #include "audio/mixer.hpp"
 #include "bms/chart.hpp"
 
@@ -42,7 +44,7 @@ public:
 
 	// An audio playback trigger event.
 	struct SoundEvent {
-		usize channel; // BMS channel index; the event should interrupt playback of any samples on the same channel
+		isize channel; // BMS channel index; the event should interrupt playback of any samples on the same channel
 		span<dev::Sample const> audio;
 	};
 
@@ -53,7 +55,7 @@ public:
 	[[nodiscard]] auto get_chart() const -> Chart const& { return *chart; }
 
 	// Return the current position of the cursor in samples.
-	[[nodiscard]] auto get_progress() const -> usize { return sample_progress; }
+	[[nodiscard]] auto get_progress() const -> isize { return sample_progress; }
 
 	// Return the current position of the cursor in nanoseconds.
 	[[nodiscard]] auto get_progress_ns() const -> nanoseconds { return globals::mixer->get_audio().samples_to_ns(get_progress()); }
@@ -73,7 +75,7 @@ public:
 	auto advance_one_sample(Func&& func, span<LaneInput const> inputs = {}) -> bool;
 
 	// Progress by the given number of samples, without generating any audio.
-	void fast_forward(usize samples);
+	void fast_forward(isize samples);
 
 	// Call the provided function for every note less than max_units away from current position.
 	template<callable<void(Note const&, Lane::Type, float)> Func>
@@ -84,15 +86,15 @@ public:
 
 private:
 	struct LaneProgress {
-		usize next_note; // Index of the earliest note that hasn't been judged yet
-		usize active_slot; // Index of the WAV slot that will be triggered on player input
+		isize next_note; // Index of the earliest note that hasn't been judged yet
+		isize active_slot; // Index of the WAV slot that will be triggered on player input
 		bool pressed; // Is the player currently pushing the lane's button?
 		optional<nanoseconds> ln_timing; // If an LN is being held, the value is the timing of the LN's start's hit
 	};
 
 	shared_ptr<Chart const> chart;
 	bool autoplay;
-	usize sample_progress = 0;
+	isize sample_progress = 0;
 	array<LaneProgress, enum_count<Lane::Type>()> lane_progress = {};
 	spsc_queue<JudgmentEvent> judgment_events;
 
@@ -137,7 +139,7 @@ auto Cursor::advance_one_sample(Func&& func, span<LaneInput const> inputs) -> bo
 	{
 		// Missed notes
 		{
-			if (progress.next_note >= lane.notes.size()) continue;
+			if (progress.next_note >= static_cast<isize>(lane.notes.size())) continue;
 			Note const& note = lane.notes[progress.next_note];
 			if (lane.playable && get_progress_ns() - note.timestamp > HitWindow && !progress.ln_timing)
 				trigger_miss(type);
@@ -145,7 +147,7 @@ auto Cursor::advance_one_sample(Func&& func, span<LaneInput const> inputs) -> bo
 
 		// Autoplay and unplayable inputs
 		if (autoplay || !lane.playable) {
-			if (progress.next_note >= lane.notes.size()) continue;
+			if (progress.next_note >= static_cast<isize>(lane.notes.size())) continue;
 			Note const& note = lane.notes[progress.next_note];
 
 			// The note just started
@@ -161,7 +163,7 @@ auto Cursor::advance_one_sample(Func&& func, span<LaneInput const> inputs) -> bo
 
 		// Auto-completed LNs
 		{
-			if (progress.next_note >= lane.notes.size()) continue;
+			if (progress.next_note >= static_cast<isize>(lane.notes.size())) continue;
 			Note const& note = lane.notes[progress.next_note];
 			if (lane.playable && note.type_is<Note::LN>() && note.timestamp + note.params<Note::LN>().length <= get_progress_ns())
 				trigger_ln_release(type);
@@ -182,7 +184,7 @@ void Cursor::upcoming_notes(float max_units, Func&& func, nanoseconds offset, bo
 	auto const beat_duration = duration<double>{60.0 / chart->metadata.bpm_range.main};
 	auto const bpm_ratio = bpm_section.bpm / chart->timeline.bpm_sections[0].bpm;
 	auto const current_y = bpm_section.y_pos + section_progress / beat_duration * bpm_ratio * bpm_section.scroll_speed;
-	for (auto [idx, lane, progress]: views::zip(views::iota(0zu), chart->timeline.lanes, lane_progress)) {
+	for (auto [idx, lane, progress]: views::zip(views::iota(0z), chart->timeline.lanes, lane_progress)) {
 		if (!lane.visible) continue;
 		for (auto const& note: span{lane.notes.begin() + progress.next_note, lane.notes.size() - progress.next_note}) {
 			auto const distance = note.y_pos - current_y;
@@ -192,9 +194,9 @@ void Cursor::upcoming_notes(float max_units, Func&& func, nanoseconds offset, bo
 	}
 }
 
-inline void Cursor::fast_forward(usize samples)
+inline void Cursor::fast_forward(isize samples)
 {
-	for (auto const _: views::iota(0zu, samples)) advance_one_sample([](SoundEvent){});
+	for (auto const _: views::iota(0z, samples)) advance_one_sample([](SoundEvent){});
 }
 
 inline auto Cursor::operator=(Cursor const& other) -> Cursor&
@@ -215,7 +217,7 @@ void Cursor::trigger_input(LaneInput input, Func&& func)
 	if (progress.pressed == input.state) return;
 
 	// Judge input against current/next note
-	if (progress.next_note < lane.notes.size()) {
+	if (progress.next_note < static_cast<isize>(lane.notes.size())) {
 		auto const& note = lane.notes[progress.next_note];
 
 		if (input.state) {
@@ -229,7 +231,7 @@ void Cursor::trigger_input(LaneInput input, Func&& func)
 						.timing = get_progress_ns() - note.timestamp,
 					});
 				}
-				if (lane.audible && note.wav_slot != -1u) {
+				if (lane.audible && note.wav_slot != -1) {
 					func(SoundEvent{
 						.channel = note.wav_slot,
 						.audio = chart->media.wav_slots[note.wav_slot],
@@ -243,7 +245,7 @@ void Cursor::trigger_input(LaneInput input, Func&& func)
 					progress.ln_timing = get_progress_ns() - note.timestamp;
 			} else {
 				// Press is too early to affect the note
-				if (lane.audible && note.wav_slot != -1u) {
+				if (lane.audible && note.wav_slot != -1) {
 					func(SoundEvent{
 						.channel = progress.active_slot,
 						.audio = chart->media.wav_slots[progress.active_slot],
@@ -258,7 +260,7 @@ void Cursor::trigger_input(LaneInput input, Func&& func)
 	} else {
 		if (input.state) {
 			// Chart over, player is just pressing things for fun
-			if (lane.audible && progress.active_slot != -1u) {
+			if (lane.audible && progress.active_slot != -1) {
 				func(SoundEvent{
 					.channel = progress.active_slot,
 					.audio = chart->media.wav_slots[progress.active_slot],

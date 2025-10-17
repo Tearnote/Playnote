@@ -8,12 +8,26 @@ Implementation file for lib/pipewire.hpp.
 
 #include "lib/pipewire.hpp"
 
+#include <cstdint>
 #include <spa/param/audio/format-utils.h>
+#include <spa/param/audio/raw-utils.h>
+#include <spa/param/audio/format.h>
+#include <spa/param/audio/raw.h>
 #include <spa/param/latency-utils.h>
+#include <spa/param/format-utils.h>
+#include <spa/param/format.h>
+#include <spa/param/param.h>
+#include <spa/pod/builder.h>
+#include <spa/pod/pod.h>
+#include <pipewire/thread-loop.h>
+#include <pipewire/properties.h>
 #include <pipewire/pipewire.h>
+#include <pipewire/stream.h>
+#include <pipewire/core.h>
+#include <pipewire/keys.h>
+#include <pipewire/port.h>
 #include "preamble.hpp"
-#include "utils/assert.hpp"
-#include "utils/logger.hpp"
+#include "lib/audio_common.hpp"
 
 namespace playnote::lib::pw {
 

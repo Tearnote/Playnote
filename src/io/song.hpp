@@ -15,6 +15,7 @@ An abstraction for an imported BMS song. Wraps a zip archive with accelerated fi
 #include "lib/ffmpeg.hpp"
 #include "dev/audio.hpp"
 #include "io/file.hpp"
+#include "audio/mixer.hpp"
 
 namespace playnote::io {
 
@@ -343,7 +344,7 @@ inline Song::Song(ReadFile&& file, lib::sqlite::DB&& db):
 inline auto Song::find_prefix(span<byte const> const& archive_data) -> fs::path
 {
 	auto shortest_prefix = fs::path{};
-	auto shortest_prefix_parts = -1zu;
+	auto shortest_prefix_parts = -1z;
 	auto archive = lib::archive::open_read(archive_data);
 	lib::archive::for_each_entry(archive, [&](auto pathname) {
 		auto const path = fs::path{pathname};
@@ -357,7 +358,7 @@ inline auto Song::find_prefix(span<byte const> const& archive_data) -> fs::path
 		return true;
 	});
 
-	if (shortest_prefix_parts == -1zu)
+	if (shortest_prefix_parts == -1z)
 		throw runtime_error_fmt("No BMS files found in archive");
 	return shortest_prefix;
 }

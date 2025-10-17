@@ -8,9 +8,20 @@ Implementation file for lib/vuk.hpp.
 
 #include "lib/vuk.hpp"
 
+#include <vector>
+#include <memory>
+#include "vuk/runtime/vk/VkSwapchain.hpp"
+#include "vuk/runtime/vk/Allocator.hpp"
+#include "vuk/runtime/vk/VkRuntime.hpp"
+#include "vuk/runtime/vk/Pipeline.hpp"
+#include "vuk/runtime/vk/Image.hpp"
+#include "vuk/runtime/CommandBuffer.hpp"
 #include "vuk/runtime/ThisThreadExecutor.hpp"
+#include "vuk/Executor.hpp"
+#include "vuk/Types.hpp"
 #include "VkBootstrap.h"
 #include "preamble.hpp"
+#include "lib/vulkan.hpp"
 
 namespace playnote::lib::vuk {
 

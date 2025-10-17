@@ -17,6 +17,7 @@ Implementation file for lib/wasapi.hpp.
 #include <avrt.h>
 #include "preamble.hpp"
 #include "utils/logger.hpp"
+#include "lib/audio_common.hpp"
 
 namespace playnote::lib::wasapi {
 

@@ -48,8 +48,8 @@ public:
 	};
 
 	struct JudgeTotals {
-		array<usize, enum_count<JudgmentType>()> types;
-		array<usize, enum_count<Timing>()> timings;
+		array<isize, enum_count<JudgmentType>()> types;
+		array<isize, enum_count<Timing>()> timings;
 	};
 
 	// Create a running score for the given chart. The reference is not stored.
@@ -65,28 +65,28 @@ public:
 	}
 
 	// Return the number of playable notes that were already judged.
-	[[nodiscard]] auto get_judged_notes() const -> usize { return notes_judged; }
+	[[nodiscard]] auto get_judged_notes() const -> isize { return notes_judged; }
 
 	// Return the note judgments.
 	[[nodiscard]] auto get_judge_totals() const -> JudgeTotals { return judge_totals; }
 
 	// Return current combo.
-	[[nodiscard]] auto get_combo() const -> usize { return combo; }
+	[[nodiscard]] auto get_combo() const -> isize { return combo; }
 
 	// Return current score.
-	[[nodiscard]] auto get_score() const -> usize { return score; }
+	[[nodiscard]] auto get_score() const -> isize { return score; }
 
 	// Return accuracy rank.
 	[[nodiscard]] auto get_rank() const -> Rank;
 
 private:
-	nanoseconds chart_duration;
-	usize notes_judged = 0;
-	usize note_count;
+	[[maybe_unused]] nanoseconds chart_duration;
+	isize notes_judged = 0;
+	[[maybe_unused]] isize note_count;
 	JudgeTotals judge_totals = {};
 	array<optional<Judgment>, 2> latest_judgement = {};
-	usize combo = 0;
-	usize score = 0;
+	isize combo = 0;
+	isize score = 0;
 };
 
 inline Score::Score(Chart const& chart):

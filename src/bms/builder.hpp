@@ -8,12 +8,17 @@ Parsing of BMS chart data into a Chart object.
 
 #pragma once
 #include "preamble.hpp"
+#include "utils/task_pool.hpp"
+#include "utils/assert.hpp"
+#include "utils/logger.hpp"
 #include "lib/ebur128.hpp"
+#include "lib/openssl.hpp"
 #include "lib/icu.hpp"
+#include "dev/audio.hpp"
 #include "io/song.hpp"
 #include "audio/renderer.hpp"
+#include "audio/mixer.hpp"
 #include "bms/chart.hpp"
-#include "utils/task_pool.hpp"
 
 namespace playnote::bms {
 
@@ -36,7 +41,7 @@ private:
 
 	// Parsed BMS header-type command.
 	struct HeaderCommand {
-		usize line_num;
+		isize line_num;
 		string_view header;
 		string_view slot;
 		string_view value;
@@ -44,7 +49,7 @@ private:
 
 	// Parsed BMS channel-type command.
 	struct ChannelCommand {
-		usize line_num;
+		isize line_num;
 		NotePosition position;
 		string_view channel;
 		string_view value;
@@ -64,7 +69,7 @@ private:
 		Type type;
 		Lane::Type lane;
 		T position;
-		usize wav_slot_idx;
+		isize wav_slot_idx;
 
 		template<variant_alternative<Type> U>
 		[[nodiscard]] auto type_is() const -> bool { return holds_alternative<U>(type); }
@@ -91,12 +96,12 @@ private:
 		using Mapping = unordered_map<string, T, string_hash>;
 
 		struct WavSlot {
-			usize idx = -1u; // 0-based increasing index
+			isize idx = -1; // 0-based increasing index
 			string filename; // without extension
 			bool used = false; // true if any note uses the slot; if false, audio file load can be skipped
 		};
 		struct BPMSlot {
-			usize idx = -1u;
+			isize idx = -1;
 			float bpm;
 		};
 
@@ -113,11 +118,11 @@ private:
 	using ChannelHandlerFunc = void(Builder::*)(ChannelCommand, Chart&, State&);
 	unordered_map<string, ChannelHandlerFunc, string_hash> channel_handlers;
 
-	[[nodiscard]] static auto slot_hex_to_int(string_view hex) -> usize;
-	static void extend_measure_lengths(vector<double>&, usize max_measure);
+	[[nodiscard]] static auto slot_hex_to_int(string_view hex) -> isize;
+	static void extend_measure_lengths(vector<double>&, isize max_measure);
 
-	void parse_header(string_view line, usize line_num, Chart&, State&);
-	void parse_channel(string_view line, usize line_num, Chart&, State&);
+	void parse_header(string_view line, isize line_num, Chart&, State&);
+	void parse_channel(string_view line, isize line_num, Chart&, State&);
 
 	// Generic handlers
 	void handle_header_ignored(HeaderCommand, Chart&, State&) {}
@@ -243,21 +248,21 @@ inline Builder::Builder()
 	channel_handlers.emplace("02" /* Measure length      */, &Builder::handle_channel_measure_length);
 	channel_handlers.emplace("03" /* BPM                 */, &Builder::handle_channel_bpm);
 	channel_handlers.emplace("08" /* BPMxx               */, &Builder::handle_channel_bpmxx);
-	for (auto const i: views::iota(1zu, 10zu)) // P1 notes
+	for (auto const i: views::iota(1z, 10z)) // P1 notes
 		channel_handlers.emplace(string{"1"} + static_cast<char>('0' + i), &Builder::handle_channel_note);
-	for (auto const i: views::iota(0zu, 26zu)) // ^
+	for (auto const i: views::iota(0z, 26z)) // ^
 		channel_handlers.emplace(string{"1"} + static_cast<char>('A' + i), &Builder::handle_channel_note);
-	for (auto const i: views::iota(1zu, 10zu)) // P2 notes
+	for (auto const i: views::iota(1z, 10z)) // P2 notes
 		channel_handlers.emplace(string{"2"} + static_cast<char>('0' + i), &Builder::handle_channel_note);
-	for (auto const i: views::iota(0zu, 26zu)) // ^
+	for (auto const i: views::iota(0z, 26z)) // ^
 		channel_handlers.emplace(string{"2"} + static_cast<char>('A' + i), &Builder::handle_channel_note);
-	for (auto const i: views::iota(1zu, 10zu)) // P1 long notes
+	for (auto const i: views::iota(1z, 10z)) // P1 long notes
 		channel_handlers.emplace(string{"5"} + static_cast<char>('0' + i), &Builder::handle_channel_ln);
-	for (auto const i: views::iota(0zu, 26zu)) // ^
+	for (auto const i: views::iota(0z, 26z)) // ^
 		channel_handlers.emplace(string{"5"} + static_cast<char>('A' + i), &Builder::handle_channel_ln);
-	for (auto const i: views::iota(1zu, 10zu)) // P2 long notes
+	for (auto const i: views::iota(1z, 10z)) // P2 long notes
 		channel_handlers.emplace(string{"6"} + static_cast<char>('0' + i), &Builder::handle_channel_ln);
-	for (auto const i: views::iota(0zu, 26zu)) // ^
+	for (auto const i: views::iota(0z, 26z)) // ^
 		channel_handlers.emplace(string{"6"} + static_cast<char>('A' + i), &Builder::handle_channel_ln);
 
 	// Unimplemented channels
@@ -275,13 +280,13 @@ inline Builder::Builder()
 	channel_handlers.emplace("A3" /* BGA layer 2 overlay */, &Builder::handle_channel_unimplemented);
 	channel_handlers.emplace("A4" /* BGA poor overlay    */, &Builder::handle_channel_unimplemented);
 	channel_handlers.emplace("A5" /* BGA key-bound       */, &Builder::handle_channel_unimplemented);
-	for (auto const i: views::iota(1zu, 10zu))// P1 notes (adlib)
+	for (auto const i: views::iota(1z, 10z))// P1 notes (adlib)
 		channel_handlers.emplace(string{"3"} + static_cast<char>('0' + i), &Builder::handle_channel_unimplemented);
-	for (auto const i: views::iota(0zu, 26zu)) // ^
+	for (auto const i: views::iota(0z, 26z)) // ^
 		channel_handlers.emplace(string{"3"} + static_cast<char>('A' + i), &Builder::handle_channel_unimplemented);
-	for (auto const i: views::iota(1zu, 10zu)) // P2 notes (adlib)
+	for (auto const i: views::iota(1z, 10z)) // P2 notes (adlib)
 		channel_handlers.emplace(string{"4"} + static_cast<char>('0' + i), &Builder::handle_channel_unimplemented);
-	for (auto const i: views::iota(0zu, 26zu)) // ^
+	for (auto const i: views::iota(0z, 26z)) // ^
 		channel_handlers.emplace(string{"4"} + static_cast<char>('A' + i), &Builder::handle_channel_unimplemented);
 
 	// Critical unimplemented channels
@@ -289,9 +294,9 @@ inline Builder::Builder()
 	channel_handlers.emplace("09" /* Stop                */, &Builder::handle_channel_unimplemented_critical);
 	channel_handlers.emplace("97" /* BGM volume          */, &Builder::handle_channel_unimplemented_critical);
 	channel_handlers.emplace("98" /* Key volume          */, &Builder::handle_channel_unimplemented_critical);
-	for (auto const i: views::iota(1zu, 10zu)) // P1 mines
+	for (auto const i: views::iota(1z, 10z)) // P1 mines
 		channel_handlers.emplace(string{"D"} + static_cast<char>('0' + i), &Builder::handle_channel_unimplemented_critical);
-	for (auto const i: views::iota(1zu, 10zu)) // P2 mines
+	for (auto const i: views::iota(1z, 10z)) // P2 mines
 		channel_handlers.emplace(string{"E"} + static_cast<char>('0' + i), &Builder::handle_channel_unimplemented_critical);
 
 	// Unsupported channels
@@ -363,8 +368,8 @@ inline auto Builder::build(span<byte const> bms_raw, io::Song& song, optional<re
 	for (auto const& parsed_slot: parse_state.wav | views::values) {
 		if (!parsed_slot.used) continue;
 		auto& slot = chart->media.wav_slots[parsed_slot.idx];
-		tasks.emplace_back(schedule_task([](io::Song& song, vector<lib::Sample>& slot, string filename) -> task<> {
-			slot = move(song.load_audio_file(filename));
+		tasks.emplace_back(schedule_task([](io::Song& song, vector<dev::Sample>& slot, string filename) -> task<> {
+			slot = song.load_audio_file(filename);
 			co_return;
 		}(song, slot, parsed_slot.filename)));
 	}
@@ -658,7 +663,7 @@ inline auto Builder::build(span<byte const> bms_raw, io::Song& song, optional<re
 
 	// Offline audio render pass, handling all related statistics in one sweep
 	auto [loudness, audio_duration] = [&] {
-		static constexpr auto BufferSize = 4096zu / sizeof(dev::Sample); // One memory page
+		static constexpr auto BufferSize = 4096z / static_cast<isize>(sizeof(dev::Sample)); // One memory page
 		auto renderer = audio::Renderer{chart};
 		auto ctx = lib::ebur128::init(globals::mixer->get_audio().get_sampling_rate());
 		auto buffer = vector<dev::Sample>{};
@@ -666,7 +671,7 @@ inline auto Builder::build(span<byte const> bms_raw, io::Song& song, optional<re
 
 		auto processing = true;
 		while (processing) {
-			for (auto _: views::iota(0zu, BufferSize)) {
+			for (auto _: views::iota(0z, BufferSize)) {
 				auto const sample = renderer.advance_one_sample();
 				if (sample) {
 					buffer.emplace_back(*sample);
@@ -702,7 +707,7 @@ inline auto Builder::build(span<byte const> bms_raw, io::Song& song, optional<re
 		auto notes_keys = vector<Note>{};
 		auto notes_scr = vector<Note>{};
 		auto const note_total = fold_left(chart->timeline.lanes, 0u, [](auto sum, auto const& lane) {
-			return sum + lane.playable? lane.notes.size() : 0;
+			return (sum + lane.playable)? lane.notes.size() : 0;
 		});
 		notes_keys.reserve(note_total);
 		notes_scr.reserve(note_total);
@@ -819,9 +824,9 @@ inline auto Builder::build(span<byte const> bms_raw, io::Song& song, optional<re
 	co_return chart;
 }
 
-inline auto Builder::slot_hex_to_int(string_view hex) -> usize
+inline auto Builder::slot_hex_to_int(string_view hex) -> isize
 {
-	auto result = 0zu;
+	auto result = 0z;
 	for (auto const c: hex) {
 		if (c >= '0' && c <= '9')
 			result = result * 16 + (c - '0');
@@ -831,14 +836,14 @@ inline auto Builder::slot_hex_to_int(string_view hex) -> usize
 	return result;
 }
 
-inline void Builder::extend_measure_lengths(vector<double>& lengths, usize max_measure)
+inline void Builder::extend_measure_lengths(vector<double>& lengths, isize max_measure)
 {
 	auto const min_length = max_measure + 1;
-	if (lengths.size() >= min_length) return;
+	if (static_cast<isize>(lengths.size()) >= min_length) return;
 	lengths.resize(min_length, 1.0);
 }
 
-inline void Builder::parse_header(string_view line, usize line_num, Chart& chart, State& state)
+inline void Builder::parse_header(string_view line, isize line_num, Chart& chart, State& state)
 {
 	// Extract components
 	auto header = string{substr_until(line, [](auto c) { return c == ' ' || c == '\t'; })};
@@ -865,7 +870,7 @@ inline void Builder::parse_header(string_view line, usize line_num, Chart& chart
 	(this->*header_handlers.at(header))({line_num, header, slot, value}, chart, state);
 }
 
-inline void Builder::parse_channel(string_view line, usize line_num, Chart& chart, State& state)
+inline void Builder::parse_channel(string_view line, isize line_num, Chart& chart, State& state)
 {
 	if (line.size() < 3) return; // Not enough space for even the measure
 	auto const measure = lexical_cast<int32>(line.substr(0, 3)); // This won't throw (first character is a digit)
@@ -907,7 +912,7 @@ inline void Builder::parse_channel(string_view line, usize line_num, Chart& char
 		}
 
 		// Advance 2 chars at a time
-		auto numerator = 0zu;
+		auto numerator = 0z;
 		auto const denominator = value.size() / 2;
 		for (auto const note: value | views::chunk(2) | views::to_sv) {
 			(this->*channel_handlers.at(channel))({line_num, measure + NotePosition{numerator, denominator}, channel, note}, chart, state);
@@ -1063,7 +1068,7 @@ inline void Builder::handle_header_wav(HeaderCommand cmd, Chart&, State& state)
 	}
 
 	auto& wav_slot = state.wav[cmd.slot];
-	if (wav_slot.idx == -1u) wav_slot.idx = state.wav.size() - 1;
+	if (wav_slot.idx == -1) wav_slot.idx = state.wav.size() - 1;
 	wav_slot.filename = cmd.value;
 }
 
@@ -1079,7 +1084,7 @@ inline void Builder::handle_header_bpmxx(HeaderCommand cmd, Chart&, State& state
 	}
 
 	auto& bpm_slot = state.bpm[cmd.slot];
-	if (bpm_slot.idx == -1u) bpm_slot.idx = state.bpm.size() - 1;
+	if (bpm_slot.idx == -1) bpm_slot.idx = state.bpm.size() - 1;
 	bpm_slot.bpm = lexical_cast<float>(cmd.value);
 }
 
@@ -1123,7 +1128,7 @@ inline void Builder::handle_channel_note(ChannelCommand cmd, Chart&, State& stat
 		throw runtime_error_fmt("L{}: Unknown note channel: {}", cmd.line_num, cmd.channel);
 	}();
 	auto const slot_iter = state.wav.find(cmd.value);
-	auto slot_idx = -1u;
+	auto slot_idx = -1;
 	if (slot_iter != state.wav.end()) { // Slot doesn't exist; quiet note
 		auto& slot = slot_iter->second;
 		slot_idx = slot.idx;
@@ -1161,7 +1166,7 @@ inline void Builder::handle_channel_ln(ChannelCommand cmd, Chart&, State& state)
 		throw runtime_error_fmt("L{}: Unknown LN note channel: {}", cmd.line_num, cmd.channel);
 	}();
 	auto const slot_iter = state.wav.find(cmd.value);
-	auto slot_idx = -1u;
+	auto slot_idx = -1;
 	if (slot_iter != state.wav.end()) { // Slot doesn't exist; quiet note
 		auto& slot = slot_iter->second;
 		slot_idx = slot.idx;

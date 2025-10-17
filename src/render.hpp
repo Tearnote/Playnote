@@ -7,7 +7,6 @@ A thread that manages game state and presents it into the window.
 */
 
 #pragma once
-#include "preamble.hpp"
 #include "dev/window.hpp"
 #include "utils/broadcaster.hpp"
 

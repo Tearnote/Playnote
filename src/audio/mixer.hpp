@@ -9,6 +9,7 @@ Wrapper over an Audio instance that provides simultaneous playback of multiple s
 #pragma once
 
 #include "preamble.hpp"
+#include "utils/service.hpp"
 #include "lib/signalsmith.hpp"
 #include "dev/audio.hpp"
 

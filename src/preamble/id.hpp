@@ -41,6 +41,6 @@ private:
 }
 
 // boost::hash implementation for id.
-[[nodiscard]] constexpr auto hash_value(id const& v) -> usize { return +v; }
+[[nodiscard]] constexpr auto hash_value(id const& v) -> isize { return +v; }
 
 }

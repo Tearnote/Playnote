@@ -7,9 +7,9 @@ Imports for string and text IO.
 */
 
 #pragma once
-#include <string_view>
+#include <string_view> // IWYU pragma: export
 #include <filesystem>
-#include <string>
+#include <string> // IWYU pragma: export
 #include <boost/algorithm/string/case_conv.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/algorithm/string/replace.hpp>
@@ -18,8 +18,10 @@ Imports for string and text IO.
 #include <boost/rational.hpp>
 #include "quill/bundled/fmt/format.h"
 #include "quill/DeferredFormatCodec.h"
+#include "preamble/algorithm.hpp"
 #include "preamble/math_ext.hpp"
 #include "preamble/concepts.hpp"
+#include "preamble/types.hpp"
 #include "preamble/math.hpp"
 #include "preamble/os.hpp"
 
@@ -73,7 +75,7 @@ struct fmtquill::formatter<std::filesystem::directory_entry>: formatter<std::str
 template<>
 struct quill::Codec<std::filesystem::directory_entry>: DeferredFormatCodec<std::filesystem::directory_entry> {};
 
-template<playnote::usize Dim, typename T>
+template<playnote::isize Dim, typename T>
 struct fmtquill::formatter<playnote::vec<Dim, T>> {
 	template<typename Ctx>
 	constexpr auto parse(Ctx& ctx) { return formatter<T>{}.parse(ctx); }
@@ -96,7 +98,7 @@ struct fmtquill::formatter<playnote::vec<Dim, T>> {
 		return format_to(ctx.out(), ")");
 	}
 };
-template<playnote::usize Dim, typename T>
+template<playnote::isize Dim, typename T>
 struct quill::Codec<playnote::vec<Dim, T>>: DeferredFormatCodec<playnote::vec<Dim, T>> {};
 
 template<typename T>

@@ -26,9 +26,9 @@ public:
 
 private:
 	struct ActiveSound {
-		usize channel;
+		isize channel;
 		span<dev::Sample const> audio;
-		usize position;
+		isize position;
 	};
 	shared_ptr<bms::Chart const> chart;
 	shared_ptr<bms::Cursor> cursor;
@@ -58,12 +58,12 @@ inline auto Renderer::advance_one_sample() -> optional<dev::Sample>
 	});
 	if (chart_ended && active_sounds.empty()) return nullopt;
 	auto sample_mix = dev::Sample{};
-	for (auto i = 0zu; i < active_sounds.size();) {
+	for (auto i = 0z; i < static_cast<isize>(active_sounds.size());) {
 		auto& sound = active_sounds[i];
 		sample_mix.left += sound.audio[sound.position].left;
 		sample_mix.right += sound.audio[sound.position].right;
 		sound.position += 1;
-		if (sound.position >= sound.audio.size()) {
+		if (sound.position >= static_cast<isize>(sound.audio.size())) {
 			// Swap-and-pop erase
 			active_sounds[i] = move(active_sounds.back());
 			active_sounds.pop_back();

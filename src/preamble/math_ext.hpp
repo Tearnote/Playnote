@@ -12,6 +12,8 @@ Additional math types and functions. Introduces 2-4 component vectors.
 #include <numbers>
 #include "preamble/algorithm.hpp"
 #include "preamble/container.hpp"
+#include "preamble/concepts.hpp"
+#include "preamble/utility.hpp"
 #include "preamble/types.hpp"
 #include "preamble/math.hpp"
 
@@ -55,7 +57,7 @@ template<arithmetic T>
 }
 
 // Generic math vector, of any dimension between 2 to 4 and any underlying type
-template<usize Dim, arithmetic T>
+template<isize Dim, arithmetic T>
 class vec {
 public:
 	static_assert(Dim >= 2 && Dim <= 4, "Vectors need to have 2, 3 or 4 components");
@@ -74,20 +76,20 @@ public:
 	explicit constexpr vec(vec<Dim, U> const& other);
 
 	// Dimension downcast
-	template<usize N>
+	template<isize N>
 		requires (N > Dim)
 	explicit constexpr vec(vec<N, T> const& other);
 
 	// Dimension upcast
-	template<usize N>
+	template<isize N>
 		requires (N < Dim)
 	constexpr vec(vec<N, T> const& other, T fill);
 
-	[[nodiscard]] constexpr auto at(usize n) -> T& { return arr[n]; }
-	[[nodiscard]] constexpr auto at(usize n) const -> T { return arr[n]; }
+	[[nodiscard]] constexpr auto at(isize n) -> T& { return arr[n]; }
+	[[nodiscard]] constexpr auto at(isize n) const -> T { return arr[n]; }
 
-	[[nodiscard]] constexpr auto operator[](usize n) -> T& { return at(n); }
-	[[nodiscard]] constexpr auto operator[](usize n) const -> T { return at(n); }
+	[[nodiscard]] constexpr auto operator[](isize n) -> T& { return at(n); }
+	[[nodiscard]] constexpr auto operator[](isize n) const -> T { return at(n); }
 
 	[[nodiscard]] constexpr auto x() -> T&;
 	[[nodiscard]] constexpr auto x() const -> T;
@@ -125,179 +127,179 @@ private:
 	array<T, Dim> arr;
 };
 
-template<usize Dim, arithmetic T>
+template<isize Dim, arithmetic T>
 template<arithmetic U>
 	requires (!same_as<T, U>)
 constexpr vec<Dim, T>::vec(vec<Dim, U> const& other)
 {
-	for (auto i: views::iota(0uz, Dim))
+	for (auto i: views::iota(0z, Dim))
 		arr[i] = static_cast<T>(other[i]);
 }
 
-template<usize Dim, arithmetic T>
-template<usize N>
+template<isize Dim, arithmetic T>
+template<isize N>
 	requires (N > Dim)
 constexpr vec<Dim, T>::vec(vec<N, T> const& other)
 {
-	for (auto i: views::iota(0uz, Dim))
+	for (auto i: views::iota(0z, Dim))
 		arr[i] = other[i];
 }
 
-template<usize Dim, arithmetic T>
-template<usize N>
+template<isize Dim, arithmetic T>
+template<isize N>
 	requires (N < Dim)
 constexpr vec<Dim, T>::vec(vec<N, T> const& other, T fill)
 {
 	arr.fill(fill);
-	for (auto i: views::iota(0uz, N))
+	for (auto i: views::iota(0z, N))
 		arr[i] = other[i];
 }
 
-template<usize Dim, arithmetic T>
+template<isize Dim, arithmetic T>
 constexpr auto vec<Dim, T>::x() -> T&
 {
 	static_assert(Dim >= 1);
 	return arr[0];
 }
 
-template<usize Dim, arithmetic T>
+template<isize Dim, arithmetic T>
 constexpr auto vec<Dim, T>::x() const -> T
 {
 	static_assert(Dim >= 1);
 	return arr[0];
 }
 
-template<usize Dim, arithmetic T>
+template<isize Dim, arithmetic T>
 constexpr auto vec<Dim, T>::y() -> T&
 {
 	static_assert(Dim >= 2);
 	return arr[1];
 }
 
-template<usize Dim, arithmetic T>
+template<isize Dim, arithmetic T>
 constexpr auto vec<Dim, T>::y() const -> T
 {
 	static_assert(Dim >= 2);
 	return arr[1];
 }
 
-template<usize Dim, arithmetic T>
+template<isize Dim, arithmetic T>
 constexpr auto vec<Dim, T>::z() -> T&
 {
 	static_assert(Dim >= 3);
 	return arr[2];
 }
 
-template<usize Dim, arithmetic T>
+template<isize Dim, arithmetic T>
 constexpr auto vec<Dim, T>::z() const -> T
 {
 	static_assert(Dim >= 3);
 	return arr[2];
 }
 
-template<usize Dim, arithmetic T>
+template<isize Dim, arithmetic T>
 constexpr auto vec<Dim, T>::w() -> T&
 {
 	static_assert(Dim >= 4);
 	return arr[3];
 }
 
-template<usize Dim, arithmetic T>
+template<isize Dim, arithmetic T>
 constexpr auto vec<Dim, T>::w() const -> T
 {
 	static_assert(Dim >= 4);
 	return arr[3];
 }
 
-template<usize Dim, arithmetic T>
+template<isize Dim, arithmetic T>
 constexpr auto vec<Dim, T>::operator+=(self_t const& other) -> self_t&
 {
-	for (auto i: views::iota(0uz, Dim))
+	for (auto i: views::iota(0z, Dim))
 		arr[i] += other[i];
 	return *this;
 }
 
-template<usize Dim, arithmetic T>
+template<isize Dim, arithmetic T>
 constexpr auto vec<Dim, T>::operator-=(self_t const& other) -> self_t&
 {
-	for (auto i: views::iota(0uz, Dim))
+	for (auto i: views::iota(0z, Dim))
 		arr[i] -= other[i];
 	return *this;
 }
 
-template<usize Dim, arithmetic T>
+template<isize Dim, arithmetic T>
 constexpr auto vec<Dim, T>::operator*=(self_t const& other) -> self_t&
 {
-	for (auto i: views::iota(0uz, Dim))
+	for (auto i: views::iota(0z, Dim))
 		arr[i] *= other[i];
 	return *this;
 }
 
-template<usize Dim, arithmetic T>
+template<isize Dim, arithmetic T>
 constexpr auto vec<Dim, T>::operator/=(self_t const& other) -> self_t&
 {
-	for (auto i: views::iota(0uz, Dim))
+	for (auto i: views::iota(0z, Dim))
 		arr[i] /= other[i];
 	return *this;
 }
 
-template<usize Dim, arithmetic T>
+template<isize Dim, arithmetic T>
 constexpr auto vec<Dim, T>::operator%=(self_t const& other) -> self_t&
 {
 	static_assert(std::is_integral_v<T>);
 
-	for (auto i: views::iota(0uz, Dim))
+	for (auto i: views::iota(0z, Dim))
 		arr[i] %= other[i];
 	return *this;
 }
 
-template<usize Dim, arithmetic T>
+template<isize Dim, arithmetic T>
 constexpr auto vec<Dim, T>::operator*=(T other) -> self_t&
 {
-	for (auto i: views::iota(0uz, Dim))
+	for (auto i: views::iota(0z, Dim))
 		arr[i] *= other;
 	return *this;
 }
 
-template<usize Dim, arithmetic T>
+template<isize Dim, arithmetic T>
 constexpr auto vec<Dim, T>::operator/=(T other) -> self_t&
 {
-	for (auto i: views::iota(0uz, Dim))
+	for (auto i: views::iota(0z, Dim))
 		arr[i] /= other;
 	return *this;
 }
 
-template<usize Dim, arithmetic T>
+template<isize Dim, arithmetic T>
 constexpr auto vec<Dim, T>::operator%=(T other) -> self_t&
 {
 	static_assert(std::is_integral_v<T>);
 
-	for (auto i: views::iota(0uz, Dim))
+	for (auto i: views::iota(0z, Dim))
 		arr[i] %= other;
 	return *this;
 }
 
-template<usize Dim, arithmetic T>
+template<isize Dim, arithmetic T>
 constexpr auto vec<Dim, T>::operator<<=(T other) -> self_t&
 {
 	static_assert(std::is_integral_v<T>);
 
-	for (auto i: views::iota(0uz, Dim))
+	for (auto i: views::iota(0z, Dim))
 		arr[i] <<= other;
 	return *this;
 }
 
-template<usize Dim, arithmetic T>
+template<isize Dim, arithmetic T>
 constexpr auto vec<Dim, T>::operator>>=(T other) -> self_t&
 {
 	static_assert(std::is_integral_v<T>);
 
-	for (auto i: views::iota(0uz, Dim))
+	for (auto i: views::iota(0z, Dim))
 		arr[i] >>= other;
 	return *this;
 }
 
-template<usize Dim, arithmetic T>
+template<isize Dim, arithmetic T>
 constexpr auto operator+(vec<Dim, T> const& left, vec<Dim, T> const& right) -> vec<Dim, T>
 {
 	auto result = left;
@@ -305,7 +307,7 @@ constexpr auto operator+(vec<Dim, T> const& left, vec<Dim, T> const& right) -> v
 	return result;
 }
 
-template<usize Dim, arithmetic T>
+template<isize Dim, arithmetic T>
 constexpr auto operator-(vec<Dim, T> const& left, vec<Dim, T> const& right) -> vec<Dim, T>
 {
 	auto result = left;
@@ -313,7 +315,7 @@ constexpr auto operator-(vec<Dim, T> const& left, vec<Dim, T> const& right) -> v
 	return result;
 }
 
-template<usize Dim, arithmetic T>
+template<isize Dim, arithmetic T>
 constexpr auto operator*(vec<Dim, T> const& left, vec<Dim, T> const& right) -> vec<Dim, T>
 {
 	auto result = left;
@@ -321,7 +323,7 @@ constexpr auto operator*(vec<Dim, T> const& left, vec<Dim, T> const& right) -> v
 	return result;
 }
 
-template<usize Dim, arithmetic T>
+template<isize Dim, arithmetic T>
 constexpr auto operator/(vec<Dim, T> const& left, vec<Dim, T> const& right) -> vec<Dim, T>
 {
 	auto result = left;
@@ -329,7 +331,7 @@ constexpr auto operator/(vec<Dim, T> const& left, vec<Dim, T> const& right) -> v
 	return result;
 }
 
-template<usize Dim, std::integral T>
+template<isize Dim, std::integral T>
 constexpr auto operator%(vec<Dim, T> const& left, vec<Dim, T> const& right) -> vec<Dim, T>
 {
 	auto result = left;
@@ -337,35 +339,35 @@ constexpr auto operator%(vec<Dim, T> const& left, vec<Dim, T> const& right) -> v
 	return result;
 }
 
-template<usize Dim, arithmetic T>
+template<isize Dim, arithmetic T>
 constexpr auto operator==(vec<Dim, T> const& left, vec<Dim, T> const& right) -> bool
 {
-	for (auto i: views::iota(0uz, Dim)) {
+	for (auto i: views::iota(0z, Dim)) {
 		if (left[i] != right[i])
 			return false;
 	}
 	return true;
 }
 
-template<usize Dim, arithmetic T>
+template<isize Dim, arithmetic T>
 constexpr auto min(vec<Dim, T> const& left, vec<Dim, T> const& right) -> vec<Dim, T>
 {
 	auto result = vec<Dim, T>();
-	for (auto i: views::iota(0uz, Dim))
+	for (auto i: views::iota(0z, Dim))
 		result[i] = min(left[i], right[i]);
 	return result;
 }
 
-template<usize Dim, arithmetic T>
+template<isize Dim, arithmetic T>
 constexpr auto max(vec<Dim, T> const& left, vec<Dim, T> const& right) -> vec<Dim, T>
 {
 	auto result = vec<Dim, T>();
-	for (auto i: views::iota(0uz, Dim))
+	for (auto i: views::iota(0z, Dim))
 		result[i] = max(left[i], right[i]);
 	return result;
 }
 
-template<usize Dim, arithmetic T>
+template<isize Dim, arithmetic T>
 constexpr auto operator*(vec<Dim, T> const& left, T right) -> vec<Dim, T>
 {
 	auto result = left;
@@ -373,10 +375,10 @@ constexpr auto operator*(vec<Dim, T> const& left, T right) -> vec<Dim, T>
 	return result;
 }
 
-template<usize Dim, arithmetic T>
+template<isize Dim, arithmetic T>
 constexpr auto operator*(T left, vec<Dim, T> const& right) -> vec<Dim, T> { return right * left; }
 
-template<usize Dim, arithmetic T>
+template<isize Dim, arithmetic T>
 constexpr auto operator/(vec<Dim, T> const& left, T right) -> vec<Dim, T>
 {
 	auto result = left;
@@ -384,7 +386,7 @@ constexpr auto operator/(vec<Dim, T> const& left, T right) -> vec<Dim, T>
 	return result;
 }
 
-template<usize Dim, std::integral T>
+template<isize Dim, std::integral T>
 constexpr auto operator%(vec<Dim, T> const& left, T right) -> vec<Dim, T>
 {
 	auto result = left;
@@ -392,7 +394,7 @@ constexpr auto operator%(vec<Dim, T> const& left, T right) -> vec<Dim, T>
 	return result;
 }
 
-template<usize Dim, std::integral T>
+template<isize Dim, std::integral T>
 constexpr auto operator<<(vec<Dim, T> const& left, T right) -> vec<Dim, T>
 {
 	auto result = left;
@@ -400,7 +402,7 @@ constexpr auto operator<<(vec<Dim, T> const& left, T right) -> vec<Dim, T>
 	return result;
 }
 
-template<usize Dim, std::integral T>
+template<isize Dim, std::integral T>
 constexpr auto operator>>(vec<Dim, T> const& left, T right) -> vec<Dim, T>
 {
 	auto result = left;
@@ -409,11 +411,11 @@ constexpr auto operator>>(vec<Dim, T> const& left, T right) -> vec<Dim, T>
 }
 
 // Component-wise absolute value
-template<usize Dim, std::floating_point T>
+template<isize Dim, std::floating_point T>
 constexpr auto abs(vec<Dim, T> const& v) -> vec<Dim, T>
 {
 	auto result = vec<Dim, T>{};
-	for (auto i: views::iota(0uz, Dim))
+	for (auto i: views::iota(0z, Dim))
 		result[i] = abs(v[i]);
 	return result;
 }

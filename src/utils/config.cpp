@@ -12,6 +12,7 @@ Implementation file for config.hpp.
 #include <sstream>
 #include "preamble.hpp"
 #include "utils/logger.hpp"
+#include "utils/assert.hpp"
 #include "io/file.hpp"
 
 namespace playnote {

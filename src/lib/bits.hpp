@@ -7,8 +7,7 @@ Wrapper for zpp_bits.
 */
 
 #pragma once
-#include <zpp_bits.h>
-#include "preamble.hpp"
+#include <zpp_bits.h> // IWYU pragma: export
 
 namespace playnote::lib::bits {
 

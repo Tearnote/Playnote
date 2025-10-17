@@ -10,9 +10,11 @@ Handling of controller input devices.
 
 #include <GLFW/glfw3.h>
 #include "preamble.hpp"
+#include "utils/assert.hpp"
 #include "utils/logger.hpp"
 #include "lib/glfw.hpp"
 #include "dev/window.hpp"
+#include "input.hpp"
 
 namespace playnote::dev {
 

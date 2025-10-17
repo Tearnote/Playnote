@@ -8,14 +8,20 @@ Wrapper for vuk, a Vulkan rendergraph library.
 
 #pragma once
 #include "vuk/runtime/vk/DeviceFrameResource.hpp"
+#include "vuk/runtime/vk/VkSwapchain.hpp" // IWYU pragma: export
+#include "vuk/runtime/vk/Allocator.hpp" // IWYU pragma: export
+#include "vuk/runtime/vk/VkRuntime.hpp" // IWYU pragma: export
+#include "vuk/runtime/CommandBuffer.hpp"
 #include "vuk/ImageAttachment.hpp"
+#include "vuk/Buffer.hpp"
+#include "vuk/Types.hpp"
 #include "vuk/Value.hpp"
 #include "preamble.hpp"
 #include "lib/vulkan.hpp"
 
 // vuk interface imports
-#include "vuk/vsl/Core.hpp"
-#include "vuk/RenderGraph.hpp"
+#include "vuk/vsl/Core.hpp" // IWYU pragma: export
+#include "vuk/RenderGraph.hpp" // IWYU pragma: export
 
 namespace playnote::lib::vuk {
 

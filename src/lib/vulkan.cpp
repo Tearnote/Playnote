@@ -8,7 +8,6 @@ Implementation file for lib/vulkan.hpp.
 
 #include "lib/vulkan.hpp"
 
-#include <vector> // need std::vector specifically
 #include <memory> // need std::unique_ptr specifically
 #include "volk.h"
 #include "VkBootstrap.h"

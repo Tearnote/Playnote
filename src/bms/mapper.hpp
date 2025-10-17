@@ -9,7 +9,7 @@ A timestamped BMS chart input, and conversion to it via a predefined mapping.
 #pragma once
 #include "preamble.hpp"
 #include "utils/config.hpp"
-#include "utils/logger.hpp"
+#include "dev/window.hpp"
 #include "bms/chart.hpp"
 #include "input.hpp"
 

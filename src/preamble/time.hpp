@@ -7,7 +7,7 @@ Imports of clock/time/date functionality.
 */
 
 #pragma once
-#include <chrono>
+#include <chrono> // IWYU pragma: export
 
 namespace playnote {
 
@@ -19,6 +19,7 @@ using std::chrono::milliseconds;
 using std::chrono::seconds;
 using std::chrono::duration;
 using std::chrono::duration_cast;
+using std::chrono::abs;
 
 // Returns the ratio of two durations as a floating-point number.
 template<typename LRep, typename LPeriod, typename RRep, typename RPeriod>

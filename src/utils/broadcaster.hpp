@@ -13,7 +13,7 @@ Allows threads to subscribe to events and receive messages from other threads.
 namespace playnote {
 
 // Simple shared struct for controlling thread lifetime.
-template<usize N>
+template<isize N>
 struct Barriers {
 	latch startup{N}; // Threads wait on this after registering with the broadcaster
 	latch shutdown{N}; // Threads wait on this before exiting
@@ -52,14 +52,14 @@ public:
 	void await(Func&& func, SleepFunc&& sleep);
 
 private:
-	inline static thread_local auto endpoint_id = -1zu;
+	inline static thread_local auto endpoint_id = -1z;
 	mutex register_lock;
 	vector<unordered_map<type_index, shared_ptr<void>>> queues;
 };
 
 inline void Broadcaster::register_as_endpoint()
 {
-	ASSUME(endpoint_id == -1zu);
+	ASSUME(endpoint_id == -1z);
 	auto lock = lock_guard{register_lock};
 	endpoint_id = queues.size();
 	queues.emplace_back();
@@ -69,7 +69,7 @@ template<typename T>
 void Broadcaster::subscribe()
 {
 	using Type = remove_cvref_t<T>;
-	ASSUME(endpoint_id != -1zu);
+	ASSUME(endpoint_id != -1z);
 	auto lock = lock_guard{register_lock};
 	ASSUME(!queues[endpoint_id].contains(typeid(Type)));
 	queues[endpoint_id][typeid(Type)] = make_shared<mpmc_queue<Type>>();
@@ -79,7 +79,7 @@ template<typename T, typename... Args>
 void Broadcaster::make_shout(Args&&... args)
 {
 	using Type = remove_cvref_t<T>;
-	ASSUME(endpoint_id != -1zu);
+	ASSUME(endpoint_id != -1z);
 	for (auto [idx, in_channel]: queues | views::enumerate) {
 		if (endpoint_id == idx) continue;
 		if (!in_channel.contains(typeid(Type))) continue;
@@ -91,11 +91,11 @@ template<typename T, callable<void(T&&)> Func>
 auto Broadcaster::receive_all(Func&& func) -> bool
 {
 	using Type = remove_cvref_t<T>;
-	ASSUME(endpoint_id != -1zu);
+	ASSUME(endpoint_id != -1z);
 	ASSUME(queues[endpoint_id].contains(typeid(Type)));
 	auto& out_queue = *static_pointer_cast<mpmc_queue<Type>>(queues[endpoint_id][typeid(Type)]);
 	auto message = Type{};
-	auto processed = 0zu;
+	auto processed = 0z;
 	while (out_queue.try_dequeue(message)) {
 		func(move(message));
 		processed += 1;

@@ -9,7 +9,11 @@ to them and translated by their associated Input handlers.
 
 #pragma once
 #include "preamble.hpp"
+#include "utils/assert.hpp"
+#include "utils/logger.hpp"
+#include "lib/openssl.hpp"
 #include "dev/window.hpp"
+#include "dev/audio.hpp"
 #include "audio/mixer.hpp"
 #include "bms/cursor.hpp"
 #include "bms/mapper.hpp"
@@ -54,19 +58,19 @@ private:
 		shared_ptr<bms::Cursor> cursor;
 		bms::Mapper mapper;
 		float gain;
-		usize sample_offset; // Sample count at the time the cursor was started
+		isize sample_offset; // Sample count at the time the cursor was started
 	};
 	struct ActiveSound {
 		lib::openssl::MD5 md5;
-		usize channel;
+		isize channel;
 		span<dev::Sample const> audio;
-		usize position;
+		isize position;
 		float gain;
 	};
 	mutex cursors_lock;
 	small_vector<PlayableCursor, 4> cursors;
 	nanoseconds timer_slop; // Player start time according to the CPU timer. Adjusted over time to maintain sync
-	usize samples_processed = 0;
+	isize samples_processed = 0;
 	shared_ptr<spsc_queue<UserInput>> inbound_inputs;
 	small_vector<UserInput, 16> pending_inputs;
 	bool paused = false;
@@ -225,12 +229,12 @@ inline auto Player::next_sample() -> dev::Sample
 	}
 
 	auto sample_mix = dev::Sample{};
-	for (auto i = 0zu; i < active_sounds.size();) {
+	for (auto i = 0z; i < static_cast<isize>(active_sounds.size());) {
 		auto& sound = active_sounds[i];
 		sample_mix.left += sound.audio[sound.position].left * sound.gain;
 		sample_mix.right += sound.audio[sound.position].right * sound.gain;
 		sound.position += 1;
-		if (sound.position >= sound.audio.size()) {
+		if (sound.position >= static_cast<isize>(sound.audio.size())) {
 			// Swap-and-pop erase
 			active_sounds[i] = move(active_sounds.back());
 			active_sounds.pop_back();

@@ -6,10 +6,10 @@ main.cpp:
 Entry point. Initializes basic facilities, spawns threads.
 */
 
+#include <cstdlib>
 #include <clocale>
 #include "preamble.hpp"
 #include "utils/broadcaster.hpp"
-#include "utils/assert.hpp"
 #include "utils/config.hpp"
 #include "utils/logger.hpp"
 #include "lib/debug.hpp"
