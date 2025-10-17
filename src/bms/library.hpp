@@ -56,6 +56,9 @@ public:
 	// Return the number of charts that were skipped as duplicates.
 	[[nodiscard]] auto get_import_charts_skipped() const -> size_t { return import_stats.charts_skipped.load(); }
 
+	// Return the number of charts that failed to import.
+	[[nodiscard]] auto get_import_charts_failed() const -> size_t { return import_stats.charts_failed.load(); }
+
 	// Set all import statistics to zero. Can be used during an import, but the values might be inconsistent afterwards.
 	void reset_import_stats();
 
@@ -185,6 +188,7 @@ private:
 		atomic<uint32> songs_total = 0;
 		atomic<uint32> charts_added = 0;
 		atomic<uint32> charts_skipped = 0;
+		atomic<uint32> charts_failed = 0;
 	};
 
 	lib::sqlite::DB db;
@@ -246,6 +250,7 @@ inline void Library::reset_import_stats()
 	import_stats.songs_total.store(0);
 	import_stats.charts_added.store(0);
 	import_stats.charts_skipped.store(0);
+	import_stats.charts_failed.store(0);
 }
 
 inline auto Library::load_chart(lib::openssl::MD5 md5) -> shared_ptr<Chart const>
@@ -358,12 +363,22 @@ inline auto Library::import_one(fs::path path) -> task<>
 	song.for_each_chart([&](auto path, auto chart) {
 		chart_import_tasks.emplace_back(schedule_task(import_chart(song, song_id, string{path}, chart)));
 	});
-	co_await when_all(move(chart_import_tasks));
-	/*if (imported_count == 0) {
+	auto results = co_await when_all(move(chart_import_tasks));
+
+	auto imported_count = 0zu;
+	for (auto& result: results) {
+		try {
+			result.return_value();
+			imported_count += 1;
+		} catch (exception const&) {
+			import_stats.charts_failed.fetch_add(1);
+		}
+	}
+	if (imported_count == 0) {
 		auto delete_song = lib::sqlite::prepare(db, DeleteSongQuery);
 		lib::sqlite::execute(delete_song, song_id);
 		move(song).remove();
-	}*/
+	}
 	import_stats.songs_processed.fetch_add(1);
 }
 
