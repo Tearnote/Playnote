@@ -9,6 +9,7 @@ project(Playnote
 	VERSION 0.0.3
 	DESCRIPTION "A BMS player hobby project"
 	LANGUAGES C CXX)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 include(cmake/Flags.cmake)
 include(cmake/Dependencies.cmake)
 

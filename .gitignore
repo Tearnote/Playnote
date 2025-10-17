@@ -1,5 +1,7 @@
 # IDE config
 .idea/**
+.zed/**
+.clangd
 
 # Build artifacts
 build*/**
