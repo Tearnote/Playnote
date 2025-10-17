@@ -2,9 +2,9 @@ name: Windows build
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 env:
   BUILD_TYPE: Release
@@ -15,29 +15,40 @@ jobs:
     runs-on: windows-2025
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Set up vcpkg binary cache
-      uses: actions/cache@v4
-      with:
-        path: ${{github.workspace}}/vcpkg_cache
-        key: vcpkg-${{runner.os}}-${{env.VCPKG_TARGET_TRIPLET}}-${{hashFiles('vcpkg.json')}}
-        restore-keys: |
-          vcpkg-${{runner.os}}-${{env.VCPKG_TARGET_TRIPLET}}-
+      - name: Get MSVC info
+        id: msvc_info
+        shell: pwsh
+        run: |
+          $vsPath = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
+          Import-Module (Join-Path $vsPath 'Common7\Tools\Microsoft.VisualStudio.DevShell.dll')
+          Enter-VsDevShell -VsInstallPath $vsPath -DevCmdArguments "-arch=amd64"
+          $clVersion = (cl.exe 2>&1 | Select-String -Pattern "Version") -join "`n"
+          $compilerHash = [System.BitConverter]::ToString([System.Security.Cryptography.SHA256]::Create().ComputeHash([System.Text.Encoding]::UTF8.GetBytes($clVersion))).Replace("-", "").ToLowerInvariant()
+          "COMPILER_HASH=$compilerHash" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
-    - name: Configure CMake
-      shell: cmd
-      run: cmake -B ${{github.workspace}}/build -T ClangCL -DCMAKE_TOOLCHAIN_FILE=%VCPKG_INSTALLATION_ROOT%/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=${{env.VCPKG_TARGET_TRIPLET}}
-      env:
-        VCPKG_BINARY_SOURCES: "clear;files,${{github.workspace}}/vcpkg_cache,readwrite"
+      - name: Set up vcpkg binary cache
+        uses: actions/cache@v4
+        with:
+          path: ${{github.workspace}}/vcpkg_cache
+          key: vcpkg-${{runner.os}}-${{env.VCPKG_TARGET_TRIPLET}}-${{steps.msvc_info.outputs.COMPILER_HASH}}-${{hashFiles('vcpkg.json', 'CMakeLists.txt', 'cmake/**')}}
+          restore-keys: |
+            vcpkg-${{runner.os}}-${{env.VCPKG_TARGET_TRIPLET}}-${{steps.msvc_info.outputs.COMPILER_HASH}}-
 
-    - name: Build
-      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+      - name: Configure CMake
+        shell: cmd
+        run: cmake -B ${{github.workspace}}/build -T ClangCL -DCMAKE_TOOLCHAIN_FILE=%VCPKG_INSTALLATION_ROOT%/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=${{env.VCPKG_TARGET_TRIPLET}}
+        env:
+          VCPKG_BINARY_SOURCES: "clear;files,${{github.workspace}}/vcpkg_cache,readwrite"
 
-    - name: Upload artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: playnote-windows-build
-        path: |
-          ${{github.workspace}}/build/${{env.BUILD_TYPE}}/Playnote.exe
-          ${{github.workspace}}/build/${{env.BUILD_TYPE}}/assets
+      - name: Build
+        run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: playnote-windows-build
+          path: |
+            ${{github.workspace}}/build/${{env.BUILD_TYPE}}/Playnote.exe
+            ${{github.workspace}}/build/${{env.BUILD_TYPE}}/assets
