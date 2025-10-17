@@ -202,7 +202,7 @@ inline void Song::zip_from_directory(fs::path const& src, fs::path const& dst)
 inline void Song::extend_zip_from_archive(fs::path const& base, fs::path const& ext, fs::path const& dst)
 {
 	auto dst_ar = lib::archive::open_write(dst);
-	auto written_paths = unordered_set<string_view>{};
+	auto written_paths = unordered_set<string>{};
 
 	// Copy over contents of base
 	auto src_file = read_file(base);
@@ -216,12 +216,13 @@ inline void Song::extend_zip_from_archive(fs::path const& base, fs::path const& 
 
 	// Append missing files from extension
 	auto ext_file = read_file(ext);
+	auto const prefix = find_prefix(ext_file.contents);
 	auto ext_ar = lib::archive::open_read(ext_file.contents);
-	auto const prefix = find_prefix(src_file.contents);
 	lib::archive::for_each_entry(ext_ar, [&](string_view pathname) {
-		if (written_paths.contains(pathname)) return true;
+		auto const rel_path = fs::relative(pathname, prefix);
+		if (written_paths.contains(rel_path.string())) return true;
 		auto data = lib::archive::read_data(ext_ar);
-		lib::archive::write_entry(dst_ar, fs::relative(pathname, prefix), data);
+		lib::archive::write_entry(dst_ar, rel_path, data);
 		return true;
 	});
 }
@@ -229,7 +230,7 @@ inline void Song::extend_zip_from_archive(fs::path const& base, fs::path const& 
 inline void Song::extend_zip_from_directory(fs::path const& base, fs::path const& ext, fs::path const& dst)
 {
 	auto dst_ar = lib::archive::open_write(dst);
-	auto written_paths = unordered_set<string_view>{};
+	auto written_paths = unordered_set<string>{};
 
 	// Copy over contents of base
 	auto src_file = read_file(base);
