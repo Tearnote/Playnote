@@ -39,7 +39,8 @@ struct ImportStatus {
 	bool complete;
 	uint32 songs_processed;
 	uint32 songs_total;
-	uint32 charts_processed;
+	uint32 charts_added;
+	uint32 charts_skipped;
 };
 
 struct LibraryContext {
@@ -215,10 +216,12 @@ static auto render_import_status(ImportStatus const& status) -> bool
 	else
 		lib::imgui::text("Import complete!");
 	if (!status.complete)
-		lib::imgui::text("Songs imported: {} / {}", status.songs_processed, status.songs_total);
+		lib::imgui::text("Songs processed: {} / {}", status.songs_processed, status.songs_total);
 	else
-		lib::imgui::text("Songs imported: {}", status.songs_processed);
-	lib::imgui::text("Charts imported: {}", status.charts_processed);
+		lib::imgui::text("Songs processed: {}", status.songs_processed);
+	lib::imgui::text("Charts added: {}", status.charts_added);
+	if (status.charts_skipped)
+		lib::imgui::text_styled(format("Charts skipped: {}", status.charts_skipped), vec4{0.3f, 0.3f, 0.3f, 1.0f});
 	if (status.complete)
 		if (lib::imgui::button("Okay")) reset = true;
 	lib::imgui::end_window();
@@ -297,13 +300,15 @@ static void run_render(Broadcaster& broadcaster, dev::Window& window)
 			state.import_status->complete = false;
 			state.import_status->songs_processed = library->get_import_songs_processed();
 			state.import_status->songs_total = library->get_import_songs_total();
-			state.import_status->charts_processed = library->get_import_charts_processed();
+			state.import_status->charts_added = library->get_import_charts_added();
+			state.import_status->charts_skipped = library->get_import_charts_skipped();
 		} else {
 			if (state.import_status) {
 				state.import_status->complete = true;
 				state.import_status->songs_processed = library->get_import_songs_processed();
 				state.import_status->songs_total = library->get_import_songs_total();
-				state.import_status->charts_processed = library->get_import_charts_processed();
+				state.import_status->charts_added = library->get_import_charts_added();
+				state.import_status->charts_skipped = library->get_import_charts_skipped();
 			}
 		}
 

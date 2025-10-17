@@ -51,7 +51,10 @@ public:
 	[[nodiscard]] auto get_import_songs_total() const -> size_t { return import_stats.songs_total.load(); }
 
 	// Return the number of charts that were imported so far.
-	[[nodiscard]] auto get_import_charts_processed() const -> size_t { return import_stats.charts_processed.load(); }
+	[[nodiscard]] auto get_import_charts_added() const -> size_t { return import_stats.charts_added.load(); }
+
+	// Return the number of charts that were skipped as duplicates.
+	[[nodiscard]] auto get_import_charts_skipped() const -> size_t { return import_stats.charts_skipped.load(); }
 
 	// Set all import statistics to zero. Can be used during an import, but the values might be inconsistent afterwards.
 	void reset_import_stats();
@@ -180,7 +183,8 @@ private:
 	struct ImportStats {
 		atomic<uint32> songs_processed = 0;
 		atomic<uint32> songs_total = 0;
-		atomic<uint32> charts_processed = 0;
+		atomic<uint32> charts_added = 0;
+		atomic<uint32> charts_skipped = 0;
 	};
 
 	lib::sqlite::DB db;
@@ -240,7 +244,8 @@ inline void Library::reset_import_stats()
 {
 	import_stats.songs_processed.store(0);
 	import_stats.songs_total.store(0);
-	import_stats.charts_processed.store(0);
+	import_stats.charts_added.store(0);
+	import_stats.charts_skipped.store(0);
 }
 
 inline auto Library::load_chart(lib::openssl::MD5 md5) -> shared_ptr<Chart const>
@@ -423,7 +428,10 @@ inline auto Library::import_chart(io::Song& song, usize song_id, string chart_pa
 	auto const md5 = lib::openssl::md5(chart_raw);
 	auto exists = false;
 	lib::sqlite::query(chart_exists, [&] { exists = true; }, md5);
-	if (exists) co_return;
+	if (exists) {
+		import_stats.charts_skipped.fetch_add(1);
+		co_return;
+	}
 
 	auto insert_chart = lib::sqlite::prepare(db, InsertChartQuery);
 	auto insert_chart_density = lib::sqlite::prepare(db, InsertChartDensityQuery);
@@ -451,7 +459,7 @@ inline auto Library::import_chart(io::Song& song, usize song_id, string chart_pa
 			serialize_density(chart->metadata.density.ln));
     });
 	dirty.store(true);
-	import_stats.charts_processed.fetch_add(1);
+	import_stats.charts_added.fetch_add(1);
 }
 
 }
