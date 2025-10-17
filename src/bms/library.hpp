@@ -65,28 +65,23 @@ public:
 	auto operator=(Library&&) -> Library& = delete;
 
 private:
-	// language=SQLite
-	static constexpr auto SongsSchema = R"(
+	static constexpr auto SongsSchema = R"sql(
 		CREATE TABLE IF NOT EXISTS songs(
 			id INTEGER PRIMARY KEY,
 			path TEXT NOT NULL UNIQUE
 		)
-	)"sv;
-	// language=SQLite
-	static constexpr auto SongExistsQuery = R"(
+	)sql"sv;
+	static constexpr auto SongExistsQuery = R"sql(
 		SELECT 1 FROM songs WHERE path = ?1
-	)"sv;
-	// language=SQLite
-	static constexpr auto InsertSongQuery = R"(
+	)sql"sv;
+	static constexpr auto InsertSongQuery = R"sql(
 		INSERT INTO songs(path) VALUES(?1)
-	)"sv;
-	// language=SQLite
-	static constexpr auto DeleteSongQuery = R"(
+	)sql"sv;
+	static constexpr auto DeleteSongQuery = R"sql(
 		DELETE FROM songs WHERE id = ?1
-	)"sv;
+	)sql"sv;
 
-	// language=SQLite
-	static constexpr auto ChartsSchema = to_array({R"(
+	static constexpr auto ChartsSchema = to_array({R"sql(
 		CREATE TABLE IF NOT EXISTS charts(
 			md5 BLOB PRIMARY KEY NOT NULL CHECK(length(md5) == 16),
 			song_id INTEGER NOT NULL REFERENCES songs ON DELETE CASCADE,
@@ -113,49 +108,45 @@ private:
 			max_bpm REAL NOT NULL,
 			main_bpm REAL NOT NULL
 		)
-	)"sv, R"(
+	)sql"sv, R"sql(
 		CREATE INDEX IF NOT EXISTS charts_title ON charts(title)
-	)"sv, R"(
+	)sql"sv, R"sql(
 		CREATE INDEX IF NOT EXISTS charts_subtitle ON charts(subtitle)
-	)"sv, R"(
+	)sql"sv, R"sql(
 		CREATE INDEX IF NOT EXISTS charts_artist ON charts(artist)
-	)"sv, R"(
+	)sql"sv, R"sql(
 		CREATE INDEX IF NOT EXISTS charts_subartist ON charts(subartist)
-	)"sv, R"(
+	)sql"sv, R"sql(
 		CREATE INDEX IF NOT EXISTS charts_genre ON charts(genre)
-	)"sv, R"(
+	)sql"sv, R"sql(
 		CREATE INDEX IF NOT EXISTS charts_difficulty ON charts(difficulty)
-	)"sv, R"(
+	)sql"sv, R"sql(
 		CREATE INDEX IF NOT EXISTS charts_playstyle ON charts(playstyle)
-	)"sv, R"(
+	)sql"sv, R"sql(
 		CREATE INDEX IF NOT EXISTS charts_note_count ON charts(note_count)
-	)"sv, R"(
+	)sql"sv, R"sql(
 		CREATE INDEX IF NOT EXISTS charts_chart_duration ON charts(chart_duration)
-	)"sv, R"(
+	)sql"sv, R"sql(
 		CREATE INDEX IF NOT EXISTS charts_average_nps ON charts(average_nps)
-	)"sv, R"(
+	)sql"sv, R"sql(
 		CREATE INDEX IF NOT EXISTS charts_peak_nps ON charts(peak_nps)
-	)"sv, R"(
+	)sql"sv, R"sql(
 		CREATE INDEX IF NOT EXISTS charts_main_bpm ON charts(main_bpm)
-	)"sv});
-	// language=SQLite
-	static constexpr auto ChartExistsQuery = R"(
+	)sql"sv});
+	static constexpr auto ChartExistsQuery = R"sql(
 		SELECT 1 FROM charts WHERE md5 = ?1
-	)"sv;
-	// language=SQLite
-	static constexpr auto ChartListingQuery = R"(
+	)sql"sv;
+	static constexpr auto ChartListingQuery = R"sql(
 		SELECT md5, title, playstyle, difficulty FROM charts
-	)"sv;
-	// language=SQLite
-	static constexpr auto InsertChartQuery = R"(
+	)sql"sv;
+	static constexpr auto InsertChartQuery = R"sql(
 		INSERT INTO charts(md5, song_id, path, title, subtitle, artist, subartist, genre, url,
 			email, difficulty, playstyle, has_ln, has_soflan, note_count, chart_duration,
 			audio_duration, loudness, average_nps, peak_nps, min_bpm, max_bpm, main_bpm)
 			VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23)
-	)"sv;
+	)sql"sv;
 
-	// language=SQLite
-	static constexpr auto ChartDensitiesSchema = to_array({R"(
+	static constexpr auto ChartDensitiesSchema = to_array({R"sql(
 		CREATE TABLE IF NOT EXISTS chart_densities(
 			md5 BLOB UNIQUE NOT NULL REFERENCES charts ON DELETE CASCADE,
 			resolution INTEGER NOT NULL CHECK(resolution >= 1),
@@ -163,20 +154,17 @@ private:
 			scratch BLOB NOT NULL,
 			ln BLOB NOT NULL
 		)
-	)"sv, R"(
+	)sql"sv, R"sql(
 		CREATE INDEX IF NOT EXISTS chart_densities_md5 ON chart_densities(md5)
-	)"sv});
-	// language=SQLite
-	static constexpr auto InsertChartDensityQuery = R"(
+	)sql"sv});
+	static constexpr auto InsertChartDensityQuery = R"sql(
 		INSERT INTO chart_densities(md5, resolution, key, scratch, ln) VALUES(?1, ?2, ?3, ?4, ?5)
-	)"sv;
+	)sql"sv;
 
-	// language=SQLite
-	static constexpr auto GetSongFromChartQuery = R"(
+	static constexpr auto GetSongFromChartQuery = R"sql(
 		SELECT songs.id, songs.path FROM songs INNER JOIN charts ON songs.id = charts.song_id WHERE charts.md5 = ?1
-	)"sv;
-	// language=SQLite
-	static constexpr auto SelectSongChartQuery = R"(
+	)sql"sv;
+	static constexpr auto SelectSongChartQuery = R"sql(
 		SELECT
 			songs.path, charts.path, charts.date_imported, charts.title, charts.subtitle, charts.artist,
 			charts.subartist, charts.genre, charts.url, charts.email, charts.difficulty, charts.playstyle,
@@ -187,7 +175,7 @@ private:
 			INNER JOIN songs ON songs.id = charts.song_id
 			INNER JOIN chart_densities ON charts.md5 = chart_densities.md5
 			WHERE charts.md5 = ?1
-	)"sv;
+	)sql"sv;
 
 	struct ImportStats {
 		atomic<uint32> songs_processed = 0;

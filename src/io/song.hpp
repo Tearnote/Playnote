@@ -91,37 +91,31 @@ private:
 		Audio,   // 2
 	};
 
-	// language=SQLite
-	static constexpr auto ContentsSchema = to_array({R"(
+	static constexpr auto ContentsSchema = to_array({R"sql(
 		CREATE TABLE contents(
 			path TEXT NOT NULL COLLATE nocase,
 			type INTEGER NOT NULL,
 			ptr BLOB NOT NULL,
 			size INTEGER NOT NULL
 		)
-	)"sv, R"(
+	)sql"sv, R"sql(
 		CREATE INDEX contents_path ON contents(path)
-	)"sv});
-	// language=SQLite
-	static constexpr auto InsertContentsQuery = R"(
+	)sql"sv});
+	static constexpr auto InsertContentsQuery = R"sql(
 		INSERT INTO contents(path, type, ptr, size) VALUES (?1, ?2, ?3, ?4)
-	)"sv;
-	// language=SQLite
-	static constexpr auto SelectChartsQuery = R"(
+	)sql"sv;
+	static constexpr auto SelectChartsQuery = R"sql(
 		SELECT path, ptr, size FROM contents WHERE type = 1
-	)"sv;
-	// language=SQLite
-	static constexpr auto SelectFileQuery = R"(
+	)sql"sv;
+	static constexpr auto SelectFileQuery = R"sql(
 		SELECT ptr, size FROM contents WHERE path = ?1
-	)"sv;
-	// language=SQLite
-	static constexpr auto SelectAudioFileQuery = R"(
+	)sql"sv;
+	static constexpr auto SelectAudioFileQuery = R"sql(
 		SELECT ptr, size FROM contents WHERE type = 2 AND path = ?1
-	)"sv;
-	// language=SQLite
-	static constexpr auto SelectAudioFilesQuery = R"(
+	)sql"sv;
+	static constexpr auto SelectAudioFilesQuery = R"sql(
 		SELECT path, ptr, size FROM contents WHERE type = 2
-	)"sv;
+	)sql"sv;
 
 	ReadFile file;
 	lib::sqlite::DB db;
