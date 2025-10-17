@@ -10,9 +10,9 @@ Implementation file for threads/audio.hpp.
 
 #include "preamble.hpp"
 #include "utils/logger.hpp"
+#include "lib/os.hpp"
 #include "dev/controller.hpp"
 #include "dev/window.hpp"
-#include "dev/os.hpp"
 
 namespace playnote {
 
@@ -62,7 +62,7 @@ static void run_input(Broadcaster& broadcaster, dev::Window& window)
 
 void input_thread(Broadcaster& broadcaster, Barriers<2>& barriers, dev::Window& window)
 try {
-	dev::name_current_thread("input");
+	lib::os::name_current_thread("input");
 	broadcaster.register_as_endpoint();
 	broadcaster.subscribe<RegisterInputQueue>();
 	broadcaster.subscribe<UnregisterInputQueue>();

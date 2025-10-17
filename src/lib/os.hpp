@@ -15,6 +15,9 @@ namespace playnote::lib::os {
 // Throws runtime_error on failure.
 void name_current_thread(string_view name);
 
+// Lower a thread's priority level, in preparation of running intensive background jobs.
+void lower_current_thread_priority();
+
 // Set the thread scheduler period to at most the provided value. This can increase the resolution
 // of thread sleep and yield. Pair with a matching callto end_thread_scheduler_period
 // with the same period.

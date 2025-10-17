@@ -34,12 +34,6 @@ private:
 	milliseconds period;
 };
 
-// Name the current thread. This name is visible in debuggers and profilers.
-inline void name_current_thread(string_view name)
-{
-	lib::os::name_current_thread(name);
-}
-
 // Communicate a critical pre-init error to the user.
 // Shows a message box on Windows, and prints to stderr on Linux.
 template <typename... Args>

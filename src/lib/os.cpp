@@ -7,6 +7,7 @@ Implementation file for lib/thread.hpp.
 */
 
 #include "lib/os.hpp"
+#include <sched.h>
 
 #include "utils/config.hpp"
 #ifdef TARGET_WINDOWS
@@ -20,7 +21,10 @@ Implementation file for lib/thread.hpp.
 #include <timeapi.h>
 #include <shellapi.h>
 #elifdef TARGET_LINUX
+#include <linux/ioprio.h>
+#include <sys/syscall.h>
 #include <pthread.h>
+#include <unistd.h>
 #endif
 #include "preamble.hpp"
 
@@ -37,6 +41,18 @@ void name_current_thread(string_view name)
 	auto const err = pthread_setname_np(pthread_self(), string{name}.c_str());
 	if (err != 0)
 		throw system_error("Failed to set thread name");
+#endif
+}
+
+void lower_current_thread_priority()
+{
+#ifdef TARGET_WINDOWS
+	SetThreadPriority(GetCurrentThread(), THREAD_MODE_BACKGROUND_BEGIN);
+#elifdef TARGET_LINUX
+	auto param = sched_param{};
+	if (pthread_setschedparam(pthread_self(), SCHED_IDLE, &param) != 0 ||
+		syscall(SYS_ioprio_set, IOPRIO_WHO_PROCESS, 0, IOPRIO_PRIO_VALUE(IOPRIO_CLASS_IDLE, 0)) != 0)
+		throw system_error("Failed to lower thread priority");
 #endif
 }
 

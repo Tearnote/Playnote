@@ -14,8 +14,8 @@ Implementation file for threads/render.hpp.
 #include "utils/logger.hpp"
 #include "utils/config.hpp"
 #include "lib/imgui.hpp"
+#include "lib/os.hpp"
 #include "dev/window.hpp"
-#include "dev/os.hpp"
 #include "gfx/playfield.hpp"
 #include "gfx/renderer.hpp"
 #include "audio/player.hpp"
@@ -229,8 +229,10 @@ static void run_render(Broadcaster& broadcaster, dev::Window& window)
 {
 	// Init subsystems
 	auto task_pool_stub = globals::task_pool.provide(thread_pool::make_unique({
-		.on_thread_start_functor =
-			[](auto worker_idx) { dev::name_current_thread(format("pool_worker{}", worker_idx)); },
+		.on_thread_start_functor = [](auto worker_idx) {
+			lib::os::name_current_thread(format("pool_worker{}", worker_idx));
+			lib::os::lower_current_thread_priority();
+		},
 	}));
 	auto mixer_stub = globals::mixer.provide();
 	auto renderer = gfx::Renderer{window};
@@ -327,7 +329,7 @@ static void run_render(Broadcaster& broadcaster, dev::Window& window)
 
 void render_thread(Broadcaster& broadcaster, Barriers<2>& barriers, dev::Window& window)
 try {
-	dev::name_current_thread("render");
+	lib::os::name_current_thread("render");
 	broadcaster.register_as_endpoint();
 	broadcaster.subscribe<FileDrop>();
 	barriers.startup.arrive_and_wait();
