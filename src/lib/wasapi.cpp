@@ -16,7 +16,7 @@ Implementation file for lib/wasapi.hpp.
 #include <combaseapi.h>
 #include <avrt.h>
 #include "preamble.hpp"
-#include "logger.hpp"
+#include "utils/logger.hpp"
 
 namespace playnote::lib::wasapi {
 
