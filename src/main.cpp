@@ -45,10 +45,10 @@ try {
 	std::setlocale(LC_ALL, "en_US.UTF-8"); //TODO remove after forking libarchive
 	lib::dbg::set_assert_handler();
 	auto config_stub = globals::config.provide();
+	globals::config->load_from_file();
 	if (globals::config->get_entry<bool>("system", "attach_console")) lib::dbg::attach_console();
 	auto logger_stub = globals::logger.provide(LogfilePath,
 		*enum_cast<Logger::Level>(globals::config->get_entry<string>("logging", "global")));
-	globals::config->load_from_file();
 	INFO("{} {}.{}.{} starting up", AppTitle, AppVersion[0], AppVersion[1], AppVersion[2]);
 	return run();
 }
