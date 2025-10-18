@@ -44,12 +44,15 @@ public:
 	using Category = quill::Frontend::logger_t;
 	using Level = quill::LogLevel;
 
-	Category* global{nullptr};
+	Category* global = nullptr;
 
+	// Initialize the logger. A global category will be created, immediately usable
+	// with the global logging macros.
 	Logger(string_view log_file_path, Level);
-	auto register_category(string_view name, Level = Level::TraceL1,
+
+	// Create a new category. To be used with the *_AS macros.
+	auto create_category(string_view name, Level = Level::TraceL1,
 		bool log_to_console = true, bool log_to_file = true) -> Category*;
-	auto get_category(string_view name) -> Category* { return categories.at(name); }
 
 private:
 	static inline auto const Pattern = quill::PatternFormatterOptions{
@@ -58,12 +61,11 @@ private:
 	};
 	static inline auto const ShortCodes = to_array<string>({
 		"TR3", "TR2", "TRA", "DBG", "INF", "NTC",
-		"WRN", "ERR", "CRT", "BCT", "___", "DYN"
+		"WRN", "ERR", "CRT", "BCT", "___"
 	});
 
 	shared_ptr<quill::ConsoleSink> console_sink;
 	shared_ptr<quill::FileSink> file_sink;
-	unordered_map<string, Category*, string_hash> categories;
 };
 
 inline Logger::Logger(string_view log_file_path, Level global_log_level)
@@ -84,10 +86,10 @@ inline Logger::Logger(string_view log_file_path, Level global_log_level)
 	file_sink = static_pointer_cast<quill::FileSink>(
 		quill::Frontend::create_or_get_sink<quill::FileSink>(string{log_file_path}, file_cfg));
 
-	global = register_category("Global", global_log_level);
+	global = create_category("Global", global_log_level);
 }
 
-inline auto Logger::register_category(string_view name, Level level, bool log_to_console,
+inline auto Logger::create_category(string_view name, Level level, bool log_to_console,
 	bool log_to_file) -> Category*
 {
 	auto* category = quill::Frontend::create_or_get_logger(string{name}, {
@@ -95,7 +97,6 @@ inline auto Logger::register_category(string_view name, Level level, bool log_to
 		log_to_file? file_sink : nullptr
 	}, Pattern);
 	category->set_log_level(level);
-	categories.emplace(name, category);
 	return category;
 }
 

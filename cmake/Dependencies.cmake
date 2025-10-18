@@ -59,7 +59,7 @@ FetchContent_MakeAvailable(mio)
 
 FetchContent_Declare(quill # Threaded logger
 	GIT_REPOSITORY https://github.com/odygrd/quill
-	GIT_TAG v9.0.3
+	GIT_TAG v10.1.0
 )
 FetchContent_MakeAvailable(quill)
 
