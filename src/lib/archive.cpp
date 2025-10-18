@@ -27,6 +27,7 @@ static void ret_check(int ret, T& archive = {})
 
 auto open_read(span<byte const> data) -> ReadArchive
 {
+	if (data.empty()) throw runtime_error{"Cannot open archive from an empty file"};
 	auto archive = archive_read_new();
 	archive_read_support_format_all(archive);
 	archive_read_support_filter_all(archive);
