@@ -344,13 +344,13 @@ inline Song::Song(ReadFile&& file, lib::sqlite::DB&& db):
 inline auto Song::find_prefix(span<byte const> const& archive_data) -> fs::path
 {
 	auto shortest_prefix = fs::path{};
-	auto shortest_prefix_parts = -1z;
+	auto shortest_prefix_parts = optional<isize>{nullopt};
 	auto archive = lib::archive::open_read(archive_data);
 	lib::archive::for_each_entry(archive, [&](auto pathname) {
 		auto const path = fs::path{pathname};
 		if (is_bms_ext(path.extension().string())) {
 			auto const parts = distance(path.begin(), path.end());
-			if (parts < shortest_prefix_parts) {
+			if (!shortest_prefix_parts || parts < *shortest_prefix_parts) {
 				shortest_prefix = path.parent_path().string();
 				shortest_prefix_parts = parts;
 			}
@@ -358,7 +358,7 @@ inline auto Song::find_prefix(span<byte const> const& archive_data) -> fs::path
 		return true;
 	});
 
-	if (shortest_prefix_parts == -1z)
+	if (!shortest_prefix_parts)
 		throw runtime_error_fmt("No BMS files found in archive");
 	return shortest_prefix;
 }
