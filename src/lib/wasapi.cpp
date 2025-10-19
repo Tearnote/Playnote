@@ -112,7 +112,7 @@ static void buffer_thread(Context_t* ctx, HANDLE buffer_event)
 	AvRevertMmThreadCharacteristics(rtprio);
 }
 
-auto init(bool exclusive_mode, function<void(span<Sample>)>&& processor, optional<nanoseconds> latency) -> Context
+auto init(Logger::Category cat, bool exclusive_mode, function<void(span<Sample>)>&& processor, optional<nanoseconds> latency) -> Context
 {
 	auto ctx = make_unique<Context_t>();
 
@@ -213,8 +213,8 @@ auto init(bool exclusive_mode, function<void(span<Sample>)>&& processor, optiona
 		auto period = min_period;
 		if (latency) {
 			auto latency_frames = static_cast<double>(latency->count()) / 1'000'000'000.0 * sample_rate;
-			if (latency_frames < min_period) WARN("Could not set WASAPI latency below the minimum value of {}ms", static_cast<double>(min_period) / sample_rate * 1000.0);
-			else if (latency_frames > max_period) WARN("Could not set WASAPI latency above the maximum value of {}ms", static_cast<double>(max_period) / sample_rate * 1000.0);
+			if (latency_frames < min_period) WARN_AS(cat, "Could not set WASAPI latency below the minimum value of {}ms", static_cast<double>(min_period) / sample_rate * 1000.0);
+			else if (latency_frames > max_period) WARN_AS(cat, "Could not set WASAPI latency above the maximum value of {}ms", static_cast<double>(max_period) / sample_rate * 1000.0);
 			else period = latency_frames;
 		}
 		ret_check(client->InitializeSharedAudioStream(AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
@@ -226,7 +226,7 @@ auto init(bool exclusive_mode, function<void(span<Sample>)>&& processor, optiona
 		auto period = min_period;
 		if (latency) {
 			auto latency_rt = to_reference_time(*latency);
-			if (latency_rt < min_period) WARN("Could not set WASAPI latency below the minimum value of {}ms", min_period / 10000);
+			if (latency_rt < min_period) WARN_AS(cat, "Could not set WASAPI latency below the minimum value of {}ms", min_period / 10000);
 			else period = latency_rt;
 		}
 		auto hr = client->Initialize(AUDCLNT_SHAREMODE_EXCLUSIVE, AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
@@ -288,7 +288,6 @@ auto init(bool exclusive_mode, function<void(span<Sample>)>&& processor, optiona
 	auto* ctx_addr = ctx.get();
 	ctx->buffer_thread = jthread{[=]() { buffer_thread(ctx_addr, buffer_event); }};
 
-	INFO("WASAPI client initialized");
 	return ctx;
 }
 
@@ -299,7 +298,6 @@ void cleanup(Context&& ctx) noexcept
 	ctx->renderer->Release();
 	ctx->client->Release();
 	CoUninitialize();
-	INFO("WASAPI client cleaned up");
 }
 
 }

@@ -44,12 +44,17 @@ static void run_input(Broadcaster& broadcaster, dev::Window& window, Logger::Cat
 		// Handle queue changes
 		broadcaster.receive_all<RegisterInputQueue>([&](auto const& q) {
 			input_queues.emplace_back(q.queue.lock());
+			TRACE_AS(cat, "Registered input queue");
 		});
 		broadcaster.receive_all<UnregisterInputQueue>([&](auto const& q) {
 			auto queue = q.queue.lock();
 			auto it = find(input_queues, queue);
-			if (it != input_queues.end())
+			if (it != input_queues.end()) {
 				input_queues.erase(it);
+				TRACE_AS(cat, "Unregistered input queue");
+			} else {
+				WARN_AS(cat, "Attempted to unregister input queue that was not registered");
+			}
 		});
 
 		// Poll and handle input events

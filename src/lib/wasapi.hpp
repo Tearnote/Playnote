@@ -8,6 +8,7 @@ WASAPI wrapper for Windows audio support.
 
 #pragma once
 #include "preamble.hpp"
+#include "utils/logger.hpp"
 #include "lib/audio_common.hpp"
 
 // Forward declarations
@@ -33,7 +34,7 @@ using Context = unique_ptr<Context_t>;
 // thread with a buffer of samples to fill. A Context is returned and must be passed to cleanup().
 // If latency is not specified, the smallest possible latency is used.
 // Throws runtime_error on failure.
-auto init(bool exclusive_mode, function<void(span<Sample>)>&& processor, optional<nanoseconds> latency) -> Context;
+auto init(Logger::Category, bool exclusive_mode, function<void(span<Sample>)>&& processor, optional<nanoseconds> latency) -> Context;
 
 // Clean up WASAPI and associated objects.
 void cleanup(Context&& ctx) noexcept;

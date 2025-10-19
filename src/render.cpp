@@ -242,7 +242,9 @@ static void run_render(Broadcaster& broadcaster, dev::Window& window, Logger::Ca
 		},
 	}));
 	DEBUG_AS(cat, "Task pool initialized");
-	auto mixer_stub = globals::mixer.provide();
+	auto audio_cat =  globals::logger->create_category("Audio",
+		*enum_cast<Logger::Level>(globals::config->get_entry<string>("logging", "audio")));
+	auto mixer_stub = globals::mixer.provide(audio_cat);
 	auto renderer = gfx::Renderer{window, cat};
 
 	// Init game state

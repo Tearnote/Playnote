@@ -10,6 +10,7 @@ Wrapper over an Audio instance that provides simultaneous playback of multiple s
 
 #include "preamble.hpp"
 #include "utils/service.hpp"
+#include "utils/logger.hpp"
 #include "lib/signalsmith.hpp"
 #include "dev/audio.hpp"
 
@@ -24,7 +25,7 @@ public:
 
 class Mixer {
 public:
-	Mixer();
+	explicit Mixer(Logger::Category);
 
 	// Register an audio generator. A generator is any object that implements the member function
 	// auto next_sample() -> dev::Sample.
@@ -43,6 +44,7 @@ public:
 	[[nodiscard]] auto get_latency() -> nanoseconds { return audio.get_latency() + 1ms; }
 
 private:
+	Logger::Category cat;
 	dev::Audio audio;
 
 	struct GeneratorOps {
@@ -57,10 +59,11 @@ private:
 	void mix(span<dev::Sample>);
 };
 
-inline Mixer::Mixer():
+inline Mixer::Mixer(Logger::Category cat):
+	cat{cat},
 	// This might call mix() in another thread before initialization is finished, but we quit early
 	// if no generators were added yet
-	audio{[this](span<dev::Sample> buffer) { this->mix(buffer); }},
+	audio{cat, [this](span<dev::Sample> buffer) { this->mix(buffer); }},
 	limiter{audio.get_sampling_rate(), 1ms, 10ms, 100ms}
 {}
 
@@ -71,6 +74,7 @@ void Mixer::add_generator(T& generator) {
 		[&]() { generator.begin_buffer(); },
 		[&]() { return generator.next_sample(); },
 	});
+	TRACE_AS(cat, "Added generator to the mixer");
 }
 
 template<implements<Generator> T>
@@ -78,12 +82,12 @@ void Mixer::remove_generator(T& generator)
 {
 	auto lock = lock_guard{generator_lock};
 	generators.erase(&generator);
+	TRACE_AS(cat, "Removed generator from the mixer");
 }
 
 inline void Mixer::mix(span<dev::Sample> buffer)
 {
-	// Mutexes are bad in realtime context, but this should only block during startup/shutdown
-	// and loadings.
+	// This should only block during startup/shutdown and loadings
 	auto lock = lock_guard{generator_lock};
 	if (generators.empty()) return;
 

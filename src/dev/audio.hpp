@@ -29,7 +29,7 @@ class Audio {
 public:
 	// Initialize the audio device. The provider generator function is called repeatedly to fill in the sample buffer.
 	template<callable<void(span<Sample>)> Func>
-	explicit Audio(Func&& generator);
+	explicit Audio(Logger::Category, Func&& generator);
 	~Audio();
 
 	// Return current sampling rate. The value is only valid while an Audio instance exists.
@@ -52,6 +52,8 @@ public:
 private:
 	InstanceLimit<Audio, 1> instance_limit;
 
+	Logger::Category cat;
+
 #ifdef TARGET_LINUX
 	lib::pw::Context context;
 #elifdef TARGET_WINDOWS
@@ -64,19 +66,22 @@ private:
 };
 
 template<callable<void(span<Sample>)> Func>
-Audio::Audio(Func&& generator):
+Audio::Audio(Logger::Category cat, Func&& generator):
+	cat{cat},
 	generator{generator}
 {
 #ifdef TARGET_LINUX
 	context = lib::pw::init(AppTitle, globals::config->get_entry<int>("pipewire", "buffer_size"),
 		[this](auto buffer) { on_process(buffer); });
+	INFO_AS(cat, "Pipewire audio initialized");
 #elifdef TARGET_WINDOWS
-	context = lib::wasapi::init(globals::config->get_entry<bool>("wasapi", "exclusive_mode"),
+	context = lib::wasapi::init(cat, globals::config->get_entry<bool>("wasapi", "exclusive_mode"),
 		[this](auto buffer) { on_process(buffer); },
 		globals::config->get_entry<bool>("wasapi", "use_custom_latency")?
 			make_optional(milliseconds{globals::config->get_entry<int>("wasapi", "custom_latency")}) : nullopt);
+	INFO_AS(cat, "WASAPI {} mode audio initialized", context.exclusive_mode? "exclusive" : "shared");
 #endif
-	INFO("Audio device properties: sample rate: {}Hz, latency: {}ms",
+	INFO_AS(cat, "Audio device properties: sample rate: {}Hz, latency: {}ms",
 		context->properties.sampling_rate,
 		duration_cast<milliseconds>(lib::audio_latency(context->properties)).count());
 }
@@ -85,8 +90,10 @@ inline Audio::~Audio()
 {
 #ifdef TARGET_LINUX
 	lib::pw::cleanup(move(context));
+	INFO_AS(cat, "Pipewire audio cleaned up");
 #elifdef TARGET_WINDOWS
 	lib::wasapi::cleanup(move(context));
+	INFO_AS(cat, "WASAPI audio cleaned up");
 #endif
 }
 
