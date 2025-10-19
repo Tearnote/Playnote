@@ -211,6 +211,7 @@ private:
 	lib::sqlite::DB db;
 	task_container import_tasks;
 	coro_mutex song_lock;
+	coro_mutex transaction_lock;
 	atomic<bool> dirty = true;
 	atomic<bool> stopping = false;
 	ImportStats import_stats;
@@ -497,6 +498,8 @@ inline auto Library::import_chart(io::Song& song, isize song_id, string chart_pa
 	INFO_AS(builder_cat, "Importing chart \"{}\"", chart_path);
 	auto builder = Builder{builder_cat};
 	auto chart = co_await builder.build(chart_raw, song);
+
+	auto lock = co_await transaction_lock.scoped_lock();
     lib::sqlite::transaction(db, [&] {
         lib::sqlite::execute(insert_chart, chart->md5, song_id, chart_path, chart->metadata.title,
 			chart->metadata.subtitle, chart->metadata.artist, chart->metadata.subartist,
