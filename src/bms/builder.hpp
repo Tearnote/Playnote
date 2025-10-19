@@ -33,9 +33,6 @@ public:
 	auto build(span<byte const> bms, io::Song&, optional<reference_wrapper<Metadata>> cache = nullopt) -> task<shared_ptr<Chart const>>;
 
 private:
-	// Text encodings expected to be found in BMS files.
-	static constexpr auto KnownEncodings = {"UTF-8"sv, "Shift_JIS"sv, "EUC-KR"sv};
-
 	// BMS header commands which can be followed up with a slot value as part of the header.
 	static constexpr auto CommandsWithSlots = {"WAV"sv, "BMP"sv, "BGA"sv, "BPM"sv, "TEXT"sv, "SONG"sv, "@BGA"sv,
 		"STOP"sv, "ARGB"sv, "SEEK"sv, "EXBPM"sv, "EXWAV"sv, "SWBGA"sv, "EXRANK"sv, "CHANGEOPTION"sv};
@@ -322,7 +319,7 @@ inline auto Builder::build(span<byte const> bms_raw, io::Song& song, optional<re
 	parse_state.measure_lengths.reserve(256); // Arbitrary
 
 	// Convert chart to UTF-8
-	auto encoding = lib::icu::detect_encoding(bms_raw, KnownEncodings);
+	auto encoding = lib::icu::detect_encoding(bms_raw, io::Song::KnownEncodings);
 	if (!encoding) {
 		WARN_AS(cat, "Unexpected BMS file encoding; assuming Shift_JIS");
 		encoding = "Shift_JIS";
@@ -376,7 +373,9 @@ inline auto Builder::build(span<byte const> bms_raw, io::Song& song, optional<re
 		if (!parsed_slot.used) continue;
 		auto& slot = chart->media.wav_slots[parsed_slot.idx];
 		tasks.emplace_back(schedule_task([](io::Song& song, vector<dev::Sample>& slot, string filename) -> task<> {
-			slot = song.load_audio_file(filename);
+			try {
+				slot = song.load_audio_file(filename);
+			} catch (...) {} // If audio failed to load, slot will just stay empty
 			co_return;
 		}(song, slot, parsed_slot.filename)));
 	}
