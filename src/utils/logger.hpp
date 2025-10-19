@@ -8,6 +8,7 @@ Wrapper for the Quill threaded async logging library.
 
 #pragma once
 #include "quill/sinks/ConsoleSink.h"
+#include "quill/sinks/StreamSink.h"
 #include "quill/sinks/FileSink.h"
 #include "quill/LogMacros.h"
 #include "quill/Frontend.h"
@@ -30,12 +31,12 @@ Wrapper for the Quill threaded async logging library.
 
 // Log to a specific category
 
-#define TRACE_AS(category, ...) LOG_TRACE_L1(category, __VA_ARGS__)
-#define DEBUG_AS(category, ...) LOG_DEBUG(category, __VA_ARGS__)
-#define INFO_AS(category, ...) LOG_INFO(category, __VA_ARGS__)
-#define WARN_AS(category, ...) LOG_WARNING(category, __VA_ARGS__)
-#define ERROR_AS(category, ...) LOG_ERROR(category, __VA_ARGS__)
-#define CRIT_AS(category, ...) LOG_CRITICAL(category, __VA_ARGS__)
+#define TRACE_AS(category, ...) LOG_TRACE_L1(static_cast<quill::Frontend::logger_t*>(category), __VA_ARGS__)
+#define DEBUG_AS(category, ...) LOG_DEBUG(static_cast<quill::Frontend::logger_t*>(category), __VA_ARGS__)
+#define INFO_AS(category, ...) LOG_INFO(static_cast<quill::Frontend::logger_t*>(category), __VA_ARGS__)
+#define WARN_AS(category, ...) LOG_WARNING(static_cast<quill::Frontend::logger_t*>(category), __VA_ARGS__)
+#define ERROR_AS(category, ...) LOG_ERROR(static_cast<quill::Frontend::logger_t*>(category), __VA_ARGS__)
+#define CRIT_AS(category, ...) LOG_CRITICAL(static_cast<quill::Frontend::logger_t*>(category), __VA_ARGS__)
 
 namespace playnote {
 
@@ -43,6 +44,58 @@ class Logger {
 public:
 	using Category = quill::Frontend::logger_t;
 	using Level = quill::LogLevel;
+
+	class StringLogger {
+	public:
+		~StringLogger();
+
+		auto get_buffer() -> string;
+
+		operator Logger::Category*() { return category; }
+
+	private:
+		class MemorySink: public quill::Sink {
+		public:
+			MemorySink() = default;
+
+			void write_log(quill::MacroMetadata const*, uint64_t /** log_timestamp **/,
+				std::string_view /** thread_id **/, std::string_view /** thread_name **/,
+				std::string const& /** process_id **/, std::string_view /** logger_name **/,
+				quill::LogLevel, std::string_view /** log_level_description **/,
+				std::string_view /** log_level_short_code **/,
+				std::vector<std::pair<std::string, std::string>> const* /** named_args **/,
+				std::string_view /** log_message **/, std::string_view log_statement) override
+			{
+				buffer.append(log_statement);
+			}
+
+			auto get_buffer() -> string;
+
+			void flush_sink() noexcept override {}
+			void run_periodic_tasks() noexcept override {}
+
+			MemorySink(MemorySink const&) = delete;
+			auto operator=(MemorySink const&) -> MemorySink& = delete;
+			MemorySink(MemorySink&&) = delete;
+			auto operator=(MemorySink&&) -> MemorySink& = delete;
+
+		private:
+			string buffer;
+		};
+
+		friend class Logger;
+
+		static inline auto const Pattern = quill::PatternFormatterOptions{
+			"%(time) [%(log_level_short_code)] %(message)",
+			"%H:%M:%S.%Qms"
+		};
+
+		string buffer;
+		shared_ptr<MemorySink> sink;
+		Logger::Category* category;
+
+		StringLogger(string_view name, Logger::Level);
+	};
 
 	Category* global = nullptr;
 
@@ -53,6 +106,8 @@ public:
 	// Create a new category. To be used with the *_AS macros.
 	auto create_category(string_view name, Level = Level::TraceL1,
 		bool log_to_console = true, bool log_to_file = true) -> Category*;
+
+	auto create_string_logger(string_view name, Level = Level::TraceL1) -> StringLogger;
 
 private:
 	static inline auto const Pattern = quill::PatternFormatterOptions{
@@ -67,6 +122,32 @@ private:
 	shared_ptr<quill::ConsoleSink> console_sink;
 	shared_ptr<quill::FileSink> file_sink;
 };
+
+inline Logger::StringLogger::StringLogger(string_view name, Logger::Level level)
+{
+	auto name_str = string{name};
+	sink = static_pointer_cast<MemorySink>(quill::Frontend::create_or_get_sink<MemorySink>(name_str));
+	category = quill::Frontend::create_or_get_logger(name_str, {sink}, Pattern);
+	category->set_log_level(level);
+}
+
+inline Logger::StringLogger::~StringLogger()
+{
+	quill::Frontend::remove_logger(category);
+}
+
+inline auto Logger::StringLogger::get_buffer() -> string
+{
+	category->flush_log();
+	return sink->get_buffer();
+}
+
+inline auto Logger::StringLogger::MemorySink::get_buffer() -> string
+{
+	auto out_buffer = move(buffer);
+	buffer = string{};
+	return out_buffer;
+}
 
 inline Logger::Logger(string_view log_file_path, Level global_log_level)
 {
@@ -98,6 +179,11 @@ inline auto Logger::create_category(string_view name, Level level, bool log_to_c
 	}, Pattern);
 	category->set_log_level(level);
 	return category;
+}
+
+inline auto Logger::create_string_logger(string_view name, Level level) -> StringLogger
+{
+	return StringLogger{name, level};
 }
 
 }
