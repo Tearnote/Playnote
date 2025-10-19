@@ -7,7 +7,6 @@ Implementation file for lib/thread.hpp.
 */
 
 #include "lib/os.hpp"
-#include <sched.h>
 
 #include "utils/config.hpp"
 #ifdef TARGET_WINDOWS
@@ -25,6 +24,7 @@ Implementation file for lib/thread.hpp.
 #include <sys/syscall.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <sched.h>
 #endif
 #include "preamble.hpp"
 
