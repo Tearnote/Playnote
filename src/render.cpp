@@ -298,7 +298,7 @@ static void run_render(Broadcaster& broadcaster, dev::Window& window, Logger::Ca
 				}(library));
 			}
 			if (context.chart_reload_result && context.chart_reload_result->wait_for(0s) == future_status::ready) {
-				context.charts = move(context.chart_reload_result->get());
+				context.charts = context.chart_reload_result->get();
 				context.chart_reload_result = nullopt;
 			}
 		}

@@ -22,6 +22,23 @@ struct ReadFile {
 	span<byte const> contents;
 };
 
+// A utility that will delete a file at the end of scope, unless disarmed.
+class FileDeleter {
+public:
+	explicit FileDeleter(fs::path path): path{path} {}
+	~FileDeleter() { if (!disarmed) fs::remove(path); }
+	void disarm() { disarmed = true; }
+
+	FileDeleter(FileDeleter const&) = delete;
+	auto operator=(FileDeleter const&) -> FileDeleter& = delete;
+	FileDeleter(FileDeleter&&) = delete;
+	auto operator=(FileDeleter&&) -> FileDeleter& = delete;
+
+private:
+	fs::path path;
+	bool disarmed = false;
+};
+
 // Open a file for reading.
 // Throws runtime_error if the provided path doesn't exist or isn't a regular file, or if mio
 // throws system_error.

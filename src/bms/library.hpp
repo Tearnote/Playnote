@@ -384,7 +384,7 @@ inline auto Library::import_one(fs::path path) -> task<>
 }
 
 inline auto Library::import_song(fs::path const& path) -> pair<isize, string>
-try {
+{
 	auto const is_archive = fs::is_regular_file(path);
 
 	// First, determine if we're creating a new song or extending an existing song
@@ -407,12 +407,14 @@ try {
 
 		auto tmp_path = existing_song_path;
 		tmp_path.concat(".tmp");
+		auto deleter = io::FileDeleter{tmp_path};
 		if (is_archive)
 			io::Song::extend_zip_from_archive(existing_song_path, path, tmp_path);
 		else
 			io::Song::extend_zip_from_directory(existing_song_path, path, tmp_path);
 
 		fs::rename(tmp_path, existing_song_path);
+		deleter.disarm();
 		return {existing_song_id, existing_song_path.string()};
 	} else { // New song
 		auto out_filename = is_archive? path.stem().string() : path.filename().string();
@@ -421,6 +423,7 @@ try {
 		out_filename = find_available_song_filename(out_filename);
 
 		auto const out_path = fs::path{LibraryPath} / out_filename;
+		auto deleter = io::FileDeleter{out_path};
 		if (is_archive)
 			io::Song::zip_from_archive(path, out_path);
 		else
@@ -428,12 +431,9 @@ try {
 
 		auto insert_song = lib::sqlite::prepare(db, InsertSongQuery);
 		auto const song_id = lib::sqlite::insert(insert_song, out_filename);
+		deleter.disarm();
 		return {song_id, out_path.string()};
 	}
-}
-catch (...) {
-	fs::remove(path);
-	throw;
 }
 
 inline auto Library::import_chart(io::Song& song, isize song_id, string chart_path, span<byte const> chart_raw) -> task<>
