@@ -104,12 +104,22 @@ inline void Config::create_defaults()
 	});
 	entries.emplace_back(Entry{
 		.category = "logging",
-		.name = "bms_build",
+		.name = "input",
 		.value = "Info",
 	});
 	entries.emplace_back(Entry{
 		.category = "logging",
-		.name = "graphics",
+		.name = "render",
+		.value = "Info",
+	});
+	entries.emplace_back(Entry{
+		.category = "logging",
+		.name = "audio",
+		.value = "Info",
+	});
+	entries.emplace_back(Entry{
+		.category = "logging",
+		.name = "library",
 		.value = "Info",
 	});
 

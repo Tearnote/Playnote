@@ -8,14 +8,13 @@ Wrapper over a GPU instance that provides rendering of primitives.
 
 #pragma once
 #include "preamble.hpp"
+#include "utils/logger.hpp"
 #include "lib/vuk.hpp"
 #include "dev/window.hpp"
 #include "dev/gpu.hpp"
 #include "gfx/imgui.hpp"
 
 namespace playnote::gfx {
-
-namespace vk = lib::vk;
 
 class Renderer {
 public:
@@ -41,7 +40,7 @@ public:
 		unordered_map<id, Layer> layers;
 	};
 
-	explicit Renderer(dev::Window&);
+	explicit Renderer(dev::Window&, Logger::Category);
 
 	// Provide a queue to the function argument, and then draw contents of the queue to the screen.
 	// Each call will wait block until the next frame begins.
@@ -50,14 +49,16 @@ public:
 	void frame(initializer_list<id> layer_order, Func&&);
 
 private:
+	Logger::Category cat;
 	dev::GPU gpu;
 	Imgui imgui;
 
 	[[nodiscard]] auto draw_rects(lib::vuk::Allocator&, lib::vuk::ManagedImage&&, span<Rect const>) -> lib::vuk::ManagedImage;
 };
 
-inline Renderer::Renderer(dev::Window& window):
-	gpu{window},
+inline Renderer::Renderer(dev::Window& window, Logger::Category cat):
+	cat{cat},
+	gpu{window, cat},
 	imgui{gpu}
 {
 	constexpr auto rects_vert_src = to_array<uint32>({
@@ -68,6 +69,9 @@ inline Renderer::Renderer(dev::Window& window):
 	});
 	auto& context = gpu.get_global_allocator().get_context();
 	lib::vuk::create_graphics_pipeline(context, "rects", rects_vert_src, rects_frag_src);
+	DEBUG_AS(cat, "Compiled rects pipeline");
+
+	INFO_AS(cat, "Renderer initialized");
 }
 
 template<callable<void(Renderer::Queue&)> Func>

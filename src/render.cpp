@@ -232,7 +232,7 @@ static auto render_import_status(ImportStatus const& status) -> bool
 	return reset;
 }
 
-static void run_render(Broadcaster& broadcaster, dev::Window& window)
+static void run_render(Broadcaster& broadcaster, dev::Window& window, Logger::Category cat)
 {
 	// Init subsystems
 	auto task_pool_stub = globals::task_pool.provide(thread_pool::make_unique({
@@ -241,8 +241,9 @@ static void run_render(Broadcaster& broadcaster, dev::Window& window)
 			lib::os::lower_current_thread_priority();
 		},
 	}));
+	DEBUG_AS(cat, "Task pool initialized");
 	auto mixer_stub = globals::mixer.provide();
-	auto renderer = gfx::Renderer{window};
+	auto renderer = gfx::Renderer{window, cat};
 
 	// Init game state
 	auto library = make_shared<bms::Library>(LibraryDBPath);
@@ -344,11 +345,14 @@ try {
 	broadcaster.register_as_endpoint();
 	broadcaster.subscribe<FileDrop>();
 	barriers.startup.arrive_and_wait();
-	run_render(broadcaster, window);
+	auto cat = globals::logger->create_category("Render",
+		*enum_cast<Logger::Level>(globals::config->get_entry<string>("logging", "render")));
+	run_render(broadcaster, window, cat);
 	barriers.shutdown.arrive_and_wait();
 }
 catch (exception const& e) {
-	CRIT("Uncaught exception: {}", e.what());
+	auto cat = globals::logger->create_category("Render");
+	CRIT_AS(cat, "Uncaught exception: {}", e.what());
 	window.request_close();
 	barriers.shutdown.arrive_and_wait();
 }

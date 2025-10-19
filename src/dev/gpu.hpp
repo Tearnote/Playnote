@@ -21,7 +21,7 @@ using lib::vuk::ManagedImage;
 // RAII encapsulation of GPU state, handling initialization and frame preparation/presentation
 class GPU {
 public:
-	explicit GPU(dev::Window&);
+	GPU(dev::Window&, Logger::Category);
 	~GPU() { runtime.wait_idle(); }
 
 	[[nodiscard]] auto get_window() const -> dev::Window& { return window; }
@@ -171,10 +171,9 @@ auto inline GPU::create_swapchain(lib::vuk::Allocator& allocator, Device& device
 	return swapchain;
 }
 
-inline GPU::GPU(dev::Window& window):
+inline GPU::GPU(dev::Window& window, Logger::Category cat):
 	// Beautiful, isn't it
-	cat{globals::logger->create_category("Graphics",
-		*enum_cast<Logger::Level>(globals::config->get_entry<string>("logging", "graphics")))},
+	cat{cat},
 	window{window},
 	instance{cat},
 	surface{cat, window, instance},

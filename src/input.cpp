@@ -10,6 +10,7 @@ Implementation file for threads/audio.hpp.
 
 #include "preamble.hpp"
 #include "utils/broadcaster.hpp"
+#include "utils/config.hpp"
 #include "utils/logger.hpp"
 #include "lib/os.hpp"
 #include "dev/controller.hpp"
@@ -71,7 +72,8 @@ try {
 	broadcaster.subscribe<RegisterInputQueue>();
 	broadcaster.subscribe<UnregisterInputQueue>();
 	barriers.startup.arrive_and_wait();
-	auto cat = globals::logger->create_category("Input");
+	auto cat = globals::logger->create_category("Input",
+		*enum_cast<Logger::Level>(globals::config->get_entry<string>("logging", "input")));
 	run_input(broadcaster, window, cat);
 	barriers.shutdown.arrive_and_wait();
 }
