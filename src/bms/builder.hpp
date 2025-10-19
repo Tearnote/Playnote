@@ -22,10 +22,14 @@ Parsing of BMS chart data into a Chart object.
 
 namespace playnote::bms {
 
+// Generator of charts from BMS files.
 class Builder {
 public:
+	// Create the builder. Chart generation from this builder will use the provided logger.
 	explicit Builder(Logger::Category);
 
+	// Build a chart from BMS data. The song must contain audio/video resources referenced by the chart.
+	// Optionally, the metadata cache speeds up loading by skipping expensive steps.
 	auto build(span<byte const> bms, io::Song&, optional<reference_wrapper<Metadata>> cache = nullopt) -> task<shared_ptr<Chart const>>;
 
 private:
