@@ -32,7 +32,7 @@ using RawInstance = VkInstance_T*;
 
 // Create a Vulkan instance.
 // Throws runtime_error on failure.
-auto create_instance(string_view name, Logger::Category* debug_logger) -> Instance;
+auto create_instance(string_view name, Logger::Category debug_logger) -> Instance;
 
 // Destroy the Vulkan instance.
 void destroy_instance(Instance&& instance) noexcept;

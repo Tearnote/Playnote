@@ -39,14 +39,14 @@ public:
 
 private:
 	InstanceLimit<GPU, 1> instance_limit;
-	Logger::Category* cat;
+	Logger::Category cat;
 
 	// RAII wrapper of a Vulkan instance.
 	class Instance {
 	public:
 		lib::vk::Instance instance;
 
-		explicit Instance(Logger::Category*);
+		explicit Instance(Logger::Category);
 		~Instance() noexcept;
 
 		Instance(Instance const&) = delete;
@@ -55,7 +55,7 @@ private:
 		auto operator=(Instance&&) -> Instance& = delete;
 
 	private:
-		Logger::Category* cat;
+		Logger::Category cat;
 	};
 
 	// RAII wrapper of a Vulkan surface.
@@ -63,7 +63,7 @@ private:
 	public:
 		lib::vk::Surface surface;
 
-		Surface(Logger::Category*, dev::Window&, Instance&);
+		Surface(Logger::Category, dev::Window&, Instance&);
 		~Surface() noexcept;
 
 		Surface(Surface const&) = delete;
@@ -72,7 +72,7 @@ private:
 		auto operator=(Surface&&) -> Surface& = delete;
 
 	private:
-		Logger::Category* cat;
+		Logger::Category cat;
 		Instance& instance;
 	};
 
@@ -81,7 +81,7 @@ private:
 	public:
 		lib::vk::Device device;
 
-		Device(Logger::Category*, lib::vk::PhysicalDevice const&);
+		Device(Logger::Category, lib::vk::PhysicalDevice const&);
 		~Device() noexcept;
 
 		Device(Device const&) = delete;
@@ -90,7 +90,7 @@ private:
 		auto operator=(Device&&) -> Device& = delete;
 
 	private:
-		Logger::Category* cat;
+		Logger::Category cat;
 	};
 
 	// Logging wrappers.
@@ -110,7 +110,7 @@ private:
 	lib::vuk::Swapchain swapchain;
 };
 
-inline GPU::Instance::Instance(Logger::Category* cat):
+inline GPU::Instance::Instance(Logger::Category cat):
 	instance{lib::vk::create_instance(AppTitle, cat)},
 	cat{cat}
 { DEBUG_AS(cat, "Vulkan instance created"); }
@@ -121,7 +121,7 @@ inline GPU::Instance::~Instance() noexcept
 	DEBUG_AS(cat, "Vulkan instance cleaned up");
 }
 
-inline GPU::Surface::Surface(Logger::Category* cat, dev::Window& window, Instance& instance):
+inline GPU::Surface::Surface(Logger::Category cat, dev::Window& window, Instance& instance):
 	surface{window.create_surface(instance.instance)},
 	cat{cat},
 	instance{instance} {}
@@ -132,7 +132,7 @@ inline GPU::Surface::~Surface() noexcept
 	DEBUG_AS(cat, "Vulkan surface cleaned up");
 }
 
-inline GPU::Device::Device(Logger::Category* cat, lib::vk::PhysicalDevice const& physical_device):
+inline GPU::Device::Device(Logger::Category cat, lib::vk::PhysicalDevice const& physical_device):
 	device{lib::vk::create_device(physical_device)},
 	cat{cat}
 { DEBUG_AS(cat, "Vulkan device created"); }

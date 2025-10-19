@@ -17,7 +17,7 @@ Implementation file for threads/audio.hpp.
 
 namespace playnote {
 
-static void run_input(Broadcaster& broadcaster, dev::Window& window, Logger::Category* cat)
+static void run_input(Broadcaster& broadcaster, dev::Window& window, Logger::Category cat)
 {
 	// Register input handlers
 	auto input_queues = vector<shared_ptr<spsc_queue<UserInput>>>{};

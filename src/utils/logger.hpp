@@ -40,9 +40,10 @@ Wrapper for the Quill threaded async logging library.
 
 namespace playnote {
 
+// Point of access to the logging system.
 class Logger {
 public:
-	using Category = quill::Frontend::logger_t;
+	using Category = quill::Frontend::logger_t*;
 	using Level = quill::LogLevel;
 
 	class StringLogger {
@@ -51,7 +52,7 @@ public:
 
 		auto get_buffer() -> string;
 
-		operator Logger::Category*() { return category; }
+		operator Logger::Category() { return category; }
 
 	private:
 		class MemorySink: public quill::Sink {
@@ -92,12 +93,12 @@ public:
 
 		string buffer;
 		shared_ptr<MemorySink> sink;
-		Logger::Category* category;
+		Logger::Category category;
 
 		StringLogger(string_view name, Logger::Level);
 	};
 
-	Category* global = nullptr;
+	Category global = nullptr;
 
 	// Initialize the logger. A global category will be created, immediately usable
 	// with the global logging macros.
@@ -105,7 +106,7 @@ public:
 
 	// Create a new category. To be used with the *_AS macros.
 	auto create_category(string_view name, Level = Level::TraceL1,
-		bool log_to_console = true, bool log_to_file = true) -> Category*;
+		bool log_to_console = true, bool log_to_file = true) -> Category;
 
 	auto create_string_logger(string_view name, Level = Level::TraceL1) -> StringLogger;
 
@@ -170,8 +171,7 @@ inline Logger::Logger(string_view log_file_path, Level global_log_level)
 	global = create_category("Global", global_log_level);
 }
 
-inline auto Logger::create_category(string_view name, Level level, bool log_to_console,
-	bool log_to_file) -> Category*
+inline auto Logger::create_category(string_view name, Level level, bool log_to_console, bool log_to_file) -> Category
 {
 	auto* category = quill::Frontend::create_or_get_logger(string{name}, {
 		log_to_console? console_sink : nullptr,

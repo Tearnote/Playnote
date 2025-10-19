@@ -25,7 +25,7 @@ static auto debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT severity_code,
 	void* logger_ptr) -> VkBool32
 {
 	ASSERT(data);
-	auto* logger = static_cast<Logger::Category*>(logger_ptr);
+	auto logger = static_cast<Logger::Category>(logger_ptr);
 
 	auto const type = [type_code]() {
 		if (type_code & VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT) return "[VulkanPerf]";
@@ -48,7 +48,7 @@ static auto debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT severity_code,
 	return VK_FALSE;
 }
 
-auto create_instance(string_view name, Logger::Category* debug_logger) -> Instance
+auto create_instance(string_view name, Logger::Category debug_logger) -> Instance
 {
 	auto instance_builder = vkb::InstanceBuilder{}
 		.set_app_name(string{name}.c_str())

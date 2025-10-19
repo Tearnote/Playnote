@@ -20,7 +20,7 @@ namespace playnote::dev {
 
 class ControllerDispatcher {
 public:
-	explicit ControllerDispatcher(Logger::Category*);
+	explicit ControllerDispatcher(Logger::Category);
 
 	using ControllerEvent = variant<ButtonInput, AxisInput>;
 	template<callable<void(ControllerEvent)> Func>
@@ -29,7 +29,7 @@ public:
 private:
 	InstanceLimit<ControllerDispatcher, 1> instance_limit;
 	static inline ControllerDispatcher* instance;
-	Logger::Category* cat;
+	Logger::Category cat;
 
 	struct Controller {
 		ControllerID id;
@@ -42,7 +42,7 @@ private:
 	static void joystick_event_callback(int jid, int event);
 };
 
-inline ControllerDispatcher::ControllerDispatcher(Logger::Category* cat):
+inline ControllerDispatcher::ControllerDispatcher(Logger::Category cat):
 	cat{cat}
 {
 	instance = this;
