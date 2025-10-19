@@ -79,7 +79,7 @@ Audio::Audio(Logger::Category cat, Func&& generator):
 		[this](auto buffer) { on_process(buffer); },
 		globals::config->get_entry<bool>("wasapi", "use_custom_latency")?
 			make_optional(milliseconds{globals::config->get_entry<int>("wasapi", "custom_latency")}) : nullopt);
-	INFO_AS(cat, "WASAPI {} mode audio initialized", context.exclusive_mode? "exclusive" : "shared");
+	INFO_AS(cat, "WASAPI {} mode audio initialized", context->exclusive_mode? "exclusive" : "shared");
 #endif
 	INFO_AS(cat, "Audio device properties: sample rate: {}Hz, latency: {}ms",
 		context->properties.sampling_rate,
