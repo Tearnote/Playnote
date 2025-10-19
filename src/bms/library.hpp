@@ -67,7 +67,7 @@ public:
 	void reset_import_stats();
 
 	// Load a chart from the library.
-	auto load_chart(lib::openssl::MD5) -> shared_ptr<Chart const>;
+	auto load_chart(lib::openssl::MD5) -> task<shared_ptr<Chart const>>;
 
 	Library(Library const&) = delete;
 	auto operator=(Library const&) -> Library& = delete;
@@ -272,7 +272,7 @@ inline void Library::reset_import_stats()
 	import_stats.charts_failed.store(0);
 }
 
-inline auto Library::load_chart(lib::openssl::MD5 md5) -> shared_ptr<Chart const>
+inline auto Library::load_chart(lib::openssl::MD5 md5) -> task<shared_ptr<Chart const>>
 {
 	auto cache = optional<Metadata>{nullopt};
 	auto song_path = fs::path{};
@@ -335,7 +335,7 @@ inline auto Library::load_chart(lib::openssl::MD5 md5) -> shared_ptr<Chart const
 	auto song = io::Song::from_zip(song_path);
 	auto chart_raw = song.load_file(chart_path);
 	auto builder = Builder{cat};
-	return sync_wait(builder.build(chart_raw, song, *cache));
+	co_return co_await builder.build(chart_raw, song, *cache);
 }
 
 inline auto Library::find_available_song_filename(string_view name) -> string

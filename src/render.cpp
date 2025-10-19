@@ -32,7 +32,7 @@ namespace playnote {
 
 enum class State {
 	None,
-	Library,
+	Select,
 	Gameplay,
 };
 
@@ -46,9 +46,10 @@ struct ImportStatus {
 	uint32 charts_failed;
 };
 
-struct LibraryContext {
+struct SelectContext {
 	vector<bms::Library::ChartEntry> charts;
-	optional<future<vector<bms::Library::ChartEntry>>> chart_reload_result;
+	optional<future<vector<bms::Library::ChartEntry>>> library_reload_result;
+	optional<future<shared_ptr<bms::Chart const>>> chart_load_result;
 };
 
 struct GameplayContext {
@@ -64,11 +65,11 @@ struct GameplayContext {
 struct GameState {
 	State current;
 	State requested;
-	lib::openssl::MD5 requested_chart;
-	variant<monostate, LibraryContext, GameplayContext> context;
+	shared_ptr<bms::Library> library;
+	variant<monostate, SelectContext, GameplayContext> context;
 	optional<ImportStatus> import_status;
 
-	[[nodiscard]] auto library_context() -> LibraryContext& { return get<LibraryContext>(context); }
+	[[nodiscard]] auto select_context() -> SelectContext& { return get<SelectContext>(context); }
 	[[nodiscard]] auto gameplay_context() -> GameplayContext& { return get<GameplayContext>(context); }
 };
 
@@ -132,7 +133,7 @@ static void show_playback_controls(GameState& state)
 		context.score = bms::Score{*context.chart};
 	}
 	lib::imgui::same_line();
-	if (lib::imgui::button("Back")) state.requested = State::Library;
+	if (lib::imgui::button("Back")) state.requested = State::Select;
 }
 
 static void show_scroll_speed_controls(double& scroll_speed)
@@ -162,21 +163,30 @@ static void show_results(bms::Score const& score)
 	lib::imgui::text(" Rank: {}", enum_name(score.get_rank()));
 }
 
-static void render_library(gfx::Renderer::Queue&, GameState& state)
+static void render_select(gfx::Renderer::Queue&, GameState& state)
 {
-	auto& context = state.library_context();
+	auto& context = state.select_context();
 	lib::imgui::begin_window("library", {8, 8}, 800, lib::imgui::WindowStyle::Static);
 	if (context.charts.empty()) {
 		lib::imgui::text("The library is empty. Drag a song folder or archive onto the game window to import.");
 	} else {
 		for (auto const& chart: context.charts) {
 			if (lib::imgui::selectable(chart.title.c_str())) {
+				context.chart_load_result = launch_pollable(
+					[](shared_ptr<bms::Library> library, lib::openssl::MD5 md5) -> task<shared_ptr<bms::Chart const>> {
+						co_return co_await library->load_chart(md5);
+					}(state.library, chart.md5));
 				state.requested = State::Gameplay;
-				state.requested_chart = chart.md5;
 			}
 		}
 	}
 	lib::imgui::end_window();
+
+	if (context.chart_load_result) {
+		lib::imgui::begin_window("chart_load", {860, 8}, 96, lib::imgui::WindowStyle::Static);
+		lib::imgui::text("Loading...");
+		lib::imgui::end_window();
+	}
 }
 
 static void render_gameplay(gfx::Renderer::Queue& queue, GameState& state)
@@ -251,32 +261,35 @@ static void run_render(Broadcaster& broadcaster, dev::Window& window, Logger::Ca
 	auto renderer = gfx::Renderer{window, cat};
 
 	// Init game state
+	auto state = GameState{};
 	auto library_cat = globals::logger->create_category("Library",
 		*enum_cast<Logger::Level>(globals::config->get_entry<string>("logging", "library")));
-	auto library = make_shared<bms::Library>(library_cat, LibraryDBPath);
-	auto state = GameState{};
-	state.requested = State::Library;
+	state.library = make_shared<bms::Library>(library_cat, LibraryDBPath);
+	state.requested = State::Select;
 
 	while (!window.is_closing()) {
 		// Handle state changes
-		if (state.requested == State::Library) {
+		if (state.requested == State::Select) {
 			if (holds_alternative<GameplayContext>(state.context)) {
 				broadcaster.shout(UnregisterInputQueue{
 					.queue = weak_ptr{state.gameplay_context().player.get_input_queue()},
 				});
 			}
-			state.context.emplace<LibraryContext>();
-			state.library_context().chart_reload_result = launch_pollable(
+			state.context.emplace<SelectContext>();
+			state.select_context().library_reload_result = launch_pollable(
 				[](shared_ptr<bms::Library> library) -> task<vector<bms::Library::ChartEntry>> {
 					co_return co_await library->list_charts();
-				}(library));
-			state.current = State::Library;
+				}(state.library));
+			state.current = State::Select;
 			state.requested = State::None;
 		}
-		if (state.requested == State::Gameplay) {
+		if (state.requested == State::Gameplay && state.current == State::Select && state.select_context().chart_load_result &&
+			state.select_context().chart_load_result->wait_for(0s) == future_status::ready)
+		{
+			auto chart = state.select_context().chart_load_result->get();
 			state.context.emplace<GameplayContext>();
 			auto& context = state.gameplay_context();
-			context.chart = library->load_chart(state.requested_chart); //TODO convert to coro
+			context.chart = move(chart);
 			context.cursor = make_shared<bms::Cursor>(context.chart, false);
 			context.score = bms::Score{*context.chart};
 			broadcaster.shout(RegisterInputQueue{
@@ -292,39 +305,39 @@ static void run_render(Broadcaster& broadcaster, dev::Window& window, Logger::Ca
 
 		// Handle chart library
 		broadcaster.receive_all<FileDrop>([&](auto const& ev) {
-			for (auto const& path: ev.paths) library->import(path);
+			for (auto const& path: ev.paths) state.library->import(path);
 		});
-		if (state.current == State::Library) {
-			auto& context = state.library_context();
-			if (library->is_dirty() && !context.chart_reload_result) {
-				state.library_context().chart_reload_result = launch_pollable(
-				[](shared_ptr<bms::Library> library) -> task<vector<bms::Library::ChartEntry>> {
-					co_return co_await library->list_charts();
-				}(library));
+		if (state.current == State::Select) {
+			auto& context = state.select_context();
+			if (state.library->is_dirty() && !context.library_reload_result) {
+				state.select_context().library_reload_result = launch_pollable(
+					[](shared_ptr<bms::Library> library) -> task<vector<bms::Library::ChartEntry>> {
+						co_return co_await library->list_charts();
+					}(state.library));
 			}
-			if (context.chart_reload_result && context.chart_reload_result->wait_for(0s) == future_status::ready) {
-				context.charts = context.chart_reload_result->get();
-				context.chart_reload_result = nullopt;
+			if (context.library_reload_result && context.library_reload_result->wait_for(0s) == future_status::ready) {
+				context.charts = context.library_reload_result->get();
+				context.library_reload_result = nullopt;
 			}
 		}
-		if (library->is_importing()) {
+		if (state.library->is_importing()) {
 			if (!state.import_status) state.import_status = ImportStatus{};
 			state.import_status->complete = false;
-			state.import_status->songs_processed = library->get_import_songs_processed();
-			state.import_status->songs_total = library->get_import_songs_total();
-			state.import_status->songs_failed = library->get_import_songs_failed();
-			state.import_status->charts_added = library->get_import_charts_added();
-			state.import_status->charts_skipped = library->get_import_charts_skipped();
-			state.import_status->charts_failed = library->get_import_charts_failed();
+			state.import_status->songs_processed = state.library->get_import_songs_processed();
+			state.import_status->songs_total = state.library->get_import_songs_total();
+			state.import_status->songs_failed = state.library->get_import_songs_failed();
+			state.import_status->charts_added = state.library->get_import_charts_added();
+			state.import_status->charts_skipped = state.library->get_import_charts_skipped();
+			state.import_status->charts_failed = state.library->get_import_charts_failed();
 		} else {
 			if (state.import_status) {
 				state.import_status->complete = true;
-				state.import_status->songs_processed = library->get_import_songs_processed();
-				state.import_status->songs_total = library->get_import_songs_total();
-				state.import_status->songs_failed = library->get_import_songs_failed();
-				state.import_status->charts_added = library->get_import_charts_added();
-				state.import_status->charts_skipped = library->get_import_charts_skipped();
-				state.import_status->charts_failed = library->get_import_charts_failed();
+				state.import_status->songs_processed = state.library->get_import_songs_processed();
+				state.import_status->songs_total = state.library->get_import_songs_total();
+				state.import_status->songs_failed = state.library->get_import_songs_failed();
+				state.import_status->charts_added = state.library->get_import_charts_added();
+				state.import_status->charts_skipped = state.library->get_import_charts_skipped();
+				state.import_status->charts_failed = state.library->get_import_charts_failed();
 			}
 		}
 
@@ -334,13 +347,13 @@ static void run_render(Broadcaster& broadcaster, dev::Window& window, Logger::Ca
 			queue.enqueue_rect("bg"_id, {{0, 0}, {1280, 720}, {0.060f, 0.060f, 0.060f, 1.000f}});
 
 			switch (state.current) {
-			case State::Library: render_library(queue, state); break;
+			case State::Select: render_select(queue, state); break;
 			case State::Gameplay: render_gameplay(queue, state); break;
 			default: break;
 			}
 			if (state.import_status) {
 				if (render_import_status(*state.import_status)) {
-					library->reset_import_stats();
+					state.library->reset_import_stats();
 					state.import_status = nullopt;
 				}
 			}
