@@ -231,7 +231,7 @@ void Cursor::trigger_input(LaneInput input, Func&& func)
 						.timing = get_progress_ns() - note.timestamp,
 					});
 				}
-				if (lane.audible && note.wav_slot != -1) {
+				if (lane.audible && note.wav_slot != -1 && !chart->media.wav_slots[note.wav_slot].empty()) {
 					func(SoundEvent{
 						.channel = note.wav_slot,
 						.audio = chart->media.wav_slots[note.wav_slot],
@@ -245,7 +245,7 @@ void Cursor::trigger_input(LaneInput input, Func&& func)
 					progress.ln_timing = get_progress_ns() - note.timestamp;
 			} else {
 				// Press is too early to affect the note
-				if (lane.audible && note.wav_slot != -1) {
+				if (lane.audible && note.wav_slot != -1 && !chart->media.wav_slots[note.wav_slot].empty()) {
 					func(SoundEvent{
 						.channel = progress.active_slot,
 						.audio = chart->media.wav_slots[progress.active_slot],
@@ -260,7 +260,7 @@ void Cursor::trigger_input(LaneInput input, Func&& func)
 	} else {
 		if (input.state) {
 			// Chart over, player is just pressing things for fun
-			if (lane.audible && progress.active_slot != -1) {
+			if (lane.audible && progress.active_slot != -1 && !chart->media.wav_slots[progress.active_slot].empty()) {
 				func(SoundEvent{
 					.channel = progress.active_slot,
 					.audio = chart->media.wav_slots[progress.active_slot],
