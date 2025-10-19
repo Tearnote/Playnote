@@ -248,7 +248,9 @@ static void run_render(Broadcaster& broadcaster, dev::Window& window, Logger::Ca
 	auto renderer = gfx::Renderer{window, cat};
 
 	// Init game state
-	auto library = make_shared<bms::Library>(LibraryDBPath);
+	auto library_cat = globals::logger->create_category("Library",
+		*enum_cast<Logger::Level>(globals::config->get_entry<string>("logging", "library")));
+	auto library = make_shared<bms::Library>(library_cat, LibraryDBPath);
 	auto state = GameState{};
 	state.requested = State::Library;
 

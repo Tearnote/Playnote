@@ -29,7 +29,7 @@ public:
 	};
 
 	// Open an existing library, or create an empty one at the provided path.
-	explicit Library(fs::path const&);
+	explicit Library(Logger::Category, fs::path const&);
 	~Library();
 
 	// Import a song and all its charts into the library. Returns instantly; the import happens in the background.
@@ -192,6 +192,8 @@ private:
 		atomic<isize> charts_failed = 0;
 	};
 
+	Logger::Category cat;
+
 	lib::sqlite::DB db;
 	task_container import_tasks;
 	coro_mutex song_lock;
@@ -208,15 +210,17 @@ private:
 	auto import_chart(io::Song& song, isize song_id, string chart_path, span<byte const>) -> task<>;
 };
 
-inline Library::Library(fs::path const& path):
+inline Library::Library(Logger::Category cat, fs::path const& path):
+	cat{cat},
 	db{lib::sqlite::open(path)},
-	import_tasks{*globals::task_pool}
+	import_tasks{*globals::task_pool},
+	builder{cat}
 {
 	lib::sqlite::execute(db, SongsSchema);
 	lib::sqlite::execute(db, ChartsSchema);
 	lib::sqlite::execute(db, ChartDensitiesSchema);
 	fs::create_directory(LibraryPath);
-	INFO("Opened song library at \"{}\"", path);
+	INFO_AS(cat, "Opened song library at \"{}\"", path);
 }
 
 inline Library::~Library()
@@ -383,7 +387,7 @@ try {
 	import_stats.songs_processed.fetch_add(1);
 }
 catch (exception const& e) {
-	ERROR("Failed to import \"{}\": {}", path, e.what());
+	ERROR_AS(cat, "Failed to import \"{}\": {}", path, e.what());
 	import_stats.songs_processed.fetch_add(1);
 }
 

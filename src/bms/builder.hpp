@@ -24,7 +24,7 @@ namespace playnote::bms {
 
 class Builder {
 public:
-	Builder();
+	explicit Builder(Logger::Category);
 
 	auto build(span<byte const> bms, io::Song&, optional<reference_wrapper<Metadata>> cache = nullopt) -> task<shared_ptr<Chart const>>;
 
@@ -113,6 +113,8 @@ private:
 		vector<MeasureRelNote> measure_rel_notes;
 	};
 
+	Logger::Category cat;
+
 	using HeaderHandlerFunc = void(Builder::*)(HeaderCommand, Chart&, State&);
 	unordered_map<string, HeaderHandlerFunc, string_hash> header_handlers;
 	using ChannelHandlerFunc = void(Builder::*)(ChannelCommand, Chart&, State&);
@@ -160,7 +162,8 @@ private:
 	void handle_channel_bpmxx(ChannelCommand, Chart&, State&);
 };
 
-inline Builder::Builder()
+inline Builder::Builder(Logger::Category cat):
+	cat{cat}
 {
 	// Implemented headers
 	header_handlers.emplace("TITLE",        &Builder::handle_header_title);
@@ -317,7 +320,7 @@ inline auto Builder::build(span<byte const> bms_raw, io::Song& song, optional<re
 	// Convert chart to UTF-8
 	auto encoding = lib::icu::detect_encoding(bms_raw, KnownEncodings);
 	if (!encoding) {
-		WARN("Unexpected BMS file encoding; assuming Shift_JIS");
+		WARN_AS(cat, "Unexpected BMS file encoding; assuming Shift_JIS");
 		encoding = "Shift_JIS";
 	}
 	auto bms = lib::icu::to_utf8(bms_raw, *encoding);
@@ -562,7 +565,7 @@ inline auto Builder::build(span<byte const> bms_raw, io::Song& song, optional<re
 		// Pair up LN ends and add
 		stable_sort(accumulator.ln_ends, [](auto const& a, auto const& b) { return a.position.timestamp < b.position.timestamp; });
 		if (accumulator.ln_ends.size() % 2 != 0) {
-			WARN("Unpaired LN ends found; dropping. Chart is most likely invalid or parsed incorrectly");
+			WARN_AS(cat, "Unpaired LN ends found; dropping. Chart is most likely invalid or parsed incorrectly");
 			accumulator.ln_ends.pop_back();
 		}
 		transform(accumulator.ln_ends | views::chunk(2), back_inserter(lane.notes), [&](auto ends) {
@@ -592,7 +595,7 @@ inline auto Builder::build(span<byte const> bms_raw, io::Song& song, optional<re
 			});
 			auto removed_count = removed.size();
 			lane.notes.erase(removed.begin(), removed.end());
-			if (removed_count) INFO("Removed {} duplicate notes", removed_count);
+			if (removed_count) INFO_AS(cat, "Removed {} duplicate notes", removed_count);
 			reverse(lane.notes); // Reverse back
 		} else {
 			// Sort only
@@ -864,7 +867,7 @@ inline void Builder::parse_header(string_view line, isize line_num, Chart& chart
 
 	// Dispatch
 	if (!header_handlers.contains(header)) {
-		WARN("L{}: Unknown header: {}", line_num, header);
+		WARN_AS(cat, "L{}: Unknown header: {}", line_num, header);
 		return;
 	}
 	(this->*header_handlers.at(header))({line_num, header, slot, value}, chart, state);
@@ -882,20 +885,20 @@ inline void Builder::parse_channel(string_view line, isize line_num, Chart& char
 	to_upper(value);
 
 	if (channel.empty()) {
-		WARN("L{}: Missing measure channel", line_num);
+		WARN_AS(cat, "L{}: Missing measure channel", line_num);
 		return;
 	}
 	// Just in case someone forgot the leading 0
 	if (channel.size() < 2)
 		channel.insert(channel.begin(), 2 - channel.size(), '0');
 	if (!channel_handlers.contains(channel)) {
-		WARN("L{}: Unknown channel: {}", line_num, channel);
+		WARN_AS(cat, "L{}: Unknown channel: {}", line_num, channel);
 		return;
 	}
 	// Truncate value at first whitespace
 	value = substr_until(value, [](auto c) { return c == ' ' || c == '\t'; });
 	if (value.empty()) {
-		WARN("L{}: No valid measure value", line_num);
+		WARN_AS(cat, "L{}: No valid measure value", line_num);
 		return;
 	}
 
@@ -906,7 +909,7 @@ inline void Builder::parse_channel(string_view line, isize line_num, Chart& char
 	} else { // Expected channel value is a series of 2-character notes
 		// Chop off unpaired characters
 		if (value.size() % 2 != 0) {
-			WARN("L{}: Stray character in measure: {}", line_num, value.back());
+			WARN_AS(cat, "L{}: Stray character in measure: {}", line_num, value.back());
 			value.pop_back();
 			// This might've emptied the view, but then the loop below will run 0 times
 		}
@@ -923,12 +926,12 @@ inline void Builder::parse_channel(string_view line, isize line_num, Chart& char
 
 inline void Builder::handle_header_ignored_log(HeaderCommand cmd, Chart&, State&)
 {
-	INFO("L{}: Ignored header: {}", cmd.line_num, cmd.header);
+	INFO_AS(cat, "L{}: Ignored header: {}", cmd.line_num, cmd.header);
 }
 
 inline void Builder::handle_header_unimplemented(HeaderCommand cmd, Chart&, State&)
 {
-	WARN("L{}: Unimplemented header: {}", cmd.line_num, cmd.header);
+	WARN_AS(cat, "L{}: Unimplemented header: {}", cmd.line_num, cmd.header);
 }
 
 inline void Builder::handle_header_unimplemented_critical(HeaderCommand cmd, Chart&, State&)
@@ -938,12 +941,12 @@ inline void Builder::handle_header_unimplemented_critical(HeaderCommand cmd, Cha
 
 inline void Builder::handle_channel_ignored_log(ChannelCommand cmd, Chart&, State&)
 {
-	INFO("L{}: Ignored channel: {}", cmd.line_num, cmd.channel);
+	INFO_AS(cat, "L{}: Ignored channel: {}", cmd.line_num, cmd.channel);
 }
 
 inline void Builder::handle_channel_unimplemented(ChannelCommand cmd, Chart&, State&)
 {
-	WARN("L{}: Unimplemented channel: {}", cmd.line_num, cmd.channel);
+	WARN_AS(cat, "L{}: Unimplemented channel: {}", cmd.line_num, cmd.channel);
 }
 
 inline void Builder::handle_channel_unimplemented_critical(ChannelCommand cmd, Chart&, State&)
@@ -954,7 +957,7 @@ inline void Builder::handle_channel_unimplemented_critical(ChannelCommand cmd, C
 inline void Builder::handle_header_title(HeaderCommand cmd, Chart& chart, State&)
 {
 	if (cmd.value.empty()) {
-		WARN("L{}: Title header has no value", cmd.line_num);
+		WARN_AS(cat, "L{}: Title header has no value", cmd.line_num);
 		return;
 	}
 	chart.metadata.title = cmd.value;
@@ -963,7 +966,7 @@ inline void Builder::handle_header_title(HeaderCommand cmd, Chart& chart, State&
 inline void Builder::handle_header_subtitle(HeaderCommand cmd, Chart& chart, State&)
 {
 	if (cmd.value.empty()) {
-		WARN("L{}: Subtitle header has no value", cmd.line_num);
+		WARN_AS(cat, "L{}: Subtitle header has no value", cmd.line_num);
 		return;
 	}
 	chart.metadata.subtitle = cmd.value;
@@ -972,7 +975,7 @@ inline void Builder::handle_header_subtitle(HeaderCommand cmd, Chart& chart, Sta
 inline void Builder::handle_header_artist(HeaderCommand cmd, Chart& chart, State&)
 {
 	if (cmd.value.empty()) {
-		WARN("L{}: Artist header has no value", cmd.line_num);
+		WARN_AS(cat, "L{}: Artist header has no value", cmd.line_num);
 		return;
 	}
 	chart.metadata.artist = cmd.value;
@@ -981,7 +984,7 @@ inline void Builder::handle_header_artist(HeaderCommand cmd, Chart& chart, State
 inline void Builder::handle_header_subartist(HeaderCommand cmd, Chart& chart, State&)
 {
 	if (cmd.value.empty()) {
-		WARN("L{}: Subartist header has no value", cmd.line_num);
+		WARN_AS(cat, "L{}: Subartist header has no value", cmd.line_num);
 		return;
 	}
 	chart.metadata.subartist = cmd.value;
@@ -990,7 +993,7 @@ inline void Builder::handle_header_subartist(HeaderCommand cmd, Chart& chart, St
 inline void Builder::handle_header_genre(HeaderCommand cmd, Chart& chart, State&)
 {
 	if (cmd.value.empty()) {
-		WARN("L{}: Genre header has no value", cmd.line_num);
+		WARN_AS(cat, "L{}: Genre header has no value", cmd.line_num);
 		return;
 	}
 	chart.metadata.genre = cmd.value;
@@ -999,7 +1002,7 @@ inline void Builder::handle_header_genre(HeaderCommand cmd, Chart& chart, State&
 inline void Builder::handle_header_url(HeaderCommand cmd, Chart& chart, State&)
 {
 	if (cmd.value.empty()) {
-		WARN("L{}: URL header has no value", cmd.line_num);
+		WARN_AS(cat, "L{}: URL header has no value", cmd.line_num);
 		return;
 	}
 	chart.metadata.url = cmd.value;
@@ -1008,7 +1011,7 @@ inline void Builder::handle_header_url(HeaderCommand cmd, Chart& chart, State&)
 inline void Builder::handle_header_email(HeaderCommand cmd, Chart& chart, State&)
 {
 	if (cmd.value.empty()) {
-		WARN("L{}: email header has no value", cmd.line_num);
+		WARN_AS(cat, "L{}: email header has no value", cmd.line_num);
 		return;
 	}
 	chart.metadata.email = cmd.value;
@@ -1021,41 +1024,41 @@ try {
 		return;
 	}
 	if (cmd.value.empty()) {
-		WARN("L{}: BPM header has no value", cmd.line_num);
+		WARN_AS(cat, "L{}: BPM header has no value", cmd.line_num);
 		return;
 	}
 	auto const bpm = lexical_cast<float>(cmd.value);
 	chart.metadata.bpm_range.initial = bpm;
 }
 catch (exception const&) {
-	WARN("L{}: BPM header has an invalid value: {}", cmd.line_num, cmd.value);
+	WARN_AS(cat, "L{}: BPM header has an invalid value: {}", cmd.line_num, cmd.value);
 }
 
 inline void Builder::handle_header_difficulty(HeaderCommand cmd, Chart& chart, State&)
 try {
 	if (cmd.value.empty()) {
-		WARN("L{}: Difficulty header has no value", cmd.line_num);
+		WARN_AS(cat, "L{}: Difficulty header has no value", cmd.line_num);
 		return;
 	}
 	auto const level = lexical_cast<int32>(cmd.value);
 	if (level < 1 || level > 5) {
-		WARN("L{}: Difficulty header has an invalid value: {}", cmd.line_num, level);
+		WARN_AS(cat, "L{}: Difficulty header has an invalid value: {}", cmd.line_num, level);
 		return;
 	}
 	chart.metadata.difficulty = static_cast<Difficulty>(level);
 }
 catch (exception const&) {
-	WARN("L{}: Difficulty header has an invalid value: {}", cmd.line_num, cmd.value);
+	WARN_AS(cat, "L{}: Difficulty header has an invalid value: {}", cmd.line_num, cmd.value);
 }
 
 inline void Builder::handle_header_wav(HeaderCommand cmd, Chart&, State& state)
 {
 	if (cmd.slot.empty()) {
-		WARN("L{}: WAV header has no slot", cmd.line_num);
+		WARN_AS(cat, "L{}: WAV header has no slot", cmd.line_num);
 		return;
 	}
 	if (cmd.value.empty()) {
-		WARN("L{}: WAV header has no value", cmd.line_num);
+		WARN_AS(cat, "L{}: WAV header has no value", cmd.line_num);
 		return;
 	}
 
@@ -1075,11 +1078,11 @@ inline void Builder::handle_header_wav(HeaderCommand cmd, Chart&, State& state)
 inline void Builder::handle_header_bpmxx(HeaderCommand cmd, Chart&, State& state)
 {
 	if (cmd.slot.empty()) {
-		WARN("L{}: BPMxx header has no slot", cmd.line_num);
+		WARN_AS(cat, "L{}: BPMxx header has no slot", cmd.line_num);
 		return;
 	}
 	if (cmd.value.empty()) {
-		WARN("L{}: BPMxx header has no value", cmd.line_num);
+		WARN_AS(cat, "L{}: BPMxx header has no value", cmd.line_num);
 		return;
 	}
 
@@ -1203,12 +1206,12 @@ inline void Builder::handle_channel_bpmxx(ChannelCommand cmd, Chart&, State& sta
 	if (cmd.value == "00") return; // Rhythm padding
 	auto const slot_iter = state.bpm.find(cmd.value);
 	if (slot_iter == state.bpm.end()) {
-		WARN("L{}: Unknown BPM slot", cmd.line_num);
+		WARN_AS(cat, "L{}: Unknown BPM slot", cmd.line_num);
 		return;
 	}
 	auto const bpm = slot_iter->second.bpm;
 	if (bpm < 0.0f) {
-		WARN("L{}: Invalid BPM value of {}", cmd.line_num, bpm);
+		WARN_AS(cat, "L{}: Invalid BPM value of {}", cmd.line_num, bpm);
 		return;
 	}
 	state.measure_rel_bpms.emplace_back(MeasureRelBPM{
