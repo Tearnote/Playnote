@@ -373,7 +373,8 @@ try {
 		try {
 			result.return_value();
 			imported_count += 1;
-		} catch (exception const&) {
+		} catch (exception const& e) {
+			ERROR_AS(cat, "Failed to import chart \"{}\": {}", path, e.what());
 			import_stats.charts_failed.fetch_add(1);
 		}
 	}
