@@ -201,8 +201,6 @@ private:
 	atomic<bool> stopping = false;
 	ImportStats import_stats;
 
-	Builder builder;
-
 	[[nodiscard]] auto find_available_song_filename(string_view name) -> string;
 	auto import_many(fs::path) -> task<>;
 	auto import_one(fs::path) -> task<>;
@@ -213,8 +211,7 @@ private:
 inline Library::Library(Logger::Category cat, fs::path const& path):
 	cat{cat},
 	db{lib::sqlite::open(path)},
-	import_tasks{*globals::task_pool},
-	builder{cat}
+	import_tasks{*globals::task_pool}
 {
 	lib::sqlite::execute(db, SongsSchema);
 	lib::sqlite::execute(db, ChartsSchema);
@@ -320,6 +317,7 @@ inline auto Library::load_chart(lib::openssl::MD5 md5) -> shared_ptr<Chart const
 
 	auto song = io::Song::from_zip(song_path);
 	auto chart_raw = song.load_file(chart_path);
+	auto builder = Builder{cat};
 	return sync_wait(builder.build(chart_raw, song, *cache));
 }
 
@@ -459,6 +457,9 @@ inline auto Library::import_chart(io::Song& song, isize song_id, string chart_pa
 
 	auto insert_chart = lib::sqlite::prepare(db, InsertChartQuery);
 	auto insert_chart_density = lib::sqlite::prepare(db, InsertChartDensityQuery);
+	auto builder_cat = globals::logger->create_string_logger(lib::openssl::md5_to_hex(md5));
+	INFO_AS(builder_cat, "Importing chart \"{}\"", chart_path);
+	auto builder = Builder{builder_cat};
 	auto chart = co_await builder.build(chart_raw, song);
     lib::sqlite::transaction(db, [&] {
         lib::sqlite::execute(insert_chart, chart->md5, song_id, chart_path, chart->metadata.title,

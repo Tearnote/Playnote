@@ -20,4 +20,15 @@ auto md5(span<byte const> data) -> MD5
 	return result;
 }
 
+auto md5_to_hex(const MD5& md5) -> string
+{
+	auto result = string{};
+	result.reserve(md5.size() * 2);
+	for (auto b: md5) {
+		auto const hex = format("{:02x}", static_cast<uint8>(b));
+		result.append(hex);
+	}
+	return result;
+}
+
 }
