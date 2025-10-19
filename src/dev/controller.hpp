@@ -20,7 +20,7 @@ namespace playnote::dev {
 
 class ControllerDispatcher {
 public:
-	ControllerDispatcher();
+	explicit ControllerDispatcher(Logger::Category*);
 
 	using ControllerEvent = variant<ButtonInput, AxisInput>;
 	template<callable<void(ControllerEvent)> Func>
@@ -29,6 +29,7 @@ public:
 private:
 	InstanceLimit<ControllerDispatcher, 1> instance_limit;
 	static inline ControllerDispatcher* instance;
+	Logger::Category* cat;
 
 	struct Controller {
 		ControllerID id;
@@ -41,7 +42,9 @@ private:
 	static void joystick_event_callback(int jid, int event);
 };
 
-inline ControllerDispatcher::ControllerDispatcher() {
+inline ControllerDispatcher::ControllerDispatcher(Logger::Category* cat):
+	cat{cat}
+{
 	instance = this;
 	for (auto jid: views::iota(GLFW_JOYSTICK_1, GLFW_JOYSTICK_LAST + 1))
 		if (glfwJoystickPresent(jid)) joystick_event_callback(jid, GLFW_CONNECTED);
@@ -91,7 +94,7 @@ inline void ControllerDispatcher::joystick_event_callback(int jid, int event)
 	auto& self = *instance;
 	auto& controller = self.controllers[jid];
 	if (event == GLFW_DISCONNECTED) {
-		INFO("Controller disconnected: \"{}\"", controller.name);
+		INFO_AS(self.cat, "Controller disconnected: \"{}\"", controller.name);
 		controller.name.clear();
 		controller.id = {};
 		controller.buttons.clear();
@@ -128,7 +131,7 @@ inline void ControllerDispatcher::joystick_event_callback(int jid, int event)
 		return value;
 	});
 
-	INFO("Controller connected: \"{}\", ID: {};{}", glfwGetJoystickName(jid), glfwGetJoystickGUID(jid), lowest_unused_did);
+	INFO_AS(self.cat, "Controller connected: \"{}\", ID: {};{}", glfwGetJoystickName(jid), glfwGetJoystickGUID(jid), lowest_unused_did);
 }
 
 }

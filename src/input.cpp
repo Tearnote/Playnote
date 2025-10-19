@@ -17,8 +17,9 @@ Implementation file for threads/audio.hpp.
 
 namespace playnote {
 
-static void run_input(Broadcaster& broadcaster, dev::Window& window)
+static void run_input(Broadcaster& broadcaster, dev::Window& window, Logger::Category* cat)
 {
+	// Register input handlers
 	auto input_queues = vector<shared_ptr<spsc_queue<UserInput>>>{};
 	window.register_key_callback([&](dev::Window::KeyCode keycode, bool state) {
 		for (auto& queue: input_queues) {
@@ -32,9 +33,11 @@ static void run_input(Broadcaster& broadcaster, dev::Window& window)
 	window.register_file_drop_callback([&](span<char const* const> paths) {
 		auto event = FileDrop{};
 		copy(paths, back_inserter(event.paths));
+		TRACE_AS(cat, "{} path(s) dropped:", event.paths.size());
+		for (auto const& path: event.paths) TRACE("  {}", path);
 		broadcaster.shout(move(event));
 	});
-	auto con_dispatcher = dev::ControllerDispatcher{};
+	auto con_dispatcher = dev::ControllerDispatcher{cat};
 
 	while (!window.is_closing()) {
 		// Handle queue changes
@@ -68,11 +71,13 @@ try {
 	broadcaster.subscribe<RegisterInputQueue>();
 	broadcaster.subscribe<UnregisterInputQueue>();
 	barriers.startup.arrive_and_wait();
-	run_input(broadcaster, window);
+	auto cat = globals::logger->create_category("Input");
+	run_input(broadcaster, window, cat);
 	barriers.shutdown.arrive_and_wait();
 }
 catch (exception const& e) {
-	CRIT("Uncaught exception: {}", e.what());
+	auto cat = globals::logger->create_category("Input");
+	CRIT_AS(cat, "Uncaught exception: {}", e.what());
 	window.request_close();
 	barriers.shutdown.arrive_and_wait();
 }
