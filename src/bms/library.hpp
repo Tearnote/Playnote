@@ -168,6 +168,16 @@ private:
 		INSERT INTO chart_densities(md5, resolution, key, scratch, ln) VALUES(?1, ?2, ?3, ?4, ?5)
 	)sql"sv;
 
+	static constexpr auto ChartImportLogsSchema = R"sql(
+		CREATE TABLE IF NOT EXISTS chart_import_logs(
+			md5 BLOB UNIQUE NOT NULL REFERENCES charts ON DELETE CASCADE,
+			log TEXT NOT NULL
+		)
+	)sql"sv;
+	static constexpr auto InsertChartImportLogQuery = R"sql(
+		INSERT INTO chart_import_logs(md5, log) VALUES(?1, ?2)
+	)sql"sv;
+
 	static constexpr auto GetSongFromChartQuery = R"sql(
 		SELECT songs.id, songs.path FROM songs INNER JOIN charts ON songs.id = charts.song_id WHERE charts.md5 = ?1
 	)sql"sv;
@@ -216,6 +226,7 @@ inline Library::Library(Logger::Category cat, fs::path const& path):
 	lib::sqlite::execute(db, SongsSchema);
 	lib::sqlite::execute(db, ChartsSchema);
 	lib::sqlite::execute(db, ChartDensitiesSchema);
+	lib::sqlite::execute(db, ChartImportLogsSchema);
 	fs::create_directory(LibraryPath);
 	INFO_AS(cat, "Opened song library at \"{}\"", path);
 }
@@ -458,6 +469,7 @@ inline auto Library::import_chart(io::Song& song, isize song_id, string chart_pa
 
 	auto insert_chart = lib::sqlite::prepare(db, InsertChartQuery);
 	auto insert_chart_density = lib::sqlite::prepare(db, InsertChartDensityQuery);
+	auto insert_chart_import_log = lib::sqlite::prepare(db, InsertChartImportLogQuery);
 	auto builder_cat = globals::logger->create_string_logger(lib::openssl::md5_to_hex(md5));
 	INFO_AS(builder_cat, "Importing chart \"{}\"", chart_path);
 	auto builder = Builder{builder_cat};
@@ -483,6 +495,7 @@ inline auto Library::import_chart(io::Song& song, isize song_id, string chart_pa
 			serialize_density(chart->metadata.density.key),
 			serialize_density(chart->metadata.density.scratch),
 			serialize_density(chart->metadata.density.ln));
+		lib::sqlite::execute(insert_chart_import_log, chart->md5, builder_cat.get_buffer());
     });
 	dirty.store(true);
 	import_stats.charts_added.fetch_add(1);
