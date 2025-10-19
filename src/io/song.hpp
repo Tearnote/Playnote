@@ -13,6 +13,7 @@ An abstraction for an imported BMS song. Wraps a zip archive with accelerated fi
 #include "lib/openssl.hpp"
 #include "lib/sqlite.hpp"
 #include "lib/ffmpeg.hpp"
+#include "lib/icu.hpp"
 #include "dev/audio.hpp"
 #include "io/file.hpp"
 #include "audio/mixer.hpp"
@@ -23,6 +24,9 @@ namespace playnote::io {
 // Once opened the contents are immutable, but only specified methods are thread-safe due to sqlite state.
 class Song {
 public:
+	// Text encodings expected to be used by BMS songs.
+	static constexpr auto KnownEncodings = {"UTF-8"sv, "Shift_JIS"sv, "EUC-KR"sv};
+
 	// Return true if the provided extension matches a known BMS extension.
 	[[nodiscard]] static auto is_bms_ext(string_view) -> bool;
 
@@ -38,6 +42,9 @@ public:
 	// Requirement for the path is the same as in zip_from_directory.
 	template<callable<bool(lib::openssl::MD5)> Func>
 	static void for_each_chart_checksum_in_directory(fs::path const&, Func&&);
+
+	// Heuristically detect the encoding of an arbitrary archive's filenames.
+	static auto detect_archive_filename_encoding(fs::path const&) -> string;
 
 	// Create a Song-compatible zip archive from an arbitrary archive. Subfolders inside the archive
 	// are handled.
@@ -126,7 +133,7 @@ private:
 	unordered_map<string, vector<dev::Sample>, string_hash> audio_cache;
 
 	Song(ReadFile&&, lib::sqlite::DB&&); // Use factory methods
-	[[nodiscard]] static auto find_prefix(span<byte const> const&) -> fs::path;
+	[[nodiscard]] static auto find_prefix(span<byte const> const&, string_view encoding) -> fs::path;
 	[[nodiscard]] static auto is_audio_ext(string_view) -> bool;
 	[[nodiscard]] static auto type_from_ext(string_view) -> FileType;
 };
@@ -169,16 +176,35 @@ inline auto Song::is_bms_ext(string_view ext) -> bool
 	return find_if(BMSExtensions, [&](auto const& e) { return iequals(e, ext); }) != BMSExtensions.end();
 }
 
+inline auto Song::detect_archive_filename_encoding(fs::path const& path) -> string
+{
+	auto ar_file = read_file(path);
+	auto ar = lib::archive::open_read(ar_file.contents);
+	auto filenames = string{};
+	lib::archive::for_each_entry(ar, [&](string_view pathname) {
+		filenames.append(pathname);
+		filenames.append("\n");
+		return true;
+	});
+	auto encoding = lib::icu::detect_encoding(span{reinterpret_cast<byte const*>(filenames.data()), filenames.size()});
+	return encoding? *encoding : "Shift_JIS";
+}
+
 inline void Song::zip_from_archive(fs::path const& src, fs::path const& dst)
 {
+	auto const encoding = detect_archive_filename_encoding(src);
 	auto dst_ar = lib::archive::open_write(dst);
 	auto wrote_something = false;
 	auto src_file = read_file(src);
-	auto const prefix = find_prefix(src_file.contents);
+	auto const prefix = find_prefix(src_file.contents, encoding);
 	auto src_ar = lib::archive::open_read(src_file.contents);
 	lib::archive::for_each_entry(src_ar, [&](string_view pathname) {
+		auto const pathname_bytes = span{reinterpret_cast<byte const*>(pathname.data()), pathname.size()};
+		auto const pathname_utf8 = lib::icu::to_utf8(pathname_bytes, encoding);
 		auto data = lib::archive::read_data(src_ar);
-		lib::archive::write_entry(dst_ar, fs::relative(pathname, prefix), data);
+		auto rel_path = fs::relative(pathname_utf8, prefix);
+		if (!rel_path.empty() && *rel_path.begin() == "..") return true;
+		lib::archive::write_entry(dst_ar, fs::relative(pathname_utf8, prefix), data);
 		wrote_something = true;
 		return true;
 	});
@@ -216,11 +242,15 @@ inline void Song::extend_zip_from_archive(fs::path const& base, fs::path const& 
 	});
 
 	// Append missing files from extension
+	auto const encoding = detect_archive_filename_encoding(ext);
 	auto ext_file = read_file(ext);
-	auto const prefix = find_prefix(ext_file.contents);
+	auto const prefix = find_prefix(ext_file.contents, encoding);
 	auto ext_ar = lib::archive::open_read(ext_file.contents);
 	lib::archive::for_each_entry(ext_ar, [&](string_view pathname) {
-		auto const rel_path = fs::relative(pathname, prefix);
+		auto const pathname_bytes = span{reinterpret_cast<byte const*>(pathname.data()), pathname.size()};
+		auto const pathname_utf8 = lib::icu::to_utf8(pathname_bytes, encoding);
+		auto const rel_path = fs::relative(pathname_utf8, prefix);
+		if (!rel_path.empty() && *rel_path.begin() == "..") return true;
 		if (written_paths.contains(rel_path.string())) return true;
 		auto data = lib::archive::read_data(ext_ar);
 		lib::archive::write_entry(dst_ar, rel_path, data);
@@ -263,10 +293,11 @@ inline auto Song::from_zip(fs::path const& path) -> Song
 	lib::archive::for_each_entry(archive, [&](auto entry_path_str) {
 		auto entry_path = fs::path{entry_path_str};
 		auto const ext = entry_path.extension().string();
-		auto const data = *lib::archive::read_data_block(archive);
+		auto const data = lib::archive::read_data_block(archive);
+		if (!data) return true;
 		auto const type = type_from_ext(ext);
 		if (type == FileType::Audio) entry_path.replace_extension();
-		lib::sqlite::execute(insert_contents, entry_path.string(), +type, static_cast<void const*>(data.data()), data.size());
+		lib::sqlite::execute(insert_contents, entry_path.string(), +type, static_cast<void const*>(data->data()), data->size());
 		return true;
 	});
 
@@ -341,13 +372,15 @@ inline Song::Song(ReadFile&& file, lib::sqlite::DB&& db):
 	select_audio_files = lib::sqlite::prepare(this->db, SelectAudioFilesQuery);
 }
 
-inline auto Song::find_prefix(span<byte const> const& archive_data) -> fs::path
+inline auto Song::find_prefix(span<byte const> const& archive_data, string_view encoding) -> fs::path
 {
 	auto shortest_prefix = fs::path{};
 	auto shortest_prefix_parts = optional<isize>{nullopt};
 	auto archive = lib::archive::open_read(archive_data);
 	lib::archive::for_each_entry(archive, [&](auto pathname) {
-		auto const path = fs::path{pathname};
+		auto const pathname_bytes = span{reinterpret_cast<byte const*>(pathname.data()), pathname.size()};
+		auto const pathname_utf8 = lib::icu::to_utf8(pathname_bytes, encoding);
+		auto const path = fs::path{pathname_utf8};
 		if (is_bms_ext(path.extension().string())) {
 			auto const parts = distance(path.begin(), path.end());
 			if (!shortest_prefix_parts || parts < *shortest_prefix_parts) {

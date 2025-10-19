@@ -21,7 +21,8 @@ static void handle_icu_error(UErrorCode err)
 {
 	if (err == U_ZERO_ERROR) return;
 	if (U_SUCCESS(err)) {
-		WARN("ICU warning: {}", u_errorName(err));
+		// Too noisy
+		// WARN("ICU warning: {}", u_errorName(err));
 		return;
 	}
 	if (err == U_ILLEGAL_CHAR_FOUND) {
