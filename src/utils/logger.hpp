@@ -43,15 +43,22 @@ namespace playnote {
 // Point of access to the logging system.
 class Logger {
 public:
+	// A named tag for log messages. Its destinations and level can be customized independently.
 	using Category = quill::Frontend::logger_t*;
+	// Log importance level.
 	using Level = quill::LogLevel;
 
+	// A special category that writes all log messages into an owned string buffer.
+	// Use create_string_logger() to get an instance.
 	class StringLogger {
 	public:
 		~StringLogger();
 
+		// Retrieve the string with all log messages so far.
+		// The existing buffer is moved out, and a new one is created in its place.
 		auto get_buffer() -> string;
 
+		// Allow usage in *_AS macros.
 		operator Logger::Category() { return category; }
 
 	private:
@@ -98,6 +105,7 @@ public:
 		StringLogger(string_view name, Logger::Level);
 	};
 
+	// Public access to the global logging category.
 	Category global = nullptr;
 
 	// Initialize the logger. A global category will be created, immediately usable
@@ -105,9 +113,11 @@ public:
 	Logger(string_view log_file_path, Level);
 
 	// Create a new category. To be used with the *_AS macros.
+	// If the category already exists, the previously created instance is returned.
 	auto create_category(string_view name, Level = Level::TraceL1,
 		bool log_to_console = true, bool log_to_file = true) -> Category;
 
+	// Create a new category that logs into a string buffer.
 	auto create_string_logger(string_view name, Level = Level::TraceL1) -> StringLogger;
 
 private:
