@@ -35,7 +35,7 @@ static void run_input(Broadcaster& broadcaster, dev::Window& window, Logger::Cat
 		auto event = FileDrop{};
 		copy(paths, back_inserter(event.paths));
 		TRACE_AS(cat, "{} path(s) dropped:", event.paths.size());
-		for (auto const& path: event.paths) TRACE("  {}", path);
+		for (auto const& path: event.paths) TRACE_AS(cat, "  {}", path);
 		broadcaster.shout(move(event));
 	});
 	auto con_dispatcher = dev::ControllerDispatcher{cat};

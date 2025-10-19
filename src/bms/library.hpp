@@ -51,6 +51,9 @@ public:
 	// Return the number of songs discovered during import so far.
 	[[nodiscard]] auto get_import_songs_total() const -> isize { return import_stats.songs_total.load(); }
 
+	// Return the number of songs that failed to import.
+	[[nodiscard]] auto get_import_songs_failed() const -> isize { return import_stats.songs_failed.load(); }
+
 	// Return the number of charts that were imported so far.
 	[[nodiscard]] auto get_import_charts_added() const -> isize { return import_stats.charts_added.load(); }
 
@@ -197,6 +200,7 @@ private:
 	struct ImportStats {
 		atomic<isize> songs_processed = 0;
 		atomic<isize> songs_total = 0;
+		atomic<isize> songs_failed = 0;
 		atomic<isize> charts_added = 0;
 		atomic<isize> charts_skipped = 0;
 		atomic<isize> charts_failed = 0;
@@ -261,6 +265,7 @@ inline void Library::reset_import_stats()
 {
 	import_stats.songs_processed.store(0);
 	import_stats.songs_total.store(0);
+	import_stats.songs_failed.store(0);
 	import_stats.charts_added.store(0);
 	import_stats.charts_skipped.store(0);
 	import_stats.charts_failed.store(0);
@@ -355,34 +360,43 @@ inline auto Library::import_many(fs::path path) -> task<>
 		auto contents = vector<fs::directory_entry>{};
 		copy(fs::directory_iterator{path}, back_inserter(contents));
 		if (any_of(contents, [&](auto const& entry) { return fs::is_regular_file(entry) && io::Song::is_bms_ext(entry.path().extension().string()); })) {
-		import_stats.songs_total.fetch_add(1);
+			import_stats.songs_total.fetch_add(1);
 			co_await schedule_task(import_one(path));
 		} else {
 			for (auto const& entry: contents) import_tasks.start(import_many(entry));
 		}
 	} else {
-		throw runtime_error_fmt("Failed to import \"{}\": unknown type of file", path);
+		ERROR_AS(cat, "Failed to import location \"{}\": unknown type of file", path);
+		import_stats.songs_processed.fetch_add(1);
+		import_stats.songs_failed.fetch_add(1);
 	}
 }
 
 inline auto Library::import_one(fs::path path) -> task<>
 try {
-	if (stopping.load()) co_return;
+	if (stopping.load()) {
+		WARN_AS(cat, "Song import \"{}\" cancelled", path);
+		co_return;
+	}
+	INFO_AS(cat, "Importing song \"{}\"", path);
 	auto lock = co_await song_lock.scoped_lock();
 	auto [song_id, song_path] = import_song(path);
 	auto song = io::Song::from_zip(song_path);
 	song.preload_audio_files();
 
 	auto chart_import_tasks = vector<task<>>{};
+	auto chart_paths = vector<string>{};
 	song.for_each_chart([&](auto path, auto chart) {
 		chart_import_tasks.emplace_back(schedule_task(import_chart(song, song_id, string{path}, chart)));
+		chart_paths.emplace_back(path);
 	});
 	auto results = co_await when_all(move(chart_import_tasks));
 
 	auto imported_count = 0z;
-	for (auto& result: results) {
+	for (auto [result, path]: views::zip(results, chart_paths)) {
 		try {
 			result.return_value();
+			INFO_AS(cat, "Chart \"{}\" imported successfully", path);
 			imported_count += 1;
 		} catch (exception const& e) {
 			ERROR_AS(cat, "Failed to import chart \"{}\": {}", path, e.what());
@@ -390,15 +404,19 @@ try {
 		}
 	}
 	if (imported_count == 0) {
+		WARN_AS(cat, "No charts found in song \"{}\"", path);
 		auto delete_song = lib::sqlite::prepare(db, DeleteSongQuery);
 		lib::sqlite::execute(delete_song, song_id);
 		move(song).remove();
+	} else {
+		INFO_AS(cat, "Song \"{}\" imported successfully", path);
 	}
 	import_stats.songs_processed.fetch_add(1);
 }
 catch (exception const& e) {
-	ERROR_AS(cat, "Failed to import \"{}\": {}", path, e.what());
+	ERROR_AS(cat, "Failed to import song \"{}\": {}", path, e.what());
 	import_stats.songs_processed.fetch_add(1);
+	import_stats.songs_failed.fetch_add(1);
 }
 
 inline auto Library::import_song(fs::path const& path) -> pair<isize, string>
@@ -420,6 +438,7 @@ inline auto Library::import_song(fs::path const& path) -> pair<isize, string>
 		io::Song::for_each_chart_checksum_in_directory(path, process_checksums);
 
 	if (existing_song) { // Extending
+		INFO_AS(cat, "Song \"{}\" already exists in library; extending", path);
 		auto existing_song_id = get<0>(*existing_song);
 		auto const existing_song_path = fs::path{LibraryPath} / get<1>(*existing_song);
 
@@ -456,13 +475,17 @@ inline auto Library::import_song(fs::path const& path) -> pair<isize, string>
 
 inline auto Library::import_chart(io::Song& song, isize song_id, string chart_path, span<byte const> chart_raw) -> task<>
 {
-	if (stopping.load()) co_return;
+	if (stopping.load()) {
+		WARN_AS(cat, "Chart import \"{}\" cancelled", chart_path);
+		co_return;
+	}
 
 	auto chart_exists = lib::sqlite::prepare(db, ChartExistsQuery);
 	auto const md5 = lib::openssl::md5(chart_raw);
 	auto exists = false;
 	lib::sqlite::query(chart_exists, [&] { exists = true; }, md5);
 	if (exists) {
+		INFO_AS(cat, "Chart import \"{}\" skipped (duplicate)", chart_path);
 		import_stats.charts_skipped.fetch_add(1);
 		co_return;
 	}

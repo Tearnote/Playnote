@@ -40,6 +40,7 @@ struct ImportStatus {
 	bool complete;
 	uint32 songs_processed;
 	uint32 songs_total;
+	uint32 songs_failed;
 	uint32 charts_added;
 	uint32 charts_skipped;
 	uint32 charts_failed;
@@ -221,6 +222,8 @@ static auto render_import_status(ImportStatus const& status) -> bool
 		lib::imgui::text("Songs processed: {} / {}", status.songs_processed, status.songs_total);
 	else
 		lib::imgui::text("Songs processed: {}", status.songs_processed);
+	if (status.songs_failed)
+		lib::imgui::text_styled(format("Songs failed: {}", status.songs_failed), vec4{1.0f, 0.3f, 0.3f, 1.0f});
 	lib::imgui::text("Charts added: {}", status.charts_added);
 	if (status.charts_skipped)
 		lib::imgui::text_styled(format("Charts skipped: {}", status.charts_skipped), vec4{0.4f, 0.4f, 0.4f, 1.0f});
@@ -309,6 +312,7 @@ static void run_render(Broadcaster& broadcaster, dev::Window& window, Logger::Ca
 			state.import_status->complete = false;
 			state.import_status->songs_processed = library->get_import_songs_processed();
 			state.import_status->songs_total = library->get_import_songs_total();
+			state.import_status->songs_failed = library->get_import_songs_failed();
 			state.import_status->charts_added = library->get_import_charts_added();
 			state.import_status->charts_skipped = library->get_import_charts_skipped();
 			state.import_status->charts_failed = library->get_import_charts_failed();
@@ -317,6 +321,7 @@ static void run_render(Broadcaster& broadcaster, dev::Window& window, Logger::Ca
 				state.import_status->complete = true;
 				state.import_status->songs_processed = library->get_import_songs_processed();
 				state.import_status->songs_total = library->get_import_songs_total();
+				state.import_status->songs_failed = library->get_import_songs_failed();
 				state.import_status->charts_added = library->get_import_charts_added();
 				state.import_status->charts_skipped = library->get_import_charts_skipped();
 				state.import_status->charts_failed = library->get_import_charts_failed();
