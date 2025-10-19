@@ -353,7 +353,7 @@ inline auto Library::import_many(fs::path path) -> task<>
 }
 
 inline auto Library::import_one(fs::path path) -> task<>
-{
+try {
 	if (stopping.load()) co_return;
 	auto lock = co_await song_lock.scoped_lock();
 	auto [song_id, song_path] = import_song(path);
@@ -380,6 +380,10 @@ inline auto Library::import_one(fs::path path) -> task<>
 		lib::sqlite::execute(delete_song, song_id);
 		move(song).remove();
 	}
+	import_stats.songs_processed.fetch_add(1);
+}
+catch (exception const& e) {
+	ERROR("Failed to import \"{}\": {}", path, e.what());
 	import_stats.songs_processed.fetch_add(1);
 }
 
