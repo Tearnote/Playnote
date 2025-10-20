@@ -10,6 +10,7 @@ Implementation file for lib/ffmpeg.hpp.
 
 extern "C" {
 #include <libswresample/swresample.h>
+#include <libavformat/version_major.h>
 #include <libavformat/avformat.h>
 #include <libavcodec/avcodec.h>
 #include <libavutil/opt.h>
@@ -116,7 +117,11 @@ static auto av_io_seek(void* opaque, int64_t offset, int whence) -> int64_t
 
 // The write callback uses a vector<byte> rather than SeekBuffer!
 // However, there should be no overlap between read and write callbacks.
+#if LIBAVFORMAT_VERSION_MAJOR < 61
+static auto av_io_write(void* opaque, uint8_t* buf, int buf_size) -> int
+#else
 static auto av_io_write(void* opaque, uint8_t const* buf, int buf_size) -> int
+#endif
 {
 	auto& out_buf = *static_cast<vector<byte>*>(opaque);
 	auto const* in_buf = reinterpret_cast<byte const*>(buf);
