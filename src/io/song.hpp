@@ -92,6 +92,7 @@ public:
 private:
 	static constexpr auto BMSExtensions = to_array({".bms", ".bme", ".bml", ".pms"});
 	static constexpr auto AudioExtensions = to_array({".wav", ".mp3", ".ogg", ".flac", ".wma", ".m4a", ".opus", ".aac", ".aiff", ".aif"});
+	static constexpr auto WastefulAudioExtensions = to_array({".wav", ".aiff", ".aif"});
 
 	enum class FileType {
 		Unknown, // 0
@@ -135,6 +136,7 @@ private:
 	Song(ReadFile&&, lib::sqlite::DB&&); // Use factory methods
 	[[nodiscard]] static auto find_prefix(span<byte const> const&, string_view encoding) -> fs::path;
 	[[nodiscard]] static auto is_audio_ext(string_view) -> bool;
+	[[nodiscard]] static auto is_wasteful_audio_ext(string_view) -> bool;
 	[[nodiscard]] static auto type_from_ext(string_view) -> FileType;
 };
 
@@ -204,7 +206,14 @@ inline void Song::zip_from_archive(fs::path const& src, fs::path const& dst)
 		auto data = lib::archive::read_data(src_ar);
 		auto rel_path = fs::relative(pathname_utf8, prefix);
 		if (!rel_path.empty() && *rel_path.begin() == "..") return true;
-		lib::archive::write_entry(dst_ar, fs::relative(pathname_utf8, prefix), data);
+
+		auto const ext = rel_path.extension().string();
+		if (is_wasteful_audio_ext(ext)) {
+			auto const sampling_rate = globals::mixer->get_audio().get_sampling_rate();
+			data = lib::ffmpeg::encode_as_ogg(lib::ffmpeg::decode_and_resample_file_buffer(data, sampling_rate), sampling_rate);
+			rel_path.replace_extension(".ogg");
+		}
+		lib::archive::write_entry(dst_ar, rel_path, data);
 		wrote_something = true;
 		return true;
 	});
@@ -218,8 +227,17 @@ inline void Song::zip_from_directory(fs::path const& src, fs::path const& dst)
 	auto wrote_something = false;
 	for (auto const& entry: fs::recursive_directory_iterator{src}) {
 		if (!entry.is_regular_file()) continue;
-		auto const rel_path = fs::relative(entry.path(), src);
-		lib::archive::write_entry(dst_ar, rel_path, read_file(entry.path()).contents);
+		auto rel_path = fs::relative(entry.path(), src);
+		auto file = read_file(entry.path());
+
+		auto converted = optional<vector<byte>>{};
+		auto const ext = rel_path.extension().string();
+		if (is_wasteful_audio_ext(ext)) {
+			auto const sampling_rate = globals::mixer->get_audio().get_sampling_rate();
+			converted = lib::ffmpeg::encode_as_ogg(lib::ffmpeg::decode_and_resample_file_buffer(file.contents, sampling_rate), sampling_rate);
+			rel_path.replace_extension(".ogg");
+		}
+		lib::archive::write_entry(dst_ar, rel_path, converted? *converted : file.contents);
 		wrote_something = true;
 	}
 	if (!wrote_something)
@@ -249,10 +267,17 @@ inline void Song::extend_zip_from_archive(fs::path const& base, fs::path const& 
 	lib::archive::for_each_entry(ext_ar, [&](string_view pathname) {
 		auto const pathname_bytes = span{reinterpret_cast<byte const*>(pathname.data()), pathname.size()};
 		auto const pathname_utf8 = lib::icu::to_utf8(pathname_bytes, encoding);
-		auto const rel_path = fs::relative(pathname_utf8, prefix);
+		auto rel_path = fs::relative(pathname_utf8, prefix);
 		if (!rel_path.empty() && *rel_path.begin() == "..") return true;
 		if (written_paths.contains(rel_path.string())) return true;
 		auto data = lib::archive::read_data(ext_ar);
+
+		auto const ext = rel_path.extension().string();
+		if (is_wasteful_audio_ext(ext)) {
+			auto const sampling_rate = globals::mixer->get_audio().get_sampling_rate();
+			data = lib::ffmpeg::encode_as_ogg(lib::ffmpeg::decode_and_resample_file_buffer(data, sampling_rate), sampling_rate);
+			rel_path.replace_extension(".ogg");
+		}
 		lib::archive::write_entry(dst_ar, rel_path, data);
 		return true;
 	});
@@ -276,9 +301,18 @@ inline void Song::extend_zip_from_directory(fs::path const& base, fs::path const
 	// Append missing files from extension
 	for (auto const& entry: fs::recursive_directory_iterator{ext}) {
 		if (!entry.is_regular_file()) continue;
-		auto const rel_path = fs::relative(entry.path(), ext);
+		auto rel_path = fs::relative(entry.path(), ext);
 		if (written_paths.contains(rel_path.string())) continue;
-		lib::archive::write_entry(dst_ar, rel_path, read_file(entry.path()).contents);
+		auto file = read_file(entry.path());
+
+		auto converted = optional<vector<byte>>{};
+		auto const ext = rel_path.extension().string();
+		if (is_wasteful_audio_ext(ext)) {
+			auto const sampling_rate = globals::mixer->get_audio().get_sampling_rate();
+			converted = lib::ffmpeg::encode_as_ogg(lib::ffmpeg::decode_and_resample_file_buffer(file.contents, sampling_rate), sampling_rate);
+			rel_path.replace_extension(".ogg");
+		}
+		lib::archive::write_entry(dst_ar, rel_path, converted? *converted : file.contents);
 	}
 }
 
@@ -399,6 +433,11 @@ inline auto Song::find_prefix(span<byte const> const& archive_data, string_view 
 inline auto Song::is_audio_ext(string_view ext) -> bool
 {
 	return find_if(AudioExtensions, [&](auto const& e) { return iequals(e, ext); }) != AudioExtensions.end();
+}
+
+inline auto Song::is_wasteful_audio_ext(string_view ext) -> bool
+{
+	return find_if(WastefulAudioExtensions, [&](auto const& e) { return iequals(e, ext); }) != WastefulAudioExtensions.end();
 }
 
 inline auto Song::type_from_ext(string_view ext) -> FileType
