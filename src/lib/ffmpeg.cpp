@@ -265,7 +265,7 @@ auto encode_as_ogg(span<Sample const> samples, uint32 sampling_rate) -> vector<b
 	codec_ctx->sample_fmt = AV_SAMPLE_FMT_FLTP;
 	codec_ctx->sample_rate = sampling_rate;
 	codec_ctx->ch_layout = AV_CHANNEL_LAYOUT_STEREO;
-	codec_ctx->global_quality = 8 * FF_QP2LAMBDA;
+	codec_ctx->global_quality = 5 * FF_QP2LAMBDA;
 	ret_check(avcodec_open2(codec_ctx.get(), codec, nullptr));
 
 	auto in_frame = AVFrame{ptr_check(av_frame_alloc())};
