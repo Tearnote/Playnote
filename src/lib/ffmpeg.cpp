@@ -56,6 +56,27 @@ static auto ptr_check(T* ptr) -> T*
 	return ptr;
 }
 
+// RAII wrappers for ffmpeg objects
+
+static constexpr auto PageSize = 4096zu;
+using AVBuffer = unique_resource<void*, decltype([](auto* buf) { av_free(buf); })>;
+using AVIO = unique_resource<AVIOContext*, decltype([](auto* ctx) {
+	av_free(ctx->buffer);
+	av_free(ctx);
+})>;
+using AVFormat = unique_resource<AVFormatContext*, decltype([](auto* ctx) {
+	avformat_free_context(ctx);
+})>;
+using AVCodec = unique_resource<AVCodecContext*, decltype([](auto* ctx) {
+	avcodec_free_context(&ctx);
+})>;
+using AVPacket = unique_resource<AVPacket*, decltype([](auto* p) {
+	av_packet_free(&p);
+})>;
+using AVFrame = unique_resource<AVFrame*, decltype([](auto* f) {
+	av_frame_free(&f);
+})>;
+
 // Data buffer wrapper with a cursor for seeking support.
 struct SeekBuffer {
 	span<byte const> buffer;
@@ -93,21 +114,19 @@ static auto av_io_seek(void* opaque, int64_t offset, int whence) -> int64_t
 	return static_cast<int64_t>(new_cursor);
 }
 
+// The write callback uses a vector<byte> rather than SeekBuffer!
+// However, there should be no overlap between read and write callbacks.
+static auto av_io_write(void* opaque, uint8_t const* buf, int buf_size) -> int
+{
+	auto& out_buf = *static_cast<vector<byte>*>(opaque);
+	auto const* in_buf = reinterpret_cast<byte const*>(buf);
+	out_buf.reserve(out_buf.size() + buf_size);
+	copy(span{in_buf, static_cast<usize>(buf_size)}, back_inserter(out_buf));
+	return buf_size;
+}
+
 auto decode_file_buffer(span<byte const> file_contents) -> DecoderOutput
 {
-	static constexpr auto PageSize = 4096zu;
-	using AVBuffer = unique_resource<void*, decltype([](auto* buf) { av_free(buf); })>;
-	using AVIO = unique_resource<AVIOContext*, decltype([](auto* ctx) {
-		av_free(ctx->buffer);
-		av_free(ctx);
-	})>;
-	using AVFormat = unique_resource<AVFormatContext*, decltype([](auto* ctx) {
-		avformat_free_context(ctx);
-	})>;
-	using AVCodec = unique_resource<AVCodecContext*, decltype([](auto* ctx) {
-		avcodec_free_context(&ctx);
-	})>;
-
 	auto file_buffer = SeekBuffer{ .buffer = file_contents, .cursor = 0 };
 	auto io_buffer = AVBuffer{av_malloc(PageSize)};
 	auto io = AVIO{ptr_check(avio_alloc_context(static_cast<unsigned char*>(io_buffer.get()), PageSize, 0,
@@ -156,24 +175,24 @@ auto decode_file_buffer(span<byte const> file_contents) -> DecoderOutput
 	}
 
 	auto cursor = 0zu;
-	auto packet = AVPacket{};
-	auto frame = AVFrame{};
+	auto in_packet = ::AVPacket{};
+	auto out_frame = ::AVFrame{};
 	auto flushing = false;
 	while (!flushing) {
-		auto const ret = av_read_frame(format.get(), &packet);
+		auto const ret = av_read_frame(format.get(), &in_packet);
 		if (ret == AVERROR_EOF)
 			flushing = true;
 		else
 			ret_check(ret);
-		ret_check(avcodec_send_packet(codec_ctx.get(), flushing? nullptr : &packet));
-		av_packet_unref(&packet);
+		ret_check(avcodec_send_packet(codec_ctx.get(), flushing? nullptr : &in_packet));
+		av_packet_unref(&in_packet);
 
 		while (true) {
-			auto const ret = avcodec_receive_frame(codec_ctx.get(), &frame);
+			auto const ret = avcodec_receive_frame(codec_ctx.get(), &out_frame);
 			if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) break;
 			ret_check(ret);
 
-			auto const frame_bytes = frame.nb_samples * bytes_per_sample * samples_per_frame;
+			auto const frame_bytes = out_frame.nb_samples * bytes_per_sample * samples_per_frame;
 			if (cursor + frame_bytes > byte_size_estimate) {
 				WARN("Underestimated output size by {} bytes", cursor + frame_bytes - byte_size_estimate);
 				byte_size_estimate = cursor + frame_bytes;
@@ -182,8 +201,8 @@ auto decode_file_buffer(span<byte const> file_contents) -> DecoderOutput
 			}
 
 			for (auto i: views::iota(0u, planes)) {
-				ASSERT(frame.data[i]);
-				copy(span{reinterpret_cast<byte*>(frame.data[i]), static_cast<usize>(frame_bytes)},
+				ASSUME(out_frame.data[i]);
+				copy(span{reinterpret_cast<byte*>(out_frame.data[i]), static_cast<usize>(frame_bytes)},
 					result->data[i].begin() + cursor);
 			}
 			cursor += frame_bytes;
@@ -233,6 +252,75 @@ auto decode_and_resample_file_buffer(span<byte const> file_contents, uint32 samp
 	auto decoder_output = decode_file_buffer(file_contents);
 	auto result = resample_buffer(move(decoder_output), sampling_rate);
 	return result;
+}
+
+auto encode_as_ogg(span<Sample const> samples, uint32 sampling_rate) -> vector<byte>
+{
+	auto output = vector<byte>{};
+	auto* format_ctx_ptr = static_cast<AVFormatContext*>(nullptr);
+	ret_check(avformat_alloc_output_context2(&format_ctx_ptr, nullptr, "ogg", nullptr));
+	auto format_ctx = AVFormat{format_ctx_ptr};
+	auto* codec = ptr_check(avcodec_find_encoder(AV_CODEC_ID_VORBIS));
+	auto codec_ctx = AVCodec{ptr_check(avcodec_alloc_context3(codec))};
+	codec_ctx->sample_fmt = AV_SAMPLE_FMT_FLTP;
+	codec_ctx->sample_rate = sampling_rate;
+	codec_ctx->ch_layout = AV_CHANNEL_LAYOUT_STEREO;
+	codec_ctx->global_quality = 8 * FF_QP2LAMBDA;
+	ret_check(avcodec_open2(codec_ctx.get(), codec, nullptr));
+
+	auto in_frame = AVFrame{ptr_check(av_frame_alloc())};
+	auto out_packet = AVPacket{ptr_check(av_packet_alloc())};
+	in_frame->nb_samples = codec_ctx->frame_size;
+	in_frame->format = AV_SAMPLE_FMT_FLTP;
+	in_frame->ch_layout = AV_CHANNEL_LAYOUT_STEREO;
+	ret_check(av_frame_get_buffer(in_frame.get(), 0));
+
+	auto* stream = ptr_check(avformat_new_stream(format_ctx.get(), nullptr));
+	ret_check(avcodec_parameters_from_context(stream->codecpar, codec_ctx.get()));
+	stream->time_base = codec_ctx->time_base;
+	auto io_buffer = AVBuffer{av_malloc(PageSize)};
+	auto io_ctx = AVIO{ptr_check(avio_alloc_context(
+		static_cast<unsigned char*>(io_buffer.get()), PageSize, 1,
+		&output, nullptr, &av_io_write, nullptr
+	))};
+	io_buffer.release();
+	format_ctx->pb = io_ctx.get();
+
+	ret_check(avformat_write_header(format_ctx.get(), nullptr));
+
+	auto const encode_and_write = [&](::AVFrame* frame) {
+		ret_check(avcodec_send_frame(codec_ctx.get(), frame));
+		while (true) {
+			auto const ret = avcodec_receive_packet(codec_ctx.get(), out_packet.get());
+			if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) break;
+			ret_check(ret);
+
+			out_packet->stream_index = stream->index;
+			av_packet_rescale_ts(out_packet.get(), codec_ctx->time_base, stream->time_base);
+			ret_check(av_interleaved_write_frame(format_ctx.get(), out_packet.get()));
+			av_packet_unref(out_packet.get());
+		}
+	};
+
+	auto pts = 0z;
+	for (auto in_slice: samples | views::chunk(in_frame->nb_samples)) {
+		ret_check(av_frame_make_writable(in_frame.get()));
+		auto* out_left = reinterpret_cast<float*>(in_frame->data[0]);
+		auto* out_right = reinterpret_cast<float*>(in_frame->data[1]);
+		ASSUME(out_left);
+		ASSUME(out_right);
+		in_frame->nb_samples = in_slice.size();
+		in_frame->pts = pts;
+		pts += in_slice.size();
+		transform(in_slice, out_left, [](auto const& s) { return s.left; });
+		transform(in_slice, out_right, [](auto const& s) { return s.right; });
+		encode_and_write(in_frame.get());
+	}
+
+	encode_and_write(nullptr);
+	ret_check(av_write_trailer(format_ctx.get()));
+	avio_flush(format_ctx->pb);
+	return output;
 }
 
 }
