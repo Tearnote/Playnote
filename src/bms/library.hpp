@@ -24,7 +24,7 @@ class Library {
 public:
 	// Minimal metadata about a chart in the library.
 	struct ChartEntry {
-		lib::openssl::MD5 md5;
+		MD5 md5;
 		string title;
 	};
 
@@ -67,7 +67,7 @@ public:
 	void reset_import_stats();
 
 	// Load a chart from the library.
-	auto load_chart(lib::openssl::MD5) -> task<shared_ptr<Chart const>>;
+	auto load_chart(MD5) -> task<shared_ptr<Chart const>>;
 
 	Library(Library const&) = delete;
 	auto operator=(Library const&) -> Library& = delete;
@@ -272,7 +272,7 @@ inline void Library::reset_import_stats()
 	import_stats.charts_failed.store(0);
 }
 
-inline auto Library::load_chart(lib::openssl::MD5 md5) -> task<shared_ptr<Chart const>>
+inline auto Library::load_chart(MD5 md5) -> task<shared_ptr<Chart const>>
 {
 	auto cache = optional<Metadata>{nullopt};
 	auto song_path = fs::path{};
@@ -428,7 +428,7 @@ inline auto Library::import_song(fs::path const& path) -> pair<isize, string>
 	// We checksum all the charts and check if any of them already exist
 	auto existing_song = optional<pair<isize, string>>{nullopt};
 	auto get_song_from_chart = lib::sqlite::prepare(db, GetSongFromChartQuery);
-	auto process_checksums = [&](lib::openssl::MD5 md5) {
+	auto process_checksums = [&](MD5 md5) {
 		lib::sqlite::query(get_song_from_chart, [&](isize id, string_view path) { existing_song.emplace(id, path); }, md5);
 		if (existing_song) return false;
 		return true;

@@ -13,6 +13,8 @@ A definite, playable rhythm game chart optimized for playback.
 
 namespace playnote::bms {
 
+using MD5 = lib::openssl::MD5;
+
 // A note of a chart with a definite timestamp and vertical position, ready for playback.
 struct Note {
 	struct Simple {};
@@ -146,7 +148,7 @@ struct Media {
 
 // A complete chart. Immutable; a chart is played by creating and advancing a Cursor from it.
 struct Chart {
-	lib::openssl::MD5 md5;
+	MD5 md5;
 	Metadata metadata;
 	Timeline timeline;
 	Media media;

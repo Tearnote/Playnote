@@ -13,7 +13,6 @@ Implementation file for threads/render.hpp.
 #include "utils/task_pool.hpp"
 #include "utils/logger.hpp"
 #include "utils/config.hpp"
-#include "lib/openssl.hpp"
 #include "lib/imgui.hpp"
 #include "lib/os.hpp"
 #include "dev/window.hpp"
@@ -173,7 +172,7 @@ static void render_select(gfx::Renderer::Queue&, GameState& state)
 		for (auto const& chart: context.charts) {
 			if (lib::imgui::selectable(chart.title.c_str())) {
 				context.chart_load_result = launch_pollable(
-					[](shared_ptr<bms::Library> library, lib::openssl::MD5 md5) -> task<shared_ptr<bms::Chart const>> {
+					[](shared_ptr<bms::Library> library, bms::MD5 md5) -> task<shared_ptr<bms::Chart const>> {
 						co_return co_await library->load_chart(md5);
 					}(state.library, chart.md5));
 				state.requested = State::Gameplay;

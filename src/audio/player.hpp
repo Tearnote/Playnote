@@ -11,7 +11,6 @@ to them and translated by their associated Input handlers.
 #include "preamble.hpp"
 #include "utils/assert.hpp"
 #include "utils/logger.hpp"
-#include "lib/openssl.hpp"
 #include "dev/window.hpp"
 #include "dev/audio.hpp"
 #include "audio/mixer.hpp"
@@ -61,7 +60,7 @@ private:
 		isize sample_offset; // Sample count at the time the cursor was started
 	};
 	struct ActiveSound {
-		lib::openssl::MD5 md5;
+		bms::MD5 md5;
 		isize channel;
 		span<dev::Sample const> audio;
 		isize position;

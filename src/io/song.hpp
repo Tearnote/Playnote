@@ -17,6 +17,7 @@ The disk portion of an imported BMS song; a zip archive with STORE compression a
 #include "dev/audio.hpp"
 #include "io/file.hpp"
 #include "audio/mixer.hpp"
+#include "bms/chart.hpp"
 
 namespace playnote::io {
 
@@ -33,14 +34,14 @@ public:
 	// Iterate over the archive, find all BMS files, and checksum them. Then, run the provided
 	// function on each checksum. If the function returns false, stop iteration early.
 	// Useful for existence checks before creating the proper zip.
-	template<callable<bool(lib::openssl::MD5)> Func>
+	template<callable<bool(bms::MD5)> Func>
 	static void for_each_chart_checksum_in_archive(fs::path const&, Func&&);
 
 	// Iterate over the directory, find all BMS files, and checksum them. Then, run the provided
 	// function on each checksum. If the function returns false, stop iteration early.
 	// Useful for existence checks before creating the proper zip.
 	// Requirement for the path is the same as in zip_from_directory.
-	template<callable<bool(lib::openssl::MD5)> Func>
+	template<callable<bool(bms::MD5)> Func>
 	static void for_each_chart_checksum_in_directory(fs::path const&, Func&&);
 
 	// Heuristically detect the encoding of an arbitrary archive's filenames.
@@ -136,7 +137,7 @@ private:
 	[[nodiscard]] static auto type_from_ext(string_view) -> FileType;
 };
 
-template<callable<bool(lib::openssl::MD5)> Func>
+template<callable<bool(bms::MD5)> Func>
 void Song::for_each_chart_checksum_in_archive(fs::path const& path, Func&& func)
 {
 	auto ar_file = read_file(path);
@@ -149,7 +150,7 @@ void Song::for_each_chart_checksum_in_archive(fs::path const& path, Func&& func)
 	});
 }
 
-template<callable<bool(lib::openssl::MD5)> Func>
+template<callable<bool(bms::MD5)> Func>
 void Song::for_each_chart_checksum_in_directory(fs::path const& path, Func&& func)
 {
 	for (auto const& entry: fs::directory_iterator{path}) {
