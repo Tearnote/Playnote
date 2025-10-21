@@ -7,6 +7,7 @@ A cache of song and chart metadata. Handles import events.
 */
 
 #pragma once
+#include "io/file.hpp"
 #include "preamble.hpp"
 #include "utils/task_pool.hpp"
 #include "utils/config.hpp"
@@ -15,6 +16,7 @@ A cache of song and chart metadata. Handles import events.
 #include "lib/sqlite.hpp"
 #include "lib/bits.hpp"
 #include "io/song.hpp"
+#include "io/file.hpp"
 #include "bms/builder.hpp"
 #include "bms/chart.hpp"
 
@@ -360,7 +362,7 @@ inline auto Library::import_many(fs::path path) -> task<>
 	} else if (fs::is_directory(path)) {
 		auto contents = vector<fs::directory_entry>{};
 		copy(fs::directory_iterator{path}, back_inserter(contents));
-		if (any_of(contents, [&](auto const& entry) { return fs::is_regular_file(entry) && io::Song::is_bms_ext(entry.path().extension().string()); })) {
+		if (any_of(contents, [&](auto const& entry) { return fs::is_regular_file(entry) && io::has_extension(entry, io::BMSExtensions); })) {
 			import_stats.songs_total.fetch_add(1);
 			co_await schedule_task(import_one(path));
 		} else {

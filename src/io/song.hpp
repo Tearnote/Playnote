@@ -25,12 +25,6 @@ namespace playnote::io {
 // Once opened the contents are immutable, but only specified methods are thread-safe due to sqlite state.
 class Song {
 public:
-	// Text encodings expected to be used by BMS songs.
-	static constexpr auto KnownEncodings = {"UTF-8"sv, "Shift_JIS"sv, "EUC-KR"sv};
-
-	// Return true if the provided extension matches a known BMS extension.
-	[[nodiscard]] static auto is_bms_ext(string_view) -> bool;
-
 	// Iterate over the archive, find all BMS files, and checksum them. Then, run the provided
 	// function on each checksum. If the function returns false, stop iteration early.
 	// Useful for existence checks before creating the proper zip.
@@ -132,9 +126,7 @@ private:
 
 	Song(ReadFile&&, lib::sqlite::DB&&); // Use factory methods
 	[[nodiscard]] static auto find_prefix(span<byte const> const&, string_view encoding) -> fs::path;
-	[[nodiscard]] static auto is_audio_ext(string_view) -> bool;
-	[[nodiscard]] static auto is_wasteful_audio_ext(string_view) -> bool;
-	[[nodiscard]] static auto type_from_ext(string_view) -> FileType;
+	[[nodiscard]] static auto type_from_ext(fs::path const&) -> FileType;
 };
 
 template<callable<bool(bms::MD5)> Func>
@@ -144,7 +136,7 @@ void Song::for_each_chart_checksum_in_archive(fs::path const& path, Func&& func)
 	auto ar = lib::archive::open_read(ar_file.contents);
 	lib::archive::for_each_entry(ar, [&](string_view pathname) {
 		auto const ext = fs::path{pathname}.extension().string();
-		if (!is_bms_ext(ext)) return true;
+		if (!has_extension(pathname, BMSExtensions)) return true;
 		auto data = lib::archive::read_data(ar);
 		return func(lib::openssl::md5(data));
 	});
@@ -155,8 +147,7 @@ void Song::for_each_chart_checksum_in_directory(fs::path const& path, Func&& fun
 {
 	for (auto const& entry: fs::directory_iterator{path}) {
 		if (!entry.is_regular_file()) continue;
-		auto const ext = entry.path().extension().string();
-		if (!is_bms_ext(ext)) continue;
+		if (!has_extension(entry, BMSExtensions)) continue;
 		auto data = read_file(entry);
 		if (!func(lib::openssl::md5(data.contents))) break;
 	}
@@ -168,11 +159,6 @@ void Song::for_each_chart(Func&& func)
 	lib::sqlite::query(select_charts, [&](string_view path, void const* ptr, isize size) {
 		func(path, span{static_cast<byte const*>(ptr), static_cast<usize>(size)});
 	});
-}
-
-inline auto Song::is_bms_ext(string_view ext) -> bool
-{
-	return find_if(BMSExtensions, [&](auto const& e) { return iequals(e, ext); }) != BMSExtensions.end();
 }
 
 inline auto Song::detect_archive_filename_encoding(fs::path const& path) -> string
@@ -204,8 +190,7 @@ inline void Song::zip_from_archive(fs::path const& src, fs::path const& dst)
 		auto rel_path = fs::relative(pathname_utf8, prefix);
 		if (!rel_path.empty() && *rel_path.begin() == "..") return true;
 
-		auto const ext = rel_path.extension().string();
-		if (is_wasteful_audio_ext(ext)) {
+		if (has_extension(rel_path, WastefulAudioExtensions)) {
 			auto const sampling_rate = globals::mixer->get_audio().get_sampling_rate();
 			data = lib::ffmpeg::encode_as_ogg(lib::ffmpeg::decode_and_resample_file_buffer(data, sampling_rate), sampling_rate);
 			rel_path.replace_extension(".ogg");
@@ -228,8 +213,7 @@ inline void Song::zip_from_directory(fs::path const& src, fs::path const& dst)
 		auto file = read_file(entry.path());
 
 		auto converted = optional<vector<byte>>{};
-		auto const ext = rel_path.extension().string();
-		if (is_wasteful_audio_ext(ext)) {
+		if (has_extension(rel_path, WastefulAudioExtensions)) {
 			auto const sampling_rate = globals::mixer->get_audio().get_sampling_rate();
 			converted = lib::ffmpeg::encode_as_ogg(lib::ffmpeg::decode_and_resample_file_buffer(file.contents, sampling_rate), sampling_rate);
 			rel_path.replace_extension(".ogg");
@@ -269,8 +253,7 @@ inline void Song::extend_zip_from_archive(fs::path const& base, fs::path const& 
 		if (written_paths.contains(rel_path.string())) return true;
 		auto data = lib::archive::read_data(ext_ar);
 
-		auto const ext = rel_path.extension().string();
-		if (is_wasteful_audio_ext(ext)) {
+		if (has_extension(rel_path, WastefulAudioExtensions)) {
 			auto const sampling_rate = globals::mixer->get_audio().get_sampling_rate();
 			data = lib::ffmpeg::encode_as_ogg(lib::ffmpeg::decode_and_resample_file_buffer(data, sampling_rate), sampling_rate);
 			rel_path.replace_extension(".ogg");
@@ -303,8 +286,7 @@ inline void Song::extend_zip_from_directory(fs::path const& base, fs::path const
 		auto file = read_file(entry.path());
 
 		auto converted = optional<vector<byte>>{};
-		auto const ext = rel_path.extension().string();
-		if (is_wasteful_audio_ext(ext)) {
+		if (has_extension(rel_path, WastefulAudioExtensions)) {
 			auto const sampling_rate = globals::mixer->get_audio().get_sampling_rate();
 			converted = lib::ffmpeg::encode_as_ogg(lib::ffmpeg::decode_and_resample_file_buffer(file.contents, sampling_rate), sampling_rate);
 			rel_path.replace_extension(".ogg");
@@ -412,7 +394,7 @@ inline auto Song::find_prefix(span<byte const> const& archive_data, string_view 
 		auto const pathname_bytes = span{reinterpret_cast<byte const*>(pathname.data()), pathname.size()};
 		auto const pathname_utf8 = lib::icu::to_utf8(pathname_bytes, encoding);
 		auto const path = fs::path{pathname_utf8};
-		if (is_bms_ext(path.extension().string())) {
+		if (has_extension(path, BMSExtensions)) {
 			auto const parts = distance(path.begin(), path.end());
 			if (!shortest_prefix_parts || parts < *shortest_prefix_parts) {
 				shortest_prefix = path.parent_path().string();
@@ -427,20 +409,10 @@ inline auto Song::find_prefix(span<byte const> const& archive_data, string_view 
 	return shortest_prefix;
 }
 
-inline auto Song::is_audio_ext(string_view ext) -> bool
+inline auto Song::type_from_ext(fs::path const& path) -> FileType
 {
-	return find_if(AudioExtensions, [&](auto const& e) { return iequals(e, ext); }) != AudioExtensions.end();
-}
-
-inline auto Song::is_wasteful_audio_ext(string_view ext) -> bool
-{
-	return find_if(WastefulAudioExtensions, [&](auto const& e) { return iequals(e, ext); }) != WastefulAudioExtensions.end();
-}
-
-inline auto Song::type_from_ext(string_view ext) -> FileType
-{
-	if (is_bms_ext(ext)) return FileType::BMS;
-	if (is_audio_ext(ext)) return FileType::Audio;
+	if (has_extension(path, BMSExtensions)) return FileType::BMS;
+	if (has_extension(path, AudioExtensions)) return FileType::Audio;
 	return FileType::Unknown;
 }
 

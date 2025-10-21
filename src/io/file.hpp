@@ -17,14 +17,17 @@ namespace playnote::io {
 // Lists of the various known extensions.
 
 static constexpr auto BMSExtensions = to_array({
-	".bms", ".bme", ".bml", ".pms"
+	".bms"sv, ".bme"sv, ".bml"sv, ".pms"sv
 });
 static constexpr auto AudioExtensions = to_array({
-	".wav", ".mp3", ".ogg", ".flac", ".wma", ".m4a", ".opus", ".aac", ".aiff", ".aif"
+	".wav"sv, ".mp3"sv, ".ogg"sv, ".flac"sv, ".wma"sv, ".m4a"sv, ".opus"sv, ".aac"sv, ".aiff"sv, ".aif"sv
 });
 static constexpr auto WastefulAudioExtensions = to_array({
-	".wav", ".aiff", ".aif"
+	".wav"sv, ".aiff"sv, ".aif"sv
 });
+
+// Text encodings expected to be used by BMS content.
+static constexpr auto KnownEncodings = {"UTF-8"sv, "Shift_JIS"sv, "EUC-KR"sv};
 
 // A file open for reading. Contents represents the entire length of the file mapped into memory.
 // Map is a RAII wrapper ensuring contents are available.
@@ -77,6 +80,13 @@ inline void write_file(fs::path const& path, span<byte const> contents)
 	file.exceptions(std::ios::failbit | std::ios::badbit);
 	file.open(path, std::ios::binary | std::ios::trunc);
 	file.write(reinterpret_cast<char const*>(contents.data()), contents.size());
+}
+
+// Check if a path has an extension that matches a set. Case-insensitive.
+inline auto has_extension(fs::path const& path, span<string_view const> extensions) -> bool
+{
+	auto const ext = path.extension().string();
+	return find_if(extensions, [&](auto const& e) { return iequals(e, ext); }) != extensions.end();
 }
 
 }

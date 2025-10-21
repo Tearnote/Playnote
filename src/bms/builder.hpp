@@ -16,6 +16,7 @@ Parsing of BMS chart data into a Chart object.
 #include "lib/icu.hpp"
 #include "dev/audio.hpp"
 #include "io/song.hpp"
+#include "io/file.hpp"
 #include "audio/renderer.hpp"
 #include "audio/mixer.hpp"
 #include "bms/chart.hpp"
@@ -319,7 +320,7 @@ inline auto Builder::build(span<byte const> bms_raw, io::Song& song, optional<re
 	parse_state.measure_lengths.reserve(256); // Arbitrary
 
 	// Convert chart to UTF-8
-	auto encoding = lib::icu::detect_encoding(bms_raw, io::Song::KnownEncodings);
+	auto encoding = lib::icu::detect_encoding(bms_raw, io::KnownEncodings);
 	if (!encoding) {
 		WARN_AS(cat, "Unexpected BMS file encoding; assuming Shift_JIS");
 		encoding = "Shift_JIS";
