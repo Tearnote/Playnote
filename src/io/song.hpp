@@ -3,7 +3,7 @@ This software is dual-licensed. For more details, please consult LICENSE.txt.
 Copyright (c) 2025 Tearnote (Hubert Maraszek)
 
 io/song.hpp:
-An abstraction for an imported BMS song. Wraps a zip archive with accelerated file lookup.
+The disk portion of an imported BMS song; a zip archive with STORE compression and no leading directory.
 */
 
 #pragma once
@@ -90,10 +90,6 @@ public:
 	void remove() && noexcept;
 
 private:
-	static constexpr auto BMSExtensions = to_array({".bms", ".bme", ".bml", ".pms"});
-	static constexpr auto AudioExtensions = to_array({".wav", ".mp3", ".ogg", ".flac", ".wma", ".m4a", ".opus", ".aac", ".aiff", ".aif"});
-	static constexpr auto WastefulAudioExtensions = to_array({".wav", ".aiff", ".aif"});
-
 	enum class FileType {
 		Unknown, // 0
 		BMS,     // 1

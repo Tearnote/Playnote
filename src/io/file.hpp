@@ -14,6 +14,18 @@ Raw file I/O utilities.
 
 namespace playnote::io {
 
+// Lists of the various known extensions.
+
+static constexpr auto BMSExtensions = to_array({
+	".bms", ".bme", ".bml", ".pms"
+});
+static constexpr auto AudioExtensions = to_array({
+	".wav", ".mp3", ".ogg", ".flac", ".wma", ".m4a", ".opus", ".aac", ".aiff", ".aif"
+});
+static constexpr auto WastefulAudioExtensions = to_array({
+	".wav", ".aiff", ".aif"
+});
+
 // A file open for reading. Contents represents the entire length of the file mapped into memory.
 // Map is a RAII wrapper ensuring contents are available.
 struct ReadFile {
