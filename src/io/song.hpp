@@ -201,8 +201,13 @@ inline auto Song::preload_audio_files() -> task<>
 	});
 
 	auto results = co_await when_all(move(tasks));
-	for (auto [result, path]: views::zip(results, paths))
-		audio_cache.emplace(path, move(result.return_value()));
+	for (auto [result, path]: views::zip(results, paths)) {
+		try {
+			audio_cache.emplace(path, move(result.return_value()));
+		} catch (exception const& e) {
+			WARN_AS(cat, "Failed to preload \"{}\": {}", path, e.what());
+		}
+	}
 }
 
 inline auto Song::load_audio_file(string_view filepath) -> vector<dev::Sample>
