@@ -15,6 +15,7 @@ A cache of song and chart metadata. Handles import events.
 #include "lib/openssl.hpp"
 #include "lib/sqlite.hpp"
 #include "lib/bits.hpp"
+#include "io/source.hpp"
 #include "io/song.hpp"
 #include "io/file.hpp"
 #include "bms/builder.hpp"
@@ -334,7 +335,7 @@ inline auto Library::load_chart(MD5 md5) -> task<shared_ptr<Chart const>>
 	}, md5);
 	if (!cache) throw runtime_error{"Chart not found"};
 
-	auto song = io::Song::from_zip(song_path);
+	auto song = io::Song(io::read_file(song_path));
 	auto chart_raw = song.load_file(chart_path);
 	auto builder = Builder{cat};
 	co_return co_await builder.build(chart_raw, song, *cache);
@@ -384,7 +385,7 @@ try {
 	INFO_AS(cat, "Importing song \"{}\"", path);
 	auto lock = co_await song_lock.scoped_lock();
 	auto [song_id, song_path] = import_song(path);
-	auto song = io::Song::from_zip(song_path);
+	auto song = io::Song(io::read_file(song_path));
 	song.preload_audio_files();
 
 	auto chart_import_tasks = vector<task<>>{};
@@ -429,16 +430,15 @@ inline auto Library::import_song(fs::path const& path) -> pair<isize, string>
 	// First, determine if we're creating a new song or extending an existing song
 	// We checksum all the charts and check if any of them already exist
 	auto existing_song = optional<pair<isize, string>>{nullopt};
+	auto source = io::Source{path};
 	auto get_song_from_chart = lib::sqlite::prepare(db, GetSongFromChartQuery);
-	auto process_checksums = [&](MD5 md5) {
+	source.for_each_file([&](auto entry) {
+		if (!io::has_extension(entry.get_path(), io::BMSExtensions)) return true;
+		auto const md5 = lib::openssl::md5(entry.read());
 		lib::sqlite::query(get_song_from_chart, [&](isize id, string_view path) { existing_song.emplace(id, path); }, md5);
 		if (existing_song) return false;
 		return true;
-	};
-	if (is_archive)
-		io::Song::for_each_chart_checksum_in_archive(path, process_checksums);
-	else
-		io::Song::for_each_chart_checksum_in_directory(path, process_checksums);
+	});
 
 	if (existing_song) { // Extending
 		INFO_AS(cat, "Song \"{}\" already exists in library; extending", path);
@@ -448,10 +448,7 @@ inline auto Library::import_song(fs::path const& path) -> pair<isize, string>
 		auto tmp_path = existing_song_path;
 		tmp_path.concat(".tmp");
 		auto deleter = io::FileDeleter{tmp_path};
-		if (is_archive)
-			io::Song::extend_zip_from_archive(existing_song_path, path, tmp_path);
-		else
-			io::Song::extend_zip_from_directory(existing_song_path, path, tmp_path);
+		io::Song::from_source_append(io::read_file(existing_song_path), io::Source{path}, tmp_path);
 
 		fs::rename(tmp_path, existing_song_path);
 		deleter.disarm();
@@ -464,10 +461,7 @@ inline auto Library::import_song(fs::path const& path) -> pair<isize, string>
 
 		auto const out_path = fs::path{LibraryPath} / out_filename;
 		auto deleter = io::FileDeleter{out_path};
-		if (is_archive)
-			io::Song::zip_from_archive(path, out_path);
-		else
-			io::Song::zip_from_directory(path, out_path);
+		io::Song::from_source(io::Source{path}, out_path);
 
 		auto insert_song = lib::sqlite::prepare(db, InsertSongQuery);
 		auto const song_id = lib::sqlite::insert(insert_song, out_filename);
