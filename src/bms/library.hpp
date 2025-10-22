@@ -222,7 +222,7 @@ private:
 	[[nodiscard]] auto find_available_song_filename(string_view name) -> string;
 	auto import_many(fs::path) -> task<>;
 	auto import_one(fs::path) -> task<>;
-	auto import_song(fs::path const&) -> pair<isize, string>;
+	auto import_song(fs::path const&) -> pair<isize, fs::path>;
 	auto import_chart(io::Song& song, isize song_id, string chart_path, span<byte const>) -> task<>;
 };
 
@@ -423,7 +423,7 @@ catch (exception const& e) {
 	import_stats.songs_failed.fetch_add(1);
 }
 
-inline auto Library::import_song(fs::path const& path) -> pair<isize, string>
+inline auto Library::import_song(fs::path const& path) -> pair<isize, fs::path>
 {
 	auto const is_archive = fs::is_regular_file(path);
 
@@ -452,7 +452,7 @@ inline auto Library::import_song(fs::path const& path) -> pair<isize, string>
 
 		fs::rename(tmp_path, existing_song_path);
 		deleter.disarm();
-		return {existing_song_id, existing_song_path.string()};
+		return {existing_song_id, move(existing_song_path)};
 	} else { // New song
 		auto out_filename = is_archive? path.stem().string() : path.filename().string();
 		if (out_filename.empty())
@@ -466,7 +466,7 @@ inline auto Library::import_song(fs::path const& path) -> pair<isize, string>
 		auto insert_song = lib::sqlite::prepare(db, InsertSongQuery);
 		auto const song_id = lib::sqlite::insert(insert_song, out_filename);
 		deleter.disarm();
-		return {song_id, out_path.string()};
+		return {song_id, move(out_path)};
 	}
 }
 
