@@ -40,7 +40,7 @@ public:
 
 	// Preload all audio files to an internal cache. This cache will be used in any later load_audio_file() calls.
 	// The loads are performed in parallel. Useful when loading multiple charts of the same song.
-	void preload_audio_files();
+	auto preload_audio_files() -> task<>;
 
 	// Load the requested audio file, decode it, and resample to current device sample rate.
 	auto load_audio_file(string_view filepath) -> vector<dev::Sample>;
@@ -184,7 +184,7 @@ inline auto Song::load_file(string_view filepath) -> span<byte const>
 	return file;
 }
 
-inline void Song::preload_audio_files()
+inline auto Song::preload_audio_files() -> task<>
 {
 	auto tasks = vector<task<vector<dev::Sample>>>{};
 	auto paths = vector<string>{};
@@ -200,7 +200,7 @@ inline void Song::preload_audio_files()
 		paths.emplace_back(move(filepath_low));
 	});
 
-	auto results = sync_wait(when_all(move(tasks)));
+	auto results = co_await when_all(move(tasks));
 	for (auto [result, path]: views::zip(results, paths))
 		audio_cache.emplace(path, move(result.return_value()));
 }

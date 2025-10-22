@@ -386,7 +386,7 @@ try {
 	auto lock = co_await song_lock.scoped_lock();
 	auto [song_id, song_path] = import_song(path);
 	auto song = io::Song(cat, io::read_file(song_path));
-	song.preload_audio_files();
+	co_await song.preload_audio_files();
 
 	auto chart_import_tasks = vector<task<>>{};
 	auto chart_paths = vector<string>{};
