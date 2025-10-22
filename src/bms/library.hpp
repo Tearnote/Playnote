@@ -335,7 +335,7 @@ inline auto Library::load_chart(MD5 md5) -> task<shared_ptr<Chart const>>
 	}, md5);
 	if (!cache) throw runtime_error{"Chart not found"};
 
-	auto song = io::Song(io::read_file(song_path));
+	auto song = io::Song(cat, io::read_file(song_path));
 	auto chart_raw = song.load_file(chart_path);
 	auto builder = Builder{cat};
 	co_return co_await builder.build(chart_raw, song, *cache);
@@ -385,7 +385,7 @@ try {
 	INFO_AS(cat, "Importing song \"{}\"", path);
 	auto lock = co_await song_lock.scoped_lock();
 	auto [song_id, song_path] = import_song(path);
-	auto song = io::Song(io::read_file(song_path));
+	auto song = io::Song(cat, io::read_file(song_path));
 	song.preload_audio_files();
 
 	auto chart_import_tasks = vector<task<>>{};
@@ -448,7 +448,7 @@ inline auto Library::import_song(fs::path const& path) -> pair<isize, string>
 		auto tmp_path = existing_song_path;
 		tmp_path.concat(".tmp");
 		auto deleter = io::FileDeleter{tmp_path};
-		io::Song::from_source_append(io::read_file(existing_song_path), io::Source{path}, tmp_path);
+		io::Song::from_source_append(cat, io::read_file(existing_song_path), io::Source{path}, tmp_path);
 
 		fs::rename(tmp_path, existing_song_path);
 		deleter.disarm();
@@ -461,7 +461,7 @@ inline auto Library::import_song(fs::path const& path) -> pair<isize, string>
 
 		auto const out_path = fs::path{LibraryPath} / out_filename;
 		auto deleter = io::FileDeleter{out_path};
-		io::Song::from_source(io::Source{path}, out_path);
+		io::Song::from_source(cat, io::Source{path}, out_path);
 
 		auto insert_song = lib::sqlite::prepare(db, InsertSongQuery);
 		auto const song_id = lib::sqlite::insert(insert_song, out_filename);

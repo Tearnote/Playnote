@@ -23,13 +23,13 @@ namespace playnote::io {
 class Song {
 public:
 	// Create from an existing songzip.
-	explicit Song(ReadFile&&);
+	explicit Song(Logger::Category, ReadFile&&);
 
 	// Convert from a Source.
-	static auto from_source(Source const&, fs::path const& dst) -> Song;
+	static auto from_source(Logger::Category, Source const&, fs::path const& dst) -> Song;
 
 	// Convert from a Source, using an existing songzip as base.
-	static auto from_source_append(ReadFile&& src, Source const& ext, fs::path const& dst) -> Song;
+	static auto from_source_append(Logger::Category, ReadFile&& src, Source const& ext, fs::path const& dst) -> Song;
 
 	// Call the provided function for each chart of the song.
 	template<callable<void(string_view, span<byte const>)> Func>
@@ -81,6 +81,7 @@ private:
 		SELECT path, ptr, size FROM contents WHERE type = 2
 	)sql"sv;
 
+	Logger::Category cat;
 	ReadFile file;
 	lib::sqlite::DB db;
 	lib::sqlite::Statement select_charts;
@@ -88,10 +89,12 @@ private:
 	lib::sqlite::Statement select_audio_files;
 	unordered_map<string, vector<dev::Sample>, string_hash> audio_cache;
 
+	static void optimize_file(Logger::Category, fs::path& path, span<byte const>& data);
 	[[nodiscard]] static auto type_from_path(fs::path const&) -> FileType;
 };
 
-inline Song::Song(ReadFile&& file):
+inline Song::Song(Logger::Category cat, ReadFile&& file):
+	cat{cat},
 	file{move(file)},
 	db{lib::sqlite::open(":memory:")}
 {
@@ -113,18 +116,14 @@ inline Song::Song(ReadFile&& file):
 	});
 }
 
-inline auto Song::from_source(Source const& src, fs::path const& dst) -> Song
+inline auto Song::from_source(Logger::Category cat, Source const& src, fs::path const& dst) -> Song
 {
 	auto ar = lib::archive::open_write(dst);
 	auto wrote_something = false;
 	src.for_each_file([&](auto ref) {
 		auto data = ref.read();
 		auto path = ref.get_path();
-		if (has_extension(path, WastefulAudioExtensions)) {
-			auto const sampling_rate = globals::mixer->get_audio().get_sampling_rate();
-			data = lib::ffmpeg::encode_as_ogg(lib::ffmpeg::decode_and_resample_file_buffer(data, sampling_rate), sampling_rate);
-			path.replace_extension(".ogg");
-		}
+		optimize_file(cat, path, data);
 		lib::archive::write_entry(ar, path, data);
 		wrote_something = true;
 		return true;
@@ -133,10 +132,10 @@ inline auto Song::from_source(Source const& src, fs::path const& dst) -> Song
 	if (!wrote_something)
 		throw runtime_error_fmt("Failed to create library zip from \"{}\": empty archive", src.get_path());
 	ar.reset(); // Finalize archive
-	return Song{read_file(dst)};
+	return Song{cat, read_file(dst)};
 }
 
-inline auto Song::from_source_append(ReadFile&& src, Source const& ext, fs::path const& dst) -> Song
+inline auto Song::from_source_append(Logger::Category cat, ReadFile&& src, Source const& ext, fs::path const& dst) -> Song
 {
 	auto ar = lib::archive::open_write(dst);
 	auto written_paths = unordered_set<string>{};
@@ -156,17 +155,13 @@ inline auto Song::from_source_append(ReadFile&& src, Source const& ext, fs::path
 		auto path = entry.get_path();
 		if (written_paths.contains(path.string())) return true;
 		auto data = entry.read();
-		if (has_extension(path, WastefulAudioExtensions)) {
-			auto const sampling_rate = globals::mixer->get_audio().get_sampling_rate();
-			data = lib::ffmpeg::encode_as_ogg(lib::ffmpeg::decode_and_resample_file_buffer(data, sampling_rate), sampling_rate);
-			path.replace_extension(".ogg");
-		}
+		optimize_file(cat, path, data);
 		lib::archive::write_entry(ar, path, data);
 		return true;
 	});
 
 	ar.reset(); // Finalize archive
-	return Song{read_file(dst)};
+	return Song{cat, read_file(dst)};
 }
 
 template<callable<void(string_view, span<byte const>)> Func>
@@ -198,9 +193,10 @@ inline void Song::preload_audio_files()
 		auto filepath_low = string{filepath};
 		to_lower(filepath_low);
 		auto file = span{static_cast<byte const*>(ptr), static_cast<usize>(size)};
-		tasks.emplace_back(schedule_task([](span<byte const> file) -> task<vector<dev::Sample>> {
+		tasks.emplace_back(schedule_task([](Logger::Category cat, span<byte const> file) -> task<vector<dev::Sample>> {
+			lib::ffmpeg::set_thread_log_category(cat);
 			co_return lib::ffmpeg::decode_and_resample_file_buffer(file, globals::mixer->get_audio().get_sampling_rate());
-		}(file)));
+		}(cat, file)));
 		paths.emplace_back(move(filepath_low));
 	});
 
@@ -227,12 +223,25 @@ inline auto Song::load_audio_file(string_view filepath) -> vector<dev::Sample>
 	}, filepath);
 	if (!file.data())
 		throw runtime_error_fmt("Audio file \"{}\" doesn't exist within the song archive", filepath);
+	lib::ffmpeg::set_thread_log_category(cat);
 	return lib::ffmpeg::decode_and_resample_file_buffer(file, globals::mixer->get_audio().get_sampling_rate());
 }
 
 inline void Song::remove() && noexcept
 {
 	fs::remove(file.path);
+}
+
+inline void Song::optimize_file(Logger::Category cat, fs::path& path, span<byte const>& data)
+try {
+	if (has_extension(path, WastefulAudioExtensions)) {
+		lib::ffmpeg::set_thread_log_category(cat);
+		auto const sampling_rate = globals::mixer->get_audio().get_sampling_rate();
+		data = lib::ffmpeg::encode_as_ogg(lib::ffmpeg::decode_and_resample_file_buffer(data, sampling_rate), sampling_rate);
+		path.replace_extension(".ogg");
+	}
+} catch (exception const& e) {
+	WARN("Failed to optimize file \"{}\": {}", path, e.what());
 }
 
 inline auto Song::type_from_path(fs::path const& path) -> FileType

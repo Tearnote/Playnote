@@ -15,7 +15,9 @@ extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavutil/opt.h>
 }
+#include <cstdarg>
 #include <cerrno>
+#include <cstdio>
 #include "preamble.hpp"
 #include "utils/assert.hpp"
 #include "utils/logger.hpp"
@@ -55,6 +57,37 @@ static auto ptr_check(T* ptr) -> T*
 {
 	if (!ptr) throw runtime_error_fmt("ffmpeg error: {}", av_err2str(errno));
 	return ptr;
+}
+
+// Logger override support
+
+thread_local Logger::Category cat = nullptr;
+static atomic<bool> log_callback_set = false;
+
+static void log_callback(void*, int level, char const* fmt, va_list va_og)
+{
+	if (level > 32) return; // Too verbose
+
+	va_list va; // not auto due to possibly-macro shenanigans
+	va_copy(va, va_og);
+	auto const msg_size = std::vsnprintf(nullptr, 0, fmt, va);
+	va_end(va);
+	if (msg_size < 0) return;
+	auto msg = string(msg_size, '\0'); // uniform initializer misinterprets this as a list of chars
+	std::vsnprintf(msg.data(), msg_size + 1, fmt, va_og);
+
+	auto log_cat = cat? cat : globals::logger->global;
+	     if (level <=  8)  CRIT_AS(log_cat, "ffmpeg: {}", msg);
+	else if (level <= 16) ERROR_AS(log_cat, "ffmpeg: {}", msg);
+	else if (level <= 24)  WARN_AS(log_cat, "ffmpeg: {}", msg);
+	else                   INFO_AS(log_cat, "ffmpeg: {}", msg);
+}
+
+static void set_log_callback()
+{
+	auto prev = log_callback_set.exchange(true);
+	if (prev) return;
+	av_log_set_callback(log_callback);
 }
 
 // RAII wrappers for ffmpeg objects
@@ -130,8 +163,14 @@ static auto av_io_write(void* opaque, uint8_t const* buf, int buf_size) -> int
 	return buf_size;
 }
 
+void set_thread_log_category(Logger::Category new_cat)
+{
+	cat = new_cat;
+}
+
 auto decode_file_buffer(span<byte const> file_contents) -> DecoderOutput
 {
+	set_log_callback();
 	auto file_buffer = SeekBuffer{ .buffer = file_contents, .cursor = 0 };
 	auto io_buffer = AVBuffer{av_malloc(PageSize)};
 	auto io = AVIO{ptr_check(avio_alloc_context(static_cast<unsigned char*>(io_buffer.get()), PageSize, 0,
@@ -225,6 +264,7 @@ auto decode_file_buffer(span<byte const> file_contents) -> DecoderOutput
 
 auto resample_buffer(DecoderOutput&& input, uint32 sampling_rate) -> vector<Sample>
 {
+	set_log_callback();
 	auto* swr = static_cast<SwrContext*>(nullptr);
 	constexpr auto channel_layout = (AVChannelLayout)AV_CHANNEL_LAYOUT_STEREO;
 	ret_check(swr_alloc_set_opts2(&swr,
@@ -254,6 +294,7 @@ auto resample_buffer(DecoderOutput&& input, uint32 sampling_rate) -> vector<Samp
 
 auto decode_and_resample_file_buffer(span<byte const> file_contents, uint32 sampling_rate) -> vector<Sample>
 {
+	set_log_callback();
 	auto decoder_output = decode_file_buffer(file_contents);
 	auto result = resample_buffer(move(decoder_output), sampling_rate);
 	return result;
@@ -261,6 +302,7 @@ auto decode_and_resample_file_buffer(span<byte const> file_contents, uint32 samp
 
 auto encode_as_ogg(span<Sample const> samples, uint32 sampling_rate) -> vector<byte>
 {
+	set_log_callback();
 	auto output = vector<byte>{};
 	auto* format_ctx_ptr = static_cast<AVFormatContext*>(nullptr);
 	ret_check(avformat_alloc_output_context2(&format_ctx_ptr, nullptr, "ogg", nullptr));

@@ -8,6 +8,7 @@ Wrapper for libav/libswresample audio file decoding.
 
 #pragma once
 #include "preamble.hpp"
+#include "utils/logger.hpp"
 #include "lib/audio_common.hpp"
 
 namespace playnote::lib::ffmpeg {
@@ -15,6 +16,10 @@ namespace playnote::lib::ffmpeg {
 // Opaque type for raw decoder output, unusable before being resampled to a known format.
 struct DecoderOutput_t;
 using DecoderOutput = DecoderOutput_t*;
+
+// Set the logger category for ffmpeg to use on the current thread. If not called, will log
+// to the global category.
+void set_thread_log_category(Logger::Category);
 
 // Decode an audio file from a buffer into uncompressed audio data. The returned output must be
 // consumed by resample_buffer() to free the underlying resources.
