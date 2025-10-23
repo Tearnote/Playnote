@@ -387,6 +387,7 @@ try {
 	auto [song_id, song_path] = co_await import_song(path);
 	auto song = io::Song(cat, io::read_file(song_path));
 	co_await song.preload_audio_files();
+	INFO_AS(cat, "Song \"{}\" files processed successfully", path);
 
 	auto chart_import_tasks = vector<task<>>{};
 	auto chart_paths = vector<string>{};
