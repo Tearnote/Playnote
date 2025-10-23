@@ -258,7 +258,7 @@ inline auto Library::list_charts() -> task<vector<ChartEntry>>
 		copy(md5, entry.md5.begin());
 		auto const difficulty_str = enum_name(static_cast<Difficulty>(difficulty));
 		auto const playstyle_str = enum_name(static_cast<Playstyle>(playstyle));
-		entry.title = format("{} [{}] [{}]", title, difficulty_str, playstyle_str.substr(1));
+		entry.title = format("{} [{}] [{}]##{}", title, difficulty_str, playstyle_str.substr(1), lib::openssl::md5_to_hex(entry.md5));
 		result.emplace_back(move(entry));
 	});
 	dirty.store(false);
