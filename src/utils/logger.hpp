@@ -166,6 +166,7 @@ inline Logger::Logger(string_view log_file_path, Level global_log_level)
 		.thread_name = "Logging",
 		.enable_yield_when_idle = true,
 		.sleep_duration = 0ns,
+		.error_notifier = [&](string const& msg) { WARN_AS(global, "{}", msg); },
 		.check_printable_char = {}, // Allow UTF-8
 		.log_level_short_codes = ShortCodes,
 	}, quill::SignalHandlerOptions{});
