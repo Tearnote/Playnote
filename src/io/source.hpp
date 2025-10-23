@@ -28,6 +28,9 @@ public:
 		// in the entry contents, skip it to iterate much faster.
 		auto read() -> span<byte const>;
 
+		// Retrieve a copy of the entry contents. The copy is elided in some cases.
+		auto read_owned() -> vector<byte>;
+
 	private:
 		friend class Source;
 		struct DirEntry {
@@ -79,6 +82,15 @@ inline auto Source::FileReference::read() -> span<byte const>
 		}
 	}, entry);
 	return result;
+}
+
+inline auto Source::FileReference::read_owned() -> vector<byte>
+{
+	read(); // Populate .entry
+	return visit(visitor{
+		[](DirEntry& e) { return vector<byte>{e.file->contents.begin(), e.file->contents.end()}; },
+		[](ArchiveEntry& e) { return move(*e.contents); }
+	}, entry);
 }
 
 inline Source::Source(fs::path const& path):

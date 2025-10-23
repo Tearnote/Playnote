@@ -222,7 +222,7 @@ private:
 	[[nodiscard]] auto find_available_song_filename(string_view name) -> string;
 	auto import_many(fs::path) -> task<>;
 	auto import_one(fs::path) -> task<>;
-	auto import_song(fs::path const&) -> pair<isize, fs::path>;
+	auto import_song(fs::path const&) -> task<pair<isize, fs::path>>;
 	auto import_chart(io::Song& song, isize song_id, string chart_path, span<byte const>) -> task<>;
 };
 
@@ -384,7 +384,7 @@ try {
 	}
 	INFO_AS(cat, "Importing song \"{}\"", path);
 	auto lock = co_await song_lock.scoped_lock();
-	auto [song_id, song_path] = import_song(path);
+	auto [song_id, song_path] = co_await import_song(path);
 	auto song = io::Song(cat, io::read_file(song_path));
 	co_await song.preload_audio_files();
 
@@ -423,7 +423,7 @@ catch (exception const& e) {
 	import_stats.songs_failed.fetch_add(1);
 }
 
-inline auto Library::import_song(fs::path const& path) -> pair<isize, fs::path>
+inline auto Library::import_song(fs::path const& path) -> task<pair<isize, fs::path>>
 {
 	auto const is_archive = fs::is_regular_file(path);
 
@@ -448,11 +448,11 @@ inline auto Library::import_song(fs::path const& path) -> pair<isize, fs::path>
 		auto tmp_path = existing_song_path;
 		tmp_path.concat(".tmp");
 		auto deleter = io::FileDeleter{tmp_path};
-		io::Song::from_source_append(cat, io::read_file(existing_song_path), io::Source{path}, tmp_path);
+		co_await io::Song::from_source_append(cat, io::read_file(existing_song_path), io::Source{path}, tmp_path);
 
 		fs::rename(tmp_path, existing_song_path);
 		deleter.disarm();
-		return {existing_song_id, move(existing_song_path)};
+		co_return {existing_song_id, move(existing_song_path)};
 	} else { // New song
 		auto out_filename = is_archive? path.stem().string() : path.filename().string();
 		if (out_filename.empty())
@@ -461,12 +461,12 @@ inline auto Library::import_song(fs::path const& path) -> pair<isize, fs::path>
 
 		auto const out_path = fs::path{LibraryPath} / out_filename;
 		auto deleter = io::FileDeleter{out_path};
-		io::Song::from_source(cat, io::Source{path}, out_path);
+		co_await io::Song::from_source(cat, io::Source{path}, out_path);
 
 		auto insert_song = lib::sqlite::prepare(db, InsertSongQuery);
 		auto const song_id = lib::sqlite::insert(insert_song, out_filename);
 		deleter.disarm();
-		return {song_id, move(out_path)};
+		co_return {song_id, move(out_path)};
 	}
 }
 
