@@ -261,7 +261,7 @@ auto Song::optimize_files(Logger::Category cat, Source const& src, Func&& filter
 {
 	// when_all requires an ordered container
 	auto optimize_tasks = vector<task<pair<fs::path, vector<byte>>>>{};
-	auto optimized_paths = vector<string>{};
+	auto optimized_paths = vector<fs::path>{};
 	src.for_each_file([&](auto ref) {
 		auto path = ref.get_path();
 		if (!filter(path)) return true;
