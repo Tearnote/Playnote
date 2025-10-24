@@ -7,6 +7,7 @@ Parsing of BMS chart data into a Chart object.
 */
 
 #pragma once
+#include "lib/ffmpeg.hpp"
 #include "preamble.hpp"
 #include "utils/task_pool.hpp"
 #include "utils/assert.hpp"
@@ -669,12 +670,17 @@ inline auto Builder::build(span<byte const> bms_raw, io::Song& song, optional<re
 	);
 
 	// Offline audio render pass, handling all related statistics in one sweep
-	auto [loudness, audio_duration] = [&] {
+	auto [loudness, audio_duration, preview] = [&] {
 		static constexpr auto BufferSize = 4096z / static_cast<isize>(sizeof(dev::Sample)); // One memory page
 		auto renderer = audio::Renderer{chart};
 		auto ctx = lib::ebur128::init(globals::mixer->get_audio().get_sampling_rate());
 		auto buffer = vector<dev::Sample>{};
 		buffer.reserve(BufferSize);
+
+		auto const preview_start = min<nanoseconds>(20s, chart->metadata.chart_duration / 4);
+		auto const preview_end = min<nanoseconds>(preview_start + 30s, chart->metadata.chart_duration);
+		auto preview = vector<dev::Sample>{};
+		preview.reserve(globals::mixer->get_audio().ns_to_samples(preview_end - preview_start) + 1);
 
 		auto processing = true;
 		while (processing) {
@@ -682,6 +688,9 @@ inline auto Builder::build(span<byte const> bms_raw, io::Song& song, optional<re
 				auto const sample = renderer.advance_one_sample();
 				if (sample) {
 					buffer.emplace_back(*sample);
+					auto const pos = renderer.get_cursor().get_progress_ns();
+					if (pos >= preview_start && pos <= preview_end)
+						preview.emplace_back(*sample);
 				} else {
 					processing = false;
 					break;
@@ -690,10 +699,11 @@ inline auto Builder::build(span<byte const> bms_raw, io::Song& song, optional<re
 			lib::ebur128::add_frames(ctx, buffer);
 			buffer.clear();
 		}
-		return pair{lib::ebur128::get_loudness(ctx), renderer.get_cursor().get_progress_ns()};
+		return make_tuple(lib::ebur128::get_loudness(ctx), renderer.get_cursor().get_progress_ns(), move(preview));
 	}();
 	chart->metadata.loudness = loudness;
 	chart->metadata.audio_duration = audio_duration;
+	chart->media.preview = move(preview);
 
 	// Playable note density distribution
 	chart->metadata.density = [&] {

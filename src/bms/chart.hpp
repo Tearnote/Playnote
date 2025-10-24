@@ -144,6 +144,7 @@ struct Timeline {
 struct Media {
 	using WavSlot = vector<dev::Sample>;
 	vector<WavSlot> wav_slots;
+	vector<dev::Sample> preview;
 };
 
 // A complete chart. Immutable; a chart is played by creating and advancing a Cursor from it.
