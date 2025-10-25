@@ -7,7 +7,9 @@ A cache of song and chart metadata. Handles import events.
 */
 
 #pragma once
+#include "audio/mixer.hpp"
 #include "io/file.hpp"
+#include "lib/ffmpeg.hpp"
 #include "preamble.hpp"
 #include "utils/task_pool.hpp"
 #include "utils/config.hpp"
@@ -184,6 +186,16 @@ private:
 		INSERT INTO chart_import_logs(md5, log) VALUES(?1, ?2)
 	)sql"sv;
 
+	static constexpr auto ChartPreviewsSchema = R"sql(
+		CREATE TABLE IF NOT EXISTS chart_previews(
+			md5 BLOB UNIQUE NOT NULL REFERENCES charts ON DELETE CASCADE,
+			preview BLOB NOT NULL
+		)
+	)sql"sv;
+	static constexpr auto InsertChartPreviewQuery = R"sql(
+		INSERT INTO chart_previews(md5, preview) VALUES(?1, ?2)
+	)sql"sv;
+
 	static constexpr auto GetSongFromChartQuery = R"sql(
 		SELECT songs.id, songs.path FROM songs INNER JOIN charts ON songs.id = charts.song_id WHERE charts.md5 = ?1
 	)sql"sv;
@@ -235,6 +247,7 @@ inline Library::Library(Logger::Category cat, fs::path const& path):
 	lib::sqlite::execute(db, ChartsSchema);
 	lib::sqlite::execute(db, ChartDensitiesSchema);
 	lib::sqlite::execute(db, ChartImportLogsSchema);
+	lib::sqlite::execute(db, ChartPreviewsSchema);
 	fs::create_directory(LibraryPath);
 	INFO_AS(cat, "Opened song library at \"{}\"", path);
 }
@@ -491,10 +504,12 @@ inline auto Library::import_chart(io::Song& song, isize song_id, string chart_pa
 	auto insert_chart = lib::sqlite::prepare(db, InsertChartQuery);
 	auto insert_chart_density = lib::sqlite::prepare(db, InsertChartDensityQuery);
 	auto insert_chart_import_log = lib::sqlite::prepare(db, InsertChartImportLogQuery);
+	auto insert_chart_preview = lib::sqlite::prepare(db, InsertChartPreviewQuery);
 	auto builder_cat = globals::logger->create_string_logger(lib::openssl::md5_to_hex(md5));
 	INFO_AS(builder_cat, "Importing chart \"{}\"", chart_path);
 	auto builder = Builder{builder_cat};
 	auto chart = co_await builder.build(chart_raw, song);
+	auto encoded_preview = lib::ffmpeg::encode_as_ogg(chart->media.preview, globals::mixer->get_audio().get_sampling_rate());
 
 	auto lock = co_await transaction_lock.scoped_lock();
     lib::sqlite::transaction(db, [&] {
@@ -519,6 +534,7 @@ inline auto Library::import_chart(io::Song& song, isize song_id, string chart_pa
 			serialize_density(chart->metadata.density.scratch),
 			serialize_density(chart->metadata.density.ln));
 		lib::sqlite::execute(insert_chart_import_log, chart->md5, builder_cat.get_buffer());
+		lib::sqlite::execute(insert_chart_preview, chart->md5, encoded_preview);
     });
 	dirty.store(true);
 	import_stats.charts_added.fetch_add(1);

@@ -7,7 +7,6 @@ Parsing of BMS chart data into a Chart object.
 */
 
 #pragma once
-#include "lib/ffmpeg.hpp"
 #include "preamble.hpp"
 #include "utils/task_pool.hpp"
 #include "utils/assert.hpp"
@@ -678,7 +677,7 @@ inline auto Builder::build(span<byte const> bms_raw, io::Song& song, optional<re
 		buffer.reserve(BufferSize);
 
 		auto const preview_start = min<nanoseconds>(20s, chart->metadata.chart_duration / 4);
-		auto const preview_end = min<nanoseconds>(preview_start + 30s, chart->metadata.chart_duration);
+		auto const preview_end = min<nanoseconds>(preview_start + 15s, chart->metadata.chart_duration);
 		auto preview = vector<dev::Sample>{};
 		preview.reserve(globals::mixer->get_audio().ns_to_samples(preview_end - preview_start) + 1);
 
