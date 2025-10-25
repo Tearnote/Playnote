@@ -121,7 +121,8 @@ private:
 			peak_nps REAL NOT NULL CHECK(peak_nps >= 0),
 			min_bpm REAL NOT NULL,
 			max_bpm REAL NOT NULL,
-			main_bpm REAL NOT NULL
+			main_bpm REAL NOT NULL,
+			preview_id INTEGER REFERENCES chart_previews
 		)
 	)sql"sv, R"sql(
 		CREATE INDEX IF NOT EXISTS charts_title ON charts(title)
@@ -157,8 +158,8 @@ private:
 	static constexpr auto InsertChartQuery = R"sql(
 		INSERT INTO charts(md5, song_id, path, title, subtitle, artist, subartist, genre, url,
 			email, difficulty, playstyle, has_ln, has_soflan, note_count, chart_duration,
-			audio_duration, loudness, average_nps, peak_nps, min_bpm, max_bpm, main_bpm)
-			VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23)
+			audio_duration, loudness, average_nps, peak_nps, min_bpm, max_bpm, main_bpm, preview_id)
+			VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24)
 	)sql"sv;
 
 	static constexpr auto ChartDensitiesSchema = to_array({R"sql(
@@ -188,12 +189,12 @@ private:
 
 	static constexpr auto ChartPreviewsSchema = R"sql(
 		CREATE TABLE IF NOT EXISTS chart_previews(
-			md5 BLOB UNIQUE NOT NULL REFERENCES charts ON DELETE CASCADE,
+			id INTEGER PRIMARY KEY,
 			preview BLOB NOT NULL
 		)
 	)sql"sv;
 	static constexpr auto InsertChartPreviewQuery = R"sql(
-		INSERT INTO chart_previews(md5, preview) VALUES(?1, ?2)
+		INSERT INTO chart_previews(preview) VALUES(?1)
 	)sql"sv;
 
 	static constexpr auto GetSongFromChartQuery = R"sql(
@@ -513,6 +514,7 @@ inline auto Library::import_chart(io::Song& song, isize song_id, string chart_pa
 
 	auto lock = co_await transaction_lock.scoped_lock();
     lib::sqlite::transaction(db, [&] {
+    	auto preview_id = lib::sqlite::insert(insert_chart_preview, encoded_preview);
         lib::sqlite::execute(insert_chart, chart->md5, song_id, chart_path, chart->metadata.title,
 			chart->metadata.subtitle, chart->metadata.artist, chart->metadata.subartist,
 			chart->metadata.genre, chart->metadata.url, chart->metadata.email,
@@ -521,7 +523,7 @@ inline auto Library::import_chart(io::Song& song, isize song_id, string chart_pa
 			chart->metadata.chart_duration.count(), chart->metadata.audio_duration.count(),
 			chart->metadata.loudness, chart->metadata.nps.average, chart->metadata.nps.peak,
 			chart->metadata.bpm_range.min, chart->metadata.bpm_range.max,
-			chart->metadata.bpm_range.main);
+			chart->metadata.bpm_range.main, preview_id);
 
 		auto serialize_density = [](vector<float> const& v) {
 			auto [data, out] = lib::bits::data_out();
@@ -534,7 +536,6 @@ inline auto Library::import_chart(io::Song& song, isize song_id, string chart_pa
 			serialize_density(chart->metadata.density.scratch),
 			serialize_density(chart->metadata.density.ln));
 		lib::sqlite::execute(insert_chart_import_log, chart->md5, builder_cat.get_buffer());
-		lib::sqlite::execute(insert_chart_preview, chart->md5, encoded_preview);
     });
 	dirty.store(true);
 	import_stats.charts_added.fetch_add(1);
