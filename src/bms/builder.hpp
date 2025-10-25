@@ -703,6 +703,12 @@ inline auto Builder::build(span<byte const> bms_raw, io::Song& song, isize sampl
 		}
 		return make_tuple(lib::ebur128::get_loudness(ctx), renderer.get_cursor().get_progress_ns(), move(preview));
 	}();
+	// Apply loudness to preview
+	auto gain = dev::lufs_to_gain(loudness);
+	for (auto& sample: preview) {
+		sample.left *= gain;
+		sample.right *= gain;
+	}
 	chart->metadata.loudness = loudness;
 	chart->metadata.audio_duration = audio_duration;
 	chart->media.preview = move(preview);
