@@ -392,10 +392,7 @@ inline auto Library::import_many(fs::path path) -> task<>
 
 inline auto Library::import_one(fs::path path) -> task<>
 try {
-	if (stopping.load()) {
-		WARN_AS(cat, "Song import \"{}\" cancelled", path);
-		co_return;
-	}
+	if (stopping.load()) throw runtime_error_fmt("Song import \"{}\" cancelled", path);
 	INFO_AS(cat, "Importing song \"{}\"", path);
 	auto lock = co_await song_lock.scoped_lock();
 	auto [song_id, song_path] = co_await import_song(path);
@@ -487,10 +484,7 @@ inline auto Library::import_song(fs::path const& path) -> task<pair<isize, fs::p
 
 inline auto Library::import_chart(io::Song& song, isize song_id, string chart_path, span<byte const> chart_raw) -> task<>
 {
-	if (stopping.load()) {
-		WARN_AS(cat, "Chart import \"{}\" cancelled", chart_path);
-		co_return;
-	}
+	if (stopping.load()) throw runtime_error_fmt("Chart import \"{}\" cancelled", chart_path);
 
 	auto chart_exists = lib::sqlite::prepare(db, ChartExistsQuery);
 	auto const md5 = lib::openssl::md5(chart_raw);
