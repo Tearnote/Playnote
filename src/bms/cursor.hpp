@@ -58,7 +58,7 @@ public:
 	[[nodiscard]] auto get_progress() const -> isize { return sample_progress; }
 
 	// Return the current position of the cursor in nanoseconds.
-	[[nodiscard]] auto get_progress_ns() const -> nanoseconds { return globals::mixer->get_audio().samples_to_ns(get_progress()); }
+	[[nodiscard]] auto get_progress_ns() const -> nanoseconds { return globals::mixer->get_audio().samples_to_ns(get_progress(), chart->media.sampling_rate); }
 
 	// true if a lane is currently being held, false otherwise.
 	[[nodiscard]] auto is_pressed(Lane::Type lane) const -> bool { return lane_progress[+lane].pressed; }
@@ -178,7 +178,7 @@ template<callable<void(Note const&, Lane::Type, float)> Func>
 void Cursor::upcoming_notes(float max_units, Func&& func, nanoseconds offset, bool adjust_for_latency) const
 {
 	auto const latency_adjustment = adjust_for_latency? -globals::mixer->get_latency() : 0ns;
-	auto const progress_timestamp = globals::mixer->get_audio().samples_to_ns(sample_progress) + latency_adjustment - offset;
+	auto const progress_timestamp = globals::mixer->get_audio().samples_to_ns(sample_progress, chart->media.sampling_rate) + latency_adjustment - offset;
 	auto const& bpm_section = get_bpm_section(progress_timestamp);
 	auto const section_progress = progress_timestamp - bpm_section.position;
 	auto const beat_duration = duration<double>{60.0 / chart->metadata.bpm_range.main};

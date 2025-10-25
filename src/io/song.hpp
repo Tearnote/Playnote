@@ -15,7 +15,6 @@ The disk portion of an imported BMS song; a zip archive with STORE compression a
 #include "dev/audio.hpp"
 #include "io/source.hpp"
 #include "io/file.hpp"
-#include "audio/mixer.hpp"
 
 namespace playnote::io {
 
@@ -40,10 +39,10 @@ public:
 
 	// Preload all audio files to an internal cache. This cache will be used in any later load_audio_file() calls.
 	// The loads are performed in parallel. Useful when loading multiple charts of the same song.
-	auto preload_audio_files() -> task<>;
+	auto preload_audio_files(isize sampling_rate) -> task<>;
 
 	// Load the requested audio file, decode it, and resample to current device sample rate.
-	auto load_audio_file(string_view filepath) -> vector<dev::Sample>;
+	auto load_audio_file(string_view filepath, isize sampling_rate) -> vector<dev::Sample>;
 
 	// Destroy the song and delete the underlying songzip from disk.
 	void remove() && noexcept;
@@ -90,8 +89,10 @@ private:
 	unordered_map<string, vector<dev::Sample>, string_hash> audio_cache;
 
 	template<callable<bool(fs::path const&)> Func>
-	static auto optimize_files(Logger::Category, Source const&, Func&& filter) -> task<unordered_map<fs::path, pair<fs::path, vector<byte>>>>;
-	static auto optimize_audio(Logger::Category, fs::path path, vector<byte> data) -> task<pair<fs::path, vector<byte>>>;
+	static auto optimize_files(Logger::Category, Source const&, Func&& filter) ->
+		task<unordered_map<fs::path, pair<fs::path, vector<byte>>>>;
+	static auto optimize_audio(Logger::Category, fs::path path, vector<byte> data) ->
+		task<pair<fs::path, vector<byte>>>;
 	[[nodiscard]] static auto type_from_path(fs::path const&) -> FileType;
 };
 
@@ -203,7 +204,7 @@ inline auto Song::load_file(string_view filepath) -> span<byte const>
 	return file;
 }
 
-inline auto Song::preload_audio_files() -> task<>
+inline auto Song::preload_audio_files(isize sampling_rate) -> task<>
 {
 	auto tasks = vector<task<vector<dev::Sample>>>{};
 	auto paths = vector<string>{};
@@ -212,10 +213,10 @@ inline auto Song::preload_audio_files() -> task<>
 		auto filepath_low = string{filepath};
 		to_lower(filepath_low);
 		auto file = span{static_cast<byte const*>(ptr), static_cast<usize>(size)};
-		tasks.emplace_back(schedule_task([](Logger::Category cat, span<byte const> file) -> task<vector<dev::Sample>> {
+		tasks.emplace_back(schedule_task([](Logger::Category cat, span<byte const> file, isize sampling_rate) -> task<vector<dev::Sample>> {
 			lib::ffmpeg::set_thread_log_category(cat);
-			co_return lib::ffmpeg::decode_and_resample_file_buffer(file, globals::mixer->get_audio().get_sampling_rate());
-		}(cat, file)));
+			co_return lib::ffmpeg::decode_and_resample_file_buffer(file, sampling_rate);
+		}(cat, file, sampling_rate)));
 		paths.emplace_back(move(filepath_low));
 	});
 
@@ -229,7 +230,7 @@ inline auto Song::preload_audio_files() -> task<>
 	}
 }
 
-inline auto Song::load_audio_file(string_view filepath) -> vector<dev::Sample>
+inline auto Song::load_audio_file(string_view filepath, isize sampling_rate) -> vector<dev::Sample>
 {
 	if (!audio_cache.empty()) {
 		auto filepath_low = string{filepath};
@@ -248,7 +249,7 @@ inline auto Song::load_audio_file(string_view filepath) -> vector<dev::Sample>
 	if (!file.data())
 		throw runtime_error_fmt("Audio file \"{}\" doesn't exist within the song archive", filepath);
 	lib::ffmpeg::set_thread_log_category(cat);
-	return lib::ffmpeg::decode_and_resample_file_buffer(file, globals::mixer->get_audio().get_sampling_rate());
+	return lib::ffmpeg::decode_and_resample_file_buffer(file, sampling_rate);
 }
 
 inline void Song::remove() && noexcept
@@ -257,7 +258,8 @@ inline void Song::remove() && noexcept
 }
 
 template<callable<bool(fs::path const&)> Func>
-auto Song::optimize_files(Logger::Category cat, Source const& src, Func&& filter) -> task<unordered_map<fs::path, pair<fs::path, vector<byte>>>>
+auto Song::optimize_files(Logger::Category cat, Source const& src, Func&& filter) ->
+	task<unordered_map<fs::path, pair<fs::path, vector<byte>>>>
 {
 	// when_all requires an ordered container
 	auto optimize_tasks = vector<task<pair<fs::path, vector<byte>>>>{};
@@ -286,11 +288,11 @@ auto Song::optimize_files(Logger::Category cat, Source const& src, Func&& filter
 	co_return optimized_files;
 }
 
-inline auto Song::optimize_audio(Logger::Category cat, fs::path path, vector<byte> data) -> task<pair<fs::path, vector<byte>>>
+inline auto Song::optimize_audio(Logger::Category cat, fs::path path, vector<byte> data) ->
+	task<pair<fs::path, vector<byte>>>
 {
 	lib::ffmpeg::set_thread_log_category(cat);
-	auto const sampling_rate = globals::mixer->get_audio().get_sampling_rate();
-	data = lib::ffmpeg::encode_as_ogg(lib::ffmpeg::decode_and_resample_file_buffer(data, sampling_rate), sampling_rate);
+	data = lib::ffmpeg::encode_as_ogg(lib::ffmpeg::decode_and_resample_file_buffer(data, 48000), 48000);
 	path.replace_extension(".ogg");
 	co_return make_pair(move(path), move(data));
 }

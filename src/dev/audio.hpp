@@ -39,10 +39,10 @@ public:
 	[[nodiscard]] auto get_latency() -> nanoseconds { return samples_to_ns(context->properties.buffer_size); }
 
 	// Convert a count of samples to their duration.
-	[[nodiscard]] auto samples_to_ns(isize) -> nanoseconds;
+	[[nodiscard]] auto samples_to_ns(isize, isize sampling_rate = -1) -> nanoseconds;
 
 	// Convert a duration to a number of full audio samples.
-	[[nodiscard]] auto ns_to_samples(nanoseconds) -> isize;
+	[[nodiscard]] auto ns_to_samples(nanoseconds, isize sampling_rate = -1) -> isize;
 
 	Audio(Audio const&) = delete;
 	auto operator=(Audio const&) -> Audio& = delete;
@@ -97,9 +97,9 @@ inline Audio::~Audio()
 #endif
 }
 
-inline auto Audio::samples_to_ns(isize samples) -> nanoseconds
+inline auto Audio::samples_to_ns(isize samples, isize sampling_rate) -> nanoseconds
 {
-	auto const rate = context->properties.sampling_rate;
+	auto const rate = sampling_rate == -1? context->properties.sampling_rate : sampling_rate;
 	ASSERT(rate > 0);
 	auto const ns_per_sample = duration_cast<nanoseconds>(duration<double>{1.0 / rate});
 	auto const whole_seconds = samples / rate;
@@ -107,9 +107,9 @@ inline auto Audio::samples_to_ns(isize samples) -> nanoseconds
 	return 1s * whole_seconds + ns_per_sample * remainder;
 }
 
-inline auto Audio::ns_to_samples(nanoseconds ns) -> isize
+inline auto Audio::ns_to_samples(nanoseconds ns, isize sampling_rate) -> isize
 {
-	auto const rate = context->properties.sampling_rate;
+	auto const rate = sampling_rate == -1? context->properties.sampling_rate : sampling_rate;
 	ASSERT(rate > 0);
 	auto const ns_per_sample = duration_cast<nanoseconds>(duration<double>{1.0 / rate});
 	return ns / ns_per_sample;

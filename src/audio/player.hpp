@@ -85,6 +85,7 @@ inline Player::Player()
 
 inline void Player::add_cursor(shared_ptr<bms::Cursor> cursor, bms::Mapper&& mapper)
 {
+	ASSERT(cursor->get_chart().media.sampling_rate == globals::mixer->get_audio().get_sampling_rate());
 	auto lock = lock_guard{cursors_lock};
 	auto gain = dev::lufs_to_gain(cursor->get_chart().metadata.loudness);
 	cursors.emplace_back(PlayableCursor{

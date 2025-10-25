@@ -31,7 +31,8 @@ public:
 
 	// Build a chart from BMS data. The song must contain audio/video resources referenced by the chart.
 	// Optionally, the metadata cache speeds up loading by skipping expensive steps.
-	auto build(span<byte const> bms, io::Song&, optional<reference_wrapper<Metadata>> cache = nullopt) -> task<shared_ptr<Chart const>>;
+	auto build(span<byte const> bms, io::Song&, isize sampling_rate,
+		optional<reference_wrapper<Metadata>> cache = nullopt) -> task<shared_ptr<Chart const>>;
 
 private:
 	// BMS header commands which can be followed up with a slot value as part of the header.
@@ -311,7 +312,8 @@ inline Builder::Builder(Logger::Category cat):
 	channel_handlers.emplace("A6" /* Play option         */, &Builder::handle_channel_ignored_log);
 }
 
-inline auto Builder::build(span<byte const> bms_raw, io::Song& song, optional<reference_wrapper<Metadata>> cache) -> task<shared_ptr<Chart const>>
+inline auto Builder::build(span<byte const> bms_raw, io::Song& song, isize sampling_rate,
+	optional<reference_wrapper<Metadata>> cache) -> task<shared_ptr<Chart const>>
 {
 	auto chart = make_shared<Chart>();
 	chart->md5 = lib::openssl::md5(bms_raw);
@@ -368,17 +370,18 @@ inline auto Builder::build(span<byte const> bms_raw, io::Song& song, optional<re
 	//   of the chart, relative to 1.0 being the on-screen height of one initial-BPM beat.
 
 	// Load used audio samples
+	chart->media.sampling_rate = sampling_rate;
 	chart->media.wav_slots.resize(parse_state.wav.size());
 	auto tasks = vector<task<>>{};
 	for (auto const& parsed_slot: parse_state.wav | views::values) {
 		if (!parsed_slot.used) continue;
 		auto& slot = chart->media.wav_slots[parsed_slot.idx];
-		tasks.emplace_back(schedule_task([](io::Song& song, vector<dev::Sample>& slot, string filename) -> task<> {
+		tasks.emplace_back(schedule_task([](io::Song& song, vector<dev::Sample>& slot, string filename, isize sampling_rate) -> task<> {
 			try {
-				slot = song.load_audio_file(filename);
+				slot = song.load_audio_file(filename, sampling_rate);
 			} catch (...) {} // If audio failed to load, slot will just stay empty
 			co_return;
-		}(song, slot, parsed_slot.filename)));
+		}(song, slot, parsed_slot.filename, sampling_rate)));
 	}
 	co_await when_all(move(tasks));
 
@@ -672,14 +675,14 @@ inline auto Builder::build(span<byte const> bms_raw, io::Song& song, optional<re
 	auto [loudness, audio_duration, preview] = [&] {
 		static constexpr auto BufferSize = 4096z / static_cast<isize>(sizeof(dev::Sample)); // One memory page
 		auto renderer = audio::Renderer{chart};
-		auto ctx = lib::ebur128::init(globals::mixer->get_audio().get_sampling_rate());
+		auto ctx = lib::ebur128::init(sampling_rate);
 		auto buffer = vector<dev::Sample>{};
 		buffer.reserve(BufferSize);
 
 		auto const preview_start = min<nanoseconds>(20s, chart->metadata.chart_duration / 4);
 		auto const preview_end = min<nanoseconds>(preview_start + 15s, chart->metadata.chart_duration);
 		auto preview = vector<dev::Sample>{};
-		preview.reserve(globals::mixer->get_audio().ns_to_samples(preview_end - preview_start) + 1);
+		preview.reserve(globals::mixer->get_audio().ns_to_samples(preview_end - preview_start, sampling_rate) + 1);
 
 		auto processing = true;
 		while (processing) {

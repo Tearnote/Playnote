@@ -351,7 +351,7 @@ inline auto Library::load_chart(MD5 md5) -> task<shared_ptr<Chart const>>
 	auto song = io::Song(cat, io::read_file(song_path));
 	auto chart_raw = song.load_file(chart_path);
 	auto builder = Builder{cat};
-	co_return co_await builder.build(chart_raw, song, *cache);
+	co_return co_await builder.build(chart_raw, song, globals::mixer->get_audio().get_sampling_rate(), *cache);
 }
 
 inline auto Library::find_available_song_filename(string_view name) -> string
@@ -399,7 +399,7 @@ try {
 	auto lock = co_await song_lock.scoped_lock();
 	auto [song_id, song_path] = co_await import_song(path);
 	auto song = io::Song(cat, io::read_file(song_path));
-	co_await song.preload_audio_files();
+	co_await song.preload_audio_files(48000);
 	INFO_AS(cat, "Song \"{}\" files processed successfully", path);
 
 	auto chart_import_tasks = vector<task<>>{};
@@ -508,8 +508,8 @@ inline auto Library::import_chart(io::Song& song, isize song_id, string chart_pa
 	auto builder_cat = globals::logger->create_string_logger(lib::openssl::md5_to_hex(md5));
 	INFO_AS(builder_cat, "Importing chart \"{}\"", chart_path);
 	auto builder = Builder{builder_cat};
-	auto chart = co_await builder.build(chart_raw, song);
-	auto encoded_preview = lib::ffmpeg::encode_as_ogg(chart->media.preview, globals::mixer->get_audio().get_sampling_rate());
+	auto chart = co_await builder.build(chart_raw, song, 48000);
+	auto encoded_preview = lib::ffmpeg::encode_as_opus(chart->media.preview, 48000);
 
 	auto lock = co_await transaction_lock.scoped_lock();
     lib::sqlite::transaction(db, [&] {
