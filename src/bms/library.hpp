@@ -11,6 +11,7 @@ A cache of song and chart metadata. Handles import events.
 #include "io/file.hpp"
 #include "lib/ffmpeg.hpp"
 #include "preamble.hpp"
+#include "preamble/algorithm.hpp"
 #include "utils/task_pool.hpp"
 #include "utils/config.hpp"
 #include "utils/logger.hpp"
@@ -196,6 +197,9 @@ private:
 	static constexpr auto InsertChartPreviewQuery = R"sql(
 		INSERT INTO chart_previews(preview) VALUES(?1)
 	)sql"sv;
+	static constexpr auto DeleteChartPreviewQuery = R"sql(
+		DELETE FROM chart_previews WHERE id = ?1
+	)sql"sv;
 
 	static constexpr auto GetSongFromChartQuery = R"sql(
 		SELECT songs.id, songs.path FROM songs INNER JOIN charts ON songs.id = charts.song_id WHERE charts.md5 = ?1
@@ -237,6 +241,7 @@ private:
 	auto import_one(fs::path) -> task<>;
 	auto import_song(fs::path const&) -> task<pair<isize, fs::path>>;
 	auto import_chart(io::Song& song, isize song_id, string chart_path, span<byte const>) -> task<MD5>;
+	auto deduplicate_previews(isize song_id, span<MD5 const> new_charts) -> isize;
 };
 
 inline Library::Library(Logger::Category cat, fs::path const& path):
@@ -426,6 +431,9 @@ try {
 		lib::sqlite::execute(delete_song, song_id);
 		move(song).remove();
 	} else {
+		auto deduplicated = deduplicate_previews(song_id, imported);
+		if (deduplicated)
+			INFO_AS(cat, "Removed {} duplicate previews from song \"{}\"", deduplicated, path);
 		INFO_AS(cat, "Song \"{}\" imported successfully", path);
 	}
 	import_stats.songs_processed.fetch_add(1);
@@ -535,6 +543,66 @@ inline auto Library::import_chart(io::Song& song, isize song_id, string chart_pa
 	dirty.store(true);
 	import_stats.charts_added.fetch_add(1);
 	co_return chart->md5;
+}
+
+inline auto Library::deduplicate_previews(isize song_id, span<MD5 const> new_charts) -> isize {
+	// Some or all of the charts of this song were just added, all with their own previews.
+	// Any of these previews can be a duplicate of a new preview or an old preview.
+
+	// Fetch all previews (decoded) of all charts of the song, with their IDs.
+	static constexpr auto SelectSongPreviewsQuery = R"sql(
+		SELECT chart_previews.id, chart_previews.preview FROM chart_previews
+			INNER JOIN charts ON chart_previews.id = charts.preview_id
+			WHERE charts.song_id = ?1
+	)sql"sv;
+	auto select_song_previews = lib::sqlite::prepare(db, SelectSongPreviewsQuery);
+	auto previews = unordered_map<isize, vector<dev::Sample>>{};
+	lib::sqlite::query(select_song_previews, [&](isize id, span<byte const> preview) {
+		previews.emplace(id, lib::ffmpeg::decode_and_resample_file_buffer(preview, 48000));
+	}, song_id);
+
+	// Fetch all preview IDs of new charts
+	static constexpr auto SelectChartPreviewIDsQuery = R"sql(
+		SELECT preview_id FROM charts WHERE md5 = ?1
+	)sql"sv;
+	auto select_chart_preview_ids = lib::sqlite::prepare(db, SelectChartPreviewIDsQuery);
+	auto new_chart_preview_ids = vector<isize>{};
+	for (auto const& md5: new_charts) {
+		lib::sqlite::query(select_chart_preview_ids, [&](isize preview_id) {
+			new_chart_preview_ids.emplace_back(preview_id);
+		}, md5);
+	}
+
+	// For every new preview, compute average sample difference from every other existing preview
+	static constexpr auto ModifyChartPreviewIDsQuery = R"sql(
+		UPDATE charts SET preview_id = ?2 WHERE preview_id = ?1
+	)sql"sv;
+	auto modify_chart_preview_ids = lib::sqlite::prepare(db, ModifyChartPreviewIDsQuery);
+	auto delete_chart_preview = lib::sqlite::prepare(db, DeleteChartPreviewQuery);
+	auto previews_removed = 0z;
+	for (auto [md5, preview_id]: views::zip(new_charts, new_chart_preview_ids)) {
+		for (auto [id, preview]: previews) {
+			if (preview_id == id) continue; // Don't check against yourself
+			auto const& self = previews.at(preview_id);
+			auto avg_diff = 0.0;
+			auto const value_count = min(self.size(), preview.size());
+			for (auto [left, right]: views::zip(self, preview)) {
+				avg_diff += abs(left.left  - right.left)  / 2 / value_count;
+				avg_diff += abs(left.right - right.right) / 2 / value_count;
+			}
+			if (avg_diff <= 0.0625) {
+				// This is a duplicate
+				previews.erase(preview_id);
+				previews_removed += 1;
+				lib::sqlite::transaction(db, [&] {
+					lib::sqlite::execute(modify_chart_preview_ids, preview_id, id);
+					lib::sqlite::execute(delete_chart_preview, preview_id);
+				});
+				break;
+			}
+		}
+	}
+	return previews_removed;
 }
 
 }
