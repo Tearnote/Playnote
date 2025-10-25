@@ -236,7 +236,7 @@ private:
 	auto import_many(fs::path) -> task<>;
 	auto import_one(fs::path) -> task<>;
 	auto import_song(fs::path const&) -> task<pair<isize, fs::path>>;
-	auto import_chart(io::Song& song, isize song_id, string chart_path, span<byte const>) -> task<>;
+	auto import_chart(io::Song& song, isize song_id, string chart_path, span<byte const>) -> task<MD5>;
 };
 
 inline Library::Library(Logger::Category cat, fs::path const& path):
@@ -400,7 +400,7 @@ try {
 	co_await song.preload_audio_files(48000);
 	INFO_AS(cat, "Song \"{}\" files processed successfully", path);
 
-	auto chart_import_tasks = vector<task<>>{};
+	auto chart_import_tasks = vector<task<MD5>>{};
 	auto chart_paths = vector<string>{};
 	song.for_each_chart([&](auto path, auto chart) {
 		chart_import_tasks.emplace_back(schedule_task(import_chart(song, song_id, string{path}, chart)));
@@ -408,18 +408,19 @@ try {
 	});
 	auto results = co_await when_all(move(chart_import_tasks));
 
-	auto imported_count = 0z;
+	auto imported = vector<MD5>{};
 	for (auto [result, path]: views::zip(results, chart_paths)) {
 		try {
-			result.return_value();
+			auto md5 = result.return_value();
+			if (md5 == MD5{}) continue; // Skipped
 			INFO_AS(cat, "Chart \"{}\" imported successfully", path);
-			imported_count += 1;
+			imported.emplace_back(md5);
 		} catch (exception const& e) {
 			ERROR_AS(cat, "Failed to import chart \"{}\": {}", path, e.what());
 			import_stats.charts_failed.fetch_add(1);
 		}
 	}
-	if (imported_count == 0) {
+	if (imported.empty()) {
 		WARN_AS(cat, "No charts found in song \"{}\"", path);
 		auto delete_song = lib::sqlite::prepare(db, DeleteSongQuery);
 		lib::sqlite::execute(delete_song, song_id);
@@ -482,7 +483,7 @@ inline auto Library::import_song(fs::path const& path) -> task<pair<isize, fs::p
 	}
 }
 
-inline auto Library::import_chart(io::Song& song, isize song_id, string chart_path, span<byte const> chart_raw) -> task<>
+inline auto Library::import_chart(io::Song& song, isize song_id, string chart_path, span<byte const> chart_raw) -> task<MD5>
 {
 	if (stopping.load()) throw runtime_error_fmt("Chart import \"{}\" cancelled", chart_path);
 
@@ -493,7 +494,7 @@ inline auto Library::import_chart(io::Song& song, isize song_id, string chart_pa
 	if (exists) {
 		INFO_AS(cat, "Chart import \"{}\" skipped (duplicate)", chart_path);
 		import_stats.charts_skipped.fetch_add(1);
-		co_return;
+		co_return {};
 	}
 
 	auto insert_chart = lib::sqlite::prepare(db, InsertChartQuery);
@@ -533,6 +534,7 @@ inline auto Library::import_chart(io::Song& song, isize song_id, string chart_pa
     });
 	dirty.store(true);
 	import_stats.charts_added.fetch_add(1);
+	co_return chart->md5;
 }
 
 }
