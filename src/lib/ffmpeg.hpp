@@ -38,4 +38,8 @@ auto decode_and_resample_file_buffer(span<byte const> file_contents, uint32 samp
 // Throws runtime_error if ffmpeg throws.
 auto encode_as_ogg(span<Sample const> samples, uint32 sampling_rate) -> vector<byte>;
 
+// Encode audio samples to an Opus buffer.
+// Throws runtime_error if ffmpeg throws.
+auto encode_as_opus(span<Sample const> samples, uint32 sampling_rate) -> vector<byte>;
+
 }

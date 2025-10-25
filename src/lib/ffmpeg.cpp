@@ -370,4 +370,71 @@ auto encode_as_ogg(span<Sample const> samples, uint32 sampling_rate) -> vector<b
 	return output;
 }
 
+auto encode_as_opus(span<Sample const> samples, uint32 sampling_rate) -> vector<byte>
+{
+	set_log_callback();
+	auto output = vector<byte>{};
+	auto* format_ctx_ptr = static_cast<AVFormatContext*>(nullptr);
+	ret_check(avformat_alloc_output_context2(&format_ctx_ptr, nullptr, "opus", nullptr));
+	auto format_ctx = AVFormat{format_ctx_ptr};
+	auto* codec = ptr_check(avcodec_find_encoder(AV_CODEC_ID_OPUS));
+	auto codec_ctx = AVCodec{ptr_check(avcodec_alloc_context3(codec))};
+	codec_ctx->sample_fmt = AV_SAMPLE_FMT_FLT;
+	codec_ctx->sample_rate = sampling_rate;
+	codec_ctx->ch_layout = AV_CHANNEL_LAYOUT_STEREO;
+	codec_ctx->bit_rate = 64 * 1024;
+	ret_check(avcodec_open2(codec_ctx.get(), codec, nullptr));
+
+	auto in_frame = AVFrame{ptr_check(av_frame_alloc())};
+	auto out_packet = AVPacket{ptr_check(av_packet_alloc())};
+	in_frame->nb_samples = codec_ctx->frame_size;
+	in_frame->format = AV_SAMPLE_FMT_FLT;
+	in_frame->ch_layout = AV_CHANNEL_LAYOUT_STEREO;
+	ret_check(av_frame_get_buffer(in_frame.get(), 0));
+
+	auto* stream = ptr_check(avformat_new_stream(format_ctx.get(), nullptr));
+	ret_check(avcodec_parameters_from_context(stream->codecpar, codec_ctx.get()));
+	stream->time_base = codec_ctx->time_base;
+	auto io_buffer = AVBuffer{av_malloc(PageSize)};
+	auto io_ctx = AVIO{ptr_check(avio_alloc_context(
+		static_cast<unsigned char*>(io_buffer.get()), PageSize, 1,
+		&output, nullptr, &av_io_write, nullptr
+	))};
+	io_buffer.release();
+	format_ctx->pb = io_ctx.get();
+
+	ret_check(avformat_write_header(format_ctx.get(), nullptr));
+
+	auto const encode_and_write = [&](::AVFrame* frame) {
+		ret_check(avcodec_send_frame(codec_ctx.get(), frame));
+		while (true) {
+			auto const ret = avcodec_receive_packet(codec_ctx.get(), out_packet.get());
+			if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) break;
+			ret_check(ret);
+
+			out_packet->stream_index = stream->index;
+			av_packet_rescale_ts(out_packet.get(), codec_ctx->time_base, stream->time_base);
+			ret_check(av_interleaved_write_frame(format_ctx.get(), out_packet.get()));
+			av_packet_unref(out_packet.get());
+		}
+	};
+
+	auto pts = 0z;
+	for (auto in_slice: samples | views::chunk(in_frame->nb_samples)) {
+		ret_check(av_frame_make_writable(in_frame.get()));
+		auto* out_buf = reinterpret_cast<Sample*>(in_frame->data[0]);
+		ASSUME(out_buf);
+		in_frame->nb_samples = in_slice.size();
+		in_frame->pts = pts;
+		pts += in_slice.size();
+		copy(in_slice, out_buf);
+		encode_and_write(in_frame.get());
+	}
+
+	encode_and_write(nullptr);
+	ret_check(av_write_trailer(format_ctx.get()));
+	avio_flush(format_ctx->pb);
+	return output;
+}
+
 }
