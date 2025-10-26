@@ -74,8 +74,20 @@ public:
 	template<callable<void(SoundEvent)> Func>
 	auto advance_one_sample(Func&& func, span<LaneInput const> inputs = {}) -> bool;
 
-	// Progress by the given number of samples, without generating any audio.
-	void fast_forward(isize samples);
+	// Directly modify current position, without triggering any audio or judgment events in between
+	// current position and the destination. Note progress will update for the new position, as if
+	// the chart has been autoplayed up to this point. Input queue is unaffected; you might want to
+	// flush it.
+	void seek(isize sample_position);
+
+	// Seek to a specified timestamp. The same precautions apply as for seek().
+	void seek_ns(nanoseconds timestamp) { seek(globals::mixer->get_audio().ns_to_samples(timestamp, chart->media.sampling_rate)); }
+
+	// Seek relative to current position. The same precautions apply as for seek().
+	void seek_relative(isize sample_offset) { seek(sample_progress + sample_offset); }
+
+	// Timestamp seek relative to current position. The same precautions apply as for seek().
+	void seek_relative_ns(nanoseconds offset) { seek_ns(get_progress_ns() + offset); }
 
 	// Call the provided function for every note less than max_units away from current position.
 	template<callable<void(Note const&, Lane::Type, float)> Func>
@@ -106,6 +118,7 @@ private:
 };
 
 inline Cursor::Cursor(shared_ptr<Chart const> chart, bool autoplay):
+//
 	chart{move(chart)},
 	autoplay{autoplay}
 {
@@ -194,9 +207,36 @@ void Cursor::upcoming_notes(float max_units, Func&& func, nanoseconds offset, bo
 	}
 }
 
-inline void Cursor::fast_forward(isize samples)
+inline void Cursor::seek(isize sample_position)
 {
-	for (auto const _: views::iota(0z, samples)) advance_one_sample([](SoundEvent){});
+	sample_progress = sample_position;
+	auto const progress_ns = get_progress_ns();
+	for (auto [progress, lane]: views::zip(lane_progress, chart->timeline.lanes)) {
+		auto first_unplayed_note = find_if(lane.notes, [&](auto const& note) { return note.timestamp > progress_ns; });
+		if (first_unplayed_note == lane.notes.end()) {
+			progress.next_note = lane.notes.size();
+			progress.active_slot = lane.notes.empty()? -1 : lane.notes.back().wav_slot;
+			progress.ln_timing = nullopt;
+			progress.pressed = false;
+			continue;
+		}
+		progress.next_note = distance(lane.notes.begin(), first_unplayed_note);
+		if (progress.next_note <= 0) {
+			progress.active_slot = first_unplayed_note->wav_slot;
+			progress.ln_timing = nullopt;
+			progress.pressed = false;
+		} else {
+			auto const& prev_note = lane.notes[progress.next_note - 1];
+			progress.active_slot = prev_note.wav_slot;
+			if (prev_note.type_is<Note::LN>() && prev_note.timestamp + prev_note.params<Note::LN>().length >= progress_ns) {
+				progress.ln_timing = 0ns;
+				progress.pressed = true;
+			} else {
+				progress.ln_timing = nullopt;
+				progress.pressed = false;
+			}
+		}
+	}
 }
 
 inline auto Cursor::operator=(Cursor const& other) -> Cursor&

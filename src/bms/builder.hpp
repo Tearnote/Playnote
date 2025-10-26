@@ -688,7 +688,7 @@ inline auto Builder::build(span<byte const> bms_raw, io::Song& song, isize sampl
 		while (processing) {
 			for (auto _: views::iota(0z, BufferSize)) {
 				auto const sample = renderer.advance_one_sample();
-				if (sample) {
+				if (sample && renderer.get_cursor().get_progress_ns() <= 300s) { // 5 minute cutoff
 					buffer.emplace_back(*sample);
 					auto const pos = renderer.get_cursor().get_progress_ns();
 					if (pos >= preview_start && pos <= preview_end)
@@ -701,6 +701,17 @@ inline auto Builder::build(span<byte const> bms_raw, io::Song& song, isize sampl
 			lib::ebur128::add_frames(ctx, buffer);
 			buffer.clear();
 		}
+		// Skip ahead if the chart end is far away
+		auto const longest_wav = fold_left(chart->media.wav_slots, 0zu,
+			[](auto accum, auto const& el) { return max(accum, el.size()); });
+		auto const longest_wav_ns = globals::mixer->get_audio().samples_to_ns(longest_wav, chart->media.sampling_rate);
+		// Jumping forward to this point will definitely not skip triggering the sound that ends up
+		// being the last sound of the song
+		auto const jump_dst = chart->metadata.chart_duration - longest_wav_ns - 1ms;
+		if (renderer.get_cursor().get_progress_ns() < jump_dst)
+			renderer.seek(jump_dst);
+		while (renderer.advance_one_sample()) {} // Advance to the end
+
 		return make_tuple(lib::ebur128::get_loudness(ctx), renderer.get_cursor().get_progress_ns(), move(preview));
 	}();
 	// Apply loudness to preview

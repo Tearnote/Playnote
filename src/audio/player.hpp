@@ -119,7 +119,7 @@ inline auto Player::get_audio_cursor(shared_ptr<bms::Cursor> const& cursor) cons
 		auto const elapsed = globals::glfw->get_time() - last_buffer_start;
 		auto const elapsed_samples = globals::mixer->get_audio().ns_to_samples(elapsed);
 		auto result = bms::Cursor{*it->cursor};
-		result.fast_forward(clamp(elapsed_samples, 0z, globals::mixer->get_audio().ns_to_samples(globals::mixer->get_latency())));
+		result.seek_relative(clamp(elapsed_samples, 0z, globals::mixer->get_audio().ns_to_samples(globals::mixer->get_latency())));
 		return result;
 	}
 	PANIC();

@@ -21,6 +21,10 @@ public:
 
 	[[nodiscard]] auto get_cursor() const -> bms::Cursor const& { return *cursor; }
 
+	// Directly change the cursor's position, without triggering any sounds between current position
+	// and seek position. All playing sounds are stopped.
+	void seek(nanoseconds);
+
 	// Advance chart playback by one audio sample. If nullopt is returned, the chart has ended.
 	auto advance_one_sample() -> optional<dev::Sample>;
 
@@ -39,6 +43,12 @@ inline Renderer::Renderer(shared_ptr<bms::Chart const> chart):
 	chart{move(chart)},
 	cursor{make_shared<bms::Cursor>(this->chart, true)}
 {}
+
+inline void Renderer::seek(nanoseconds time)
+{
+	cursor->seek_ns(time);
+	active_sounds.clear();
+}
 
 inline auto Renderer::advance_one_sample() -> optional<dev::Sample>
 {
