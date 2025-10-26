@@ -726,18 +726,18 @@ inline auto Builder::build(span<byte const> bms_raw, io::Song& song, isize sampl
 
 	// Playable note density distribution
 	chart->metadata.density = [&] {
-		static constexpr auto Resolution = 125ms;
-		static constexpr auto Window = 2s;
+		static constexpr auto Points = 2048;
+		const auto resolution = chart->metadata.chart_duration / Points;
+		const auto window = resolution * 16;
 		static constexpr auto Bandwidth = 3.0f; // In standard deviations
 		// Scale back a stretched window, and correct for considering only 3 standard deviations
-		static constexpr auto GaussianScale = 1.0f / (Window / 1s) * (1.0f / 0.973f);
+		const auto gaussian_scale = 1.0f / ratio(window, 1s) * (1.0f / 0.973f);
 
 		auto result = Metadata::Density{};
-		auto const points = chart->metadata.chart_duration / Resolution + 1;
-		result.resolution = Resolution;
-		result.key.resize(points);
-		result.scratch.resize(points);
-		result.ln.resize(points);
+		result.resolution = resolution;
+		result.key.resize(Points);
+		result.scratch.resize(Points);
+		result.ln.resize(Points);
 
 		// Collect all playable notes
 		auto notes_keys = vector<Note>{};
@@ -750,7 +750,8 @@ inline auto Builder::build(span<byte const> bms_raw, io::Song& song, isize sampl
 		for (auto [type, lane]: views::zip(
 			views::iota(0u) | views::transform([](auto idx) { return Lane::Type{idx}; }),
 			chart->timeline.lanes) |
-			views::filter([](auto const& view) { return get<1>(view).playable; })) {
+			views::filter([](auto const& view) { return get<1>(view).playable; }))
+		{
 			auto& dest = type == Lane::Type::P1_KeyS || type == Lane::Type::P2_KeyS? notes_scr : notes_keys;
 			for (Note const& note: lane.notes) {
 				if (note.type_is<Note::LN>()) {
@@ -762,13 +763,13 @@ inline auto Builder::build(span<byte const> bms_raw, io::Song& song, isize sampl
 					dest.emplace_back(note);
 				}
 			}
-			}
+		}
 		sort(notes_keys, [](auto const& left, auto const& right) { return left.timestamp < right.timestamp; });
 		sort(notes_scr, [](auto const& left, auto const& right) { return left.timestamp < right.timestamp; });
 
 		auto notes_around = [&](span<Note const> notes, auto cursor) {
-			auto const from = cursor - Window;
-			auto const to = cursor + Window;
+			auto const from = cursor - window;
+			auto const to = cursor + window;
 			return notes | views::drop_while([=](auto const& note) {
 				return note.timestamp < from;
 			}) | views::take_while([=](auto const& note) {
@@ -776,23 +777,24 @@ inline auto Builder::build(span<byte const> bms_raw, io::Song& song, isize sampl
 			});
 		};
 		for (auto [cursor, key, scratch, ln]: views::zip(
-			views::iota(0u) | views::transform([&](auto i) { return i * Resolution; }),
-			result.key, result.scratch, result.ln)) {
+			views::iota(0u) | views::transform([&](auto i) { return i * resolution; }),
+			result.key, result.scratch, result.ln))
+		{
 			for (Note const& note: notes_around(notes_keys, cursor)) {
 				auto& target = [&]() -> float& {
 					if (note.type_is<Note::LN>()) return ln;
 					return key;
 				}();
 				auto const delta = note.timestamp - cursor;
-				auto const delta_scaled = ratio(delta, Window) * Bandwidth; // now within [-Bandwidth, Bandwidth]
-				target += exp(-pow(delta_scaled, 2.0f) / 2.0f) * GaussianScale; // Gaussian filter
+				auto const delta_scaled = ratio(delta, window) * Bandwidth; // now within [-Bandwidth, Bandwidth]
+				target += exp(-pow(delta_scaled, 2.0f) / 2.0f) * gaussian_scale; // Gaussian filter
 			}
 			for (Note const& note: notes_around(notes_scr, cursor)) {
 				auto const delta = note.timestamp - cursor;
-				auto const delta_scaled = ratio(delta, Window) * Bandwidth; // now within [-Bandwidth, Bandwidth]
-				scratch += exp(-pow(delta_scaled, 2.0f) / 2.0f) * GaussianScale; // Gaussian filter
+				auto const delta_scaled = ratio(delta, window) * Bandwidth; // now within [-Bandwidth, Bandwidth]
+				scratch += exp(-pow(delta_scaled, 2.0f) / 2.0f) * gaussian_scale; // Gaussian filter
 			}
-			}
+		}
 
 		return result;
 	}();

@@ -100,12 +100,14 @@ static void show_metadata(GameplayContext const& context)
 		lib::imgui::text("BPM: {}", meta.bpm_range.main);
 	else
 		lib::imgui::text("BPM: {} - {} ({})", meta.bpm_range.min, meta.bpm_range.max, meta.bpm_range.main);
+
+	auto const cursor_pos = ratio(min(context.cursor->get_progress_ns(), meta.chart_duration), meta.density.resolution);
 	lib::imgui::plot("Note density", {
 		{"Scratch", meta.density.scratch, {1.0f, 0.1f, 0.1f, 1.0f}},
 		{"LN", meta.density.ln, {0.1f, 0.1f, 1.0f, 1.0f}},
 		{"Key", meta.density.key, {1.0f, 1.0f, 1.0f, 1.0f}},
 	}, {
-		{lib::imgui::PlotMarker::Type::Vertical,static_cast<float>(min(context.cursor->get_progress_ns(), meta.chart_duration) / 125ms), {1.0f, 0.0f, 0.0f, 1.0f}},
+		{lib::imgui::PlotMarker::Type::Vertical, static_cast<float>(cursor_pos), {1.0f, 0.0f, 0.0f, 1.0f}},
 		{lib::imgui::PlotMarker::Type::Horizontal, meta.nps.average, {0.0f, 0.0f, 1.0f, 1.0f}},
 		{lib::imgui::PlotMarker::Type::Horizontal, meta.nps.peak, {1.0f, 0.0f, 1.0f, 1.0f}}
 	}, 120, true);
