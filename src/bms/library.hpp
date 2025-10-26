@@ -18,6 +18,7 @@ A cache of song and chart metadata. Handles import events.
 #include "lib/openssl.hpp"
 #include "lib/sqlite.hpp"
 #include "lib/bits.hpp"
+#include "lib/zstd.hpp"
 #include "io/source.hpp"
 #include "io/song.hpp"
 #include "io/file.hpp"
@@ -35,7 +36,7 @@ public:
 	};
 
 	// Open an existing library, or create an empty one at the provided path.
-	explicit Library(Logger::Category, fs::path const&);
+	Library(Logger::Category, fs::path const&);
 	~Library();
 
 	// Import a song and all its charts into the library. Returns instantly; the import happens in the background.
@@ -538,7 +539,9 @@ inline auto Library::import_chart(io::Song& song, isize song_id, string chart_pa
 			serialize_density(chart->metadata.density.key),
 			serialize_density(chart->metadata.density.scratch),
 			serialize_density(chart->metadata.density.ln));
-		lib::sqlite::execute(insert_chart_import_log, chart->md5, builder_cat.get_buffer());
+		auto buffer = builder_cat.get_buffer();
+		auto buffer_bytes = span{reinterpret_cast<byte const*>(buffer.data()), buffer.size() + 1};
+		lib::sqlite::execute(insert_chart_import_log, chart->md5, lib::zstd::compress(buffer_bytes));
     });
 	dirty.store(true);
 	import_stats.charts_added.fetch_add(1);
