@@ -44,44 +44,50 @@ target_include_directories(Playnote PRIVATE src) # All includes start from src a
 # Communicate build type to the project
 target_compile_definitions(Playnote PRIVATE "$<$<CONFIG:Debug>:BUILD_DEBUG>$<$<CONFIG:RelWithDebInfo>:BUILD_RELDEB>$<$<CONFIG:Release>:BUILD_RELEASE>")
 
-target_link_libraries(Playnote PRIVATE signalsmith-basics)
-target_link_libraries(Playnote PRIVATE readerwriterqueue)
-target_link_libraries(Playnote PRIVATE concurrentqueue)
-target_link_libraries(Playnote PRIVATE tomlplusplus::tomlplusplus)
-target_link_libraries(Playnote PRIVATE vk-bootstrap)
-target_link_libraries(Playnote PRIVATE LibArchive::LibArchive)
-target_link_libraries(Playnote PRIVATE magic_enum::magic_enum)
-target_link_libraries(Playnote PRIVATE libassert::assert)
-target_link_libraries(Playnote PRIVATE zpp_bits)
-target_link_libraries(Playnote PRIVATE OpenSSL::Crypto)
-target_link_libraries(Playnote PRIVATE ebur128)
-target_link_libraries(Playnote PRIVATE libcoro)
-target_link_libraries(Playnote PRIVATE SQLite::SQLite3)
-target_link_libraries(Playnote PRIVATE implot)
-target_link_libraries(Playnote PRIVATE Boost::container)
-target_link_libraries(Playnote PRIVATE Boost::boost)
-target_link_libraries(Playnote PRIVATE imgui)
-target_link_libraries(Playnote PRIVATE quill)
-target_link_libraries(Playnote PRIVATE zstd::libzstd)
-target_link_libraries(Playnote PRIVATE glfw)
-target_link_libraries(Playnote PRIVATE volk)
-target_link_libraries(Playnote PRIVATE ICU::i18n)
-target_link_libraries(Playnote PRIVATE ICU::uc)
-target_link_libraries(Playnote PRIVATE mio::mio)
-target_link_libraries(Playnote PRIVATE vuk)
+target_link_libraries(Playnote
+	PRIVATE signalsmith-basics
+	PRIVATE readerwriterqueue
+	PRIVATE concurrentqueue
+	PRIVATE tomlplusplus::tomlplusplus
+	PRIVATE vk-bootstrap
+	PRIVATE LibArchive::LibArchive
+	PRIVATE magic_enum::magic_enum
+	PRIVATE libassert::assert
+	PRIVATE zpp_bits
+	PRIVATE OpenSSL::Crypto
+	PRIVATE ebur128
+	PRIVATE libcoro
+	PRIVATE SQLite::SQLite3
+	PRIVATE implot
+	PRIVATE Boost::container
+	PRIVATE Boost::boost
+	PRIVATE imgui
+	PRIVATE quill
+	PRIVATE zstd::libzstd
+	PRIVATE glfw
+	PRIVATE volk
+	PRIVATE ICU::i18n
+	PRIVATE ICU::uc
+	PRIVATE mio::mio
+	PRIVATE vuk
+)
 if(UNIX)
-	target_link_libraries(Playnote PRIVATE PkgConfig::libswresample)
-	target_link_libraries(Playnote PRIVATE PkgConfig::libavformat)
-	target_link_libraries(Playnote PRIVATE PkgConfig::libavcodec)
-	target_link_libraries(Playnote PRIVATE PkgConfig::libavutil)
-	target_link_libraries(Playnote PRIVATE PkgConfig::PipeWire)
+	target_link_libraries(Playnote
+		PRIVATE PkgConfig::libswresample
+		PkgConfig::libavformat
+		PkgConfig::libavcodec
+		PkgConfig::libavutil
+		PkgConfig::PipeWire
+	)
 else()
 	target_include_directories(Playnote PRIVATE ${FFMPEG_INCLUDE_DIRS})
 	target_link_directories(Playnote PRIVATE ${FFMPEG_LIBRARY_DIRS})
-	target_link_libraries(Playnote PRIVATE ${FFMPEG_LIBRARIES})
-	target_link_libraries(Playnote PRIVATE ksuser)
-	target_link_libraries(Playnote PRIVATE winmm)
-	target_link_libraries(Playnote PRIVATE avrt)
+	target_link_libraries(Playnote PRIVATE
+		${FFMPEG_LIBRARIES}
+		PRIVATE ksuser
+		PRIVATE winmm
+		PRIVATE avrt
+	)
 endif()
 target_compile_definitions(imgui PUBLIC "IMGUI_USER_CONFIG=\"${PROJECT_SOURCE_DIR}/src/lib/imconfig.h\"")
 
