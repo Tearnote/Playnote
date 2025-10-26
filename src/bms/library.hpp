@@ -242,7 +242,7 @@ private:
 	auto import_one(fs::path) -> task<>;
 	auto import_song(fs::path const&) -> task<pair<isize, fs::path>>;
 	auto import_chart(io::Song& song, isize song_id, string chart_path, span<byte const>) -> task<MD5>;
-	auto deduplicate_previews(isize song_id, span<MD5 const> new_charts) -> isize;
+	auto deduplicate_previews(isize song_id, span<MD5 const> new_charts) -> task<isize>;
 };
 
 inline Library::Library(Logger::Category cat, fs::path const& path):
@@ -432,7 +432,7 @@ try {
 		lib::sqlite::execute(delete_song, song_id);
 		move(song).remove();
 	} else {
-		auto deduplicated = deduplicate_previews(song_id, imported);
+		auto deduplicated = co_await deduplicate_previews(song_id, imported);
 		if (deduplicated)
 			INFO_AS(cat, "Removed {} duplicate previews from song \"{}\"", deduplicated, path);
 		INFO_AS(cat, "Song \"{}\" imported successfully", path);
@@ -548,7 +548,7 @@ inline auto Library::import_chart(io::Song& song, isize song_id, string chart_pa
 	co_return chart->md5;
 }
 
-inline auto Library::deduplicate_previews(isize song_id, span<MD5 const> new_charts) -> isize {
+inline auto Library::deduplicate_previews(isize song_id, span<MD5 const> new_charts) -> task<isize> {
 	// Some or all of the charts of this song were just added, all with their own previews.
 	// Any of these previews can be a duplicate of a new preview or an old preview.
 
@@ -597,6 +597,7 @@ inline auto Library::deduplicate_previews(isize song_id, span<MD5 const> new_cha
 				// This is a duplicate
 				previews.erase(preview_id);
 				previews_removed += 1;
+				co_await transaction_lock.scoped_lock();
 				lib::sqlite::transaction(db, [&] {
 					lib::sqlite::execute(modify_chart_preview_ids, preview_id, id);
 					lib::sqlite::execute(delete_chart_preview, preview_id);
@@ -605,7 +606,7 @@ inline auto Library::deduplicate_previews(isize song_id, span<MD5 const> new_cha
 			}
 		}
 	}
-	return previews_removed;
+	co_return previews_removed;
 }
 
 }
