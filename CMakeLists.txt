@@ -64,7 +64,6 @@ target_link_libraries(Playnote
 	PRIVATE Boost::boost
 	PRIVATE imgui
 	PRIVATE quill
-	PRIVATE zstd::libzstd
 	PRIVATE glfw
 	PRIVATE volk
 	PRIVATE ICU::i18n
@@ -75,16 +74,18 @@ target_link_libraries(Playnote
 if(UNIX)
 	target_link_libraries(Playnote
 		PRIVATE PkgConfig::libswresample
-		PkgConfig::libavformat
-		PkgConfig::libavcodec
-		PkgConfig::libavutil
-		PkgConfig::PipeWire
+		PRIVATE PkgConfig::libavformat
+		PRIVATE PkgConfig::libavcodec
+		PRIVATE PkgConfig::libavutil
+		PRIVATE PkgConfig::PipeWire
+		PRIVATE zstd::libzstd_shared
 	)
 else()
 	target_include_directories(Playnote PRIVATE ${FFMPEG_INCLUDE_DIRS})
 	target_link_directories(Playnote PRIVATE ${FFMPEG_LIBRARY_DIRS})
 	target_link_libraries(Playnote PRIVATE
 		${FFMPEG_LIBRARIES}
+		PRIVATE zstd::libzstd
 		PRIVATE ksuser
 		PRIVATE winmm
 		PRIVATE avrt
