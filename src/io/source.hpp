@@ -53,6 +53,8 @@ public:
 
 	auto get_path() const -> fs::path const& { return path; }
 
+	auto is_archive() const -> bool { return archive.has_value(); }
+
 	// Call the provided method for each contained file. Recurses into subfolders.
 	// Return false from the callback to abort iteration.
 	template<callable<bool(FileReference)> Func>

@@ -8,10 +8,12 @@ A cache of song and chart metadata. Handles import events.
 
 #pragma once
 #include "audio/mixer.hpp"
+#include "coro/mutex.hpp"
 #include "io/file.hpp"
 #include "lib/ffmpeg.hpp"
 #include "preamble.hpp"
 #include "preamble/algorithm.hpp"
+#include "preamble/coro.hpp"
 #include "utils/task_pool.hpp"
 #include "utils/config.hpp"
 #include "utils/logger.hpp"
@@ -90,6 +92,9 @@ private:
 	)sql"sv;
 	static constexpr auto SongExistsQuery = R"sql(
 		SELECT 1 FROM songs WHERE path = ?1
+	)sql"sv;
+	static constexpr auto SelectSongByIDQuery = R"sql(
+		SELECT path FROM songs WHERE id = ?1
 	)sql"sv;
 	static constexpr auto InsertSongQuery = R"sql(
 		INSERT INTO songs(path) VALUES(?1)
@@ -231,7 +236,9 @@ private:
 
 	lib::sqlite::DB db;
 	task_container import_tasks;
-	coro_mutex song_lock;
+	unordered_map<MD5, isize> staging;
+	coro_mutex staging_lock;
+	unordered_node_map<isize, coro_mutex> song_locks;
 	coro_mutex transaction_lock;
 	atomic<bool> dirty = true;
 	atomic<bool> stopping = false;
@@ -240,7 +247,6 @@ private:
 	[[nodiscard]] auto find_available_song_filename(string_view name) -> string;
 	auto import_many(fs::path) -> task<>;
 	auto import_one(fs::path) -> task<>;
-	auto import_song(fs::path const&) -> task<pair<isize, fs::path>>;
 	auto import_chart(io::Song& song, isize song_id, string chart_path, span<byte const>) -> task<MD5>;
 	auto deduplicate_previews(isize song_id, span<MD5 const> new_charts) -> task<isize>;
 };
@@ -397,98 +403,137 @@ inline auto Library::import_many(fs::path path) -> task<>
 }
 
 inline auto Library::import_one(fs::path path) -> task<>
-try {
-	if (stopping.load()) throw runtime_error_fmt("Song import \"{}\" cancelled", path);
-	INFO_AS(cat, "Importing song \"{}\"", path);
-	auto lock = co_await song_lock.scoped_lock();
-	auto [song_id, song_path] = co_await import_song(path);
-	auto song = io::Song(cat, io::read_file(song_path));
-	co_await song.preload_audio_files(48000);
-	INFO_AS(cat, "Song \"{}\" files processed successfully", path);
-
-	auto chart_import_tasks = vector<task<MD5>>{};
-	auto chart_paths = vector<string>{};
-	song.for_each_chart([&](auto path, auto chart) {
-		chart_import_tasks.emplace_back(schedule_task(import_chart(song, song_id, string{path}, chart)));
-		chart_paths.emplace_back(path);
-	});
-	auto results = co_await when_all(move(chart_import_tasks));
-
-	auto imported = vector<MD5>{};
-	for (auto [result, path]: views::zip(results, chart_paths)) {
-		try {
-			auto md5 = result.return_value();
-			if (md5 == MD5{}) continue; // Skipped
-			INFO_AS(cat, "Chart \"{}\" imported successfully", path);
-			imported.emplace_back(md5);
-		} catch (exception const& e) {
-			ERROR_AS(cat, "Failed to import chart \"{}\": {}", path, e.what());
-			import_stats.charts_failed.fetch_add(1);
-		}
-	}
-	if (imported.empty()) {
-		WARN_AS(cat, "No charts found in song \"{}\"", path);
-		auto delete_song = lib::sqlite::prepare(db, DeleteSongQuery);
-		lib::sqlite::execute(delete_song, song_id);
-		move(song).remove();
-	} else {
-		auto deduplicated = co_await deduplicate_previews(song_id, imported);
-		if (deduplicated)
-			INFO_AS(cat, "Removed {} duplicate previews from song \"{}\"", deduplicated, path);
-		INFO_AS(cat, "Song \"{}\" imported successfully", path);
-	}
-	import_stats.songs_processed.fetch_add(1);
-}
-catch (exception const& e) {
-	ERROR_AS(cat, "Failed to import song \"{}\": {}", path, e.what());
-	import_stats.songs_processed.fetch_add(1);
-	import_stats.songs_failed.fetch_add(1);
-}
-
-inline auto Library::import_song(fs::path const& path) -> task<pair<isize, fs::path>>
 {
-	auto const is_archive = fs::is_regular_file(path);
+	auto charts = vector<MD5>{}; // Need access to this in the catch clause
+	try {
+		if (stopping.load()) throw runtime_error_fmt("Song import \"{}\" cancelled", path);
+		INFO_AS(cat, "Importing song \"{}\"", path);
 
-	// First, determine if we're creating a new song or extending an existing song
-	// We checksum all the charts and check if any of them already exist
-	auto existing_song = optional<pair<isize, string>>{nullopt};
-	auto source = io::Source{path};
-	auto get_song_from_chart = lib::sqlite::prepare(db, GetSongFromChartQuery);
-	source.for_each_file([&](auto entry) {
-		if (!io::has_extension(entry.get_path(), io::BMSExtensions)) return true;
-		auto const md5 = lib::openssl::md5(entry.read());
-		lib::sqlite::query(get_song_from_chart, [&](isize id, string_view path) { existing_song.emplace(id, path); }, md5);
-		if (existing_song) return false;
-		return true;
-	});
+		// Collect MD5s of charts to add
+		auto source = io::Source{path};
+		source.for_each_file([&](auto ref) {
+			if (!io::has_extension(ref.get_path(), io::BMSExtensions)) return true;
+			charts.emplace_back(lib::openssl::md5(ref.read()));
+			return true;
+		});
 
-	if (existing_song) { // Extending
-		INFO_AS(cat, "Song \"{}\" already exists in library; extending", path);
-		auto existing_song_id = get<0>(*existing_song);
-		auto const existing_song_path = fs::path{LibraryPath} / get<1>(*existing_song);
+		// Check if any running task is a duplicate of this one
+		auto lock = co_await staging_lock.scoped_lock();
+		auto song_id = -1z;
+		auto song_filename = string{};
+		auto duplicate = false;
+		for (auto const& chart: charts) {
+			auto it = staging.find(chart);
+			if (it != staging.end()) {
+				song_id = it->second;
+				duplicate = true;
+				break;
+			}
+		}
 
-		auto tmp_path = existing_song_path;
-		tmp_path.concat(".tmp");
-		auto deleter = io::FileDeleter{tmp_path};
-		co_await io::Song::from_source_append(cat, io::read_file(existing_song_path), io::Source{path}, tmp_path);
+		// Check if there is a duplicate song in the library
+		if (!duplicate) {
+			auto get_song_from_chart = lib::sqlite::prepare(db, GetSongFromChartQuery);
+			for (auto const& chart: charts) {
+				lib::sqlite::query(get_song_from_chart, [&](isize id, string_view) { song_id = id; }, chart);
+				if (song_id != -1z) {
+					duplicate = true;
+					break;
+				}
+			}
+		}
 
-		fs::rename(tmp_path, existing_song_path);
-		deleter.disarm();
-		co_return {existing_song_id, move(existing_song_path)};
-	} else { // New song
-		auto out_filename = is_archive? path.stem().string() : path.filename().string();
-		if (out_filename.empty())
-			throw runtime_error_fmt("Failed to import \"{}\": invalid filename", path);
-		out_filename = find_available_song_filename(out_filename);
+		// Not duplicate? Obtain song ID
+		if (!duplicate) {
+			song_filename = source.is_archive()? path.stem().string() : path.filename().string();
+			if (song_filename.empty())
+				throw runtime_error_fmt("Failed to import \"{}\": invalid filename", path);
+			song_filename = find_available_song_filename(song_filename);
+			auto insert_song = lib::sqlite::prepare(db, InsertSongQuery);
+			song_id = lib::sqlite::insert(insert_song, song_filename);
+		}
 
-		auto const out_path = fs::path{LibraryPath} / out_filename;
-		auto deleter = io::FileDeleter{out_path};
-		co_await io::Song::from_source(cat, io::Source{path}, out_path);
+		// Ensure exclusive ownership of song_id and associated songzip
+		auto song_lock_it = song_locks.try_emplace(song_id).first;
+		auto song_lock = co_await song_lock_it->second.scoped_lock();
 
-		auto insert_song = lib::sqlite::prepare(db, InsertSongQuery);
-		auto const song_id = lib::sqlite::insert(insert_song, out_filename);
-		deleter.disarm();
-		co_return {song_id, move(out_path)};
+		// Register intent to add charts
+		for (auto const& chart: charts) staging.emplace(chart, song_id);
+		lock.unlock();
+
+		// Create/modify the songzip
+		auto song = optional<io::Song>{nullopt};
+		if (duplicate) {
+			// Extending
+			INFO_AS(cat, "Song \"{}\" already exists in library; extending", path);
+			auto existing_song_path = fs::path{};
+			auto select_song_by_id = lib::sqlite::prepare(db, SelectSongByIDQuery);
+			lib::sqlite::query(select_song_by_id, [&](string_view pathname) {
+				existing_song_path = fs::path{LibraryPath} / pathname;
+			}, song_id);
+
+			auto tmp_path = existing_song_path;
+			tmp_path.concat(".tmp");
+			auto deleter = io::FileDeleter{tmp_path};
+			song = co_await io::Song::from_source_append(cat, io::read_file(existing_song_path), source, tmp_path);
+
+			fs::rename(tmp_path, existing_song_path);
+			deleter.disarm();
+		} else {
+			// New song
+			auto const out_path = fs::path{LibraryPath} / song_filename;
+			auto deleter = io::FileDeleter{out_path};
+			song = co_await io::Song::from_source(cat, source, out_path);
+			deleter.disarm();
+		}
+
+		// Prepare song for chart imports
+		co_await song->preload_audio_files(48000);
+		INFO_AS(cat, "Song \"{}\" files processed successfully", path);
+
+		// Start chart imports
+		auto chart_import_tasks = vector<task<MD5>>{};
+		auto chart_paths = vector<string>{};
+		song->for_each_chart([&](auto path, auto chart) {
+			chart_import_tasks.emplace_back(schedule_task(import_chart(*song, song_id, string{path}, chart)));
+			chart_paths.emplace_back(path);
+		});
+		auto results = co_await when_all(move(chart_import_tasks));
+
+		// Report chart import results
+		auto imported = vector<MD5>{};
+		for (auto [result, path]: views::zip(results, chart_paths)) {
+			try {
+				auto md5 = result.return_value();
+				if (md5 == MD5{}) continue; // Skipped
+				INFO_AS(cat, "Chart \"{}\" imported successfully", path);
+				imported.emplace_back(md5);
+			} catch (exception const& e) {
+				ERROR_AS(cat, "Failed to import chart \"{}\": {}", path, e.what());
+				import_stats.charts_failed.fetch_add(1);
+			}
+		}
+
+		// Clean up
+		if (imported.empty()) {
+			WARN_AS(cat, "No new charts found in song \"{}\"", path);
+			if (!duplicate) {
+				auto delete_song = lib::sqlite::prepare(db, DeleteSongQuery);
+				lib::sqlite::execute(delete_song, song_id);
+				move(*song).remove();
+			}
+		} else {
+			auto deduplicated = co_await deduplicate_previews(song_id, imported);
+			if (deduplicated)
+				INFO_AS(cat, "Removed {} duplicate previews from song \"{}\"", deduplicated, path);
+			INFO_AS(cat, "Song \"{}\" imported successfully", path);
+		}
+		import_stats.songs_processed.fetch_add(1);
+	}
+	catch (exception const& e) {
+		ERROR_AS(cat, "Failed to import song \"{}\": {}", path, e.what());
+		import_stats.songs_processed.fetch_add(1);
+		import_stats.songs_failed.fetch_add(1);
 	}
 }
 

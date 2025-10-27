@@ -14,6 +14,7 @@ Imports and helpers for container types.
 #include <array>
 #include <span>
 #include <boost/container_hash/hash.hpp>
+#include <boost/unordered/unordered_node_map.hpp>
 #include <boost/unordered/unordered_flat_map.hpp>
 #include <boost/unordered/unordered_flat_set.hpp>
 #include <boost/container/pmr/monotonic_buffer_resource.hpp>
@@ -38,6 +39,7 @@ template<typename Key, typename T, typename Hash = boost::hash<Key>>
 using unordered_map = boost::unordered_flat_map<Key, T, Hash, std::equal_to<>>;
 template<typename Key, typename Hash = boost::hash<Key>>
 using unordered_set = boost::unordered_flat_set<Key, Hash, std::equal_to<>>;
+using boost::unordered_node_map;
 using std::span;
 namespace pmr {
 	using boost::container::pmr::vector;
