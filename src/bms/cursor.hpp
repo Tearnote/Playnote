@@ -195,28 +195,19 @@ inline void Cursor::seek(isize sample_position)
 			if (note.type_is<Note::LN>()) timestamp += note.params<Note::LN>().length;
 			return timestamp > progress_ns;
 		});
+		progress.next_note = distance(lane.notes.begin(), first_unplayed_note);
+		progress.ln_timing = nullopt;
+		progress.pressed = false;
 		if (first_unplayed_note == lane.notes.end()) {
-			progress.next_note = lane.notes.size();
 			progress.active_slot = lane.notes.empty()? -1 : lane.notes.back().wav_slot;
-			progress.ln_timing = nullopt;
-			progress.pressed = false;
 			continue;
 		}
-		progress.next_note = distance(lane.notes.begin(), first_unplayed_note);
-		if (progress.next_note <= 0) {
-			progress.active_slot = first_unplayed_note->wav_slot;
-			progress.ln_timing = nullopt;
-			progress.pressed = false;
-		} else {
-			auto const& prev_note = lane.notes[progress.next_note - 1];
-			progress.active_slot = prev_note.wav_slot;
-			if (prev_note.type_is<Note::LN>() && prev_note.timestamp + prev_note.params<Note::LN>().length >= progress_ns) {
-				progress.ln_timing = 0ns;
-				progress.pressed = true;
-			} else {
-				progress.ln_timing = nullopt;
-				progress.pressed = false;
-			}
+
+		auto const& next_note = lane.notes[progress.next_note];
+		progress.active_slot = next_note.wav_slot;
+		if (next_note.type_is<Note::LN>() && next_note.timestamp <= progress_ns) {
+			progress.ln_timing = 0ns;
+			progress.pressed = true;
 		}
 	}
 }
