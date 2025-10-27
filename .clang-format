@@ -1,5 +1,3 @@
-# Generated from CLion C/C++ Code Style settings
----
 Language: Cpp
 BasedOnStyle: LLVM
 AccessModifierOffset: -4
@@ -10,7 +8,7 @@ AlignOperands: false
 AlignTrailingComments: false
 AlwaysBreakAfterDefinitionReturnType: false
 AlwaysBreakTemplateDeclarations: Yes
-BraceWrapping: 
+BraceWrapping:
   AfterCaseLabel: false
   AfterClass: false
   AfterControlStatement: false
@@ -33,7 +31,7 @@ BreakConstructorInitializers: AfterColon
 BreakConstructorInitializersBeforeComma: false
 ColumnLimit: 120
 ConstructorInitializerAllOnOneLineOrOnePerLine: false
-IncludeCategories: 
+IncludeCategories:
   - Regex: '^<.*'
     Priority: 1
   - Regex: '^".*'
