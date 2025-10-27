@@ -324,6 +324,7 @@ inline void Cursor::trigger_miss(Lane::Type type)
 		judgment_events.enqueue(JudgmentEvent{
 			.type = note.type_is<Note::Simple>()? JudgmentEvent::Type::Note : JudgmentEvent::Type::LN,
 			.lane = type,
+			.timestamp = get_progress_ns(),
 		});
 	}
 	progress.active_slot = note.wav_slot;
@@ -340,6 +341,7 @@ inline void Cursor::trigger_ln_release(Lane::Type type)
 		judgment_events.enqueue(JudgmentEvent{
 			.type = JudgmentEvent::Type::LN,
 			.lane = type,
+			.timestamp = get_progress_ns(),
 			.timing = *progress.ln_timing,
 			.release_timing = get_progress_ns() - (note.timestamp + note.params<Note::LN>().length),
 		});
