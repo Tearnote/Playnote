@@ -212,7 +212,11 @@ inline void Cursor::seek(isize sample_position)
 	sample_progress = sample_position;
 	auto const progress_ns = get_progress_ns();
 	for (auto [progress, lane]: views::zip(lane_progress, chart->timeline.lanes)) {
-		auto first_unplayed_note = find_if(lane.notes, [&](auto const& note) { return note.timestamp > progress_ns; });
+		auto first_unplayed_note = find_if(lane.notes, [&](Note const& note) {
+			auto timestamp = note.timestamp;
+			if (note.type_is<Note::LN>()) timestamp += note.params<Note::LN>().length;
+			return timestamp > progress_ns;
+		});
 		if (first_unplayed_note == lane.notes.end()) {
 			progress.next_note = lane.notes.size();
 			progress.active_slot = lane.notes.empty()? -1 : lane.notes.back().wav_slot;
