@@ -6,7 +6,7 @@
 
 cmake_minimum_required(VERSION 3.28)
 project(Playnote
-	VERSION 0.0.3
+	VERSION 0.0.4
 	DESCRIPTION "A BMS player hobby project"
 	LANGUAGES C CXX)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)

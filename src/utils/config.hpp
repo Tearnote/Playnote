@@ -13,7 +13,7 @@ or distributed except according to those terms.
 
 namespace playnote {
 inline constexpr auto AppTitle = "Playnote";
-inline constexpr auto AppVersion = to_array({0u, 0u, 3u});
+inline constexpr auto AppVersion = to_array({0u, 0u, 4u});
 
 #if !defined(BUILD_DEBUG) && !defined(BUILD_RELDEB) && !defined(BUILD_RELEASE)
 #error Build type incorrectly defined
