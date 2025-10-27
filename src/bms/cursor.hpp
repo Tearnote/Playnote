@@ -83,11 +83,9 @@ public:
 	// Seek to a specified timestamp. The same precautions apply as for seek().
 	void seek_ns(nanoseconds timestamp) { seek(globals::mixer->get_audio().ns_to_samples(timestamp, chart->media.sampling_rate)); }
 
-	// Seek relative to current position. The same precautions apply as for seek().
-	void seek_relative(isize sample_offset) { seek(sample_progress + sample_offset); }
-
-	// Timestamp seek relative to current position. The same precautions apply as for seek().
-	void seek_relative_ns(nanoseconds offset) { seek_ns(get_progress_ns() + offset); }
+	// Seek relative to current position. If seek is backward, or autoplay is on, lane progress is
+	// driven automatically. Otherwise, functions as a fast-forward.
+	void seek_relative(isize sample_offset);
 
 	// Call the provided function for every note less than max_units away from current position.
 	template<callable<void(Note const&, Lane::Type, float)> Func>
@@ -187,26 +185,6 @@ auto Cursor::advance_one_sample(Func&& func, span<LaneInput const> inputs) -> bo
 	return get_progress_ns() < chart->metadata.chart_duration;
 }
 
-template<callable<void(Note const&, Lane::Type, float)> Func>
-void Cursor::upcoming_notes(float max_units, Func&& func, nanoseconds offset, bool adjust_for_latency) const
-{
-	auto const latency_adjustment = adjust_for_latency? -globals::mixer->get_latency() : 0ns;
-	auto const progress_timestamp = globals::mixer->get_audio().samples_to_ns(sample_progress, chart->media.sampling_rate) + latency_adjustment - offset;
-	auto const& bpm_section = get_bpm_section(progress_timestamp);
-	auto const section_progress = progress_timestamp - bpm_section.position;
-	auto const beat_duration = duration<double>{60.0 / chart->metadata.bpm_range.main};
-	auto const bpm_ratio = bpm_section.bpm / chart->timeline.bpm_sections[0].bpm;
-	auto const current_y = bpm_section.y_pos + section_progress / beat_duration * bpm_ratio * bpm_section.scroll_speed;
-	for (auto [idx, lane, progress]: views::zip(views::iota(0z), chart->timeline.lanes, lane_progress)) {
-		if (!lane.visible) continue;
-		for (auto const& note: span{lane.notes.begin() + progress.next_note, lane.notes.size() - progress.next_note}) {
-			auto const distance = note.y_pos - current_y;
-			if (distance > max_units) break;
-			func(note, static_cast<Lane::Type>(idx), distance);
-		}
-	}
-}
-
 inline void Cursor::seek(isize sample_position)
 {
 	sample_progress = sample_position;
@@ -239,6 +217,35 @@ inline void Cursor::seek(isize sample_position)
 				progress.ln_timing = nullopt;
 				progress.pressed = false;
 			}
+		}
+	}
+}
+
+inline void Cursor::seek_relative(isize sample_offset)
+{
+	if (sample_offset < 0 || autoplay) {
+		seek(sample_progress + sample_offset);
+		return;
+	}
+	for (auto _: views::iota(0z, sample_offset)) advance_one_sample([](auto){});
+}
+
+template<callable<void(Note const&, Lane::Type, float)> Func>
+void Cursor::upcoming_notes(float max_units, Func&& func, nanoseconds offset, bool adjust_for_latency) const
+{
+	auto const latency_adjustment = adjust_for_latency? -globals::mixer->get_latency() : 0ns;
+	auto const progress_timestamp = globals::mixer->get_audio().samples_to_ns(sample_progress, chart->media.sampling_rate) + latency_adjustment - offset;
+	auto const& bpm_section = get_bpm_section(progress_timestamp);
+	auto const section_progress = progress_timestamp - bpm_section.position;
+	auto const beat_duration = duration<double>{60.0 / chart->metadata.bpm_range.main};
+	auto const bpm_ratio = bpm_section.bpm / chart->timeline.bpm_sections[0].bpm;
+	auto const current_y = bpm_section.y_pos + section_progress / beat_duration * bpm_ratio * bpm_section.scroll_speed;
+	for (auto [idx, lane, progress]: views::zip(views::iota(0z), chart->timeline.lanes, lane_progress)) {
+		if (!lane.visible) continue;
+		for (auto const& note: span{lane.notes.begin() + progress.next_note, lane.notes.size() - progress.next_note}) {
+			auto const distance = note.y_pos - current_y;
+			if (distance > max_units) break;
+			func(note, static_cast<Lane::Type>(idx), distance);
 		}
 	}
 }
