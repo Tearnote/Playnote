@@ -31,6 +31,8 @@ static auto ret_check_ext(sqlite3* db_raw, int ret) -> int
 
 auto open(fs::path const& path) -> DB
 {
+	if (sqlite3_threadsafe() == 0)
+		throw runtime_error{"sqlite was built without thread-safe support"};
 	auto db_raw = static_cast<sqlite3*>(nullptr);
 	auto check = [&](int ret) {
 		if (ret != SQLITE_OK) {
