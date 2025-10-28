@@ -140,14 +140,21 @@ void detail::reset(Statement& stmt)
 	ret_check_ext(sqlite3_db_handle(stmt.get()), sqlite3_reset(stmt.get()));
 }
 
-void detail::begin_transaction(DB& db)
+detail::ScopedTransaction::ScopedTransaction(DB& db):
+	db{db}
 {
 	execute(db, "BEGIN TRANSACTION");
 }
 
-void detail::end_transaction(DB& db)
+detail::ScopedTransaction::~ScopedTransaction()
+{
+	if (!committed) execute(db, "ROLLBACK");
+}
+
+void detail::ScopedTransaction::commit()
 {
 	execute(db, "END TRANSACTION");
+	committed = true;
 }
 
 auto detail::last_insert_rowid(Statement& stmt) -> int64

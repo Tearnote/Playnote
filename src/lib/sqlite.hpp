@@ -51,8 +51,6 @@ template<> void bind<void const*>     (Statement&, int idx, void const* arg);
 
 auto step(Statement&) -> QueryStatus;
 void reset(Statement&);
-void begin_transaction(DB&);
-void end_transaction(DB&);
 auto last_insert_rowid(Statement&) -> int64;
 auto acquire_db_mutex(DB&) -> detail::Mutex;
 
@@ -65,6 +63,21 @@ template<> auto get_column<string_view>     (Statement&, int idx) -> string_view
 template<> auto get_column<span<byte const>>(Statement&, int idx) -> span<byte const>;
 template<> auto get_column<void const*>     (Statement&, int idx) -> void const*;
 
+class ScopedTransaction {
+public:
+	explicit ScopedTransaction(DB& db);
+	~ScopedTransaction();
+	void commit();
+
+	ScopedTransaction(ScopedTransaction const&) = delete;
+	auto operator=(ScopedTransaction const&) -> ScopedTransaction& = delete;
+	ScopedTransaction(ScopedTransaction&&) = delete;
+	auto operator=(ScopedTransaction&&) -> ScopedTransaction& = delete;
+
+private:
+	DB& db;
+	bool committed = false;
+};
 }
 
 // Open an existing database, or create a new one if it doesn't exist yet. The database
@@ -159,9 +172,9 @@ template<callable<void()> Func>
 void transaction(DB& db, Func&& func)
 {
 	auto lock = detail::acquire_db_mutex(db);
-	detail::begin_transaction(db);
+	auto tx = detail::ScopedTransaction(db);
 	func();
-	detail::end_transaction(db);
+	tx.commit();
 }
 
 }
