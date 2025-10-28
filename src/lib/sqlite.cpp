@@ -84,6 +84,11 @@ void detail::StatementDeleter::operator()(sqlite3_stmt* stmt) noexcept
 	sqlite3_finalize(stmt);
 }
 
+void detail::MutexDeleter::operator()(sqlite3_mutex* m) noexcept
+{
+	sqlite3_mutex_leave(m);
+}
+
 template<>
 void detail::bind<int>(Statement& stmt, int idx, int arg)
 {
@@ -148,6 +153,13 @@ void detail::end_transaction(DB& db)
 auto detail::last_insert_rowid(Statement& stmt) -> int64
 {
 	return sqlite3_last_insert_rowid(sqlite3_db_handle(stmt.get()));
+}
+
+auto detail::acquire_db_mutex(DB& db) -> Mutex
+{
+	auto raw_mutex = sqlite3_db_mutex(db.get());
+	sqlite3_mutex_enter(raw_mutex);
+	return Mutex{raw_mutex};
 }
 
 template<>

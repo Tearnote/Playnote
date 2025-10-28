@@ -14,6 +14,7 @@ or distributed except according to those terms.
 
 struct sqlite3;
 struct sqlite3_stmt;
+struct sqlite3_mutex;
 
 namespace playnote::lib::sqlite {
 
@@ -24,6 +25,10 @@ struct DBDeleter {
 struct StatementDeleter {
 	static void operator()(sqlite3_stmt* st) noexcept;
 };
+struct MutexDeleter {
+	static void operator()(sqlite3_mutex* m) noexcept;
+};
+using Mutex = unique_resource<sqlite3_mutex*, MutexDeleter>;
 }
 
 using DB = unique_resource<sqlite3*, detail::DBDeleter>;
@@ -49,6 +54,7 @@ void reset(Statement&);
 void begin_transaction(DB&);
 void end_transaction(DB&);
 auto last_insert_rowid(Statement&) -> int64;
+auto acquire_db_mutex(DB&) -> detail::Mutex;
 
 template<typename T>
            auto get_column                  (Statement&, int idx) -> T;
@@ -152,6 +158,7 @@ void query(Statement& stmt, Func&& func, Args&&... args)
 template<callable<void()> Func>
 void transaction(DB& db, Func&& func)
 {
+	auto lock = detail::acquire_db_mutex(db);
 	detail::begin_transaction(db);
 	func();
 	detail::end_transaction(db);

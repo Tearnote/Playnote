@@ -240,7 +240,6 @@ private:
 	unordered_map<MD5, isize> staging;
 	coro_mutex staging_lock;
 	unordered_node_map<isize, coro_mutex> song_locks;
-	coro_mutex transaction_lock;
 	atomic<bool> dirty = true;
 	atomic<bool> stopping = false;
 	ImportStats import_stats;
@@ -562,7 +561,6 @@ inline auto Library::import_chart(io::Song& song, isize song_id, string chart_pa
 	auto chart = co_await builder.build(chart_raw, song, 48000);
 	auto encoded_preview = lib::ffmpeg::encode_as_opus(chart->media.preview, 48000);
 
-	auto lock = co_await transaction_lock.scoped_lock();
     lib::sqlite::transaction(db, [&] {
     	auto preview_id = lib::sqlite::insert(insert_chart_preview, encoded_preview);
         lib::sqlite::execute(insert_chart, chart->md5, song_id, chart_path, chart->metadata.title,
@@ -643,7 +641,6 @@ inline auto Library::deduplicate_previews(isize song_id, span<MD5 const> new_cha
 				// This is a duplicate
 				previews.erase(preview_id);
 				previews_removed += 1;
-				co_await transaction_lock.scoped_lock();
 				lib::sqlite::transaction(db, [&] {
 					lib::sqlite::execute(modify_chart_preview_ids, preview_id, id);
 					lib::sqlite::execute(delete_chart_preview, preview_id);
