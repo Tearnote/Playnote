@@ -12,30 +12,31 @@ or distributed except according to those terms.
 #include "utils/service.hpp"
 
 namespace playnote::globals {
-inline auto task_pool = Service<unique_ptr<thread_pool>>{};
+inline auto fg_pool = Service<unique_ptr<thread_pool>>{};
+inline auto bg_pool = Service<unique_ptr<thread_pool>>{};
 }
 
 namespace playnote {
 
-// Launch a fire-and-forget task on the thread pool.
-inline void launch_task(task<>&& t)
+// Launch a fire-and-forget task on a thread pool.
+inline void launch_task_on(unique_ptr<thread_pool>& pool, task<>&& t)
 {
-	(*globals::task_pool)->spawn(move(t));
+	pool->spawn(move(t));
 }
 
 // Schedule a task on the thread pool. The task will execute once the returned task is awaited.
 template<typename T>
-auto schedule_task(task<T>&& t) -> task<T>
+auto schedule_task_on(unique_ptr<thread_pool>& pool, task<T>&& t) -> task<T>
 {
-	return (*globals::task_pool)->schedule(move(t));
+	return pool->schedule(move(t));
 }
 
 // Launch a task on the thread pool and return a future to its result, so that its result can be polled synchronously.
 template<typename T>
-auto launch_pollable(task<T>&& t) -> future<T> {
+auto launch_pollable_on(unique_ptr<thread_pool>& pool, task<T>&& t) -> future<T> {
 	auto result_promise = promise<T>{};
 	auto result_future = result_promise.get_future();
-	launch_task([](promise<T> p, task<T> t) -> task<> {
+	launch_task_on(pool, [](promise<T> p, task<T> t) -> task<> {
 		try {
 			p.set_value(move(co_await t));
 		}
@@ -45,5 +46,18 @@ auto launch_pollable(task<T>&& t) -> future<T> {
 	}(move(result_promise), move(t)));
 	return result_future;
 }
+
+// Shorthands for global pools
+
+inline void launch_fg(task<>&& t) { launch_task_on(*globals::fg_pool, forward<task<>>(t)); }
+inline void launch_bg(task<>&& t) { launch_task_on(*globals::bg_pool, forward<task<>>(t)); }
+template<typename T>
+auto schedule_fg(task<T>&& t) -> task<T> { return schedule_task_on(*globals::fg_pool, forward<task<T>>(t)); }
+template<typename T>
+auto schedule_bg(task<T>&& t) -> task<T> { return schedule_task_on(*globals::bg_pool, forward<task<T>>(t)); }
+template<typename T>
+auto pollable_fg(task<T>&& t) -> future<T> { return launch_pollable_on(*globals::fg_pool, forward<task<T>>(t)); }
+template<typename T>
+auto pollable_bg(task<T>&& t) -> future<T> { return launch_pollable_on(*globals::bg_pool, forward<task<T>>(t)); }
 
 }

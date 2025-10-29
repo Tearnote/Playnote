@@ -173,9 +173,9 @@ static void render_select(gfx::Renderer::Queue&, GameState& state)
 	} else {
 		for (auto const& chart: context.charts) {
 			if (lib::imgui::selectable(chart.title.c_str())) {
-				context.chart_load_result = launch_pollable(
+				context.chart_load_result = pollable_fg(
 					[](shared_ptr<bms::Library> library, bms::MD5 md5) -> task<shared_ptr<bms::Chart const>> {
-						co_return co_await library->load_chart(md5);
+						co_return co_await library->load_chart(*globals::fg_pool, md5);
 					}(state.library, chart.md5));
 				state.requested = State::Gameplay;
 			}
@@ -249,13 +249,20 @@ static auto render_import_status(ImportStatus const& status) -> bool
 static void run_render(Broadcaster& broadcaster, dev::Window& window, Logger::Category cat)
 {
 	// Init subsystems
-	auto task_pool_stub = globals::task_pool.provide(thread_pool::make_unique({
+	auto fg_pool_stub = globals::fg_pool.provide(thread_pool::make_unique({
+		.thread_count = max(1u, jthread::hardware_concurrency() / 2),
 		.on_thread_start_functor = [](auto worker_idx) {
-			lib::os::name_current_thread(format("pool_worker{}", worker_idx));
+			lib::os::name_current_thread(format("fg_worker{}", worker_idx));
+		},
+	}));
+	auto bg_pool_stub = globals::bg_pool.provide(thread_pool::make_unique({
+		.thread_count = max(1u, jthread::hardware_concurrency() / 2),
+		.on_thread_start_functor = [](auto worker_idx) {
+			lib::os::name_current_thread(format("bg_worker{}", worker_idx));
 			lib::os::lower_current_thread_priority();
 		},
 	}));
-	DEBUG_AS(cat, "Task pool initialized");
+	DEBUG_AS(cat, "Task pools initialized");
 	auto audio_cat =  globals::logger->create_category("Audio",
 		*enum_cast<Logger::Level>(globals::config->get_entry<string>("logging", "audio")));
 	auto mixer_stub = globals::mixer.provide(audio_cat);
@@ -265,7 +272,7 @@ static void run_render(Broadcaster& broadcaster, dev::Window& window, Logger::Ca
 	auto state = GameState{};
 	auto library_cat = globals::logger->create_category("Library",
 		*enum_cast<Logger::Level>(globals::config->get_entry<string>("logging", "library")));
-	state.library = make_shared<bms::Library>(library_cat, LibraryDBPath);
+	state.library = make_shared<bms::Library>(library_cat, *globals::bg_pool, LibraryDBPath);
 	state.requested = State::Select;
 
 	while (!window.is_closing()) {
@@ -277,7 +284,7 @@ static void run_render(Broadcaster& broadcaster, dev::Window& window, Logger::Ca
 				});
 			}
 			state.context.emplace<SelectContext>();
-			state.select_context().library_reload_result = launch_pollable(
+			state.select_context().library_reload_result = pollable_fg(
 				[](shared_ptr<bms::Library> library) -> task<vector<bms::Library::ChartEntry>> {
 					co_return co_await library->list_charts();
 				}(state.library));
@@ -311,7 +318,7 @@ static void run_render(Broadcaster& broadcaster, dev::Window& window, Logger::Ca
 		if (state.current == State::Select) {
 			auto& context = state.select_context();
 			if (state.library->is_dirty() && !context.library_reload_result) {
-				state.select_context().library_reload_result = launch_pollable(
+				state.select_context().library_reload_result = pollable_fg(
 					[](shared_ptr<bms::Library> library) -> task<vector<bms::Library::ChartEntry>> {
 						co_return co_await library->list_charts();
 					}(state.library));

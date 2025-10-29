@@ -26,10 +26,12 @@ public:
 	explicit Song(Logger::Category, ReadFile&&);
 
 	// Convert from a Source.
-	static auto from_source(Logger::Category, Source const&, fs::path const& dst) -> task<Song>;
+	static auto from_source(Logger::Category, unique_ptr<thread_pool>&,
+		Source const&, fs::path const& dst) -> task<Song>;
 
 	// Convert from a Source, using an existing songzip as base.
-	static auto from_source_append(Logger::Category, ReadFile&& src, Source const& ext, fs::path const& dst) -> task<Song>;
+	static auto from_source_append(Logger::Category, unique_ptr<thread_pool>&,
+		ReadFile&& src, Source const& ext, fs::path const& dst) -> task<Song>;
 
 	// Call the provided function for each chart of the song.
 	template<callable<void(string_view, span<byte const>)> Func>
@@ -40,7 +42,7 @@ public:
 
 	// Preload all audio files to an internal cache. This cache will be used in any later load_audio_file() calls.
 	// The loads are performed in parallel. Useful when loading multiple charts of the same song.
-	auto preload_audio_files(isize sampling_rate) -> task<>;
+	auto preload_audio_files(unique_ptr<thread_pool>&, isize sampling_rate) -> task<>;
 
 	// Load the requested audio file, decode it, and resample to current device sample rate.
 	auto load_audio_file(string_view filepath, isize sampling_rate) -> vector<dev::Sample>;
@@ -90,8 +92,8 @@ private:
 	unordered_map<string, vector<dev::Sample>, string_hash> audio_cache;
 
 	template<callable<bool(fs::path const&)> Func>
-	static auto optimize_files(Logger::Category, Source const&, Func&& filter) ->
-		task<unordered_map<fs::path, pair<fs::path, vector<byte>>>>;
+	static auto optimize_files(Logger::Category, unique_ptr<thread_pool>&, Source const&,
+		Func&& filter) -> task<unordered_map<fs::path, pair<fs::path, vector<byte>>>>;
 	static auto optimize_audio(Logger::Category, fs::path path, vector<byte> data) ->
 		task<pair<fs::path, vector<byte>>>;
 	[[nodiscard]] static auto type_from_path(fs::path const&) -> FileType;
@@ -120,10 +122,11 @@ inline Song::Song(Logger::Category cat, ReadFile&& file):
 	});
 }
 
-inline auto Song::from_source(Logger::Category cat, Source const& src, fs::path const& dst) -> task<Song>
+inline auto Song::from_source(Logger::Category cat, unique_ptr<thread_pool>& pool,
+	Source const& src, fs::path const& dst) -> task<Song>
 {
 	auto ar = lib::archive::open_write(dst);
-	auto optimized_files = co_await optimize_files(cat, src, [](auto const&) { return true; });
+	auto optimized_files = co_await optimize_files(cat, pool, src, [](auto const&) { return true; });
 
 	auto wrote_something = false;
 	src.for_each_file([&](auto ref) {
@@ -147,7 +150,8 @@ inline auto Song::from_source(Logger::Category cat, Source const& src, fs::path 
 	co_return Song{cat, read_file(dst)};
 }
 
-inline auto Song::from_source_append(Logger::Category cat, ReadFile&& src, Source const& ext, fs::path const& dst) -> task<Song>
+inline auto Song::from_source_append(Logger::Category cat, unique_ptr<thread_pool>& pool,
+	ReadFile&& src, Source const& ext, fs::path const& dst) -> task<Song>
 {
 	auto ar = lib::archive::open_write(dst);
 	auto written_paths = unordered_set<string>{};
@@ -162,7 +166,7 @@ inline auto Song::from_source_append(Logger::Category cat, ReadFile&& src, Sourc
 		return true;
 	});
 
-	auto optimized_files = co_await optimize_files(cat, ext, [&](auto const& path) {
+	auto optimized_files = co_await optimize_files(cat, pool, ext, [&](auto const& path) {
 		return !written_paths.contains(path.string());
 	});
 
@@ -205,7 +209,7 @@ inline auto Song::load_file(string_view filepath) -> span<byte const>
 	return file;
 }
 
-inline auto Song::preload_audio_files(isize sampling_rate) -> task<>
+inline auto Song::preload_audio_files(unique_ptr<thread_pool>& pool, isize sampling_rate) -> task<>
 {
 	auto tasks = vector<task<vector<dev::Sample>>>{};
 	auto paths = vector<string>{};
@@ -214,7 +218,7 @@ inline auto Song::preload_audio_files(isize sampling_rate) -> task<>
 		auto filepath_low = string{filepath};
 		to_lower(filepath_low);
 		auto file = span{static_cast<byte const*>(ptr), static_cast<usize>(size)};
-		tasks.emplace_back(schedule_task([](Logger::Category cat, span<byte const> file, isize sampling_rate) -> task<vector<dev::Sample>> {
+		tasks.emplace_back(schedule_task_on(pool, [](Logger::Category cat, span<byte const> file, isize sampling_rate) -> task<vector<dev::Sample>> {
 			lib::ffmpeg::set_thread_log_category(cat);
 			co_return lib::ffmpeg::decode_and_resample_file_buffer(file, sampling_rate);
 		}(cat, file, sampling_rate)));
@@ -259,8 +263,8 @@ inline void Song::remove() && noexcept
 }
 
 template<callable<bool(fs::path const&)> Func>
-auto Song::optimize_files(Logger::Category cat, Source const& src, Func&& filter) ->
-	task<unordered_map<fs::path, pair<fs::path, vector<byte>>>>
+auto Song::optimize_files(Logger::Category cat, unique_ptr<thread_pool>& pool, Source const& src,
+	Func&& filter) -> task<unordered_map<fs::path, pair<fs::path, vector<byte>>>>
 {
 	// when_all requires an ordered container
 	auto optimize_tasks = vector<task<pair<fs::path, vector<byte>>>>{};
@@ -271,7 +275,7 @@ auto Song::optimize_files(Logger::Category cat, Source const& src, Func&& filter
 		if (!has_extension(path, WastefulAudioExtensions)) return true;
 		auto data = ref.read_owned();
 		optimized_paths.emplace_back(path);
-		optimize_tasks.emplace_back(schedule_task(optimize_audio(cat, move(path), move(data))));
+		optimize_tasks.emplace_back(schedule_task_on(pool, optimize_audio(cat, move(path), move(data))));
 		return true;
 	});
 	auto optimize_results = co_await when_all(move(optimize_tasks));

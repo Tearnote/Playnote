@@ -39,7 +39,8 @@ public:
 	};
 
 	// Open an existing library, or create an empty one at the provided path.
-	Library(Logger::Category, fs::path const&);
+	// The thread pool passed in will be used for import jobs.
+	Library(Logger::Category, unique_ptr<thread_pool>&, fs::path const&);
 	~Library();
 
 	// Import a song and all its charts into the library. Returns instantly; the import happens in the background.
@@ -77,7 +78,7 @@ public:
 	void reset_import_stats();
 
 	// Load a chart from the library.
-	auto load_chart(MD5) -> task<shared_ptr<Chart const>>;
+	auto load_chart(unique_ptr<thread_pool>&, MD5) -> task<shared_ptr<Chart const>>;
 
 	Library(Library const&) = delete;
 	auto operator=(Library const&) -> Library& = delete;
@@ -234,6 +235,7 @@ private:
 	};
 
 	Logger::Category cat;
+	unique_ptr<thread_pool>& pool;
 
 	lib::sqlite::DB db;
 	task_container import_tasks;
@@ -251,10 +253,11 @@ private:
 	auto deduplicate_previews(isize song_id, span<MD5 const> new_charts) -> task<isize>;
 };
 
-inline Library::Library(Logger::Category cat, fs::path const& path):
+inline Library::Library(Logger::Category cat, unique_ptr<thread_pool>& pool, fs::path const& path):
 	cat{cat},
+	pool{pool},
 	db{lib::sqlite::open(path)},
-	import_tasks{*globals::task_pool}
+	import_tasks{pool}
 {
 	lib::sqlite::execute(db, SongsSchema);
 	lib::sqlite::execute(db, ChartsSchema);
@@ -301,7 +304,7 @@ inline void Library::reset_import_stats()
 	import_stats.charts_failed.store(0);
 }
 
-inline auto Library::load_chart(MD5 md5) -> task<shared_ptr<Chart const>>
+inline auto Library::load_chart(unique_ptr<thread_pool>& pool, MD5 md5) -> task<shared_ptr<Chart const>>
 {
 	auto cache = optional<Metadata>{nullopt};
 	auto song_path = fs::path{};
@@ -364,7 +367,7 @@ inline auto Library::load_chart(MD5 md5) -> task<shared_ptr<Chart const>>
 	auto song = io::Song(cat, io::read_file(song_path));
 	auto chart_raw = song.load_file(chart_path);
 	auto builder = Builder{cat};
-	co_return co_await builder.build(chart_raw, song, globals::mixer->get_audio().get_sampling_rate(), *cache);
+	co_return co_await builder.build(pool, chart_raw, song, globals::mixer->get_audio().get_sampling_rate(), *cache);
 }
 
 inline auto Library::find_available_song_filename(string_view name) -> string
@@ -385,13 +388,13 @@ inline auto Library::import_many(fs::path path) -> task<>
 {
 	if (fs::is_regular_file(path)) {
 		import_stats.songs_total.fetch_add(1);
-		co_await schedule_task(import_one(path));
+		co_await schedule_task_on(pool, import_one(path));
 	} else if (fs::is_directory(path)) {
 		auto contents = vector<fs::directory_entry>{};
 		copy(fs::directory_iterator{path}, back_inserter(contents));
 		if (any_of(contents, [&](auto const& entry) { return fs::is_regular_file(entry) && io::has_extension(entry, io::BMSExtensions); })) {
 			import_stats.songs_total.fetch_add(1);
-			co_await schedule_task(import_one(path));
+			co_await schedule_task_on(pool, import_one(path));
 		} else {
 			for (auto const& entry: contents) import_tasks.start(import_many(entry));
 		}
@@ -475,7 +478,7 @@ inline auto Library::import_one(fs::path path) -> task<>
 			auto tmp_path = existing_song_path;
 			tmp_path.concat(".tmp");
 			auto deleter = io::FileDeleter{tmp_path};
-			song = co_await io::Song::from_source_append(cat, io::read_file(existing_song_path), source, tmp_path);
+			song = co_await io::Song::from_source_append(cat, pool, io::read_file(existing_song_path), source, tmp_path);
 
 			fs::rename(tmp_path, existing_song_path);
 			deleter.disarm();
@@ -483,19 +486,19 @@ inline auto Library::import_one(fs::path path) -> task<>
 			// New song
 			auto const out_path = fs::path{LibraryPath} / song_filename;
 			auto deleter = io::FileDeleter{out_path};
-			song = co_await io::Song::from_source(cat, source, out_path);
+			song = co_await io::Song::from_source(cat, pool, source, out_path);
 			deleter.disarm();
 		}
 
 		// Prepare song for chart imports
-		co_await song->preload_audio_files(48000);
+		co_await song->preload_audio_files(pool, 48000);
 		INFO_AS(cat, "Song \"{}\" files processed successfully", path);
 
 		// Start chart imports
 		auto chart_import_tasks = vector<task<MD5>>{};
 		auto chart_paths = vector<string>{};
 		song->for_each_chart([&](auto path, auto chart) {
-			chart_import_tasks.emplace_back(schedule_task(import_chart(*song, song_id, string{path}, chart)));
+			chart_import_tasks.emplace_back(schedule_task_on(pool, import_chart(*song, song_id, string{path}, chart)));
 			chart_paths.emplace_back(path);
 		});
 		auto results = co_await when_all(move(chart_import_tasks));
@@ -558,7 +561,7 @@ inline auto Library::import_chart(io::Song& song, isize song_id, string chart_pa
 	auto builder_cat = globals::logger->create_string_logger(lib::openssl::md5_to_hex(md5));
 	INFO_AS(builder_cat, "Importing chart \"{}\"", chart_path);
 	auto builder = Builder{builder_cat};
-	auto chart = co_await builder.build(chart_raw, song, 48000);
+	auto chart = co_await builder.build(pool, chart_raw, song, 48000);
 	auto encoded_preview = lib::ffmpeg::encode_as_opus(chart->media.preview, 48000);
 
     lib::sqlite::transaction(db, [&] {

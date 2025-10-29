@@ -32,7 +32,7 @@ public:
 
 	// Build a chart from BMS data. The song must contain audio/video resources referenced by the chart.
 	// Optionally, the metadata cache speeds up loading by skipping expensive steps.
-	auto build(span<byte const> bms, io::Song&, isize sampling_rate,
+	auto build(unique_ptr<thread_pool>&, span<byte const> bms, io::Song&, isize sampling_rate,
 		optional<reference_wrapper<Metadata>> cache = nullopt) -> task<shared_ptr<Chart const>>;
 
 private:
@@ -313,7 +313,7 @@ inline Builder::Builder(Logger::Category cat):
 	channel_handlers.emplace("A6" /* Play option         */, &Builder::handle_channel_ignored_log);
 }
 
-inline auto Builder::build(span<byte const> bms_raw, io::Song& song, isize sampling_rate,
+inline auto Builder::build(unique_ptr<thread_pool>& pool, span<byte const> bms_raw, io::Song& song, isize sampling_rate,
 	optional<reference_wrapper<Metadata>> cache) -> task<shared_ptr<Chart const>>
 {
 	auto chart = make_shared<Chart>();
@@ -377,7 +377,7 @@ inline auto Builder::build(span<byte const> bms_raw, io::Song& song, isize sampl
 	for (auto const& parsed_slot: parse_state.wav | views::values) {
 		if (!parsed_slot.used) continue;
 		auto& slot = chart->media.wav_slots[parsed_slot.idx];
-		tasks.emplace_back(schedule_task([](io::Song& song, vector<dev::Sample>& slot, string filename, isize sampling_rate) -> task<> {
+		tasks.emplace_back(schedule_task_on(pool, [](io::Song& song, vector<dev::Sample>& slot, string filename, isize sampling_rate) -> task<> {
 			try {
 				slot = song.load_audio_file(filename, sampling_rate);
 			} catch (...) {} // If audio failed to load, slot will just stay empty
