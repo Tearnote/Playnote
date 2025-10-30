@@ -1,0 +1,60 @@
+/*
+Copyright (c) 2025 Tearnote (Hubert Maraszek)
+
+Licensed under the Mozilla Public License Version 2.0 <LICENSE-MPL-2.0.txt
+or https://www.mozilla.org/en-US/MPL/2.0/> or the Boost Software License <LICENSE-BSL-1.0.txt
+or https://www.boost.org/LICENSE_1_0.txt>, at your option. This file may not be copied, modified,
+or distributed except according to those terms.
+*/
+
+#version 460
+#pragma shader_stage(compute)
+#extension GL_EXT_shader_image_load_formatted: enable
+
+layout(local_size_x = 16, local_size_y = 16) in;
+
+struct Circle {
+    vec2 pos;
+    float radius;
+    float _pad0;
+    vec4 color;
+};
+
+layout(binding = 0, std430) restrict readonly buffer Circles {
+    Circle b_circles[];
+};
+layout(binding = 1) restrict uniform image2D i_target;
+
+layout(push_constant) uniform push_constants {
+    uint circle_count;
+} C;
+
+layout(constant_id = 0) const uint ViewportWidth = 0;
+layout(constant_id = 1) const uint ViewportHeight = 0;
+const uvec2 ViewportSize = uvec2(ViewportWidth, ViewportHeight);
+
+float circle_sdf(vec2 p, float radius)
+{
+    return length(p) - radius;
+}
+
+vec4 blend(vec4 target, vec4 color)
+{
+    return mix(target, color, color.a);
+}
+
+void main()
+{
+    uvec2 gid = gl_GlobalInvocationID.xy;
+    if (any(greaterThanEqual(gid, ViewportSize))) return;
+
+    vec4 color = imageLoad(i_target, ivec2(gid));
+    for (int i = 0; i < C.circle_count; i += 1) {
+        Circle circle = b_circles[i];
+        float dist = circle_sdf(vec2(gid) - circle.pos, circle.radius);
+        if (dist < 0.0) {
+            color = blend(color, circle.color);
+        }
+    }
+    imageStore(i_target, ivec2(gid), color);
+}

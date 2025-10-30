@@ -164,7 +164,7 @@ static void show_results(bms::Score const& score)
 	lib::imgui::text(" Rank: {}", enum_name(score.get_rank()));
 }
 
-static void render_select(gfx::Renderer::Queue&, GameState& state)
+static void render_select(gfx::Renderer::Queue& queue, GameState& state)
 {
 	auto& context = state.select_context();
 	lib::imgui::begin_window("library", {8, 8}, 800, lib::imgui::WindowStyle::Static);
@@ -188,6 +188,27 @@ static void render_select(gfx::Renderer::Queue&, GameState& state)
 		lib::imgui::text("Loading...");
 		lib::imgui::end_window();
 	}
+
+	queue.add_circle(gfx::Renderer::Circle{
+		.pos = {20.0f, 40.0f},
+		.radius = 5.0f,
+		.color = {1.0f, 1.0f, 1.0f, 1.0f},
+	});
+	queue.add_circle(gfx::Renderer::Circle{
+		.pos = {200.0f, 200.0f},
+		.radius = 20.0f,
+		.color = {1.0f, 0.0f, 0.0f, 1.0f},
+	});
+	queue.add_circle(gfx::Renderer::Circle{
+		.pos = {212.0f, 200.0f},
+		.radius = 20.0f,
+		.color = {0.0f, 1.0f, 0.0f, 1.0f},
+	});
+	queue.add_circle(gfx::Renderer::Circle{
+		.pos = {206.0f, 212.0f},
+		.radius = 20.0f,
+		.color = {0.0f, 0.0f, 1.0f, 0.5f},
+	});
 }
 
 static void render_gameplay(gfx::Renderer::Queue& queue, GameState& state)

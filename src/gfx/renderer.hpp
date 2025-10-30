@@ -14,6 +14,7 @@ or distributed except according to those terms.
 #include "dev/window.hpp"
 #include "dev/gpu.hpp"
 #include "gfx/imgui.hpp"
+#include "vuk/runtime/vk/VkTypes.hpp"
 
 namespace playnote::gfx {
 
@@ -26,11 +27,20 @@ public:
 		vec4 color;
 	};
 
+	struct Circle {
+		vec2 pos;
+		float radius;
+		float _pad0;
+		vec4 color;
+	};
+
 	// An accumulator of primitives to draw.
 	class Queue {
 	public:
 		// Add a solid color rectangle to the draw queue.
 		void enqueue_rect(id layer, Rect rect) { layers[layer].rects.emplace_back(rect); }
+
+		void add_circle(Circle circle) { circles.emplace_back(circle); }
 
 	private:
 		struct Layer {
@@ -39,6 +49,7 @@ public:
 
 		friend Renderer;
 		unordered_map<id, Layer> layers;
+		vector<Circle> circles;
 	};
 
 	explicit Renderer(dev::Window&, Logger::Category);
@@ -54,7 +65,10 @@ private:
 	dev::GPU gpu;
 	Imgui imgui;
 
-	[[nodiscard]] auto draw_rects(lib::vuk::Allocator&, lib::vuk::ManagedImage&&, span<Rect const>) -> lib::vuk::ManagedImage;
+	[[nodiscard]] auto draw_rects(lib::vuk::Allocator&, lib::vuk::ManagedImage&&,
+		span<Rect const>) -> lib::vuk::ManagedImage;
+	[[nodiscard]] auto draw_circles(lib::vuk::Allocator&, lib::vuk::ManagedImage&&,
+		span<Circle const>) -> lib::vuk::ManagedImage;
 };
 
 inline Renderer::Renderer(dev::Window& window, Logger::Category cat):
@@ -62,15 +76,22 @@ inline Renderer::Renderer(dev::Window& window, Logger::Category cat):
 	gpu{window, cat},
 	imgui{gpu}
 {
+	auto& context = gpu.get_global_allocator().get_context();
+
 	constexpr auto rects_vert_src = to_array<uint32>({
 #include "spv/rects.vert.spv"
 	});
 	constexpr auto rects_frag_src = to_array<uint32>({
 #include "spv/rects.frag.spv"
 	});
-	auto& context = gpu.get_global_allocator().get_context();
 	lib::vuk::create_graphics_pipeline(context, "rects", rects_vert_src, rects_frag_src);
 	DEBUG_AS(cat, "Compiled rects pipeline");
+
+	constexpr auto circles_comp_src = to_array<uint32>({
+#include "spv/circles.comp.spv"
+	});
+	lib::vuk::create_compute_pipeline(context, "circles", circles_comp_src);
+	DEBUG_AS(cat, "Compiled circles pipeline");
 
 	INFO_AS(cat, "Renderer initialized");
 }
@@ -86,26 +107,50 @@ void Renderer::frame(initializer_list<id> layer_order, Func&& func)
 
 		for (auto const& layer: layer_order |
 			views::filter([&](auto id) { return queue.layers.contains(id); }) |
-			views::transform([&](auto id) -> Queue::Layer const& { return queue.layers.at(id); })) {
+			views::transform([&](auto id) -> Queue::Layer const& { return queue.layers.at(id); }))
+		{
 			auto result = draw_rects(allocator, move(next), layer.rects);
 			next = move(result);
 		}
+		next = draw_circles(allocator, move(next), queue.circles);
 		return imgui.draw(allocator, move(next));
 	});
 }
 
-inline auto Renderer::draw_rects(lib::vuk::Allocator& allocator, lib::vuk::ManagedImage&& dest, span<Rect const> rects) -> lib::vuk::ManagedImage
+inline auto Renderer::draw_rects(lib::vuk::Allocator& allocator, lib::vuk::ManagedImage&& dest,
+	span<Rect const> rects) -> lib::vuk::ManagedImage
 {
-	auto rects_buf = lib::vuk::create_scratch_buffer(allocator, span{rects});
+	auto rects_buf = lib::vuk::create_scratch_buffer(allocator, rects);
 	auto pass = lib::vuk::make_pass("rects",
 		[window_size = gpu.get_window().size(), window_scale = gpu.get_window().scale(), rects_buf, rects_count = rects.size()]
-		(lib::vuk::CommandBuffer& cmd, VUK_IA(lib::vuk::Access::eColorWrite) target) {
+		(lib::vuk::CommandBuffer& cmd, VUK_IA(lib::vuk::Access::eColorWrite) target)
+	{
 		lib::vuk::set_cmd_defaults(cmd)
 			.bind_graphics_pipeline("rects")
 			.bind_buffer(0, 0, rects_buf)
 			.specialize_constants(0, window_size.x()).specialize_constants(1, window_size.y())
 			.specialize_constants(2, window_scale)
 			.draw(6 * rects_count, 1, 0, 0);
+		return target;
+	});
+	return pass(move(dest));
+}
+
+inline auto Renderer::draw_circles(lib::vuk::Allocator& allocator, lib::vuk::ManagedImage&& dest,
+		span<Circle const> circles) -> lib::vuk::ManagedImage
+{
+	auto circles_buf = lib::vuk::create_scratch_buffer(allocator, circles);
+	auto pass = lib::vuk::make_pass("circles",
+		[window_size = gpu.get_window().size(), circles_buf, circles_count = circles.size()]
+		(lib::vuk::CommandBuffer& cmd, VUK_IA(lib::vuk::Access::eComputeRW) target)
+	{
+		lib::vuk::set_cmd_defaults(cmd)
+			.bind_compute_pipeline("circles")
+			.bind_buffer(0, 0, circles_buf)
+			.bind_image(0, 1, target)
+			.push_constants(lib::vuk::ShaderStageFlagBits::eCompute, 0, static_cast<uint32>(circles_count))
+			.specialize_constants(0, window_size.x()).specialize_constants(1, window_size.y())
+			.dispatch_invocations(window_size.x(), window_size.y(), 1);
 		return target;
 	});
 	return pass(move(dest));
