@@ -38,11 +38,6 @@ float circle_sdf(vec2 p, float radius)
     return length(p) - radius;
 }
 
-vec4 blend(vec4 target, vec4 color)
-{
-    return mix(target, color, color.a);
-}
-
 void main()
 {
     uvec2 gid = gl_GlobalInvocationID.xy;
@@ -52,9 +47,8 @@ void main()
     for (int i = 0; i < C.circle_count; i += 1) {
         Circle circle = b_circles[i];
         float dist = circle_sdf(vec2(gid) - circle.pos, circle.radius);
-        if (dist < 0.0) {
-            color = blend(color, circle.color);
-        }
+        float alpha = clamp(0.5 - dist, 0.0, 1.0);
+        color = mix(color, circle.color, circle.color.a * alpha);
     }
     imageStore(i_target, ivec2(gid), color);
 }
