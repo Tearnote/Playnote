@@ -141,15 +141,23 @@ inline auto Renderer::draw_circles(lib::vuk::Allocator& allocator, lib::vuk::Man
 {
 	auto circles_buf = lib::vuk::create_scratch_buffer(allocator, circles);
 	auto pass = lib::vuk::make_pass("circles",
-		[window_size = gpu.get_window().size(), circles_buf, circles_count = circles.size()]
+		[window_size = gpu.get_window().size(), window_scale = gpu.get_window().scale(), circles_buf, circles_count = circles.size()]
 		(lib::vuk::CommandBuffer& cmd, VUK_IA(lib::vuk::Access::eComputeRW) target)
 	{
+		struct Push {
+			uint32 circles_count;
+			float timer;
+		};
 		lib::vuk::set_cmd_defaults(cmd)
 			.bind_compute_pipeline("circles")
 			.bind_buffer(0, 0, circles_buf)
 			.bind_image(0, 1, target)
-			.push_constants(lib::vuk::ShaderStageFlagBits::eCompute, 0, static_cast<uint32>(circles_count))
+			.push_constants(lib::vuk::ShaderStageFlagBits::eCompute, 0, Push{
+				.circles_count = circles_count,
+				.timer = ratio(globals::glfw->get_time(), 1s),
+			})
 			.specialize_constants(0, window_size.x()).specialize_constants(1, window_size.y())
+			.specialize_constants(2, window_scale)
 			.dispatch_invocations(window_size.x(), window_size.y(), 1);
 		return target;
 	});
