@@ -12,6 +12,7 @@ include(cmake/Dependencies.cmake)
 set(SHADER_DIR_PREFIX src/gpu/)
 set(SHADER_SOURCES
 	circles.comp
+	gamma.comp
 	imgui.vert
 	imgui.frag
 	rects.vert

@@ -69,6 +69,7 @@ private:
 		span<Rect const>) -> lib::vuk::ManagedImage;
 	[[nodiscard]] auto draw_circles(lib::vuk::Allocator&, lib::vuk::ManagedImage&&,
 		span<Circle const>) -> lib::vuk::ManagedImage;
+	[[nodiscard]] auto correct_gamma(lib::vuk::Allocator&, lib::vuk::ManagedImage&&) -> lib::vuk::ManagedImage;
 };
 
 inline Renderer::Renderer(dev::Window& window, Logger::Category cat):
@@ -86,6 +87,12 @@ inline Renderer::Renderer(dev::Window& window, Logger::Category cat):
 	});
 	lib::vuk::create_graphics_pipeline(context, "rects", rects_vert_src, rects_frag_src);
 	DEBUG_AS(cat, "Compiled rects pipeline");
+
+	constexpr auto gamma_comp_src = to_array<uint32>({
+#include "spv/gamma.comp.spv"
+	});
+	lib::vuk::create_compute_pipeline(context, "gamma", gamma_comp_src);
+	DEBUG_AS(cat, "Compiled gamma pipeline");
 
 	constexpr auto circles_comp_src = to_array<uint32>({
 #include "spv/circles.comp.spv"
@@ -113,6 +120,7 @@ void Renderer::frame(initializer_list<id> layer_order, Func&& func)
 			next = move(result);
 		}
 		next = draw_circles(allocator, move(next), queue.circles);
+		next = correct_gamma(allocator, move(next));
 		return imgui.draw(allocator, move(next));
 	});
 }
@@ -158,6 +166,23 @@ inline auto Renderer::draw_circles(lib::vuk::Allocator& allocator, lib::vuk::Man
 			})
 			.specialize_constants(0, window_size.x()).specialize_constants(1, window_size.y())
 			.specialize_constants(2, window_scale)
+			.dispatch_invocations(window_size.x(), window_size.y(), 1);
+		return target;
+	});
+	return pass(move(dest));
+}
+
+inline auto Renderer::correct_gamma(lib::vuk::Allocator& allocator,
+	lib::vuk::ManagedImage&& dest) -> lib::vuk::ManagedImage
+{
+	auto pass = lib::vuk::make_pass("gamma",
+		[window_size = gpu.get_window().size()]
+		(lib::vuk::CommandBuffer& cmd, VUK_IA(lib::vuk::Access::eComputeRW) target)
+	{
+		lib::vuk::set_cmd_defaults(cmd)
+			.bind_compute_pipeline("gamma")
+			.bind_image(0, 0, target)
+			.specialize_constants(0, window_size.x()).specialize_constants(1, window_size.y())
 			.dispatch_invocations(window_size.x(), window_size.y(), 1);
 		return target;
 	});
