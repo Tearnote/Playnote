@@ -27,11 +27,13 @@ public:
 	};
 
 	struct Circle {
-		vec2 pos;
-		float radius;
-		float _pad0;
+		vec2 position;
+		vec2 velocity;
 		vec4 color;
+		float radius;
+		float _pad0[3];
 	};
+	static_assert(alignof(Circle) == sizeof(float));
 
 	// An accumulator of primitives to draw.
 	class Queue {

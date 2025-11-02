@@ -190,24 +190,22 @@ static void render_select(gfx::Renderer::Queue& queue, GameState& state)
 	}
 
 	queue.add_circle(gfx::Renderer::Circle{
-		.pos = {20.0f, 40.0f},
-		.radius = 5.0f,
-		.color = {1.0f, 1.0f, 1.0f, 1.0f},
-	});
-	queue.add_circle(gfx::Renderer::Circle{
-		.pos = {200.0f, 200.0f},
-		.radius = 20.0f,
+		.position = {200.0f, 200.0f},
+		.velocity = {0.01f, 0.01f},
 		.color = {1.0f, 0.0f, 0.0f, 1.0f},
+		.radius = 20.0f,
 	});
 	queue.add_circle(gfx::Renderer::Circle{
-		.pos = {212.0f, 200.0f},
-		.radius = 20.0f,
+		.position = {212.0f, 200.0f},
+		.velocity = {0.0f, 0.0f},
 		.color = {0.0f, 1.0f, 0.0f, 1.0f},
+		.radius = 20.0f,
 	});
 	queue.add_circle(gfx::Renderer::Circle{
-		.pos = {206.0f, 212.0f},
-		.radius = 20.0f,
+		.position = {206.0f, 212.0f},
+		.velocity = {0.0f, 0.0f},
 		.color = {0.0f, 0.0f, 1.0f, 0.5f},
+		.radius = 20.0f,
 	});
 }
 
