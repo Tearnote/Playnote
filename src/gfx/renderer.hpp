@@ -14,7 +14,6 @@ or distributed except according to those terms.
 #include "dev/window.hpp"
 #include "dev/gpu.hpp"
 #include "gfx/imgui.hpp"
-#include "vuk/runtime/vk/VkTypes.hpp"
 
 namespace playnote::gfx {
 
@@ -38,9 +37,9 @@ public:
 	class Queue {
 	public:
 		// Add a solid color rectangle to the draw queue.
-		void enqueue_rect(id layer, Rect rect) { layers[layer].rects.emplace_back(rect); }
+		void enqueue_rect(id layer, Rect);
 
-		void add_circle(Circle circle) { circles.emplace_back(circle); }
+		void add_circle(Circle);
 
 	private:
 		struct Layer {
@@ -71,6 +70,26 @@ private:
 		span<Circle const>) -> lib::vuk::ManagedImage;
 	[[nodiscard]] auto correct_gamma(lib::vuk::Allocator&, lib::vuk::ManagedImage&&) -> lib::vuk::ManagedImage;
 };
+
+inline auto srgb_decode(vec4 color) -> vec4
+{
+	float r = color.r() < 0.04045 ? (1.0 / 12.92) * color.r() : pow((color.r() + 0.055) * (1.0 / 1.055), 2.4);
+	float g = color.g() < 0.04045 ? (1.0 / 12.92) * color.g() : pow((color.g() + 0.055) * (1.0 / 1.055), 2.4);
+	float b = color.b() < 0.04045 ? (1.0 / 12.92) * color.b() : pow((color.b() + 0.055) * (1.0 / 1.055), 2.4);
+	return {r, g, b, color.a()};
+}
+
+inline void Renderer::Queue::enqueue_rect(id layer, Rect rect)
+{
+	rect.color = srgb_decode(rect.color);
+	 layers[layer].rects.emplace_back(rect);
+}
+
+inline void Renderer::Queue::add_circle(Circle circle)
+{
+	circle.color = srgb_decode(circle.color);
+	circles.emplace_back(circle);
+}
 
 inline Renderer::Renderer(dev::Window& window, Logger::Category cat):
 	cat{cat},
