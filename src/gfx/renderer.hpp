@@ -37,9 +37,9 @@ public:
 	class Queue {
 	public:
 		// Add a solid color rectangle to the draw queue.
-		void enqueue_rect(id layer, Rect);
+		auto enqueue_rect(id layer, Rect) -> Queue&;
 
-		void add_circle(Circle);
+		auto add_circle(Circle) -> Queue&;
 
 	private:
 		struct Layer {
@@ -79,16 +79,18 @@ inline auto srgb_decode(vec4 color) -> vec4
 	return {r, g, b, color.a()};
 }
 
-inline void Renderer::Queue::enqueue_rect(id layer, Rect rect)
+inline auto Renderer::Queue::enqueue_rect(id layer, Rect rect) -> Queue&
 {
 	rect.color = srgb_decode(rect.color);
-	 layers[layer].rects.emplace_back(rect);
+	layers[layer].rects.emplace_back(rect);
+	return *this;
 }
 
-inline void Renderer::Queue::add_circle(Circle circle)
+inline auto Renderer::Queue::add_circle(Circle circle) -> Queue&
 {
 	circle.color = srgb_decode(circle.color);
 	circles.emplace_back(circle);
+	return *this;
 }
 
 inline Renderer::Renderer(dev::Window& window, Logger::Category cat):
