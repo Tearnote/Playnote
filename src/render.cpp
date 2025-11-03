@@ -19,7 +19,6 @@ except according to those terms.
 #include "gfx/playfield.hpp"
 #include "gfx/renderer.hpp"
 #include "audio/player.hpp"
-#include "audio/mixer.hpp"
 #include "bms/library.hpp"
 #include "bms/cursor.hpp"
 #include "bms/mapper.hpp"

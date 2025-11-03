@@ -54,7 +54,7 @@ auto create_instance(string_view name, Logger::Category debug_logger) -> Instanc
 	auto instance_builder = vkb::InstanceBuilder{}
 		.set_app_name(string{name}.c_str())
 		.set_engine_name("vuk")
-		.require_api_version(1, 2, 0)
+		.require_api_version(1, 3, 0)
 		.set_app_version(AppVersion[0], AppVersion[1], AppVersion[2]);
 	if (globals::config->get_entry<bool>("vulkan", "validation_enabled")) {
 		instance_builder
@@ -137,7 +137,7 @@ auto select_physical_device(Instance const& instance, Surface surface) -> Physic
 
 	auto physical_device_selector = vkb::PhysicalDeviceSelector{*instance}
 		.set_surface(surface)
-		.set_minimum_version(1, 2) // vuk requirement
+		.set_minimum_version(1, 3)
 		.set_required_features(features)
 		.set_required_features_11(vulkan11_features)
 		.set_required_features_12(vulkan12_features)
