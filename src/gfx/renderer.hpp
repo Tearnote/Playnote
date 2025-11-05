@@ -102,19 +102,12 @@ inline Renderer::Renderer(dev::Window& window, Logger::Category cat):
 {
 	auto& context = gpu.get_global_allocator().get_context();
 
-	constexpr auto rects_vert_src = to_array<uint32>({
-#include "spv/rects.vert.spv"
-	});
-	constexpr auto rects_frag_src = to_array<uint32>({
-#include "spv/rects.frag.spv"
-	});
-	lib::vuk::create_graphics_pipeline(context, "rects", rects_vert_src, rects_frag_src);
+#include "spv/rects.slang.spv.h"
+	lib::vuk::create_graphics_pipeline(context, "rects", rects_spv);
 	DEBUG_AS(cat, "Compiled rects pipeline");
 
-	constexpr auto gamma_comp_src = to_array<uint32>({
-#include "spv/gamma.comp.spv"
-	});
-	lib::vuk::create_compute_pipeline(context, "gamma", gamma_comp_src);
+#include "spv/gamma.slang.spv.h"
+	lib::vuk::create_compute_pipeline(context, "gamma", gamma_spv, "computeMain");
 	DEBUG_AS(cat, "Compiled gamma pipeline");
 
 	constexpr auto circles_comp_src = to_array<uint32>({
@@ -142,7 +135,8 @@ void Renderer::frame(initializer_list<id> layer_order, Func&& func)
 			auto result = draw_rects(allocator, move(next), layer.rects);
 			next = move(result);
 		}
-		next = draw_circles(allocator, move(next), queue.circles);
+		if (!queue.circles.empty())
+			next = draw_circles(allocator, move(next), queue.circles);
 		next = correct_gamma(allocator, move(next));
 		return imgui.draw(allocator, move(next));
 	});

@@ -86,8 +86,8 @@ set(VUK_USE_SHADERC OFF CACHE BOOL "" FORCE)
 set(VUK_EXTRA_IMGUI OFF CACHE BOOL "" FORCE)
 set(VUK_EXTRA_INIT OFF CACHE BOOL "" FORCE)
 FetchContent_Declare(vuk # Vulkan rendergraph
-	GIT_REPOSITORY https://github.com/Tearnote/vuk
-	GIT_TAG f24c0316ad0a1eaa27685cec9fbef34273bc68be
+	GIT_REPOSITORY https://github.com/martty/vuk
+	GIT_TAG 8afb4cf239b6f9e8b268f97eaa8cf1da5468ddd2
 )
 FetchContent_MakeAvailable(vuk)
 if(UNIX)

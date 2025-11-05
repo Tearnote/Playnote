@@ -13,14 +13,12 @@ include(cmake/FetchSlang.cmake)
 set(SHADER_DIR_PREFIX src/gpu/)
 set(GLSL_SHADER_SOURCES
 	circles.comp
-	gamma.comp
 	imgui.vert
 	imgui.frag
-	rects.vert
-	rects.frag
 )
 set(SHADER_SOURCES
-	test.slang
+	gamma.slang
+	rects.slang
 )
 
 if(WIN32)
@@ -52,7 +50,7 @@ foreach(SHADER_PATH ${SHADER_SOURCES})
 	add_custom_command(
 		OUTPUT ${SHADER_OUTPUT}
 		COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/$<CONFIG>/generated/spv/${SHADER_DIR}
-		COMMAND ${SLANGC_EXECUTABLE} -target spirv -source-embed-style u32 -source-embed-name ${SHADER_ID}_spv $<$<CONFIG:Debug,RelWithDebInfo>:-g> -depfile ${SHADER_OUTPUT}.d -o ${SHADER_OUTPUT} ${PROJECT_SOURCE_DIR}/${SHADER_DIR_PREFIX}${SHADER_PATH}
+		COMMAND ${SLANGC_EXECUTABLE} -target spirv -capability vk_mem_model -fvk-use-entrypoint-name -source-embed-style u32 -source-embed-name ${SHADER_ID}_spv $<$<CONFIG:Debug,RelWithDebInfo>:-g> -depfile ${SHADER_OUTPUT}.d -o ${SHADER_OUTPUT} ${PROJECT_SOURCE_DIR}/${SHADER_DIR_PREFIX}${SHADER_PATH}
 		DEPENDS ${SHADER_DIR_PREFIX}${SHADER_PATH}
 		DEPFILE ${SHADER_OUTPUT}.d
 		VERBATIM COMMAND_EXPAND_LISTS

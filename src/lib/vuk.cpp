@@ -150,11 +150,20 @@ void create_graphics_pipeline(Runtime& runtime, string_view name, span<uint32 co
 	runtime.create_named_pipeline(name, pci);
 }
 
-void create_compute_pipeline(Runtime& runtime, string_view name, span<uint32 const> shader)
+void create_graphics_pipeline(Runtime& runtime, string_view name, span<uint32 const> shader)
+{
+	auto const shader_name = format("{}.slang", name);
+	auto pci = PipelineBaseCreateInfo{};
+	pci.add_static_spirv(shader.data(), shader.size(), shader_name, "vertexMain");
+	pci.add_static_spirv(shader.data(), shader.size(), move(shader_name), "fragmentMain");
+	runtime.create_named_pipeline(name, pci);
+}
+
+void create_compute_pipeline(Runtime& runtime, string_view name, span<uint32 const> shader, string_view entrypoint)
 {
 	auto const comp_name = format("{}.comp", name);
 	auto pci = PipelineBaseCreateInfo{};
-	pci.add_static_spirv(shader.data(), shader.size(), move(comp_name));
+	pci.add_static_spirv(shader.data(), shader.size(), move(comp_name), string{entrypoint});
 	runtime.create_named_pipeline(name, pci);
 }
 
