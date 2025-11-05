@@ -87,7 +87,7 @@ set(VUK_EXTRA_IMGUI OFF CACHE BOOL "" FORCE)
 set(VUK_EXTRA_INIT OFF CACHE BOOL "" FORCE)
 FetchContent_Declare(vuk # Vulkan rendergraph
 	GIT_REPOSITORY https://github.com/martty/vuk
-	GIT_TAG 8afb4cf239b6f9e8b268f97eaa8cf1da5468ddd2
+	GIT_TAG f3af1ba601532f93f07dcef49f25d9469e4cd1f6
 )
 FetchContent_MakeAvailable(vuk)
 if(UNIX)

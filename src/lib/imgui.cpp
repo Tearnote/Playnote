@@ -87,14 +87,13 @@ auto init(glfw::Window window, vuk::Allocator& global_allocator) -> Context
 	imgui_ctx->font_ia.layout = vuk::ImageLayout::eReadOnlyOptimal;
 	ctx.set_name(imgui_ctx->font_image_view->payload, "ImGui/font");
 
-	constexpr auto imgui_vert_src = to_array<uint32>({
-#include "spv/imgui.vert.spv"
-	});
-	constexpr auto imgui_frag_src = to_array<uint32>({
-#include "spv/imgui.frag.spv"
-	});
-	vuk::create_graphics_pipeline(ctx, "imgui", imgui_vert_src, imgui_frag_src);
-
+#include "spv/imgui.slang.spv.h"
+	vuk::create_graphics_pipeline(ctx, "imgui", imgui_spv);
+/*
+#include "spv/imgui.vert.slang.spv.h"
+#include "spv/imgui.frag.slang.spv.h"
+	vuk::create_graphics_pipeline(ctx, "imgui", imgui_vert_spv, imgui_frag_spv);
+*/
 	return imgui_ctx;
 }
 

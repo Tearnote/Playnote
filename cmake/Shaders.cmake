@@ -13,12 +13,11 @@ include(cmake/FetchSlang.cmake)
 set(SHADER_DIR_PREFIX src/gpu/)
 set(GLSL_SHADER_SOURCES
 	circles.comp
-	imgui.vert
-	imgui.frag
 )
 set(SHADER_SOURCES
 	gamma.slang
 	rects.slang
+	imgui.slang
 )
 
 if(WIN32)
