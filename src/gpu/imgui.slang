@@ -9,7 +9,7 @@ or distributed except according to those terms.
 
 #language slang 2026
 
-Sampler2D s_font;
+Sampler2D<float4> s_font;
 
 struct VertexIn {
 	float2 position;

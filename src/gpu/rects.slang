@@ -15,10 +15,10 @@ struct Rect {
     float4 color;
 };
 
-[SpecializationConstant] const uint ViewportWidth = 0;
-[SpecializationConstant] const uint ViewportHeight = 0;
-[SpecializationConstant] const float WindowScale = 0.0;
-static const uint2 ViewportSize = {ViewportWidth, ViewportHeight};
+[SpecializationConstant] let ViewportWidth = 0u;
+[SpecializationConstant] let ViewportHeight = 0u;
+[SpecializationConstant] let WindowScale = 0.0;
+static let ViewportSize = uint2(ViewportWidth, ViewportHeight);
 
 StructuredBuffer<Rect> b_rects;
 
@@ -30,12 +30,12 @@ struct VertexOut {
 [shader("vertex")]
 VertexOut vertexMain(uint vertexID: SV_VertexID)
 {
-    uint instance = vertexID / 6;
-    uint vertex = vertexID % 6;
+    let instance = vertexID / 6;
+    let vertex = vertexID % 6;
 
-    Rect rect = b_rects[instance];
+    let rect = b_rects[instance];
 
-    float2 offset;
+    var offset = float2(0.0);
     switch (vertex) {
         case 0:
         offset = {0, 0};
@@ -56,7 +56,7 @@ VertexOut vertexMain(uint vertexID: SV_VertexID)
         offset = {1, 1};
         break;
     }
-    float2 pos = rect.pos + rect.size * offset;
+    var pos = rect.pos + rect.size * offset;
     pos *= WindowScale;
     pos += 0.5; // Center the vertex on the pixel
     pos /= ViewportSize; // from 0.0 to 1.0

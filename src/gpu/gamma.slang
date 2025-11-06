@@ -9,10 +9,10 @@ or distributed except according to those terms.
 
 #language slang 2026
 
-RWTexture2D t_target;
+RWTexture2D<float4> t_target;
 
-[SpecializationConstant] const uint ViewportWidth = 0;
-[SpecializationConstant] const uint ViewportHeight = 0;
+[SpecializationConstant] let ViewportWidth = 0u;
+[SpecializationConstant] let ViewportHeight = 0u;
 static let ViewportSize = uint2(ViewportWidth, ViewportHeight);
 
 // http://www.java-gaming.org/topics/fast-srgb-conversion-glsl-snippet/37583/view.html
