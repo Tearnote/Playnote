@@ -9,6 +9,8 @@ or distributed except according to those terms.
 
 #language slang 2026
 
+import lib;
+
 struct Circle {
     float2 position;
     float2 velocity;
@@ -20,41 +22,18 @@ struct Circle {
 StructuredBuffer<Circle> b_circles;
 RWTexture2D<float4> i_target;
 
-static let Pi = 3.14159265359;
 [SpecializationConstant] let ViewportWidth = 0u;
 [SpecializationConstant] let ViewportHeight = 0u;
 [SpecializationConstant] let WindowScale = 0.0;
 static let ViewportSize = uint2(ViewportWidth, ViewportHeight);
 
-func blend(onto: float4, color: float4) -> float4
-{
-    return lerp(onto, color, color.a);
-}
-
-func circle_sdf(p: float2, radius: float) -> float
-{
-    return length(p) - radius;
-}
-
-// Antiderivative of the cosine shutter function
-// https://www.shadertoy.com/view/cdXSRn
-func cos_shutter(t: float) -> float
-{
-    if (t < 0.0) return 0.0;
-    if (t > 1.0) return 1.0;
-    return t - sin(2.0 * Pi * t) / (2.0 * Pi);
-}
-
 func motion_blurred_circle_coverage(p: float2, v: float2, r: float) -> float
 {
-    let a = dot(v, v);
-    if (a < 0.0001) {
-        let dist = length(p) - r;
-        return saturate(0.5 - dist);
-    }
+    let a = dot2(v);
+    if (a < 0.0001) return sdf.aa(sdf.circle(p, r));
 
     let b = -2.0 * dot(p, v);
-    let c = dot(p, p) - r * r;
+    let c = dot2(p) - r * r;
 
     let delta = b * b - 4.0 * a * c;
     if (delta < 0.0) return 0.0;
