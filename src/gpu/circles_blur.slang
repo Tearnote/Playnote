@@ -30,8 +30,7 @@ static let ViewportSize = uint2(ViewportWidth, ViewportHeight);
 func motion_blurred_circle_coverage(p: float2, v: float2, r: float) -> float
 {
     let a = dot2(v);
-    if (a < 0.0001) return sdf.aa(sdf.circle(p, r));
-
+    if (a < 0.001) return sdf::circle(p, r) <= 0.0? 1.0 : 0.0;
     let b = -2.0 * dot(p, v);
     let c = dot2(p) - r * r;
 

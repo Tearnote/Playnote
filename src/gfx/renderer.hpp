@@ -41,7 +41,8 @@ public:
 		// Add a solid color rectangle to the draw queue.
 		auto enqueue_rect(id layer, Rect) -> Queue&;
 
-		auto add_circle(Circle) -> Queue&;
+		auto add_circle_blur(Circle) -> Queue&;
+		auto add_circle_aa(Circle) -> Queue&;
 
 	private:
 		struct Layer {
@@ -50,7 +51,8 @@ public:
 
 		friend Renderer;
 		unordered_map<id, Layer> layers;
-		vector<Circle> circles;
+		vector<Circle> circles_blur;
+		vector<Circle> circles_aa;
 	};
 
 	explicit Renderer(dev::Window&, Logger::Category);
@@ -68,7 +70,9 @@ private:
 
 	[[nodiscard]] auto draw_rects(lib::vuk::Allocator&, lib::vuk::ManagedImage&&,
 		span<Rect const>) -> lib::vuk::ManagedImage;
-	[[nodiscard]] auto draw_circles(lib::vuk::Allocator&, lib::vuk::ManagedImage&&,
+	[[nodiscard]] auto draw_circles_blur(lib::vuk::Allocator&, lib::vuk::ManagedImage&&,
+		span<Circle const>) -> lib::vuk::ManagedImage;
+	[[nodiscard]] auto draw_circles_aa(lib::vuk::Allocator&, lib::vuk::ManagedImage&&,
 		span<Circle const>) -> lib::vuk::ManagedImage;
 	[[nodiscard]] auto correct_gamma(lib::vuk::Allocator&, lib::vuk::ManagedImage&&) -> lib::vuk::ManagedImage;
 };
@@ -88,10 +92,17 @@ inline auto Renderer::Queue::enqueue_rect(id layer, Rect rect) -> Queue&
 	return *this;
 }
 
-inline auto Renderer::Queue::add_circle(Circle circle) -> Queue&
+inline auto Renderer::Queue::add_circle_blur(Circle circle) -> Queue&
 {
 	circle.color = srgb_decode(circle.color);
-	circles.emplace_back(circle);
+	circles_blur.emplace_back(circle);
+	return *this;
+}
+
+inline auto Renderer::Queue::add_circle_aa(Circle circle) -> Queue&
+{
+	circle.color = srgb_decode(circle.color);
+	circles_aa.emplace_back(circle);
 	return *this;
 }
 
@@ -110,8 +121,10 @@ inline Renderer::Renderer(dev::Window& window, Logger::Category cat):
 	lib::vuk::create_compute_pipeline(context, "gamma", gamma_spv);
 	DEBUG_AS(cat, "Compiled gamma pipeline");
 
-#include "spv/circles.slang.spv.h"
-	lib::vuk::create_compute_pipeline(context, "circles", circles_spv);
+#include "spv/circles_blur.slang.spv.h"
+	lib::vuk::create_compute_pipeline(context, "circles_blur", circles_blur_spv);
+#include "spv/circles_aa.slang.spv.h"
+	lib::vuk::create_compute_pipeline(context, "circles_aa", circles_aa_spv);
 	DEBUG_AS(cat, "Compiled circles pipeline");
 
 	INFO_AS(cat, "Renderer initialized");
@@ -133,8 +146,10 @@ void Renderer::frame(initializer_list<id> layer_order, Func&& func)
 			auto result = draw_rects(allocator, move(next), layer.rects);
 			next = move(result);
 		}
-		if (!queue.circles.empty())
-			next = draw_circles(allocator, move(next), queue.circles);
+		if (!queue.circles_blur.empty())
+			next = draw_circles_blur(allocator, move(next), queue.circles_blur);
+		if (!queue.circles_aa.empty())
+			next = draw_circles_aa(allocator, move(next), queue.circles_aa);
 		next = correct_gamma(allocator, move(next));
 		return imgui.draw(allocator, move(next));
 	});
@@ -159,11 +174,11 @@ inline auto Renderer::draw_rects(lib::vuk::Allocator& allocator, lib::vuk::Manag
 	return pass(move(dest));
 }
 
-inline auto Renderer::draw_circles(lib::vuk::Allocator& allocator, lib::vuk::ManagedImage&& dest,
+inline auto Renderer::draw_circles_blur(lib::vuk::Allocator& allocator, lib::vuk::ManagedImage&& dest,
 		span<Circle const> circles) -> lib::vuk::ManagedImage
 {
 	auto circles_buf = lib::vuk::create_scratch_buffer(allocator, circles);
-	auto pass = lib::vuk::make_pass("circles",
+	auto pass = lib::vuk::make_pass("circles_blur",
 		[window_size = gpu.get_window().size(), window_scale = gpu.get_window().scale(), circles_buf, circles_count = circles.size()]
 		(lib::vuk::CommandBuffer& cmd, VUK_IA(lib::vuk::Access::eComputeRW) target)
 	{
@@ -172,7 +187,35 @@ inline auto Renderer::draw_circles(lib::vuk::Allocator& allocator, lib::vuk::Man
 			float timer;
 		};
 		lib::vuk::set_cmd_defaults(cmd)
-			.bind_compute_pipeline("circles")
+			.bind_compute_pipeline("circles_blur")
+			.bind_buffer(0, 0, circles_buf)
+			.bind_image(0, 1, target)
+			.push_constants(lib::vuk::ShaderStageFlagBits::eCompute, 0, Push{
+				.circles_count = circles_count,
+				.timer = ratio(globals::glfw->get_time(), 1s),
+			})
+			.specialize_constants(0, window_size.x()).specialize_constants(1, window_size.y())
+			.specialize_constants(2, window_scale)
+			.dispatch_invocations(window_size.x(), window_size.y(), 1);
+		return target;
+	});
+	return pass(move(dest));
+}
+
+inline auto Renderer::draw_circles_aa(lib::vuk::Allocator& allocator, lib::vuk::ManagedImage&& dest,
+		span<Circle const> circles) -> lib::vuk::ManagedImage
+{
+	auto circles_buf = lib::vuk::create_scratch_buffer(allocator, circles);
+	auto pass = lib::vuk::make_pass("circles_aa",
+		[window_size = gpu.get_window().size(), window_scale = gpu.get_window().scale(), circles_buf, circles_count = circles.size()]
+		(lib::vuk::CommandBuffer& cmd, VUK_IA(lib::vuk::Access::eComputeRW) target)
+	{
+		struct Push {
+			uint32 circles_count;
+			float timer;
+		};
+		lib::vuk::set_cmd_defaults(cmd)
+			.bind_compute_pipeline("circles_aa")
 			.bind_buffer(0, 0, circles_buf)
 			.bind_image(0, 1, target)
 			.push_constants(lib::vuk::ShaderStageFlagBits::eCompute, 0, Push{
