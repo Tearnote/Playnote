@@ -89,14 +89,9 @@ auto init(glfw::Window window, vuk::Allocator& global_allocator) -> Context
 
 #include "spv/imgui.slang.spv.h"
 	vuk::create_graphics_pipeline(ctx, "imgui", imgui_spv);
-/*
-#include "spv/imgui.vert.slang.spv.h"
-#include "spv/imgui.frag.slang.spv.h"
-	vuk::create_graphics_pipeline(ctx, "imgui", imgui_vert_spv, imgui_frag_spv);
-*/
 	return imgui_ctx;
 }
-
+ 
 void begin()
 {
 	ImGui_ImplGlfw_NewFrame();

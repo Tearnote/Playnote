@@ -13,7 +13,7 @@ RWTexture2D t_target;
 
 [SpecializationConstant] const uint ViewportWidth = 0;
 [SpecializationConstant] const uint ViewportHeight = 0;
-static const uint2 ViewportSize = {ViewportWidth, ViewportHeight};
+static let ViewportSize = uint2(ViewportWidth, ViewportHeight);
 
 // http://www.java-gaming.org/topics/fast-srgb-conversion-glsl-snippet/37583/view.html
 func srgbEncode(float3 color) -> float3

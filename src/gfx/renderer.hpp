@@ -107,13 +107,11 @@ inline Renderer::Renderer(dev::Window& window, Logger::Category cat):
 	DEBUG_AS(cat, "Compiled rects pipeline");
 
 #include "spv/gamma.slang.spv.h"
-	lib::vuk::create_compute_pipeline(context, "gamma", gamma_spv, "computeMain");
+	lib::vuk::create_compute_pipeline(context, "gamma", gamma_spv);
 	DEBUG_AS(cat, "Compiled gamma pipeline");
 
-	constexpr auto circles_comp_src = to_array<uint32>({
-#include "spv/circles.comp.spv"
-	});
-	lib::vuk::create_compute_pipeline(context, "circles", circles_comp_src);
+#include "spv/circles.slang.spv.h"
+	lib::vuk::create_compute_pipeline(context, "circles", circles_spv);
 	DEBUG_AS(cat, "Compiled circles pipeline");
 
 	INFO_AS(cat, "Renderer initialized");

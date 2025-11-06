@@ -20,11 +20,8 @@ find_package(SQLite3 REQUIRED) # Local database
 find_package(zstd REQUIRED) # Lossless compression
 if(WIN32)
 	find_package(VulkanHeaders REQUIRED)
-	find_package(unofficial-shaderc REQUIRED)
 else()
-	find_package(Vulkan REQUIRED # GPU API
-		COMPONENTS glslc # Shader compiler
-	)
+	find_package(Vulkan REQUIRED) # GPU API
 endif()
 find_package(ICU REQUIRED # Charset detection and conversion
 	COMPONENTS uc i18n
