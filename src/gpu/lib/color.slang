@@ -17,7 +17,7 @@ public func blend(onto: float4, color: float4) -> float4
     return lerp(onto, color, color.a);
 }
 
-// Encode a linear-space color as sRGB.
+// Encode a linear space color as sRGB.
 // http://www.java-gaming.org/topics/fast-srgb-conversion-glsl-snippet/37583/view.html
 public func srgbEncode(color: float3) -> float3
 {
@@ -25,4 +25,13 @@ public func srgbEncode(color: float3) -> float3
     let g = color.g < 0.0031308 ? 12.92 * color.g : 1.055 * pow(color.g, 1.0 / 2.4) - 0.055;
     let b = color.b < 0.0031308 ? 12.92 * color.b : 1.055 * pow(color.b, 1.0 / 2.4) - 0.055;
     return {r, g, b};
+}
+
+// Decode a color from sRGB to linear space.
+public func srgbDecode(color: float3) -> float3
+{
+	let r = color.r < 0.04045 ? (1.0 / 12.92) * color.r : pow((color.r + 0.055) * (1.0 / 1.055), 2.4);
+	let g = color.g < 0.04045 ? (1.0 / 12.92) * color.g : pow((color.g + 0.055) * (1.0 / 1.055), 2.4);
+	let b = color.b < 0.04045 ? (1.0 / 12.92) * color.b : pow((color.b + 0.055) * (1.0 / 1.055), 2.4);
+	return {r, g, b};
 }

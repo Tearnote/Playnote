@@ -74,7 +74,6 @@ private:
 		span<Circle const>) -> lib::vuk::ManagedImage;
 	[[nodiscard]] auto draw_circles_aa(lib::vuk::Allocator&, lib::vuk::ManagedImage&&,
 		span<Circle const>) -> lib::vuk::ManagedImage;
-	[[nodiscard]] auto correct_gamma(lib::vuk::Allocator&, lib::vuk::ManagedImage&&) -> lib::vuk::ManagedImage;
 };
 
 inline auto srgb_decode(vec4 color) -> vec4
@@ -117,10 +116,6 @@ inline Renderer::Renderer(dev::Window& window, Logger::Category cat):
 	lib::vuk::create_graphics_pipeline(context, "rects", rects_spv);
 	DEBUG_AS(cat, "Compiled rects pipeline");
 
-#include "spv/gamma.slang.spv.h"
-	lib::vuk::create_compute_pipeline(context, "gamma", gamma_spv);
-	DEBUG_AS(cat, "Compiled gamma pipeline");
-
 #include "spv/circles_blur.slang.spv.h"
 	lib::vuk::create_compute_pipeline(context, "circles_blur", circles_blur_spv);
 #include "spv/circles_aa.slang.spv.h"
@@ -150,7 +145,6 @@ void Renderer::frame(initializer_list<id> layer_order, Func&& func)
 			next = draw_circles_blur(allocator, move(next), queue.circles_blur);
 		if (!queue.circles_aa.empty())
 			next = draw_circles_aa(allocator, move(next), queue.circles_aa);
-		next = correct_gamma(allocator, move(next));
 		return imgui.draw(allocator, move(next));
 	});
 }
@@ -224,23 +218,6 @@ inline auto Renderer::draw_circles_aa(lib::vuk::Allocator& allocator, lib::vuk::
 			})
 			.specialize_constants(0, window_size.x()).specialize_constants(1, window_size.y())
 			.specialize_constants(2, window_scale)
-			.dispatch_invocations(window_size.x(), window_size.y(), 1);
-		return target;
-	});
-	return pass(move(dest));
-}
-
-inline auto Renderer::correct_gamma(lib::vuk::Allocator& allocator,
-	lib::vuk::ManagedImage&& dest) -> lib::vuk::ManagedImage
-{
-	auto pass = lib::vuk::make_pass("gamma",
-		[window_size = gpu.get_window().size()]
-		(lib::vuk::CommandBuffer& cmd, VUK_IA(lib::vuk::Access::eComputeRW) target)
-	{
-		lib::vuk::set_cmd_defaults(cmd)
-			.bind_compute_pipeline("gamma")
-			.bind_image(0, 0, target)
-			.specialize_constants(0, window_size.x()).specialize_constants(1, window_size.y())
 			.dispatch_invocations(window_size.x(), window_size.y(), 1);
 		return target;
 	});

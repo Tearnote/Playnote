@@ -9,6 +9,8 @@ or distributed except according to those terms.
 
 #language slang 2026
 
+import lib;
+
 struct Rect {
     int2 pos;
     int2 size;
@@ -71,5 +73,5 @@ VertexOut vertexMain(uint vertexID: SV_VertexID)
 [shader("fragment")]
 float4 fragmentMain(VertexOut in): SV_Target
 {
-	return in.color;
+	return float4(srgbEncode(in.color.rgb), in.color.a);
 }

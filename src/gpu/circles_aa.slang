@@ -42,9 +42,13 @@ void computeMain(uint2 threadId: SV_DispatchThreadID, uniform uint circle_count,
     let self_pos = float2(threadId) + 0.5;
 
     var color = i_target.Load(threadId);
+    color = float4(srgbDecode(color.rgb), color.a);
+
     for (int i = 0; i < circle_count; i += 1) {
         let new_color = draw_circle(b_circles[i], self_pos);
         color = blend(color, new_color);
     }
+
+    color = float4(srgbEncode(color.rgb), color.a);
     i_target.Store(threadId, color);
 }
