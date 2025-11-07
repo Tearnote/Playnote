@@ -205,14 +205,8 @@ static void render_select(gfx::Renderer::Queue& queue, GameState& state)
 			default: return -1.0f;
 			}
 		}();
-		queue.add_circle_aa(gfx::Renderer::Circle{
+		queue.add_circle(gfx::Renderer::Circle{
 			.position = {64.0f + 96.0f * i, 256.0f},
-			.velocity = {vel, vel / 2},
-			.color = {0.1f, 0.3f, 0.9f, 1.0f},
-			.radius = 24.0f,
-		});
-		queue.add_circle_blur(gfx::Renderer::Circle{
-			.position = {64.0f + 96.0f * i, 352.0f},
 			.velocity = {vel, vel / 2},
 			.color = {0.1f, 0.3f, 0.9f, 1.0f},
 			.radius = 24.0f,

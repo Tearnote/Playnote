@@ -25,8 +25,9 @@ RWTexture2D<float4> i_target;
 [SpecializationConstant] let ViewportWidth = 0u;
 [SpecializationConstant] let ViewportHeight = 0u;
 [SpecializationConstant] let WindowScale = 0.0;
-static let ViewportSize: uint2 = {ViewportWidth, ViewportHeight};
+static let ViewportSize = uint2(ViewportWidth, ViewportHeight);
 
+static let MaxMotionSupersample = 4u;
 static let SamplePattern4x: float2[4] = {
 	{0.375, 0.125},
 	{0.875, 0.375},
@@ -55,12 +56,30 @@ func motion_blurred_circle_coverage(p: float2, v: float2, r: float) -> float
 
 func draw_circle(circle: Circle, at: float2) -> float4
 {
-	var alpha = 0.0;
-	for (var i = 0u; i < 4; i += 1) {
-		let center = at + (SamplePattern4x[i] - 0.5) - circle.position * WindowScale;
-	    alpha += motion_blurred_circle_coverage(center, circle.velocity * WindowScale, circle.radius * WindowScale);
+	let velocity_len = length(circle.velocity);
+	if (velocity_len > MaxMotionSupersample) {
+		// Analytical motion blur with supersampled AA
+		var alpha = 0.0;
+		for (var i = 0u; i < 4; i += 1) {
+			let center = at + (SamplePattern4x[i] - 0.5) - circle.position * WindowScale;
+		    alpha += motion_blurred_circle_coverage(center, circle.velocity * WindowScale, circle.radius * WindowScale);
+		}
+		return circle.color * (alpha / 4);
 	}
-	return circle.color * (alpha / 4);
+
+	// Analytical AA with supersampled motion blur
+    let center = at - circle.position * WindowScale;
+    let sample_count = clamp(uint(ceil(velocity_len)), 1, MaxMotionSupersample);
+    let step = sample_count == 1? circle.velocity : circle.velocity / (sample_count - 1);
+    let shutter_step = 1.0 / sample_count;
+    var accum_alpha = 0.0;
+    for (var i = 0u; i < sample_count; i += 1) {
+    	let step_center = center - step * i;
+     	let alpha = sdf::aa(sdf::circle(step_center, circle.radius * WindowScale));
+      	let shutter = cosShutterIntegral(shutter_step * i, shutter_step * (i + 1));
+        accum_alpha += alpha * shutter;
+    }
+    return circle.color * accum_alpha;
 }
 
 [shader("compute")]
