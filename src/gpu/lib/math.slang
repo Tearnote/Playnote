@@ -18,10 +18,17 @@ public func dot2(v: float2) -> float { return dot(v, v); }
 public func dot2(v: float3) -> float { return dot(v, v); }
 
 // Antiderivative of the cosine shutter function.
-// https://www.shadertoy.com/view/cdXSRn
-public func cos_shutter(t: float) -> float
+func cosShutterAntiderivative(t: float) -> float
 {
     if (t < 0.0) return 0.0;
     if (t > 1.0) return 1.0;
     return t - sin(2.0 * Pi * t) / (2.0 * Pi);
+}
+
+// Integral of the cosine shutter function within a time period.
+// The function is roughly bell-shaped, spanning t=[0.0, 1.0]. Requires t1 <= t2.
+// https://www.shadertoy.com/view/cdXSRn
+public func cosShutterIntegral(t1: float, t2: float) -> float
+{
+	return cosShutterAntiderivative(t2) - cosShutterAntiderivative(t1);
 }

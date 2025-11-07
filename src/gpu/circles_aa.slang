@@ -27,11 +27,22 @@ RWTexture2D<float4> i_target;
 [SpecializationConstant] let WindowScale = 0.0;
 static let ViewportSize = uint2(ViewportWidth, ViewportHeight);
 
+static let MaxMotionSupersample = 8u;
+
 func draw_circle(circle: Circle, at: float2) -> float4
 {
     let center = at - circle.position * WindowScale;
-    let alpha = sdf::aa(sdf::circle(center, circle.radius * WindowScale));
-    return circle.color * alpha;
+    let sample_count = clamp(uint(ceil(length(circle.velocity))), 1, MaxMotionSupersample);
+    let step = sample_count == 1? circle.velocity : circle.velocity / (sample_count - 1);
+    let shutter_step = 1.0 / sample_count;
+    var accum_alpha = 0.0;
+    for (var i = 0u; i < sample_count; i += 1) {
+    	let step_center = center - step * i;
+     	let alpha = sdf::aa(sdf::circle(step_center, circle.radius * WindowScale));
+      	let shutter = cosShutterIntegral(shutter_step * i, shutter_step * (i + 1));
+        accum_alpha += alpha * shutter;
+    }
+    return circle.color * accum_alpha;
 }
 
 [shader("compute")]

@@ -43,7 +43,7 @@ func motion_blurred_circle_coverage(p: float2, v: float2, r: float) -> float
 
     let overlap_start = max(0.0, t1);
     let overlap_end = min(1.0, t2);
-    return cos_shutter(overlap_end) - cos_shutter(overlap_start);
+    return cosShutterIntegral(overlap_start, overlap_end);
 }
 
 func draw_circle(circle: Circle, at: float2) -> float4

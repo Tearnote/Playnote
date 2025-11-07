@@ -188,27 +188,31 @@ static void render_select(gfx::Renderer::Queue& queue, GameState& state)
 		lib::imgui::end_window();
 	}
 
-	for (auto i: views::iota(0u, 8u)) {
+	for (auto i: views::iota(0u, 11u)) {
 		auto vel = [&] {
 			switch (i) {
 			case 0: return 0.0f;
 			case 1: return 0.01f;
-			case 2: return 0.5f;
-			case 3: return 1.0f;
+			case 2: return 1.0f;
+			case 3: return 2.0f;
 			case 4: return 4.0f;
-			case 5: return 16.0f;
-			case 6: return 64.0f;
-			case 7: return 256.0f;
+			case 5: return 8.0f;
+			case 6: return 16.0f;
+			case 7: return 32.0f;
+			case 8: return 64.0f;
+			case 9: return 128.0f;
+			case 10: return 256.0f;
+			default: return -1.0f;
 			}
 		}();
 		queue.add_circle_aa(gfx::Renderer::Circle{
-			.position = {96.0f * (i + 1), 256.0f},
+			.position = {64.0f + 96.0f * i, 256.0f},
 			.velocity = {vel, vel / 2},
 			.color = {0.1f, 0.3f, 0.9f, 1.0f},
 			.radius = 24.0f,
 		});
 		queue.add_circle_blur(gfx::Renderer::Circle{
-			.position = {96.0f * (i + 1), 352.0f},
+			.position = {64.0f + 96.0f * i, 352.0f},
 			.velocity = {vel, vel / 2},
 			.color = {0.1f, 0.3f, 0.9f, 1.0f},
 			.radius = 24.0f,
