@@ -192,9 +192,10 @@ static void render_select(gfx::Renderer::Queue& queue, GameState& state)
 		lib::imgui::end_window();
 	}
 
+	// Sine movement
 	auto const time = ratio(globals::glfw->get_time(), 1s);
 	context.circle.update({
-		64.0f + sinf(time * 3.7f) * 16.0f,
+		64.0f,
 		256.0f + 32.0f + sinf(time * 12.0f) * 160.0f});
 	queue.add_circle(gfx::Renderer::Circle{
 		.position = context.circle.position,
@@ -209,12 +210,71 @@ static void render_select(gfx::Renderer::Queue& queue, GameState& state)
 		.radius = 24.0f,
 	});
 
+	// Mouse
 	context.mouse.update(state.window.cursor_position());
 	queue.add_circle(gfx::Renderer::Circle{
 		.position = context.mouse.position,
 		.velocity = context.mouse.velocity,
 		.color = {0.8f, 0.7f, 0.9f, 1.0f},
 		.radius = 8.0f,
+	});
+
+	// Connections
+	queue.add_circle(gfx::Renderer::Circle{
+		.position = {256.0f + 128.0f, 64.0f},
+		.velocity = {4.0f, 0.0f},
+		.color = {0.2f, 0.4f, 0.0f, 1.0f},
+		.radius = 10.0f,
+	});
+	queue.add_circle(gfx::Renderer::Circle{
+		.position = {256.0f + 132.0f, 64.0f},
+		.velocity = {4.0f, 0.0f},
+		.color = {0.2f, 0.4f, 0.0f, 1.0f},
+		.radius = 10.0f,
+	});
+	queue.add_circle(gfx::Renderer::Circle{
+		.position = {256.0f + 136.0f, 64.0f},
+		.velocity = {4.0f, 0.0f},
+		.color = {0.2f, 0.4f, 0.0f, 1.0f},
+		.radius = 10.0f,
+	});
+
+	queue.add_circle(gfx::Renderer::Circle{
+		.position = {256.0f + 128.0f, 96.0f},
+		.velocity = {16.0f, 0.0f},
+		.color = {0.2f, 0.4f, 0.0f, 1.0f},
+		.radius = 10.0f,
+	});
+	queue.add_circle(gfx::Renderer::Circle{
+		.position = {256.0f + 144.0f, 96.0f},
+		.velocity = {16.0f, 0.0f},
+		.color = {0.2f, 0.4f, 0.0f, 1.0f},
+		.radius = 10.0f,
+	});
+	queue.add_circle(gfx::Renderer::Circle{
+		.position = {256.0f + 160.0f, 96.0f},
+		.velocity = {16.0f, 0.0f},
+		.color = {0.2f, 0.4f, 0.0f, 1.0f},
+		.radius = 10.0f,
+	});
+
+	queue.add_circle(gfx::Renderer::Circle{
+		.position = {256.0f + 128.0f, 128.0f},
+		.velocity = {64.0f, 0.0f},
+		.color = {0.2f, 0.4f, 0.0f, 1.0f},
+		.radius = 10.0f,
+	});
+	queue.add_circle(gfx::Renderer::Circle{
+		.position = {256.0f + 192.0f, 128.0f},
+		.velocity = {64.0f, 0.0f},
+		.color = {0.2f, 0.4f, 0.0f, 1.0f},
+		.radius = 10.0f,
+	});
+	queue.add_circle(gfx::Renderer::Circle{
+		.position = {256.0f + 256.0f, 128.0f},
+		.velocity = {64.0f, 0.0f},
+		.color = {0.2f, 0.4f, 0.0f, 1.0f},
+		.radius = 10.0f,
 	});
 }
 
