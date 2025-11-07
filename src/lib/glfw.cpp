@@ -137,4 +137,12 @@ auto get_window_content_scale(Window window) -> float
 	return result;
 }
 
+[[nodiscard]] auto get_window_cursor_position(Window window) -> vec2
+{
+	auto xpos = 0.0;
+	auto ypos = 0.0;
+	glfwGetCursorPos(window, &xpos, &ypos);
+	return vec2{static_cast<float>(xpos), static_cast<float>(ypos)} * get_window_content_scale(window);
+}
+
 }

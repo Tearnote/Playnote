@@ -262,6 +262,10 @@ void set_window_file_drop_handler(Window window, Func&& func)
 // Throws runtime_error on failure.
 [[nodiscard]] auto create_window_surface(Window window, vk::Instance instance) -> vk::Surface;
 
+// Return the current position of the mouse cursor relative to the window.
+// Throws runtime_error on failure.
+[[nodiscard]] auto get_window_cursor_position(Window window) -> vec2;
+
 }
 
 // magic_enum compatibility

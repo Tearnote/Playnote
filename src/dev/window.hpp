@@ -99,6 +99,8 @@ public:
 	// Destruction needs to be handled manually by the caller.
 	auto create_surface(lib::vk::Instance const&) -> lib::vk::Surface;
 
+	auto cursor_position() -> vec2;
+
 	Window(Window const&) = delete;
 	auto operator=(Window const&) -> Window& = delete;
 	Window(Window&&) = delete;
@@ -186,6 +188,11 @@ inline auto Window::scale() const -> float
 inline auto Window::create_surface(lib::vk::Instance const& instance) -> lib::vk::Surface
 {
 	return lib::glfw::create_window_surface(window_handle.get(), instance);
+}
+
+inline auto Window::cursor_position() -> vec2
+{
+	return lib::glfw::get_window_cursor_position(window_handle.get());
 }
 
 }
