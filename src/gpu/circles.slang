@@ -54,33 +54,35 @@ func motion_blurred_circle_coverage(p: float2, v: float2, r: float) -> float
     return cosShutterIntegral(overlap_start, overlap_end);
 }
 
-func draw_circle(circle: Circle, at: float2) -> float4
+func circle_coverage(circle: Circle, at: float2) -> float
 {
-	let scaled_velocity = circle.velocity * WindowScale * Pi;
+	let scaled_velocity = circle.velocity * WindowScale * 2;
+	let velocity_offset = scaled_velocity / 4;
+	let center = at - velocity_offset - circle.position * WindowScale;
 	let velocity_len = length(scaled_velocity);
+
 	if (velocity_len > MaxMotionSupersample) {
 		// Analytical motion blur with supersampled AA
 		var alpha = 0.0;
 		for (var i = 0u; i < 4; i += 1) {
-			let center = at + (SamplePattern4x[i] - 0.5) - circle.position * WindowScale;
-		    alpha += motion_blurred_circle_coverage(center, -scaled_velocity, circle.radius * WindowScale);
+			let sample_center = center + (SamplePattern4x[i] - 0.5);
+		    alpha += motion_blurred_circle_coverage(sample_center, -scaled_velocity, circle.radius * WindowScale);
 		}
-		return circle.color * (alpha / 4);
+		return alpha / 4;
+	} else {
+		// Analytical AA with supersampled motion blur
+	    let sample_count = clamp(uint(ceil(velocity_len)), 1, MaxMotionSupersample);
+	    let step = sample_count == 1? -scaled_velocity : -scaled_velocity / (sample_count - 1);
+	    let shutter_step = 1.0 / sample_count;
+	    var accum_alpha = 0.0;
+	    for (var i = 0u; i < sample_count; i += 1) {
+	    	let step_center = center - step * i;
+	     	let alpha = sdf::aa(sdf::circle(step_center, circle.radius * WindowScale));
+	      	let shutter = cosShutterIntegral(shutter_step * i, shutter_step * (i + 1));
+	        accum_alpha += alpha * shutter;
+	    }
+	    return accum_alpha;
 	}
-
-	// Analytical AA with supersampled motion blur
-    let center = at - circle.position * WindowScale;
-    let sample_count = clamp(uint(ceil(velocity_len)), 1, MaxMotionSupersample);
-    let step = sample_count == 1? -scaled_velocity : -scaled_velocity / (sample_count - 1);
-    let shutter_step = 1.0 / sample_count;
-    var accum_alpha = 0.0;
-    for (var i = 0u; i < sample_count; i += 1) {
-    	let step_center = center - step * i;
-     	let alpha = sdf::aa(sdf::circle(step_center, circle.radius * WindowScale));
-      	let shutter = cosShutterIntegral(shutter_step * i, shutter_step * (i + 1));
-        accum_alpha += alpha * shutter;
-    }
-    return circle.color * accum_alpha;
 }
 
 [shader("compute")]
@@ -94,8 +96,9 @@ void computeMain(uint2 threadId: SV_DispatchThreadID, uniform uint circle_count,
     color = float4(srgbDecode(color.rgb), color.a);
 
     for (int i = 0; i < circle_count; i += 1) {
-        let new_color = draw_circle(b_circles[i], self_pos);
-        color = blend(color, new_color);
+    	let circle = b_circles[i];
+        let coverage = circle_coverage(circle, self_pos);
+        color = blend(color, float4(circle.color.rgb, circle.color.a * coverage));
     }
 
     color = float4(srgbEncode(color.rgb), color.a);
