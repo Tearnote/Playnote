@@ -56,13 +56,14 @@ func motion_blurred_circle_coverage(p: float2, v: float2, r: float) -> float
 
 func draw_circle(circle: Circle, at: float2) -> float4
 {
-	let velocity_len = length(circle.velocity);
+	let scaled_velocity = circle.velocity * WindowScale * Pi;
+	let velocity_len = length(scaled_velocity);
 	if (velocity_len > MaxMotionSupersample) {
 		// Analytical motion blur with supersampled AA
 		var alpha = 0.0;
 		for (var i = 0u; i < 4; i += 1) {
 			let center = at + (SamplePattern4x[i] - 0.5) - circle.position * WindowScale;
-		    alpha += motion_blurred_circle_coverage(center, circle.velocity * WindowScale, circle.radius * WindowScale);
+		    alpha += motion_blurred_circle_coverage(center, -scaled_velocity, circle.radius * WindowScale);
 		}
 		return circle.color * (alpha / 4);
 	}
@@ -70,7 +71,7 @@ func draw_circle(circle: Circle, at: float2) -> float4
 	// Analytical AA with supersampled motion blur
     let center = at - circle.position * WindowScale;
     let sample_count = clamp(uint(ceil(velocity_len)), 1, MaxMotionSupersample);
-    let step = sample_count == 1? circle.velocity : circle.velocity / (sample_count - 1);
+    let step = sample_count == 1? -scaled_velocity : -scaled_velocity / (sample_count - 1);
     let shutter_step = 1.0 / sample_count;
     var accum_alpha = 0.0;
     for (var i = 0u; i < sample_count; i += 1) {

@@ -18,6 +18,7 @@ except according to those terms.
 #include "dev/window.hpp"
 #include "gfx/playfield.hpp"
 #include "gfx/renderer.hpp"
+#include "gfx/entity.hpp"
 #include "audio/player.hpp"
 #include "bms/library.hpp"
 #include "bms/cursor.hpp"
@@ -48,6 +49,8 @@ struct SelectContext {
 	vector<bms::Library::ChartEntry> charts;
 	optional<future<vector<bms::Library::ChartEntry>>> library_reload_result;
 	optional<future<shared_ptr<bms::Chart const>>> chart_load_result;
+	gfx::Position circle;
+	gfx::Position mouse;
 };
 
 struct GameplayContext {
@@ -63,6 +66,7 @@ struct GameplayContext {
 struct GameState {
 	State current;
 	State requested;
+	dev::Window& window;
 	shared_ptr<bms::Library> library;
 	variant<monostate, SelectContext, GameplayContext> context;
 	optional<ImportStatus> import_status;
@@ -188,30 +192,30 @@ static void render_select(gfx::Renderer::Queue& queue, GameState& state)
 		lib::imgui::end_window();
 	}
 
-	for (auto i: views::iota(0u, 11u)) {
-		auto vel = [&] {
-			switch (i) {
-			case 0: return 0.0f;
-			case 1: return 0.01f;
-			case 2: return 1.0f;
-			case 3: return 2.0f;
-			case 4: return 4.0f;
-			case 5: return 8.0f;
-			case 6: return 16.0f;
-			case 7: return 32.0f;
-			case 8: return 64.0f;
-			case 9: return 128.0f;
-			case 10: return 256.0f;
-			default: return -1.0f;
-			}
-		}();
-		queue.add_circle(gfx::Renderer::Circle{
-			.position = {64.0f + 96.0f * i, 256.0f},
-			.velocity = {vel, vel / 2},
-			.color = {0.1f, 0.3f, 0.9f, 1.0f},
-			.radius = 24.0f,
-		});
-	}
+	auto const time = ratio(globals::glfw->get_time(), 1s);
+	context.circle.update({
+		64.0f + sinf(time * 3.7f) * 16.0f,
+		256.0f + 32.0f + sinf(time * 12.0f) * 160.0f});
+	queue.add_circle(gfx::Renderer::Circle{
+		.position = context.circle.position,
+		.velocity = context.circle.velocity,
+		.color = {0.1f, 0.3f, 0.9f, 1.0f},
+		.radius = 24.0f,
+	});
+	queue.add_circle(gfx::Renderer::Circle{
+		.position = context.circle.position + vec2{64.0f, 0.0f},
+		.velocity = {},
+		.color = {0.1f, 0.3f, 0.9f, 1.0f},
+		.radius = 24.0f,
+	});
+
+	context.mouse.update(state.window.cursor_position());
+	queue.add_circle(gfx::Renderer::Circle{
+		.position = context.mouse.position,
+		.velocity = context.mouse.velocity,
+		.color = {0.8f, 0.7f, 0.9f, 1.0f},
+		.radius = 8.0f,
+	});
 }
 
 static void render_gameplay(gfx::Renderer::Queue& queue, GameState& state)
@@ -293,7 +297,7 @@ static void run_render(Broadcaster& broadcaster, dev::Window& window, Logger::Ca
 	auto renderer = gfx::Renderer{window, cat};
 
 	// Init game state
-	auto state = GameState{};
+	auto state = GameState{ .window = window };
 	auto library_cat = globals::logger->create_category("Library",
 		*enum_cast<Logger::Level>(globals::config->get_entry<string>("logging", "library")));
 	state.library = make_shared<bms::Library>(library_cat, *globals::bg_pool, LibraryDBPath);
