@@ -25,7 +25,14 @@ RWTexture2D<float4> i_target;
 [SpecializationConstant] let ViewportWidth = 0u;
 [SpecializationConstant] let ViewportHeight = 0u;
 [SpecializationConstant] let WindowScale = 0.0;
-static let ViewportSize = uint2(ViewportWidth, ViewportHeight);
+static let ViewportSize: uint2 = {ViewportWidth, ViewportHeight};
+
+static let SamplePattern4x: float2[4] = {
+	{0.375, 0.125},
+	{0.875, 0.375},
+	{0.125, 0.625},
+	{0.625, 0.875}
+};
 
 func motion_blurred_circle_coverage(p: float2, v: float2, r: float) -> float
 {
@@ -48,9 +55,12 @@ func motion_blurred_circle_coverage(p: float2, v: float2, r: float) -> float
 
 func draw_circle(circle: Circle, at: float2) -> float4
 {
-    let center = at - circle.position * WindowScale;
-    let alpha = motion_blurred_circle_coverage(center, circle.velocity * WindowScale, circle.radius * WindowScale);
-    return circle.color * alpha;
+	var alpha = 0.0;
+	for (var i = 0u; i < 4; i += 1) {
+		let center = at + (SamplePattern4x[i] - 0.5) - circle.position * WindowScale;
+	    alpha += motion_blurred_circle_coverage(center, circle.velocity * WindowScale, circle.radius * WindowScale);
+	}
+	return circle.color * (alpha / 4);
 }
 
 [shader("compute")]
