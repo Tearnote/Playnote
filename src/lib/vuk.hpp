@@ -31,13 +31,6 @@ using namespace ::vuk;
 // A shorthand for an image attachment currently being managed by vuk's rendergraph.
 using ManagedImage = Value<ImageAttachment>;
 
-// Swapchain presentation mode.
-enum class PresentMode {
-	Immediate = VK_PRESENT_MODE_IMMEDIATE_KHR,
-	Mailbox = VK_PRESENT_MODE_MAILBOX_KHR,
-	Fifo = VK_PRESENT_MODE_FIFO_KHR,
-};
-
 // Initialize vuk by building a Runtime object.
 // Throws if vuk throws.
 auto create_runtime(vk::Instance instance, vk::Device device, vk::QueueSet const& queues) -> Runtime;
@@ -50,7 +43,7 @@ using GlobalResource = DeviceSuperFrameResource;
 // FIFO presentation mode is used.
 // Throws runtime_error on failure, or if vuk throws.
 [[nodiscard]] auto create_swapchain(Allocator& allocator, vk::Device device, uvec2 size,
-	PresentMode, optional<Swapchain> old = nullopt) -> Swapchain;
+	optional<Swapchain> old = nullopt) -> Swapchain;
 
 // Start a new frame and create its single-frame allocator.
 // Throws if vuk throws.

@@ -148,11 +148,6 @@ inline void Config::create_defaults()
 
 	entries.emplace_back(Entry{
 		.category = "vulkan",
-		.name = "present_mode",
-		.value = "Immediate",
-	});
-	entries.emplace_back(Entry{
-		.category = "vulkan",
 		.name = "frames_in_flight",
 		.value = 1,
 	});
