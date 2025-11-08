@@ -10,9 +10,9 @@ or distributed except according to those terms.
 #language slang 2026
 
 import lib;
-#include "shared/circles.slang.h"
+#include "shared/primitives.slang.h"
 
-StructuredBuffer<Circle> b_circles;
+StructuredBuffer<Primitive> b_primitives;
 RWTexture2D<float4> i_target;
 
 [SpecializationConstant] let ViewportWidth = 0u;
@@ -47,11 +47,12 @@ func motion_blurred_circle_coverage(p: float2, v: float2, r: float) -> float
     return cosShutterIntegral(overlap_start, overlap_end);
 }
 
-func circle_coverage(circle: Circle, at: float2) -> float
+func circle_coverage(primitive: Primitive, at: float2) -> float
 {
-	let scaled_velocity = circle.velocity * WindowScale * 2;
+	let params = reinterpret<CircleParams>(primitive.params);
+	let scaled_velocity = primitive.velocity * WindowScale * 2;
 	let velocity_offset = scaled_velocity / 4;
-	let center = at - velocity_offset - circle.position * WindowScale;
+	let center = at - velocity_offset - primitive.position * WindowScale;
 	let velocity_len = length(scaled_velocity);
 
 	if (velocity_len > MaxMotionSupersample) {
@@ -59,7 +60,7 @@ func circle_coverage(circle: Circle, at: float2) -> float
 		var alpha = 0.0;
 		for (var i = 0u; i < 4; i += 1) {
 			let sample_center = center + (SamplePattern4x[i] - 0.5);
-		    alpha += motion_blurred_circle_coverage(sample_center, -scaled_velocity, circle.radius * WindowScale);
+		    alpha += motion_blurred_circle_coverage(sample_center, -scaled_velocity, params.radius * WindowScale);
 		}
 		return alpha / 4;
 	} else {
@@ -70,7 +71,7 @@ func circle_coverage(circle: Circle, at: float2) -> float
 	    var accum_alpha = 0.0;
 	    for (var i = 0u; i < sample_count; i += 1) {
 	    	let step_center = center - step * i;
-	     	let alpha = sdf::aa(sdf::circle(step_center, circle.radius * WindowScale));
+	     	let alpha = sdf::aa(sdf::circle(step_center, params.radius * WindowScale));
 	      	let shutter = cosShutterIntegral(shutter_step * i, shutter_step * (i + 1));
 	        accum_alpha += alpha * shutter;
 	    }
@@ -80,7 +81,7 @@ func circle_coverage(circle: Circle, at: float2) -> float
 
 [shader("compute")]
 [numthreads(16, 16)]
-void computeMain(int2 threadId: SV_DispatchThreadID, uniform uint circle_count, uniform float timer)
+void computeMain(int2 threadId: SV_DispatchThreadID, uniform uint PrimitiveCount)
 {
     if (any(threadId >= ViewportSize)) return;
     let self_pos = float2(threadId) + 0.5;
@@ -88,10 +89,10 @@ void computeMain(int2 threadId: SV_DispatchThreadID, uniform uint circle_count, 
     var color = i_target.Load(threadId);
     color = float4(srgbDecode(color.rgb), color.a);
 
-    for (int i = 0; i < circle_count; i += 1) {
-    	let circle = b_circles[i];
-        let coverage = circle_coverage(circle, self_pos);
-        color = blend(color, float4(circle.color.rgb, circle.color.a * coverage));
+    for (int i = 0; i < PrimitiveCount; i += 1) {
+    	let primitive = b_primitives[i];
+        let coverage = circle_coverage(primitive, self_pos);
+        color = blend(color, float4(primitive.color.rgb, primitive.color.a * coverage));
     }
 
     color = float4(srgbEncode(color.rgb), color.a);

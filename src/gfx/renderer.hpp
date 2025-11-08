@@ -20,7 +20,7 @@ namespace playnote::gfx {
 class Renderer {
 public:
 #include "gpu/shared/rects.slang.h"
-#include "gpu/shared/circles.slang.h"
+#include "gpu/shared/primitives.slang.h"
 
 	// An accumulator of primitives to draw.
 	class Queue {
@@ -28,7 +28,7 @@ public:
 		// Add a solid color rectangle to the draw queue.
 		auto enqueue_rect(id layer, Rect) -> Queue&;
 
-		auto add_circle(Circle) -> Queue&;
+		auto add_circle(Primitive) -> Queue&;
 
 	private:
 		struct Layer {
@@ -37,7 +37,7 @@ public:
 
 		friend Renderer;
 		unordered_map<id, Layer> layers;
-		vector<Circle> circles;
+		vector<Primitive> primitives;
 	};
 
 	explicit Renderer(dev::Window&, Logger::Category);
@@ -55,8 +55,8 @@ private:
 
 	[[nodiscard]] auto draw_rects(lib::vuk::Allocator&, lib::vuk::ManagedImage&&,
 		span<Rect const>) -> lib::vuk::ManagedImage;
-	[[nodiscard]] auto draw_circles(lib::vuk::Allocator&, lib::vuk::ManagedImage&&,
-		span<Circle const>) -> lib::vuk::ManagedImage;
+	[[nodiscard]] auto draw_primitives(lib::vuk::Allocator&, lib::vuk::ManagedImage&&,
+		span<Primitive const>) -> lib::vuk::ManagedImage;
 };
 
 inline auto srgb_decode(float4 color) -> float4
@@ -74,10 +74,10 @@ inline auto Renderer::Queue::enqueue_rect(id layer, Rect rect) -> Queue&
 	return *this;
 }
 
-inline auto Renderer::Queue::add_circle(Circle circle) -> Queue&
+inline auto Renderer::Queue::add_circle(Primitive primitive) -> Queue&
 {
-	circle.color = srgb_decode(circle.color);
-	circles.emplace_back(circle);
+	primitive.color = srgb_decode(primitive.color);
+	primitives.emplace_back(primitive);
 	return *this;
 }
 
@@ -92,9 +92,9 @@ inline Renderer::Renderer(dev::Window& window, Logger::Category cat):
 	lib::vuk::create_graphics_pipeline(context, "rects", rects_spv);
 	DEBUG_AS(cat, "Compiled rects pipeline");
 
-#include "spv/circles.slang.spv.h"
-	lib::vuk::create_compute_pipeline(context, "circles", circles_spv);
-	DEBUG_AS(cat, "Compiled circles pipeline");
+#include "spv/primitives.slang.spv.h"
+	lib::vuk::create_compute_pipeline(context, "primitives", primitives_spv);
+	DEBUG_AS(cat, "Compiled primitives pipeline");
 
 	INFO_AS(cat, "Renderer initialized");
 }
@@ -115,8 +115,8 @@ void Renderer::frame(initializer_list<id> layer_order, Func&& func)
 			auto result = draw_rects(allocator, move(next), layer.rects);
 			next = move(result);
 		}
-		if (!queue.circles.empty())
-			next = draw_circles(allocator, move(next), queue.circles);
+		if (!queue.primitives.empty())
+			next = draw_primitives(allocator, move(next), queue.primitives);
 		return imgui.draw(allocator, move(next));
 	});
 }
@@ -140,26 +140,19 @@ inline auto Renderer::draw_rects(lib::vuk::Allocator& allocator, lib::vuk::Manag
 	return pass(move(dest));
 }
 
-inline auto Renderer::draw_circles(lib::vuk::Allocator& allocator, lib::vuk::ManagedImage&& dest,
-		span<Circle const> circles) -> lib::vuk::ManagedImage
+inline auto Renderer::draw_primitives(lib::vuk::Allocator& allocator, lib::vuk::ManagedImage&& dest,
+		span<Primitive const> primitives) -> lib::vuk::ManagedImage
 {
-	auto circles_buf = lib::vuk::create_scratch_buffer(allocator, circles);
+	auto primitives_buf = lib::vuk::create_scratch_buffer(allocator, primitives);
 	auto pass = lib::vuk::make_pass("circles",
-		[window_size = gpu.get_window().size(), window_scale = gpu.get_window().scale(), circles_buf, circles_count = circles.size()]
+		[window_size = gpu.get_window().size(), window_scale = gpu.get_window().scale(), primitives_buf, primitives_count = primitives.size()]
 		(lib::vuk::CommandBuffer& cmd, VUK_IA(lib::vuk::Access::eComputeRW) target)
 	{
-		struct Push {
-			int circles_count;
-			float timer;
-		};
 		lib::vuk::set_cmd_defaults(cmd)
-			.bind_compute_pipeline("circles")
-			.bind_buffer(0, 0, circles_buf)
+			.bind_compute_pipeline("primitives")
+			.bind_buffer(0, 0, primitives_buf)
 			.bind_image(0, 1, target)
-			.push_constants(lib::vuk::ShaderStageFlagBits::eCompute, 0, Push{
-				.circles_count = circles_count,
-				.timer = ratio(globals::glfw->get_time(), 1s),
-			})
+			.push_constants(lib::vuk::ShaderStageFlagBits::eCompute, 0, primitives_count)
 			.specialize_constants(0, window_size.x()).specialize_constants(1, window_size.y())
 			.specialize_constants(2, window_scale)
 			.dispatch_invocations(window_size.x(), window_size.y(), 1);

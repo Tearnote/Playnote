@@ -12,7 +12,7 @@ include(cmake/FetchSlang.cmake)
 
 set(SHADER_DIR_PREFIX src/gpu/)
 set(SHADER_SOURCES
-	circles.slang
+	primitives.slang
 	rects.slang
 	imgui.slang
 )

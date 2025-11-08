@@ -9,10 +9,26 @@ or distributed except according to those terms.
 
 #pragma once
 
-struct Circle {
-    float2 position;
-    float2 velocity;
-    float4 color;
+struct CircleParams {
     float radius;
-    float _pad0[3];
+    int _pad0[3];
+};
+
+struct Primitive {
+	enum class Type: int {
+		Circle,
+	};
+	Type type;
+	int _pad0;
+	float2 position;
+    float2 velocity;
+    int2 _pad1;
+    float4 color;
+#ifndef __cplusplus
+    int params[4]; // reinterpret as one of the structs above
+#else
+	union {
+		CircleParams circle_params;
+	};
+#endif
 };
