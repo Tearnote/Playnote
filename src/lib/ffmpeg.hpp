@@ -29,18 +29,18 @@ auto decode_file_buffer(span<byte const> file_contents) -> DecoderOutput;
 
 // Resample decoded audio to a known format.
 // Throws runtime_error if ffmpeg throws.
-auto resample_buffer(DecoderOutput&& input, uint32 sampling_rate) -> vector<Sample>;
+auto resample_buffer(DecoderOutput&& input, int sampling_rate) -> vector<Sample>;
 
 // Perform both decoding and resampling in one step.
 // Throws runtime_error if ffmpeg throws.
-auto decode_and_resample_file_buffer(span<byte const> file_contents, uint32 sampling_rate) -> vector<Sample>;
+auto decode_and_resample_file_buffer(span<byte const> file_contents, int sampling_rate) -> vector<Sample>;
 
 // Encode audio samples to an OGG Vorbis buffer.
 // Throws runtime_error if ffmpeg throws.
-auto encode_as_ogg(span<Sample const> samples, uint32 sampling_rate) -> vector<byte>;
+auto encode_as_ogg(span<Sample const> samples, int sampling_rate) -> vector<byte>;
 
 // Encode audio samples to an Opus buffer.
 // Throws runtime_error if ffmpeg throws.
-auto encode_as_opus(span<Sample const> samples, uint32 sampling_rate) -> vector<byte>;
+auto encode_as_opus(span<Sample const> samples, int sampling_rate) -> vector<byte>;
 
 }

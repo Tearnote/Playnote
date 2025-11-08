@@ -44,13 +44,13 @@ static auto to_reference_time(duration<T, U> time) -> REFERENCE_TIME
 }
 
 struct Int16Sample {
-	int16 left;
-	int16 right;
+	int16_t left;
+	int16_t right;
 };
 
 struct Int24Sample {
-	int32 left;
-	int32 right;
+	int left;
+	int right;
 };
 
 // Function executed in the realtime audio thread.
@@ -69,8 +69,8 @@ static void buffer_thread(Context_t* ctx, HANDLE buffer_event)
 			break;
 		}
 
-		auto padding = uint32{0};
-		auto actual_size = uint32{0};
+		auto padding = uint{0};
+		auto actual_size = uint{0};
 		if (!ctx->exclusive_mode) {
 			ret_check(ctx->client->GetCurrentPadding(&padding), "Failed to retrieve buffer padding");
 			actual_size = ctx->properties.buffer_size - padding;
@@ -91,8 +91,8 @@ static void buffer_thread(Context_t* ctx, HANDLE buffer_event)
 		case SampleFormat::Int16:
 			transform(client_buffer, reinterpret_cast<Int16Sample*>(buffer), [](auto const& sample) {
 				return Int16Sample{
-					.left = static_cast<int16>(lround(sample.left * 0x7FFF)),
-					.right = static_cast<int16>(lround(sample.right * 0x7FFF)),
+					.left = static_cast<int16_t>(lround(sample.left * 0x7FFF)),
+					.right = static_cast<int16_t>(lround(sample.right * 0x7FFF)),
 				};
 			});
 			break;
@@ -205,10 +205,10 @@ auto init(Logger::Category cat, bool exclusive_mode, function<void(span<Sample>)
 	}();
 
 	if (!exclusive_mode) {
-		auto default_period = uint32{0};
-		auto fundamental_period = uint32{0};
-		auto min_period = uint32{0};
-		auto max_period = uint32{0};
+		auto default_period = uint{0};
+		auto fundamental_period = uint{0};
+		auto min_period = uint{0};
+		auto max_period = uint{0};
 		ret_check(client->GetSharedModeEnginePeriod(reinterpret_cast<WAVEFORMATEX*>(&format),
 			&default_period, &fundamental_period, &min_period, &max_period), "Failed to retrieve shared mode engine period");
 		auto period = min_period;

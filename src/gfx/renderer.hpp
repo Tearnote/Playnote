@@ -162,7 +162,7 @@ inline auto Renderer::draw_circles(lib::vuk::Allocator& allocator, lib::vuk::Man
 		(lib::vuk::CommandBuffer& cmd, VUK_IA(lib::vuk::Access::eComputeRW) target)
 	{
 		struct Push {
-			uint32 circles_count;
+			int circles_count;
 			float timer;
 		};
 		lib::vuk::set_cmd_defaults(cmd)

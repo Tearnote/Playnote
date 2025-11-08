@@ -63,16 +63,16 @@ auto read_data(ReadArchive& archive) -> vector<byte>
 {
 	auto result = vector<byte>{};
 	auto* buf = static_cast<byte const*>(nullptr);
-	auto size = 0z;
+	auto size = 0zu;
 	auto offset = 0z;
 	while (true) {
 		auto const ret = archive_read_data_block(archive.get(), reinterpret_cast<void const**>(&buf),
-			reinterpret_cast<usize*>(&size), &offset);
+			&size, &offset);
 		if (ret == ARCHIVE_EOF) break;
 		ret_check(ret, archive);
 
 		result.resize(offset + size);
-		if (size > 0) copy(span{buf, static_cast<usize>(size)}, &result[offset]);
+		if (size > 0) copy(span{buf, size}, &result[offset]);
 
 	}
 	return result;
@@ -81,12 +81,12 @@ auto read_data(ReadArchive& archive) -> vector<byte>
 auto read_data_block(ReadArchive& archive) -> optional<span<byte const>>
 {
 	auto* buf = static_cast<byte const*>(nullptr);
-	auto size = 0z;
+	auto size = 0zu;
 	auto offset = 0z;
 	auto const ret = archive_read_data_block(archive.get(), reinterpret_cast<void const**>(&buf),
-		reinterpret_cast<usize*>(&size), &offset);
+		&size, &offset);
 	if (ret == ARCHIVE_EOF) return nullopt;
-	return span{buf, static_cast<usize>(size)};
+	return span{buf, size};
 }
 
 void write_entry(WriteArchive& archive, fs::path const& pathname, span<byte const> data) {
@@ -104,7 +104,7 @@ auto detail::next_entry(ReadArchive& archive) -> optional<string_view>
 	return archive_entry_pathname(entry);
 }
 
-void detail::write_header_for(WriteArchive& archive, fs::path const& pathname, isize total_size)
+void detail::write_header_for(WriteArchive& archive, fs::path const& pathname, isize_t total_size)
 {
 	auto entry = archive_entry_new();
 	archive_entry_set_pathname(entry, pathname.string().c_str());

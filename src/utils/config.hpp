@@ -47,7 +47,7 @@ inline constexpr auto LibraryDBPath = "library.db"sv;
 // Global runtime configuration, kept in sync with the config file.
 class Config {
 public:
-	using Value = variant<int32, double, bool, string>;
+	using Value = variant<int, double, bool, string>;
 	struct Entry {
 		string category;
 		string name;

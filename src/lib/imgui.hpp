@@ -50,7 +50,7 @@ enum class WindowStyle {
 
 // Start a new ImGui window at a specific position and size. If static_frame is true, the window
 // will have no title and won't be able to be modified by the user.
-void begin_window(char const* title, uint2 pos, uint32 width, WindowStyle);
+void begin_window(char const* title, uint2 pos, int width, WindowStyle);
 
 // Finalize a started window.
 void end_window();
@@ -110,6 +110,6 @@ struct PlotMarker {
 };
 
 // A simple line plot of an array of values.
-void plot(char const* label, initializer_list<PlotValues> values, initializer_list<PlotMarker> markers = {}, uint32 height = 0, bool stacked = false);
+void plot(char const* label, initializer_list<PlotValues> values, initializer_list<PlotMarker> markers = {}, int height = 0, bool stacked = false);
 
 }

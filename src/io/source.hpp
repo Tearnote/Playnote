@@ -118,7 +118,7 @@ inline Source::Source(fs::path const& path):
 
 		// Find prefix
 		auto shortest_prefix = fs::path{};
-		auto shortest_prefix_parts = optional<isize>{nullopt};
+		auto shortest_prefix_parts = optional<isize_t>{nullopt};
 		ar = lib::archive::open_read(archive->file.contents);
 		lib::archive::for_each_entry(ar, [&](auto pathname) {
 			auto const pathname_bytes = span{reinterpret_cast<byte const*>(pathname.data()), pathname.size()};

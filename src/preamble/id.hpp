@@ -18,7 +18,8 @@ class id {
 public:
 	id() = default;
 
-	explicit constexpr id(string_view str): val{Basis} {
+	explicit constexpr id(string_view str): val{Basis}
+	{
 		for (auto const ch: str) {
 			val ^= ch;
 			val *= Prime;
@@ -33,15 +34,15 @@ private:
 	static constexpr auto Prime = 16777619u;
 	static constexpr auto Basis = 2166136261u;
 
-	uint32 val;
+	uint val;
 };
 
 // Generate the hash of a string at compile-time.
-[[nodiscard]] consteval auto operator ""_id(char const* str, usize len) -> id {
+[[nodiscard]] consteval auto operator ""_id(char const* str, size_t len) -> id {
 	return id{string_view{str, len}};
 }
 
 // boost::hash implementation for id.
-[[nodiscard]] constexpr auto hash_value(id const& v) -> isize { return +v; }
+[[nodiscard]] constexpr auto hash_value(id const& v) -> uint { return +v; }
 
 }

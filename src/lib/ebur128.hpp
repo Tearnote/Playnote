@@ -26,7 +26,7 @@ using Context = unique_resource<Context_t*, detail::ContextDeleter>;
 
 // Create a context to accumulate audio frames. Call cleanup() when finished.
 // Throws if libebur128 throws.
-auto init(uint32 sampling_rate) -> Context;
+auto init(int sampling_rate) -> Context;
 
 // Process audio frames. They can all be added at once, or in chunks to save memory.
 // Throws if libebur128 throws.

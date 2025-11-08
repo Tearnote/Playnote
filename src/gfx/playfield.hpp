@@ -26,7 +26,7 @@ public:
 		Right,
 	};
 
-	Playfield(int2 position, int32 length, bms::Playstyle);
+	Playfield(int2 position, int length, bms::Playstyle);
 
 	void enqueue_from_cursor(Renderer::Queue&, bms::Cursor const&, bms::Score const&, float scroll_speed, nanoseconds offset);
 
@@ -63,13 +63,13 @@ private:
 	static constexpr auto LanePressedColor = float4{1.000f, 1.000f, 1.000f, 1.000f};
 
 	int2 position;
-	int32 length;
+	int length;
 	bms::Playstyle playstyle;
 	vector<vector<Lane>> fields;
 	vector<float> measure_lines;
 
 	[[nodiscard]] auto get_lane(bms::Lane::Type) -> Lane&;
-	[[nodiscard]] static auto lane_width(Lane::Visual) -> int32;
+	[[nodiscard]] static auto lane_width(Lane::Visual) -> int;
 	[[nodiscard]] static auto lane_background_color(Lane::Visual) -> float4;
 	[[nodiscard]] static auto lane_note_color(Lane::Visual) -> float4;
 	[[nodiscard]] static auto judgement_color(bms::Score::JudgmentType) -> float4;
@@ -77,12 +77,12 @@ private:
 
 	static auto make_field(bms::Playstyle, Side = Side::Left) -> vector<Lane>;
 	static void enqueue_field_border(Renderer::Queue&, int2 position, int2 size);
-	static void enqueue_lane(Renderer::Queue&, int2 position, int32 length, Lane const&, bool left_border, bool pressed);
+	static void enqueue_lane(Renderer::Queue&, int2 position, int length, Lane const&, bool left_border, bool pressed);
 	static void enqueue_measure_lines(Renderer::Queue&, span<float const> measure_lines, int2 position, int2 size);
-	static void enqueue_judgment(bms::Score::Judgment const&, uint32 field_id, int2 position, int2 size);
+	static void enqueue_judgment(bms::Score::Judgment const&, int field_id, int2 position, int2 size);
 };
 
-inline Playfield::Playfield(int2 position, int32 length, bms::Playstyle playstyle):
+inline Playfield::Playfield(int2 position, int length, bms::Playstyle playstyle):
 	position{position},
 	length{length},
 	playstyle{playstyle}
@@ -137,7 +137,7 @@ inline void Playfield::enqueue_from_cursor(Renderer::Queue& queue, bms::Cursor c
 		for (auto [l_idx, lane]: field | views::enumerate) {
 			enqueue_lane(queue, {x_advance + field_x_advance, position.y()}, length, lane,
 				l_idx != 0, cursor.is_pressed(lane.type));
-			field_x_advance += lane_width(lane.visual) + (l_idx != static_cast<isize>(field.size()) - 1? LaneSeparatorWidth : 0);
+			field_x_advance += lane_width(lane.visual) + (l_idx != static_cast<isize_t>(field.size()) - 1? LaneSeparatorWidth : 0);
 		}
 		enqueue_measure_lines(queue, measure_lines, {x_advance, position.y()}, {field_x_advance, length});
 		enqueue_field_border(queue, {x_advance, position.y()}, {field_x_advance, length});
@@ -193,7 +193,7 @@ inline auto Playfield::get_lane(bms::Lane::Type type) -> Lane&
 	}
 }
 
-inline auto Playfield::lane_width(Lane::Visual visual) -> int32
+inline auto Playfield::lane_width(Lane::Visual visual) -> int
 {
 	switch (visual) {
 	case Lane::Visual::Odd:     return 40;
@@ -315,7 +315,7 @@ inline void Playfield::enqueue_field_border(Renderer::Queue& queue, int2 positio
 	});
 }
 
-inline void Playfield::enqueue_lane(Renderer::Queue& queue, int2 position, int32 length, Lane const& lane, bool left_border, bool pressed)
+inline void Playfield::enqueue_lane(Renderer::Queue& queue, int2 position, int length, Lane const& lane, bool left_border, bool pressed)
 {
 	auto const width = lane_width(lane.visual);
 	queue.enqueue_rect("frame"_id, {
@@ -328,8 +328,8 @@ inline void Playfield::enqueue_lane(Renderer::Queue& queue, int2 position, int32
 		auto const ln_overflow = max(0.0f, -note.y_pos);
 		auto const ln_height_clipped = note.ln_height - ln_overflow;
 		queue.enqueue_rect("notes"_id, {
-			{position.x(), static_cast<int32>(position.y() + length - ceil((y_pos_clipped + ln_height_clipped) * length) - NoteHeight)},
-			{width, NoteHeight + static_cast<int32>(ceil(ln_height_clipped * length))},
+			{position.x(), static_cast<int>(position.y() + length - ceil((y_pos_clipped + ln_height_clipped) * length) - NoteHeight)},
+			{width, NoteHeight + static_cast<int>(ceil(ln_height_clipped * length))},
 			lane_note_color(lane.visual),
 		});
 	}
@@ -353,14 +353,14 @@ inline void Playfield::enqueue_measure_lines(Renderer::Queue& queue, span<float 
 {
 	for (auto y_pos: measure_lines) {
 		queue.enqueue_rect("measure"_id, {
-			{position.x(), static_cast<int32>(position.y() + size.y() - ceil(y_pos * size.y()) - MeasureLineHeight)},
+			{position.x(), static_cast<int>(position.y() + size.y() - ceil(y_pos * size.y()) - MeasureLineHeight)},
 			{size.x(), MeasureLineHeight},
 			MeasureLineColor,
 		});
 	}
 }
 
-inline void Playfield::enqueue_judgment(bms::Score::Judgment const& judgment, uint32 field_id, int2 position, int2 size)
+inline void Playfield::enqueue_judgment(bms::Score::Judgment const& judgment, int field_id, int2 position, int2 size)
 {
 	constexpr auto JudgeWidth = 200;
 	constexpr auto JudgeY = 332;
@@ -372,7 +372,7 @@ inline void Playfield::enqueue_judgment(bms::Score::Judgment const& judgment, ui
 	to_upper(judge_str);
 	auto const judge_color = judgement_color(judgment.type);
 	lib::imgui::begin_window(judge_name.c_str(),
-		uint2{position} + uint2{static_cast<uint32>(size.x() / 2 - JudgeWidth / 2), JudgeY}, JudgeWidth,
+		uint2{position} + uint2{static_cast<uint>(size.x() / 2 - JudgeWidth / 2), JudgeY}, JudgeWidth,
 		lib::imgui::WindowStyle::Transparent);
 	lib::imgui::text_styled(judge_str, judge_color, 3.0f, lib::imgui::TextAlignment::Center);
 	lib::imgui::end_window();
@@ -383,7 +383,7 @@ inline void Playfield::enqueue_judgment(bms::Score::Judgment const& judgment, ui
 	to_upper(timing_str);
 	auto const time_color = timing_color(judgment.timing);
 	lib::imgui::begin_window(timing_name.c_str(),
-		uint2{position} + uint2{static_cast<uint32>(size.x() / 2 - TimingWidth / 2), TimingY}, TimingWidth,
+		uint2{position} + uint2{static_cast<uint>(size.x() / 2 - TimingWidth / 2), TimingY}, TimingWidth,
 		lib::imgui::WindowStyle::Transparent);
 	lib::imgui::text_styled(timing_str, time_color, 1.0f, lib::imgui::TextAlignment::Center);
 	lib::imgui::end_window();

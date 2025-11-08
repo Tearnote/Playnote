@@ -43,7 +43,7 @@ enum class QueryStatus: int {
 template<typename T>
            void bind                  (Statement&, int idx, T arg);
 template<> void bind<int>             (Statement&, int idx, int arg);
-template<> void bind<int64>           (Statement&, int idx, int64 arg);
+template<> void bind<int64_t>         (Statement&, int idx, int64_t arg);
 template<> void bind<double>          (Statement&, int idx, double arg);
 template<> void bind<string_view>     (Statement&, int idx, string_view arg);
 template<> void bind<span<byte const>>(Statement&, int idx, span<byte const> arg);
@@ -51,13 +51,13 @@ template<> void bind<void const*>     (Statement&, int idx, void const* arg);
 
 auto step(Statement&) -> QueryStatus;
 void reset(Statement&);
-auto last_insert_rowid(Statement&) -> int64;
+auto last_insert_rowid(Statement&) -> int64_t;
 auto acquire_db_mutex(DB&) -> detail::Mutex;
 
 template<typename T>
            auto get_column                  (Statement&, int idx) -> T;
 template<> auto get_column<int>             (Statement&, int idx) -> int;
-template<> auto get_column<int64>           (Statement&, int idx) -> int64;
+template<> auto get_column<int64_t>         (Statement&, int idx) -> int64_t;
 template<> auto get_column<double>          (Statement&, int idx) -> double;
 template<> auto get_column<string_view>     (Statement&, int idx) -> string_view;
 template<> auto get_column<span<byte const>>(Statement&, int idx) -> span<byte const>;
@@ -107,7 +107,7 @@ void execute(Statement&, Args&&... args);
 // Execute an insert statement with provided parameters, and return the rowid of the inserted row.
 // Throws runtime_error on sqlite error.
 template<typename... Args>
-auto insert(Statement&, Args&&... args) -> int64;
+auto insert(Statement&, Args&&... args) -> int64_t;
 
 // Execute a statement with provided parameters, and call the provided function on every resulting row.
 // Throws runtime_error on sqlite error.
@@ -124,7 +124,7 @@ template<typename ... Args>
 void execute(Statement& stmt, Args&&... args) { query(stmt, []{}, forward<Args>(args)...); }
 
 template<typename ... Args>
-auto insert(Statement& stmt, Args&&... args) -> int64
+auto insert(Statement& stmt, Args&&... args) -> int64_t
 {
 	query(stmt, []{}, forward<Args>(args)...);
 	return detail::last_insert_rowid(stmt);
@@ -138,8 +138,8 @@ void query(Statement& stmt, Func&& func, Args&&... args)
 		using ArgT = remove_cvref_t<decltype(arg)>;
 		if constexpr (same_as<ArgT, float> || same_as<ArgT, double>)
 			detail::bind<double>(stmt, idx, arg);
-		else if constexpr (same_as<ArgT, int64> || same_as<ArgT, uint64>)
-			detail::bind<int64>(stmt, idx, arg);
+		else if constexpr (same_as<ArgT, int64_t> || same_as<ArgT, uint64_t>)
+			detail::bind<int64_t>(stmt, idx, arg);
 		else if constexpr (convertible_to<ArgT, int> || same_as<ArgT, bool>)
 			detail::bind<int>(stmt, idx, arg);
 		else if constexpr (same_as<ArgT, char const*> || same_as<ArgT, string> || same_as<ArgT, string_view>)
@@ -157,7 +157,7 @@ void query(Statement& stmt, Func&& func, Args&&... args)
 	// Step through every result row
 	using FuncParams = function_traits<Func>::params;
 	while (detail::step(stmt) == detail::QueryStatus::Row) {
-		auto const process_row = [&]<usize... I>(index_sequence<I...>) {
+		auto const process_row = [&]<size_t... I>(index_sequence<I...>) {
 			auto row = make_tuple(detail::get_column<tuple_element_t<I, FuncParams>>(stmt, I)...);
 			apply(func, row);
 		};

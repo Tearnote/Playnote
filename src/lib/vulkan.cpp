@@ -165,7 +165,7 @@ auto select_physical_device(Instance const& instance, Surface surface) -> Physic
 	return physical_device;
 }
 
-auto get_driver_version(PhysicalDevice const& physical_device) -> array<uint32, 3>
+auto get_driver_version(PhysicalDevice const& physical_device) -> array<uint, 3>
 {
 	return to_array({
 		VK_API_VERSION_MAJOR(physical_device->properties.driverVersion),

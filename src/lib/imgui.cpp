@@ -193,8 +193,8 @@ auto render(vuk::Allocator& frame_allocator, vuk::ManagedImage&& target, Context
 
 						// Apply scissor/clipping rectangle
 						auto scissor = vuk::Rect2D{
-							.offset = {static_cast<int32>(clip_rect.x), static_cast<int32>(clip_rect.y)},
-							.extent = {static_cast<uint32>(clip_rect.z - clip_rect.x), static_cast<uint32>(clip_rect.w - clip_rect.y)},
+							.offset = {static_cast<int>(clip_rect.x), static_cast<int>(clip_rect.y)},
+							.extent = {static_cast<uint>(clip_rect.z - clip_rect.x), static_cast<uint>(clip_rect.w - clip_rect.y)},
 						};
 						cmd.set_scissor(0, scissor);
 
@@ -220,7 +220,7 @@ auto render(vuk::Allocator& frame_allocator, vuk::ManagedImage&& target, Context
 
 void begin_window(char const* title) { ImGui::Begin(title); }
 
-void begin_window(char const* title, uint2 pos, uint32 width, WindowStyle style)
+void begin_window(char const* title, uint2 pos, int width, WindowStyle style)
 {
 	ImGui::SetNextWindowPos({static_cast<float>(pos.x()), static_cast<float>(pos.y())});
 	ImGui::SetNextWindowSize({static_cast<float>(width), 0});
@@ -277,9 +277,8 @@ void progress_bar(optional<float> progress, string_view text)
 		ImGui::ProgressBar(-1.0f * (static_cast<float>(ImGui::GetTime()) / 2.0f), ImVec2{-1.0f, 0.0f}, string{text}.c_str());
 }
 
-void plot(char const* label,
-	initializer_list<PlotValues> values, initializer_list<PlotMarker> markers,
-	uint32 height, bool stacked)
+void plot(char const* label, initializer_list<PlotValues> values,
+	initializer_list<PlotMarker> markers, int height, bool stacked)
 {
 	if (!ImPlot::BeginPlot(label, ImVec2{-1, static_cast<float>(height)}, ImPlotFlags_NoLegend | ImPlotFlags_NoInputs | ImPlotFlags_NoFrame)) return;
 	ImPlot::SetupAxis(ImAxis_X1, nullptr, ImPlotAxisFlags_NoTickLabels | ImPlotAxisFlags_AutoFit);
@@ -287,7 +286,7 @@ void plot(char const* label,
 
 	struct ValueRef {
 		span<PlotValues const> values;
-		usize idx;
+		isize_t idx;
 	};
 
 	auto const value_func = [&]() -> ImPlotGetter {
@@ -310,7 +309,7 @@ void plot(char const* label,
 		};
 	}();
 
-	for (auto [idx, value]: views::zip(views::iota(0zu), values) | views::reverse) {
+	for (auto [idx, value]: views::zip(views::iota(0z), values) | views::reverse) {
 		auto const implot_color = ImVec4{value.color.r(), value.color.g(), value.color.b(), value.color.a()};
 		auto ref = ValueRef{values, idx};
 		ImPlot::SetNextLineStyle(implot_color);

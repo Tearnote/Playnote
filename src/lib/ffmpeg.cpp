@@ -38,9 +38,9 @@ av_always_inline auto av_err2string(int errnum) -> string {
 
 struct DecoderOutput_t {
 	vector<vector<byte>> data;
-	usize sample_count;
+	isize_t sample_count;
 	AVSampleFormat sample_format;
-	uint32 sample_rate;
+	int sample_rate;
 	AVChannelLayout channel_layout;
 	bool planar;
 };
@@ -115,7 +115,7 @@ using AVFrame = unique_resource<AVFrame*, decltype([](auto* f) {
 // Data buffer wrapper with a cursor for seeking support.
 struct SeekBuffer {
 	span<byte const> buffer;
-	usize cursor;
+	isize_t cursor;
 };
 
 // Memory buffer IO callbacks
@@ -160,7 +160,7 @@ static auto av_io_write(void* opaque, uint8_t const* buf, int buf_size) -> int
 	auto& out_buf = *static_cast<vector<byte>*>(opaque);
 	auto const* in_buf = reinterpret_cast<byte const*>(buf);
 	out_buf.reserve(out_buf.size() + buf_size);
-	copy(span{in_buf, static_cast<usize>(buf_size)}, back_inserter(out_buf));
+	copy(span{in_buf, static_cast<size_t>(buf_size)}, back_inserter(out_buf));
 	return buf_size;
 }
 
@@ -204,7 +204,7 @@ auto decode_file_buffer(span<byte const> file_contents) -> DecoderOutput
 
 	auto result = new DecoderOutput_t{
 		.sample_format = codec_ctx->sample_fmt,
-		.sample_rate = static_cast<uint32>(codec_ctx->sample_rate),
+		.sample_rate = codec_ctx->sample_rate,
 		.channel_layout = codec_ctx->ch_layout,
 		.planar = static_cast<bool>(av_sample_fmt_is_planar(codec_ctx->sample_fmt)),
 	};
@@ -247,7 +247,7 @@ auto decode_file_buffer(span<byte const> file_contents) -> DecoderOutput
 
 			for (auto i: views::iota(0u, planes)) {
 				ASSUME(out_frame.data[i]);
-				copy(span{reinterpret_cast<byte*>(out_frame.data[i]), static_cast<usize>(frame_bytes)},
+				copy(span{reinterpret_cast<byte*>(out_frame.data[i]), frame_bytes},
 					result->data[i].begin() + cursor);
 			}
 			cursor += frame_bytes;
@@ -263,15 +263,14 @@ auto decode_file_buffer(span<byte const> file_contents) -> DecoderOutput
 	return result;
 }
 
-auto resample_buffer(DecoderOutput&& input, uint32 sampling_rate) -> vector<Sample>
+auto resample_buffer(DecoderOutput&& input, int sampling_rate) -> vector<Sample>
 {
 	set_log_callback();
 	auto* swr = static_cast<SwrContext*>(nullptr);
 	constexpr auto channel_layout = (AVChannelLayout)AV_CHANNEL_LAYOUT_STEREO;
 	ret_check(swr_alloc_set_opts2(&swr,
-		&channel_layout, AV_SAMPLE_FMT_FLT, static_cast<int>(sampling_rate),
-		&input->channel_layout, input->sample_format, static_cast<int>(input->sample_rate),
-		0, nullptr));
+		&channel_layout, AV_SAMPLE_FMT_FLT, sampling_rate, &input->channel_layout,
+		input->sample_format, static_cast<int>(input->sample_rate), 0, nullptr));
 	ret_check(av_opt_set_int(swr, "resampler", SWR_ENGINE_SOXR, 0));
 	ret_check(swr_init(swr));
 
@@ -293,7 +292,7 @@ auto resample_buffer(DecoderOutput&& input, uint32 sampling_rate) -> vector<Samp
 	return output;
 }
 
-auto decode_and_resample_file_buffer(span<byte const> file_contents, uint32 sampling_rate) -> vector<Sample>
+auto decode_and_resample_file_buffer(span<byte const> file_contents, int sampling_rate) -> vector<Sample>
 {
 	set_log_callback();
 	auto decoder_output = decode_file_buffer(file_contents);
@@ -301,7 +300,7 @@ auto decode_and_resample_file_buffer(span<byte const> file_contents, uint32 samp
 	return result;
 }
 
-auto encode_as_ogg(span<Sample const> samples, uint32 sampling_rate) -> vector<byte>
+auto encode_as_ogg(span<Sample const> samples, int sampling_rate) -> vector<byte>
 {
 	set_log_callback();
 	auto output = vector<byte>{};
@@ -371,7 +370,7 @@ auto encode_as_ogg(span<Sample const> samples, uint32 sampling_rate) -> vector<b
 	return output;
 }
 
-auto encode_as_opus(span<Sample const> samples, uint32 sampling_rate) -> vector<byte>
+auto encode_as_opus(span<Sample const> samples, int sampling_rate) -> vector<byte>
 {
 	set_log_callback();
 	auto output = vector<byte>{};

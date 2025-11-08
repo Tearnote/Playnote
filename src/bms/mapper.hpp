@@ -34,7 +34,7 @@ public:
 private:
 	struct ConBinding {
 		ControllerID controller;
-		uint32 idx;
+		int idx;
 		auto operator==(ConBinding const&) const -> bool = default;
 	};
 	struct TurntableState {
@@ -72,8 +72,8 @@ inline Mapper::Mapper()
 		if (segments.size() != 3)
 			throw runtime_error_fmt("Invalid controller mapping syntax: {}", conf_entry);
 		return ConBinding{
-			.controller = { id{segments[0]}, lexical_cast<uint32>(segments[1]) },
-			.idx = lexical_cast<uint32>(segments[2]),
+			.controller = { id{segments[0]}, lexical_cast<int>(segments[1]) },
+			.idx = lexical_cast<int>(segments[2]),
 		};
 	};
 
@@ -186,7 +186,7 @@ inline auto Mapper::from_key(KeyInput const& key, Playstyle playstyle) -> option
 	auto const lane = static_cast<Lane::Type>(distance(playstyle_binds.begin(), match));
 	auto& last = last_input[+playstyle][+lane];
 	auto const since_last = key.timestamp - last;
-	if (since_last <= milliseconds{globals::config->get_entry<int32>("controls", "debounce_duration")}) return nullopt;
+	if (since_last <= milliseconds{globals::config->get_entry<int>("controls", "debounce_duration")}) return nullopt;
 
 	last = key.timestamp;
 	return Input{
@@ -209,7 +209,7 @@ inline auto Mapper::from_button(ButtonInput const& button, Playstyle playstyle) 
 	auto const lane = static_cast<Lane::Type>(distance(playstyle_binds.begin(), match));
 	auto& last = last_input[+playstyle][+lane];
 	auto const since_last = button.timestamp - last;
-	if (since_last <= milliseconds{globals::config->get_entry<int32>("controls", "debounce_duration")}) return nullopt;
+	if (since_last <= milliseconds{globals::config->get_entry<int>("controls", "debounce_duration")}) return nullopt;
 
 	last = button.timestamp;
 	return Input{
@@ -239,7 +239,7 @@ inline auto Mapper::submit_axis_input(AxisInput const& axis, Playstyle playstyle
 	auto& last = last_input[+playstyle][+lane];
 	auto const since_last = axis.timestamp - last;
 
-	if (current_direction != tt_state.direction && since_last > milliseconds{globals::config->get_entry<int32>("controls", "debounce_duration")}) {
+	if (current_direction != tt_state.direction && since_last > milliseconds{globals::config->get_entry<int>("controls", "debounce_duration")}) {
 		// Changing direction of existing rotation
 		if (tt_state.direction != TurntableState::Direction::None) {
 			inputs.emplace_back(Input{
@@ -277,7 +277,7 @@ inline auto Mapper::from_axis_state(Playstyle playstyle) -> vector<Input>
 		if (tt.direction == TurntableState::Direction::None) continue;
 		auto now = globals::glfw->get_time();
 		auto elapsed = now - tt.last_stopped;
-		if (elapsed <= milliseconds{globals::config->get_entry<int32>("controls", "turntable_stop_timeout")}) continue;
+		if (elapsed <= milliseconds{globals::config->get_entry<int>("controls", "turntable_stop_timeout")}) continue;
 
 		inputs.emplace_back(Input{
 			.timestamp = now,

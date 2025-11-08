@@ -49,8 +49,8 @@ public:
 	};
 
 	struct JudgeTotals {
-		array<isize, enum_count<JudgmentType>()> types;
-		array<isize, enum_count<Timing>()> timings;
+		array<isize_t, enum_count<JudgmentType>()> types;
+		array<isize_t, enum_count<Timing>()> timings;
 	};
 
 	// Create a running score for the given chart. The reference is not stored.
@@ -60,34 +60,34 @@ public:
 	void submit_judgment_event(Cursor::JudgmentEvent const&);
 
 	// Return the latest judgment on given playfield.
-	[[nodiscard]] auto get_latest_judgment(uint32 field_idx) const -> optional<Judgment>
+	[[nodiscard]] auto get_latest_judgment(int field_idx) const -> optional<Judgment>
 	{
 		return latest_judgement[field_idx];
 	}
 
 	// Return the number of playable notes that were already judged.
-	[[nodiscard]] auto get_judged_notes() const -> isize { return notes_judged; }
+	[[nodiscard]] auto get_judged_notes() const -> isize_t { return notes_judged; }
 
 	// Return the note judgments.
 	[[nodiscard]] auto get_judge_totals() const -> JudgeTotals { return judge_totals; }
 
 	// Return current combo.
-	[[nodiscard]] auto get_combo() const -> isize { return combo; }
+	[[nodiscard]] auto get_combo() const -> isize_t { return combo; }
 
 	// Return current score.
-	[[nodiscard]] auto get_score() const -> isize { return score; }
+	[[nodiscard]] auto get_score() const -> isize_t { return score; }
 
 	// Return accuracy rank.
 	[[nodiscard]] auto get_rank() const -> Rank;
 
 private:
 	[[maybe_unused]] nanoseconds chart_duration;
-	isize notes_judged = 0;
-	[[maybe_unused]] isize note_count;
+	isize_t notes_judged = 0;
+	[[maybe_unused]] isize_t note_count;
 	JudgeTotals judge_totals = {};
 	array<optional<Judgment>, 2> latest_judgement = {};
-	isize combo = 0;
-	isize score = 0;
+	isize_t combo = 0;
+	isize_t score = 0;
 };
 
 inline Score::Score(Chart const& chart):

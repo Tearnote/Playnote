@@ -37,12 +37,12 @@ enum class State {
 
 struct ImportStatus {
 	bool complete;
-	uint32 songs_processed;
-	uint32 songs_total;
-	uint32 songs_failed;
-	uint32 charts_added;
-	uint32 charts_skipped;
-	uint32 charts_failed;
+	int songs_processed;
+	int songs_total;
+	int songs_failed;
+	int charts_added;
+	int charts_skipped;
+	int charts_failed;
 };
 
 struct SelectContext {
@@ -394,7 +394,7 @@ static void run_render(Broadcaster& broadcaster, dev::Window& window, Logger::Ca
 			context.player.add_cursor(context.cursor, bms::Mapper{});
 			context.playfield = gfx::Playfield{{44, 0}, 545, context.cursor->get_chart().metadata.playstyle};
 			context.scroll_speed = globals::config->get_entry<double>("gameplay", "scroll_speed"),
-			context.offset = milliseconds{globals::config->get_entry<int32>("gameplay", "note_offset")};
+			context.offset = milliseconds{globals::config->get_entry<int>("gameplay", "note_offset")};
 			state.current = State::Gameplay;
 			state.requested = State::None;
 		}

@@ -57,22 +57,22 @@ public:
 	[[nodiscard]] auto is_dirty() const -> bool { return dirty.load(); }
 
 	// Return the number of songs that were imported so far.
-	[[nodiscard]] auto get_import_songs_processed() const -> isize { return import_stats.songs_processed.load(); }
+	[[nodiscard]] auto get_import_songs_processed() const -> isize_t { return import_stats.songs_processed.load(); }
 
 	// Return the number of songs discovered during import so far.
-	[[nodiscard]] auto get_import_songs_total() const -> isize { return import_stats.songs_total.load(); }
+	[[nodiscard]] auto get_import_songs_total() const -> isize_t { return import_stats.songs_total.load(); }
 
 	// Return the number of songs that failed to import.
-	[[nodiscard]] auto get_import_songs_failed() const -> isize { return import_stats.songs_failed.load(); }
+	[[nodiscard]] auto get_import_songs_failed() const -> isize_t { return import_stats.songs_failed.load(); }
 
 	// Return the number of charts that were imported so far.
-	[[nodiscard]] auto get_import_charts_added() const -> isize { return import_stats.charts_added.load(); }
+	[[nodiscard]] auto get_import_charts_added() const -> isize_t { return import_stats.charts_added.load(); }
 
 	// Return the number of charts that were skipped as duplicates.
-	[[nodiscard]] auto get_import_charts_skipped() const -> isize { return import_stats.charts_skipped.load(); }
+	[[nodiscard]] auto get_import_charts_skipped() const -> isize_t { return import_stats.charts_skipped.load(); }
 
 	// Return the number of charts that failed to import.
-	[[nodiscard]] auto get_import_charts_failed() const -> isize { return import_stats.charts_failed.load(); }
+	[[nodiscard]] auto get_import_charts_failed() const -> isize_t { return import_stats.charts_failed.load(); }
 
 	// Set all import statistics to zero. Can be used during an import, but the values might be inconsistent afterwards.
 	void reset_import_stats();
@@ -226,12 +226,12 @@ private:
 	)sql"sv;
 
 	struct ImportStats {
-		atomic<isize> songs_processed = 0;
-		atomic<isize> songs_total = 0;
-		atomic<isize> songs_failed = 0;
-		atomic<isize> charts_added = 0;
-		atomic<isize> charts_skipped = 0;
-		atomic<isize> charts_failed = 0;
+		atomic<isize_t> songs_processed = 0;
+		atomic<isize_t> songs_total = 0;
+		atomic<isize_t> songs_failed = 0;
+		atomic<isize_t> charts_added = 0;
+		atomic<isize_t> charts_skipped = 0;
+		atomic<isize_t> charts_failed = 0;
 	};
 
 	Logger::Category cat;
@@ -239,9 +239,9 @@ private:
 
 	lib::sqlite::DB db;
 	task_container import_tasks;
-	unordered_map<MD5, isize> staging;
+	unordered_map<MD5, isize_t> staging;
 	coro_mutex staging_lock;
-	unordered_node_map<isize, coro_mutex> song_locks;
+	unordered_node_map<isize_t, coro_mutex> song_locks;
 	atomic<bool> dirty = true;
 	atomic<bool> stopping = false;
 	ImportStats import_stats;
@@ -249,8 +249,8 @@ private:
 	[[nodiscard]] auto find_available_song_filename(string_view name) -> string;
 	auto import_many(fs::path) -> task<>;
 	auto import_one(fs::path) -> task<>;
-	auto import_chart(io::Song& song, isize song_id, string chart_path, span<byte const>) -> task<MD5>;
-	auto deduplicate_previews(isize song_id, span<MD5 const> new_charts) -> task<isize>;
+	auto import_chart(io::Song& song, isize_t song_id, string chart_path, span<byte const>) -> task<MD5>;
+	auto deduplicate_previews(isize_t song_id, span<MD5 const> new_charts) -> task<isize_t>;
 };
 
 inline Library::Library(Logger::Category cat, unique_ptr<thread_pool>& pool, fs::path const& path):
@@ -311,10 +311,10 @@ inline auto Library::load_chart(unique_ptr<thread_pool>& pool, MD5 md5) -> task<
 	auto chart_path = string{};
 	auto select_song_chart = lib::sqlite::prepare(db, SelectSongChartQuery);
 	lib::sqlite::query(select_song_chart, [&](
-		string_view song_path_sv, string_view chart_path_sv, [[maybe_unused]] int64 date_imported, string_view title, string_view subtitle,
+		string_view song_path_sv, string_view chart_path_sv, [[maybe_unused]] int64_t date_imported, string_view title, string_view subtitle,
 		string_view artist, string_view subartist, string_view genre, string_view url, string_view email,
-		int difficulty, int playstyle, int has_ln, int has_soflan, int note_count, int64 chart_duration,
-		int64 audio_duration, double loudness, double average_nps, double peak_nps, double min_bpm, double max_bpm,
+		int difficulty, int playstyle, int has_ln, int has_soflan, int note_count, int64_t chart_duration,
+		int64_t audio_duration, double loudness, double average_nps, double peak_nps, double min_bpm, double max_bpm,
 		double main_bpm, int density_resolution, span<byte const> density_key, span<byte const> density_scratch,
 		span<byte const> density_ln
 	) {
@@ -340,7 +340,7 @@ inline auto Library::load_chart(unique_ptr<thread_pool>& pool, MD5 md5) -> task<
 				.has_ln = has_ln != 0,
 				.has_soflan = has_soflan != 0,
 			},
-			.note_count = static_cast<uint32>(note_count),
+			.note_count = note_count,
 			.chart_duration = nanoseconds{chart_duration},
 			.audio_duration = nanoseconds{audio_duration},
 			.loudness = loudness,
@@ -438,7 +438,7 @@ inline auto Library::import_one(fs::path path) -> task<>
 		if (!duplicate) {
 			auto get_song_from_chart = lib::sqlite::prepare(db, GetSongFromChartQuery);
 			for (auto const& chart: charts) {
-				lib::sqlite::query(get_song_from_chart, [&](isize id, string_view) { song_id = id; }, chart);
+				lib::sqlite::query(get_song_from_chart, [&](isize_t id, string_view) { song_id = id; }, chart);
 				if (song_id != -1z) {
 					duplicate = true;
 					break;
@@ -540,7 +540,7 @@ inline auto Library::import_one(fs::path path) -> task<>
 	}
 }
 
-inline auto Library::import_chart(io::Song& song, isize song_id, string chart_path, span<byte const> chart_raw) -> task<MD5>
+inline auto Library::import_chart(io::Song& song, isize_t song_id, string chart_path, span<byte const> chart_raw) -> task<MD5>
 {
 	if (stopping.load()) throw runtime_error_fmt("Chart import \"{}\" cancelled", chart_path);
 
@@ -595,7 +595,7 @@ inline auto Library::import_chart(io::Song& song, isize song_id, string chart_pa
 	co_return chart->md5;
 }
 
-inline auto Library::deduplicate_previews(isize song_id, span<MD5 const> new_charts) -> task<isize> {
+inline auto Library::deduplicate_previews(isize_t song_id, span<MD5 const> new_charts) -> task<isize_t> {
 	// Some or all of the charts of this song were just added, all with their own previews.
 	// Any of these previews can be a duplicate of a new preview or an old preview.
 
@@ -606,8 +606,8 @@ inline auto Library::deduplicate_previews(isize song_id, span<MD5 const> new_cha
 			WHERE charts.song_id = ?1
 	)sql"sv;
 	auto select_song_previews = lib::sqlite::prepare(db, SelectSongPreviewsQuery);
-	auto previews = unordered_map<isize, vector<dev::Sample>>{};
-	lib::sqlite::query(select_song_previews, [&](isize id, span<byte const> preview) {
+	auto previews = unordered_map<isize_t, vector<dev::Sample>>{};
+	lib::sqlite::query(select_song_previews, [&](isize_t id, span<byte const> preview) {
 		previews.emplace(id, lib::ffmpeg::decode_and_resample_file_buffer(preview, 48000));
 	}, song_id);
 
@@ -616,9 +616,9 @@ inline auto Library::deduplicate_previews(isize song_id, span<MD5 const> new_cha
 		SELECT preview_id FROM charts WHERE md5 = ?1
 	)sql"sv;
 	auto select_chart_preview_ids = lib::sqlite::prepare(db, SelectChartPreviewIDsQuery);
-	auto new_chart_preview_ids = vector<isize>{};
+	auto new_chart_preview_ids = vector<isize_t>{};
 	for (auto const& md5: new_charts) {
-		lib::sqlite::query(select_chart_preview_ids, [&](isize preview_id) {
+		lib::sqlite::query(select_chart_preview_ids, [&](isize_t preview_id) {
 			new_chart_preview_ids.emplace_back(preview_id);
 		}, md5);
 	}

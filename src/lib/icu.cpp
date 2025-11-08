@@ -51,7 +51,7 @@ auto detect_encoding(span<byte const> input, initializer_list<string_view> chars
 	handle_icu_error(err);
 
 	if (!matches_count) return nullopt;
-	auto const matches = std::span{matches_ptr, static_cast<usize>(matches_count)};
+	auto const matches = std::span{matches_ptr, static_cast<size_t>(matches_count)};
 	if (empty(charsets)) { // No filtering
 		auto* match_name = ucsdet_getName(matches[0], &err);
 		handle_icu_error(err);

@@ -58,13 +58,13 @@ using mpmc_queue = moodycamel::ConcurrentQueue<T>;
 // https://www.cppstories.com/2021/heterogeneous-access-cpp20/
 struct string_hash {
 	using is_transparent = void;
-	[[nodiscard]] auto operator()(char const* text) const -> usize {
+	[[nodiscard]] auto operator()(char const* text) const -> size_t {
 		return boost::hash<std::string_view>{}(text);
 	}
-	[[nodiscard]] auto operator()(std::string_view text) const -> usize {
+	[[nodiscard]] auto operator()(std::string_view text) const -> size_t {
 		return boost::hash<std::string_view>{}(text);
 	}
-	[[nodiscard]] auto operator()(std::string const& text) const -> usize {
+	[[nodiscard]] auto operator()(std::string const& text) const -> size_t {
 		return boost::hash<std::string>{}(text);
 	}
 };

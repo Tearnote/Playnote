@@ -57,19 +57,19 @@ private:
 		shared_ptr<bms::Cursor> cursor;
 		bms::Mapper mapper;
 		float gain;
-		isize sample_offset; // Sample count at the time the cursor was started
+		isize_t sample_offset; // Sample count at the time the cursor was started
 	};
 	struct ActiveSound {
 		bms::MD5 md5;
-		isize channel;
+		isize_t channel;
 		span<dev::Sample const> audio;
-		isize position;
+		isize_t position;
 		float gain;
 	};
 	mutex cursors_lock;
 	small_vector<PlayableCursor, 4> cursors;
 	nanoseconds timer_slop; // Player start time according to the CPU timer. Adjusted over time to maintain sync
-	isize samples_processed = 0;
+	isize_t samples_processed = 0;
 	shared_ptr<spsc_queue<UserInput>> inbound_inputs;
 	small_vector<UserInput, 16> pending_inputs;
 	bool paused = false;
@@ -229,12 +229,12 @@ inline auto Player::next_sample() -> dev::Sample
 	}
 
 	auto sample_mix = dev::Sample{};
-	for (auto i = 0z; i < static_cast<isize>(active_sounds.size());) {
+	for (auto i = 0z; i < static_cast<isize_t>(active_sounds.size());) {
 		auto& sound = active_sounds[i];
 		sample_mix.left += sound.audio[sound.position].left * sound.gain;
 		sample_mix.right += sound.audio[sound.position].right * sound.gain;
 		sound.position += 1;
-		if (sound.position >= static_cast<isize>(sound.audio.size())) {
+		if (sound.position >= static_cast<isize_t>(sound.audio.size())) {
 			// Swap-and-pop erase
 			active_sounds[i] = move(active_sounds.back());
 			active_sounds.pop_back();

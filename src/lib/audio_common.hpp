@@ -29,9 +29,9 @@ enum class SampleFormat {
 };
 
 struct AudioProperties {
-	uint32 sampling_rate;
+	int sampling_rate;
 	SampleFormat sample_format;
-	uint32 buffer_size;
+	int buffer_size;
 };
 
 inline auto audio_latency(AudioProperties const& props) -> nanoseconds

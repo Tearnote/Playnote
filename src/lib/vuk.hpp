@@ -60,11 +60,11 @@ void submit(Allocator& allocator, ManagedImage&& image);
 // Compile a combined vertex and fragment shader into a graphics pipeline. Expects "vertexMain"
 // and "fragmentMain" entry points.
 // Throws if vuk throws.
-void create_graphics_pipeline(Runtime& runtime, string_view name, span<uint32 const> shader);
+void create_graphics_pipeline(Runtime& runtime, string_view name, span<uint const> shader);
 
 // Compile a compute shader into a compute pipeline. Expects "computeMain" entry point.
 // Throws if vuk throws.
-void create_compute_pipeline(Runtime& runtime, string_view name, span<uint32 const> shader);
+void create_compute_pipeline(Runtime& runtime, string_view name, span<uint const> shader);
 
 // Clear an image with a solid color.
 // Throws if vuk throws.

@@ -19,7 +19,7 @@ namespace playnote::lib::dsp {
 class Limiter {
 public:
 	// Initialize with provided parameters.
-	Limiter(uint32 sampling_rate, milliseconds attack, milliseconds hold, milliseconds release);
+	Limiter(int sampling_rate, milliseconds attack, milliseconds hold, milliseconds release);
 
 	// Process a single sample.
 	auto process(Sample in) noexcept -> Sample;
@@ -28,7 +28,7 @@ private:
 	signalsmith::basics::LimiterDouble limiter;
 };
 
-inline Limiter::Limiter(uint32 sampling_rate, milliseconds attack, milliseconds hold,
+inline Limiter::Limiter(int sampling_rate, milliseconds attack, milliseconds hold,
 	milliseconds release):
 	limiter{attack.count()}
 {

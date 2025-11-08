@@ -79,7 +79,7 @@ constexpr auto operator+(scoped_enum auto val) noexcept { return std::to_underly
 
 // Add as class member to limit the number of simultaneous instances.
 // Throws logic_error if the limit is reached.
-template<typename, usize Limit>
+template<typename, isize_t Limit>
 class InstanceLimit {
 public:
 	InstanceLimit()
@@ -93,7 +93,7 @@ public:
 	// Default copy and move constructors should behave as expected
 
 private:
-	static inline auto count = 0zu;
+	static inline auto count = 0z;
 };
 
 // Trait for retrieving a function's parameter types as a tuple.

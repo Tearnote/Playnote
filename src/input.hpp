@@ -29,7 +29,7 @@ struct KeyInput {
 // Unique identifier for a controller. Can be persisted between sessions.
 struct ControllerID {
 	id guid; // Hash of the GUID
-	uint32 duplicate; // Initially 0, incremented if a duplicate GUID is found
+	int duplicate; // Initially 0, incremented if a duplicate GUID is found
 	auto operator==(ControllerID const&) const -> bool = default;
 };
 
@@ -37,7 +37,7 @@ struct ControllerID {
 struct ButtonInput {
 	ControllerID controller;
 	nanoseconds timestamp; // Time since application start
-	uint32 button;
+	int button;
 	bool state;
 };
 
@@ -45,7 +45,7 @@ struct ButtonInput {
 struct AxisInput {
 	ControllerID controller;
 	nanoseconds timestamp; // Time since application start
-	uint32 axis;
+	int axis;
 	float value;
 };
 

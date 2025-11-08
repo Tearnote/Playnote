@@ -86,7 +86,7 @@ static void on_param_changed(void* data, uint32_t id, spa_pod const* param)
 	context->properties.sampling_rate = audio_info.info.raw.rate;
 }
 
-[[nodiscard]] auto init(string_view stream_name, uint32 buffer_size, function<void(span<Sample>)>&& processor) -> Context
+[[nodiscard]] auto init(string_view stream_name, int buffer_size, function<void(span<Sample>)>&& processor) -> Context
 {
 	auto context = make_unique<Context_t>();
 	pw_init(nullptr, nullptr);
@@ -109,7 +109,7 @@ static void on_param_changed(void* data, uint32_t id, spa_pod const* param)
 		&stream->events, context.get());
 
 	auto params = array<spa_pod const*, 1>{};
-	auto buffer = array<uint8, 1024>{};
+	auto buffer = array<uint8_t, 1024>{};
 	auto builder = SPA_POD_BUILDER_INIT(buffer.data(), buffer.size());
 	auto audio_info = spa_audio_info_raw{
 		.format = SPA_AUDIO_FORMAT_F32,

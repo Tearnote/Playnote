@@ -96,7 +96,7 @@ void detail::bind<int>(Statement& stmt, int idx, int arg)
 }
 
 template<>
-void detail::bind<int64>(Statement& stmt, int idx, int64 arg)
+void detail::bind<int64_t>(Statement& stmt, int idx, int64_t arg)
 {
 	ret_check_ext(sqlite3_db_handle(stmt.get()), sqlite3_bind_int64(stmt.get(), idx, arg));
 }
@@ -157,7 +157,7 @@ void detail::ScopedTransaction::commit()
 	committed = true;
 }
 
-auto detail::last_insert_rowid(Statement& stmt) -> int64
+auto detail::last_insert_rowid(Statement& stmt) -> int64_t
 {
 	return sqlite3_last_insert_rowid(sqlite3_db_handle(stmt.get()));
 }
@@ -176,7 +176,7 @@ auto detail::get_column<int>(Statement& stmt, int idx) -> int
 }
 
 template<>
-auto detail::get_column<int64>(Statement& stmt, int idx) -> int64
+auto detail::get_column<int64_t>(Statement& stmt, int idx) -> int64_t
 {
 	return sqlite3_column_int64(stmt.get(), idx);
 }
@@ -194,7 +194,7 @@ auto detail::get_column<string_view>(Statement& stmt, int idx) -> string_view
 	auto const len = sqlite3_column_bytes(stmt.get(), idx);
 	// The string pointed at by string_view lives until the next step() or reset(),
 	// which is guaranteed by the usage of this function in query()
-	return {text, static_cast<usize>(len)};
+	return {text, static_cast<size_t>(len)};
 }
 
 template<>
@@ -204,7 +204,7 @@ auto detail::get_column<span<byte const>>(Statement& stmt, int idx) -> span<byte
 	auto const size = sqlite3_column_bytes(stmt.get(), idx);
 	// The buffer pointed at by the span lives until the next step() or reset(),
 	// which is guaranteed by the usage of this function in query()
-	return {blob, static_cast<usize>(size)};
+	return {blob, static_cast<size_t>(size)};
 }
 
 template<>

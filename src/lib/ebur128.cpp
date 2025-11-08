@@ -31,7 +31,7 @@ static void ret_check(int ret, string_view message = "libebur128 error")
 	if (ret != EBUR128_SUCCESS) throw system_error_fmt("{}: #{}", message, ret);
 }
 
-auto init(uint32 sampling_rate) -> Context
+auto init(int sampling_rate) -> Context
 {
 	return Context{static_cast<Context_t*>(ptr_check(ebur128_init(2, sampling_rate, EBUR128_MODE_I)))};
 }

@@ -138,7 +138,7 @@ void submit(Allocator& allocator, ManagedImage&& image)
 	entire_thing.submit(allocator, compiler);
 }
 
-void create_graphics_pipeline(Runtime& runtime, string_view name, span<uint32 const> shader)
+void create_graphics_pipeline(Runtime& runtime, string_view name, span<uint const> shader)
 {
 	auto const shader_name = format("{}.slang", name);
 	auto pci = PipelineBaseCreateInfo{};
@@ -147,7 +147,7 @@ void create_graphics_pipeline(Runtime& runtime, string_view name, span<uint32 co
 	runtime.create_named_pipeline(name, pci);
 }
 
-void create_compute_pipeline(Runtime& runtime, string_view name, span<uint32 const> shader)
+void create_compute_pipeline(Runtime& runtime, string_view name, span<uint const> shader)
 {
 	auto const comp_name = format("{}.slang", name);
 	auto pci = PipelineBaseCreateInfo{};

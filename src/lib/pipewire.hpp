@@ -33,7 +33,7 @@ using Context = unique_ptr<Context_t>;
 // Initialize PipeWire and open an audio stream. processor function will be called in a separate
 // thread with a buffer of samples to fill. A Context is returned and must be passed to cleanup().
 // Throws system_error on failure.
-auto init(string_view stream_name, uint32 buffer_size, function<void(span<Sample>)>&& processor) -> Context;
+auto init(string_view stream_name, int buffer_size, function<void(span<Sample>)>&& processor) -> Context;
 
 // Clean up PipeWire and associated objects.
 void cleanup(Context&& context);

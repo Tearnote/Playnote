@@ -166,7 +166,7 @@ inline Window::Window(string_view title, uint2 size) {
 	lib::glfw::set_window_file_drop_handler(window_handle.get(),
 		[](lib::glfw::Window window_ptr, int count, char const** paths_raw) {
 			auto& window = *lib::glfw::get_window_user_pointer<Window>(window_ptr);
-			auto const paths = span{paths_raw, static_cast<usize>(count)};
+			auto const paths = span{paths_raw, static_cast<size_t>(count)};
 			for (auto& func: window.file_drop_callbacks)
 				func(paths);
 		}

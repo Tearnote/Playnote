@@ -42,10 +42,10 @@ public:
 
 	// Preload all audio files to an internal cache. This cache will be used in any later load_audio_file() calls.
 	// The loads are performed in parallel. Useful when loading multiple charts of the same song.
-	auto preload_audio_files(unique_ptr<thread_pool>&, isize sampling_rate) -> task<>;
+	auto preload_audio_files(unique_ptr<thread_pool>&, int sampling_rate) -> task<>;
 
 	// Load the requested audio file, decode it, and resample to current device sample rate.
-	auto load_audio_file(string_view filepath, isize sampling_rate) -> vector<dev::Sample>;
+	auto load_audio_file(string_view filepath, int sampling_rate) -> vector<dev::Sample>;
 
 	// Destroy the song and delete the underlying songzip from disk.
 	void remove() && noexcept;
@@ -192,16 +192,16 @@ inline auto Song::from_source_append(Logger::Category cat, unique_ptr<thread_poo
 template<callable<void(string_view, span<byte const>)> Func>
 void Song::for_each_chart(Func&& func)
 {
-	lib::sqlite::query(select_charts, [&](string_view path, void const* ptr, isize size) {
-		func(path, span{static_cast<byte const*>(ptr), static_cast<usize>(size)});
+	lib::sqlite::query(select_charts, [&](string_view path, void const* ptr, isize_t size) {
+		func(path, span{static_cast<byte const*>(ptr), static_cast<size_t>(size)});
 	});
 }
 
 inline auto Song::load_file(string_view filepath) -> span<byte const>
 {
 	auto file = span<byte const>{};
-	lib::sqlite::query(select_file, [&](void const* ptr, isize size) {
-		file = span{static_cast<byte const*>(ptr), static_cast<usize>(size)};
+	lib::sqlite::query(select_file, [&](void const* ptr, isize_t size) {
+		file = span{static_cast<byte const*>(ptr), static_cast<size_t>(size)};
 		return false;
 	}, filepath);
 	if (!file.data())
@@ -209,16 +209,16 @@ inline auto Song::load_file(string_view filepath) -> span<byte const>
 	return file;
 }
 
-inline auto Song::preload_audio_files(unique_ptr<thread_pool>& pool, isize sampling_rate) -> task<>
+inline auto Song::preload_audio_files(unique_ptr<thread_pool>& pool, int sampling_rate) -> task<>
 {
 	auto tasks = vector<task<vector<dev::Sample>>>{};
 	auto paths = vector<string>{};
-	lib::sqlite::query(select_audio_files, [&](string_view filepath, void const* ptr, isize size) {
+	lib::sqlite::query(select_audio_files, [&](string_view filepath, void const* ptr, isize_t size) {
 		// Normally the db collation handles case-insensitive lookup for us, but we need to do it manually for the cache
 		auto filepath_low = string{filepath};
 		to_lower(filepath_low);
-		auto file = span{static_cast<byte const*>(ptr), static_cast<usize>(size)};
-		tasks.emplace_back(schedule_task_on(pool, [](Logger::Category cat, span<byte const> file, isize sampling_rate) -> task<vector<dev::Sample>> {
+		auto file = span{static_cast<byte const*>(ptr), static_cast<size_t>(size)};
+		tasks.emplace_back(schedule_task_on(pool, [](Logger::Category cat, span<byte const> file, isize_t sampling_rate) -> task<vector<dev::Sample>> {
 			lib::ffmpeg::set_thread_log_category(cat);
 			co_return lib::ffmpeg::decode_and_resample_file_buffer(file, sampling_rate);
 		}(cat, file, sampling_rate)));
@@ -235,7 +235,7 @@ inline auto Song::preload_audio_files(unique_ptr<thread_pool>& pool, isize sampl
 	}
 }
 
-inline auto Song::load_audio_file(string_view filepath, isize sampling_rate) -> vector<dev::Sample>
+inline auto Song::load_audio_file(string_view filepath, int sampling_rate) -> vector<dev::Sample>
 {
 	if (!audio_cache.empty()) {
 		auto filepath_low = string{filepath};
@@ -247,8 +247,8 @@ inline auto Song::load_audio_file(string_view filepath, isize sampling_rate) -> 
 
 	auto file = span<byte const>{};
 	auto select_audio_file = lib::sqlite::prepare(this->db, SelectAudioFileQuery);
-	lib::sqlite::query(select_audio_file, [&](void const* ptr, isize size) {
-		file = span{static_cast<byte const*>(ptr), static_cast<usize>(size)};
+	lib::sqlite::query(select_audio_file, [&](void const* ptr, isize_t size) {
+		file = span{static_cast<byte const*>(ptr), static_cast<size_t>(size)};
 		return false;
 	}, filepath);
 	if (!file.data())

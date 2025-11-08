@@ -61,8 +61,8 @@ void ControllerDispatcher::poll(Func&& func)
 
 		auto button_count = 0;
 		auto const* buttons_ptr = glfwGetJoystickButtons(jid, &button_count);
-		auto buttons = span{buttons_ptr, static_cast<uint32>(button_count)};
-		for (auto [idx, previous, current_raw]: views::zip(views::iota(0u), controller.buttons, buttons)) {
+		auto buttons = span{buttons_ptr, static_cast<size_t>(button_count)};
+		for (auto [idx, previous, current_raw]: views::zip(views::iota(0), controller.buttons, buttons)) {
 			auto current = current_raw == +lib::glfw::Action::Press;
 			if (previous == current) continue;
 			func(ControllerEvent{ButtonInput{
@@ -76,8 +76,8 @@ void ControllerDispatcher::poll(Func&& func)
 
 		auto axes_count = 0;
 		auto const* axes_ptr = glfwGetJoystickAxes(jid, &axes_count);
-		auto axes = span{axes_ptr, static_cast<uint32>(axes_count)};
-		for (auto [idx, previous, current]: views::zip(views::iota(0u), controller.axes, axes)) {
+		auto axes = span{axes_ptr, static_cast<size_t>(axes_count)};
+		for (auto [idx, previous, current]: views::zip(views::iota(0), controller.axes, axes)) {
 			if (previous == current) continue;
 			func(ControllerEvent{AxisInput{
 				.controller = controller.id,
@@ -116,7 +116,7 @@ inline void ControllerDispatcher::joystick_event_callback(int jid, int event)
 
 	auto button_count = 0;
 	auto const* buttons_ptr = glfwGetJoystickButtons(jid, &button_count);
-	auto buttons = span{buttons_ptr, static_cast<uint32>(button_count)};
+	auto buttons = span{buttons_ptr, static_cast<size_t>(button_count)};
 	ASSERT(controller.buttons.empty());
 	controller.buttons.reserve(button_count);
 	transform(buttons, back_inserter(controller.buttons), [](auto state) {
@@ -125,7 +125,7 @@ inline void ControllerDispatcher::joystick_event_callback(int jid, int event)
 
 	auto axes_count = 0;
 	auto const* axes_ptr = glfwGetJoystickAxes(jid, &axes_count);
-	auto axes = span{axes_ptr, static_cast<uint32>(axes_count)};
+	auto axes = span{axes_ptr, static_cast<size_t>(axes_count)};
 	ASSERT(controller.axes.empty());
 	controller.axes.reserve(axes_count);
 	transform(axes, back_inserter(controller.axes), [](auto value) {

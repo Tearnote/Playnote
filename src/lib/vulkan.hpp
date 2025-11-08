@@ -65,7 +65,7 @@ using PhysicalDevice = unique_ptr<vkb::PhysicalDevice, detail::PhysicalDeviceDel
 auto select_physical_device(Instance const& instance, Surface surface) -> PhysicalDevice;
 
 // Return the driver version triple in use by a specific GPU.
-auto get_driver_version(PhysicalDevice const& physical_device) -> array<uint32, 3>;
+auto get_driver_version(PhysicalDevice const& physical_device) -> array<uint, 3>;
 
 // Return a GPU's name as reported by the driver.
 auto get_device_name(PhysicalDevice const& physical_device) -> string_view;
@@ -86,11 +86,11 @@ using Queue = VkQueue_T*;
 // Set of queues available on a device. A queue is nullptr if unavailable.
 struct QueueSet {
 	Queue graphics;
-	uint32 graphics_family_index;
+	int graphics_family_index;
 	Queue transfer;
-	uint32 transfer_family_index;
+	int transfer_family_index;
 	Queue compute;
-	uint32 compute_family_index;
+	int compute_family_index;
 };
 
 // Fill in a QueueSet from a Vulkan device.

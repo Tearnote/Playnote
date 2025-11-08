@@ -32,7 +32,7 @@ public:
 
 	// Build a chart from BMS data. The song must contain audio/video resources referenced by the chart.
 	// Optionally, the metadata cache speeds up loading by skipping expensive steps.
-	auto build(unique_ptr<thread_pool>&, span<byte const> bms, io::Song&, isize sampling_rate,
+	auto build(unique_ptr<thread_pool>&, span<byte const> bms, io::Song&, int sampling_rate,
 		optional<reference_wrapper<Metadata>> cache = nullopt) -> task<shared_ptr<Chart const>>;
 
 private:
@@ -41,11 +41,11 @@ private:
 		"STOP"sv, "ARGB"sv, "SEEK"sv, "EXBPM"sv, "EXWAV"sv, "SWBGA"sv, "EXRANK"sv, "CHANGEOPTION"sv};
 
 	// Whole part - measure, fractional part - position within measure.
-	using NotePosition = rational<int32>;
+	using NotePosition = rational<int>;
 
 	// Parsed BMS header-type command.
 	struct HeaderCommand {
-		isize line_num;
+		isize_t line_num;
 		string_view header;
 		string_view slot;
 		string_view value;
@@ -53,7 +53,7 @@ private:
 
 	// Parsed BMS channel-type command.
 	struct ChannelCommand {
-		isize line_num;
+		isize_t line_num;
 		NotePosition position;
 		string_view channel;
 		string_view value;
@@ -73,7 +73,7 @@ private:
 		Type type;
 		Lane::Type lane;
 		T position;
-		isize wav_slot_idx;
+		isize_t wav_slot_idx;
 
 		template<variant_alternative<Type> U>
 		[[nodiscard]] auto type_is() const -> bool { return holds_alternative<U>(type); }
@@ -100,12 +100,12 @@ private:
 		using Mapping = unordered_map<string, T, string_hash>;
 
 		struct WavSlot {
-			isize idx = -1; // 0-based increasing index
+			isize_t idx = -1; // 0-based increasing index
 			string filename; // without extension
 			bool used = false; // true if any note uses the slot; if false, audio file load can be skipped
 		};
 		struct BPMSlot {
-			isize idx = -1;
+			isize_t idx = -1;
 			float bpm;
 		};
 
@@ -124,11 +124,11 @@ private:
 	using ChannelHandlerFunc = void(Builder::*)(ChannelCommand, Chart&, State&);
 	unordered_map<string, ChannelHandlerFunc, string_hash> channel_handlers;
 
-	[[nodiscard]] static auto slot_hex_to_int(string_view hex) -> isize;
-	static void extend_measure_lengths(vector<double>&, isize max_measure);
+	[[nodiscard]] static auto slot_hex_to_int(string_view hex) -> isize_t;
+	static void extend_measure_lengths(vector<double>&, isize_t max_measure);
 
-	void parse_header(string_view line, isize line_num, Chart&, State&);
-	void parse_channel(string_view line, isize line_num, Chart&, State&);
+	void parse_header(string_view line, isize_t line_num, Chart&, State&);
+	void parse_channel(string_view line, isize_t line_num, Chart&, State&);
 
 	// Generic handlers
 	void handle_header_ignored(HeaderCommand, Chart&, State&) {}
@@ -313,7 +313,7 @@ inline Builder::Builder(Logger::Category cat):
 	channel_handlers.emplace("A6" /* Play option         */, &Builder::handle_channel_ignored_log);
 }
 
-inline auto Builder::build(unique_ptr<thread_pool>& pool, span<byte const> bms_raw, io::Song& song, isize sampling_rate,
+inline auto Builder::build(unique_ptr<thread_pool>& pool, span<byte const> bms_raw, io::Song& song, int sampling_rate,
 	optional<reference_wrapper<Metadata>> cache) -> task<shared_ptr<Chart const>>
 {
 	auto chart = make_shared<Chart>();
@@ -377,7 +377,7 @@ inline auto Builder::build(unique_ptr<thread_pool>& pool, span<byte const> bms_r
 	for (auto const& parsed_slot: parse_state.wav | views::values) {
 		if (!parsed_slot.used) continue;
 		auto& slot = chart->media.wav_slots[parsed_slot.idx];
-		tasks.emplace_back(schedule_task_on(pool, [](io::Song& song, vector<dev::Sample>& slot, string filename, isize sampling_rate) -> task<> {
+		tasks.emplace_back(schedule_task_on(pool, [](io::Song& song, vector<dev::Sample>& slot, string filename, int sampling_rate) -> task<> {
 			try {
 				slot = song.load_audio_file(filename, sampling_rate);
 			} catch (...) {} // If audio failed to load, slot will just stay empty
@@ -674,7 +674,7 @@ inline auto Builder::build(unique_ptr<thread_pool>& pool, span<byte const> bms_r
 
 	// Offline audio render pass, handling all related statistics in one sweep
 	auto [loudness, audio_duration, preview] = [&] {
-		static constexpr auto BufferSize = 4096z / static_cast<isize>(sizeof(dev::Sample)); // One memory page
+		static constexpr auto BufferSize = 4096z / static_cast<isize_t>(sizeof(dev::Sample)); // One memory page
 		auto renderer = audio::Renderer{chart};
 		auto ctx = lib::ebur128::init(sampling_rate);
 		auto buffer = vector<dev::Sample>{};
@@ -863,7 +863,7 @@ inline auto Builder::build(unique_ptr<thread_pool>& pool, span<byte const> bms_r
 	co_return chart;
 }
 
-inline auto Builder::slot_hex_to_int(string_view hex) -> isize
+inline auto Builder::slot_hex_to_int(string_view hex) -> isize_t
 {
 	auto result = 0z;
 	for (auto const c: hex) {
@@ -875,14 +875,14 @@ inline auto Builder::slot_hex_to_int(string_view hex) -> isize
 	return result;
 }
 
-inline void Builder::extend_measure_lengths(vector<double>& lengths, isize max_measure)
+inline void Builder::extend_measure_lengths(vector<double>& lengths, isize_t max_measure)
 {
 	auto const min_length = max_measure + 1;
-	if (static_cast<isize>(lengths.size()) >= min_length) return;
+	if (static_cast<isize_t>(lengths.size()) >= min_length) return;
 	lengths.resize(min_length, 1.0);
 }
 
-inline void Builder::parse_header(string_view line, isize line_num, Chart& chart, State& state)
+inline void Builder::parse_header(string_view line, isize_t line_num, Chart& chart, State& state)
 {
 	// Extract components
 	auto header = string{substr_until(line, [](auto c) { return c == ' ' || c == '\t'; })};
@@ -909,10 +909,10 @@ inline void Builder::parse_header(string_view line, isize line_num, Chart& chart
 	(this->*header_handlers.at(header))({line_num, header, slot, value}, chart, state);
 }
 
-inline void Builder::parse_channel(string_view line, isize line_num, Chart& chart, State& state)
+inline void Builder::parse_channel(string_view line, isize_t line_num, Chart& chart, State& state)
 {
 	if (line.size() < 3) return; // Not enough space for even the measure
-	auto const measure = lexical_cast<int32>(line.substr(0, 3)); // This won't throw (first character is a digit)
+	auto const measure = lexical_cast<int>(line.substr(0, 3)); // This won't throw (first character is a digit)
 
 	auto const colon_pos = line.find_first_of(':');
 	auto channel = string{line.substr(3, colon_pos - 3)};
@@ -1076,7 +1076,7 @@ try {
 		WARN_AS(cat, "L{}: Difficulty header has no value", cmd.line_num);
 		return;
 	}
-	auto const level = lexical_cast<int32>(cmd.value);
+	auto const level = lexical_cast<int>(cmd.value);
 	if (level < 1 || level > 5) {
 		WARN_AS(cat, "L{}: Difficulty header has an invalid value: {}", cmd.line_num, level);
 		return;

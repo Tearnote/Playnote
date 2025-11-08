@@ -76,7 +76,7 @@ struct fmtquill::formatter<std::filesystem::directory_entry>: formatter<std::str
 template<>
 struct quill::Codec<std::filesystem::directory_entry>: DeferredFormatCodec<std::filesystem::directory_entry> {};
 
-template<playnote::isize Dim, typename T>
+template<playnote::isize_t Dim, typename T>
 struct fmtquill::formatter<playnote::vec<Dim, T>> {
 	template<typename Ctx>
 	constexpr auto parse(Ctx& ctx) { return formatter<T>{}.parse(ctx); }
@@ -99,7 +99,7 @@ struct fmtquill::formatter<playnote::vec<Dim, T>> {
 		return format_to(ctx.out(), ")");
 	}
 };
-template<playnote::isize Dim, typename T>
+template<playnote::isize_t Dim, typename T>
 struct quill::Codec<playnote::vec<Dim, T>>: DeferredFormatCodec<playnote::vec<Dim, T>> {};
 
 template<typename T>
