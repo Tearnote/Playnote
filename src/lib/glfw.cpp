@@ -99,7 +99,7 @@ catch (runtime_error const&) {
 	ASSERT(false);
 }
 
-auto create_window(uvec2 size, string_view title) -> Window
+auto create_window(uint2 size, string_view title) -> Window
 {
 	return ASSUME_VAL(glfwCreateWindow(size.x(), size.y(), string{title}.c_str(), nullptr, nullptr));
 }
@@ -111,13 +111,13 @@ try {
 }
 catch (runtime_error const&) {}
 
-[[nodiscard]] auto get_window_framebuffer_size(Window window) -> uvec2
+[[nodiscard]] auto get_window_framebuffer_size(Window window) -> uint2
 {
 	ASSERT(window);
 	auto w = 0;
 	auto h = 0;
 	glfwGetFramebufferSize(window, &w, &h);
-	return uvec2{static_cast<uint32>(w), static_cast<uint32>(h)};
+	return uint2{static_cast<uint32>(w), static_cast<uint32>(h)};
 }
 
 auto get_window_content_scale(Window window) -> float
@@ -137,12 +137,12 @@ auto get_window_content_scale(Window window) -> float
 	return result;
 }
 
-[[nodiscard]] auto get_window_cursor_position(Window window) -> vec2
+[[nodiscard]] auto get_window_cursor_position(Window window) -> float2
 {
 	auto xpos = 0.0;
 	auto ypos = 0.0;
 	glfwGetCursorPos(window, &xpos, &ypos);
-	return vec2{static_cast<float>(xpos), static_cast<float>(ypos)} * get_window_content_scale(window);
+	return float2{static_cast<float>(xpos), static_cast<float>(ypos)} * get_window_content_scale(window);
 }
 
 }

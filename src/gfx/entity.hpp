@@ -15,17 +15,17 @@ namespace playnote::gfx {
 // A position keeper that keeps track of the last movement's delta.
 class Position {
 public:
-	vec2 position;
-	vec2 velocity;
+	float2 position;
+	float2 velocity;
 
 	Position() = default;
-	explicit Position(vec2 pos): position{pos}, velocity{} {}
+	explicit Position(float2 pos): position{pos}, velocity{} {}
 	explicit Position(float x, float y): position{x, y}, velocity{} {}
 
-	void update(vec2 new_position);
+	void update(float2 new_position);
 };
 
-inline void Position::update(vec2 new_position)
+inline void Position::update(float2 new_position)
 {
 	velocity = new_position - position;
 	position = new_position;

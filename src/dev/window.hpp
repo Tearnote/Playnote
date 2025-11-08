@@ -47,7 +47,7 @@ public:
 	using MouseButton = lib::glfw::MouseButton;
 	using MouseButtonAction = lib::glfw::MouseButtonAction;
 
-	Window(string_view title, uvec2 size);
+	Window(string_view title, uint2 size);
 
 	// true if application close was requested (the X was pressed, or triggered manually from code
 	// to mark a user-requested quit event).
@@ -60,7 +60,7 @@ public:
 	void request_close() { lib::glfw::set_window_closing_flag(window_handle.get(), true); }
 
 	// Size of the window's framebuffer.
-	[[nodiscard]] auto size() const -> uvec2;
+	[[nodiscard]] auto size() const -> uint2;
 
 	// Scale factor of the window, useful for converting pixel coordinates.
 	[[nodiscard]] auto scale() const -> float;
@@ -74,7 +74,7 @@ public:
 
 	// Run the provided function on any cursor move.
 	// Function is provided with the new cursor position.
-	void register_cursor_motion_callback(function<void(vec2)>&& func)
+	void register_cursor_motion_callback(function<void(float2)>&& func)
 	{
 		cursor_motion_callbacks.emplace_back(move(func));
 	}
@@ -99,7 +99,7 @@ public:
 	// Destruction needs to be handled manually by the caller.
 	auto create_surface(lib::vk::Instance const&) -> lib::vk::Surface;
 
-	auto cursor_position() -> vec2;
+	auto cursor_position() -> float2;
 
 	Window(Window const&) = delete;
 	auto operator=(Window const&) -> Window& = delete;
@@ -114,7 +114,7 @@ private:
 
 	WindowHandle window_handle{};
 	vector<function<void(KeyCode, bool)>> key_callbacks;
-	vector<function<void(vec2)>> cursor_motion_callbacks;
+	vector<function<void(float2)>> cursor_motion_callbacks;
 	vector<function<void(MouseButton, bool)>> mouse_button_callbacks;
 	vector<function<void(span<char const* const>)>> file_drop_callbacks;
 };
@@ -134,7 +134,7 @@ inline GLFW::~GLFW() noexcept
 	INFO("GLFW cleaned up");
 }
 
-inline Window::Window(string_view title, uvec2 size) {
+inline Window::Window(string_view title, uint2 size) {
 	ASSERT(size.x() > 0 && size.y() > 0);
 
 	window_handle = WindowHandle{lib::glfw::create_window(size, title)};
@@ -152,7 +152,7 @@ inline Window::Window(string_view title, uvec2 size) {
 	lib::glfw::set_window_cursor_motion_handler(window_handle.get(), [](lib::glfw::Window window_ptr, double x, double y) {
 		auto& window = *lib::glfw::get_window_user_pointer<Window>(window_ptr);
 		for (auto& func: window.cursor_motion_callbacks)
-			func(vec2{static_cast<float>(x), static_cast<float>(y)});
+			func(float2{static_cast<float>(x), static_cast<float>(y)});
 	});
 
 	lib::glfw::set_window_mouse_button_handler(window_handle.get(),
@@ -175,7 +175,7 @@ inline Window::Window(string_view title, uvec2 size) {
 	INFO("Created window {}, size {}", title, size);
 }
 
-inline auto Window::size() const -> uvec2
+inline auto Window::size() const -> uint2
 {
 	return lib::glfw::get_window_framebuffer_size(window_handle.get());
 }
@@ -190,7 +190,7 @@ inline auto Window::create_surface(lib::vk::Instance const& instance) -> lib::vk
 	return lib::glfw::create_window_surface(window_handle.get(), instance);
 }
 
-inline auto Window::cursor_position() -> vec2
+inline auto Window::cursor_position() -> float2
 {
 	return lib::glfw::get_window_cursor_position(window_handle.get());
 }

@@ -204,7 +204,7 @@ static void render_select(gfx::Renderer::Queue& queue, GameState& state)
 		.radius = 24.0f,
 	});
 	queue.add_circle(gfx::Renderer::Circle{
-		.position = context.circle.position + vec2{64.0f, 0.0f},
+		.position = context.circle.position + float2{64.0f, 0.0f},
 		.velocity = {},
 		.color = {0.1f, 0.3f, 0.9f, 1.0f},
 		.radius = 24.0f,
@@ -322,12 +322,12 @@ static auto render_import_status(ImportStatus const& status) -> bool
 	else
 		lib::imgui::text("Songs processed: {}", status.songs_processed);
 	if (status.songs_failed)
-		lib::imgui::text_styled(format("Songs failed: {}", status.songs_failed), vec4{1.0f, 0.3f, 0.3f, 1.0f});
+		lib::imgui::text_styled(format("Songs failed: {}", status.songs_failed), float4{1.0f, 0.3f, 0.3f, 1.0f});
 	lib::imgui::text("Charts added: {}", status.charts_added);
 	if (status.charts_skipped)
-		lib::imgui::text_styled(format("Charts skipped: {}", status.charts_skipped), vec4{0.4f, 0.4f, 0.4f, 1.0f});
+		lib::imgui::text_styled(format("Charts skipped: {}", status.charts_skipped), float4{0.4f, 0.4f, 0.4f, 1.0f});
 	if (status.charts_failed)
-		lib::imgui::text_styled(format("Charts failed: {}", status.charts_failed), vec4{1.0f, 0.3f, 0.3f, 1.0f});
+		lib::imgui::text_styled(format("Charts failed: {}", status.charts_failed), float4{1.0f, 0.3f, 0.3f, 1.0f});
 	if (status.complete)
 		if (lib::imgui::button("Okay")) reset = true;
 	lib::imgui::end_window();

@@ -62,7 +62,7 @@ auto create_runtime(vk::Instance instance, vk::Device device, vk::QueueSet const
 	}};
 }
 
-[[nodiscard]] auto create_swapchain(Allocator& allocator, vk::Device device, uvec2 size, optional<Swapchain> old) -> Swapchain
+[[nodiscard]] auto create_swapchain(Allocator& allocator, vk::Device device, uint2 size, optional<Swapchain> old) -> Swapchain
 {
 	auto vkbswapchain_result = vkb::SwapchainBuilder{*device}
 		.set_old_swapchain(old? old->swapchain : VK_NULL_HANDLE)
@@ -155,7 +155,7 @@ void create_compute_pipeline(Runtime& runtime, string_view name, span<uint32 con
 	runtime.create_named_pipeline(name, pci);
 }
 
-auto clear_image(ManagedImage&& input, vec4 color) -> ManagedImage
+auto clear_image(ManagedImage&& input, float4 color) -> ManagedImage
 {
 	return clear_image(move(input), ClearColor{color.r(), color.g(), color.b(), color.a()});
 }

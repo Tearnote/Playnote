@@ -421,25 +421,25 @@ constexpr auto abs(vec<Dim, T> const& v) -> vec<Dim, T>
 	return result;
 }
 
-// GLSL-like shorthands
-using vec2 = vec<2, float>;
-using vec3 = vec<3, float>;
-using vec4 = vec<4, float>;
-using ivec2 = vec<2, int32>;
-using ivec3 = vec<3, int32>;
-using ivec4 = vec<4, int32>;
-using uvec2 = vec<2, uint32>;
-using uvec3 = vec<3, uint32>;
-using uvec4 = vec<4, uint32>;
+// Slang-like shorthands
+using float2 = vec<2, float>;
+using float3 = vec<3, float>;
+using float4 = vec<4, float>;
+using int2 = vec<2, int32>;
+using int3 = vec<3, int32>;
+using int4 = vec<4, int32>;
+using uint2 = vec<2, uint32>;
+using uint3 = vec<3, uint32>;
+using uint4 = vec<4, uint32>;
 
-static_assert(std::is_trivially_constructible_v<vec2>);
-static_assert(std::is_trivially_constructible_v<vec3>);
-static_assert(std::is_trivially_constructible_v<vec4>);
-static_assert(std::is_trivially_constructible_v<ivec2>);
-static_assert(std::is_trivially_constructible_v<ivec3>);
-static_assert(std::is_trivially_constructible_v<ivec4>);
-static_assert(std::is_trivially_constructible_v<uvec2>);
-static_assert(std::is_trivially_constructible_v<uvec3>);
-static_assert(std::is_trivially_constructible_v<uvec4>);
+static_assert(std::is_trivially_constructible_v<float2>);
+static_assert(std::is_trivially_constructible_v<float3>);
+static_assert(std::is_trivially_constructible_v<float4>);
+static_assert(std::is_trivially_constructible_v<int2>);
+static_assert(std::is_trivially_constructible_v<int3>);
+static_assert(std::is_trivially_constructible_v<int4>);
+static_assert(std::is_trivially_constructible_v<uint2>);
+static_assert(std::is_trivially_constructible_v<uint3>);
+static_assert(std::is_trivially_constructible_v<uint4>);
 
 }

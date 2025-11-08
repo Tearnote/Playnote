@@ -26,7 +26,7 @@ public:
 		Right,
 	};
 
-	Playfield(ivec2 position, int32 length, bms::Playstyle);
+	Playfield(int2 position, int32 length, bms::Playstyle);
 
 	void enqueue_from_cursor(Renderer::Queue&, bms::Cursor const&, bms::Score const&, float scroll_speed, nanoseconds offset);
 
@@ -50,19 +50,19 @@ private:
 	};
 
 	static constexpr auto LaneSeparatorWidth = 2;
-	static constexpr auto LaneSeparatorColor = vec4{0.165f, 0.165f, 0.165f, 1.000f};
+	static constexpr auto LaneSeparatorColor = float4{0.165f, 0.165f, 0.165f, 1.000f};
 	static constexpr auto JudgmentLineHeight = 6;
-	static constexpr auto JudgmentLineColor = vec4{1.000f, 0.200f, 0.200f, 1.000f};
+	static constexpr auto JudgmentLineColor = float4{1.000f, 0.200f, 0.200f, 1.000f};
 	static constexpr auto FieldBorderWidth = 2;
-	static constexpr auto FieldBorderColor = vec4{0.596f, 0.596f, 0.596f, 1.000f};
+	static constexpr auto FieldBorderColor = float4{0.596f, 0.596f, 0.596f, 1.000f};
 	static constexpr auto FieldSpacing = 94;
 	static constexpr auto NoteHeight = 13;
 	static constexpr auto MeasureLineHeight = 1;
-	static constexpr auto MeasureLineColor = vec4{0.267f, 0.267f, 0.267f, 1.000f};
+	static constexpr auto MeasureLineColor = float4{0.267f, 0.267f, 0.267f, 1.000f};
 	static constexpr auto LanePressedMargin = 4;
-	static constexpr auto LanePressedColor = vec4{1.000f, 1.000f, 1.000f, 1.000f};
+	static constexpr auto LanePressedColor = float4{1.000f, 1.000f, 1.000f, 1.000f};
 
-	ivec2 position;
+	int2 position;
 	int32 length;
 	bms::Playstyle playstyle;
 	vector<vector<Lane>> fields;
@@ -70,19 +70,19 @@ private:
 
 	[[nodiscard]] auto get_lane(bms::Lane::Type) -> Lane&;
 	[[nodiscard]] static auto lane_width(Lane::Visual) -> int32;
-	[[nodiscard]] static auto lane_background_color(Lane::Visual) -> vec4;
-	[[nodiscard]] static auto lane_note_color(Lane::Visual) -> vec4;
-	[[nodiscard]] static auto judgement_color(bms::Score::JudgmentType) -> vec4;
-	[[nodiscard]] static auto timing_color(bms::Score::Timing) -> vec4;
+	[[nodiscard]] static auto lane_background_color(Lane::Visual) -> float4;
+	[[nodiscard]] static auto lane_note_color(Lane::Visual) -> float4;
+	[[nodiscard]] static auto judgement_color(bms::Score::JudgmentType) -> float4;
+	[[nodiscard]] static auto timing_color(bms::Score::Timing) -> float4;
 
 	static auto make_field(bms::Playstyle, Side = Side::Left) -> vector<Lane>;
-	static void enqueue_field_border(Renderer::Queue&, ivec2 position, ivec2 size);
-	static void enqueue_lane(Renderer::Queue&, ivec2 position, int32 length, Lane const&, bool left_border, bool pressed);
-	static void enqueue_measure_lines(Renderer::Queue&, span<float const> measure_lines, ivec2 position, ivec2 size);
-	static void enqueue_judgment(bms::Score::Judgment const&, uint32 field_id, ivec2 position, ivec2 size);
+	static void enqueue_field_border(Renderer::Queue&, int2 position, int2 size);
+	static void enqueue_lane(Renderer::Queue&, int2 position, int32 length, Lane const&, bool left_border, bool pressed);
+	static void enqueue_measure_lines(Renderer::Queue&, span<float const> measure_lines, int2 position, int2 size);
+	static void enqueue_judgment(bms::Score::Judgment const&, uint32 field_id, int2 position, int2 size);
 };
 
-inline Playfield::Playfield(ivec2 position, int32 length, bms::Playstyle playstyle):
+inline Playfield::Playfield(int2 position, int32 length, bms::Playstyle playstyle):
 	position{position},
 	length{length},
 	playstyle{playstyle}
@@ -203,7 +203,7 @@ inline auto Playfield::lane_width(Lane::Visual visual) -> int32
 	}
 }
 
-inline auto Playfield::lane_background_color(Lane::Visual visual) -> vec4
+inline auto Playfield::lane_background_color(Lane::Visual visual) -> float4
 {
 	switch (visual) {
 	case Lane::Visual::Scratch:
@@ -213,7 +213,7 @@ inline auto Playfield::lane_background_color(Lane::Visual visual) -> vec4
 	}
 }
 
-inline auto Playfield::lane_note_color(Lane::Visual visual) -> vec4
+inline auto Playfield::lane_note_color(Lane::Visual visual) -> float4
 {
 	switch (visual) {
 	case Lane::Visual::Odd:     return {0.800f, 0.800f, 0.800f, 1.000f};
@@ -223,7 +223,7 @@ inline auto Playfield::lane_note_color(Lane::Visual visual) -> vec4
 	}
 }
 
-inline auto Playfield::judgement_color(bms::Score::JudgmentType judge) -> vec4
+inline auto Playfield::judgement_color(bms::Score::JudgmentType judge) -> float4
 {
 	switch (judge) {
 	case bms::Score::JudgmentType::PGreat: return {0.533f, 0.859f, 0.961f, 1.000f};
@@ -234,7 +234,7 @@ inline auto Playfield::judgement_color(bms::Score::JudgmentType judge) -> vec4
 	}
 }
 
-inline auto Playfield::timing_color(bms::Score::Timing timing) -> vec4
+inline auto Playfield::timing_color(bms::Score::Timing timing) -> float4
 {
 	switch (timing) {
 	case bms::Score::Timing::Early: return {0.200f, 0.400f, 0.961f, 1.000f};
@@ -291,7 +291,7 @@ inline auto Playfield::make_field(bms::Playstyle playstyle, Side side) -> vector
 	}
 }
 
-inline void Playfield::enqueue_field_border(Renderer::Queue& queue, ivec2 position, ivec2 size)
+inline void Playfield::enqueue_field_border(Renderer::Queue& queue, int2 position, int2 size)
 {
 	queue.enqueue_rect("judgment_line"_id, {
 		{position.x(), position.y() + size.y() - JudgmentLineHeight},
@@ -315,7 +315,7 @@ inline void Playfield::enqueue_field_border(Renderer::Queue& queue, ivec2 positi
 	});
 }
 
-inline void Playfield::enqueue_lane(Renderer::Queue& queue, ivec2 position, int32 length, Lane const& lane, bool left_border, bool pressed)
+inline void Playfield::enqueue_lane(Renderer::Queue& queue, int2 position, int32 length, Lane const& lane, bool left_border, bool pressed)
 {
 	auto const width = lane_width(lane.visual);
 	queue.enqueue_rect("frame"_id, {
@@ -349,7 +349,7 @@ inline void Playfield::enqueue_lane(Renderer::Queue& queue, ivec2 position, int3
 	}
 }
 
-inline void Playfield::enqueue_measure_lines(Renderer::Queue& queue, span<float const> measure_lines, ivec2 position, ivec2 size)
+inline void Playfield::enqueue_measure_lines(Renderer::Queue& queue, span<float const> measure_lines, int2 position, int2 size)
 {
 	for (auto y_pos: measure_lines) {
 		queue.enqueue_rect("measure"_id, {
@@ -360,7 +360,7 @@ inline void Playfield::enqueue_measure_lines(Renderer::Queue& queue, span<float 
 	}
 }
 
-inline void Playfield::enqueue_judgment(bms::Score::Judgment const& judgment, uint32 field_id, ivec2 position, ivec2 size)
+inline void Playfield::enqueue_judgment(bms::Score::Judgment const& judgment, uint32 field_id, int2 position, int2 size)
 {
 	constexpr auto JudgeWidth = 200;
 	constexpr auto JudgeY = 332;
@@ -372,7 +372,7 @@ inline void Playfield::enqueue_judgment(bms::Score::Judgment const& judgment, ui
 	to_upper(judge_str);
 	auto const judge_color = judgement_color(judgment.type);
 	lib::imgui::begin_window(judge_name.c_str(),
-		uvec2{position} + uvec2{static_cast<uint32>(size.x() / 2 - JudgeWidth / 2), JudgeY}, JudgeWidth,
+		uint2{position} + uint2{static_cast<uint32>(size.x() / 2 - JudgeWidth / 2), JudgeY}, JudgeWidth,
 		lib::imgui::WindowStyle::Transparent);
 	lib::imgui::text_styled(judge_str, judge_color, 3.0f, lib::imgui::TextAlignment::Center);
 	lib::imgui::end_window();
@@ -383,7 +383,7 @@ inline void Playfield::enqueue_judgment(bms::Score::Judgment const& judgment, ui
 	to_upper(timing_str);
 	auto const time_color = timing_color(judgment.timing);
 	lib::imgui::begin_window(timing_name.c_str(),
-		uvec2{position} + uvec2{static_cast<uint32>(size.x() / 2 - TimingWidth / 2), TimingY}, TimingWidth,
+		uint2{position} + uint2{static_cast<uint32>(size.x() / 2 - TimingWidth / 2), TimingY}, TimingWidth,
 		lib::imgui::WindowStyle::Transparent);
 	lib::imgui::text_styled(timing_str, time_color, 1.0f, lib::imgui::TextAlignment::Center);
 	lib::imgui::end_window();

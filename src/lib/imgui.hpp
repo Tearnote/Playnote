@@ -50,7 +50,7 @@ enum class WindowStyle {
 
 // Start a new ImGui window at a specific position and size. If static_frame is true, the window
 // will have no title and won't be able to be modified by the user.
-void begin_window(char const* title, uvec2 pos, uint32 width, WindowStyle);
+void begin_window(char const* title, uint2 pos, uint32 width, WindowStyle);
 
 // Finalize a started window.
 void end_window();
@@ -77,7 +77,7 @@ enum class TextAlignment {
 };
 
 // Styled static text.
-void text_styled(string_view str, optional<vec4> color, float size = 1.0f, TextAlignment = TextAlignment::Left);
+void text_styled(string_view str, optional<float4> color, float size = 1.0f, TextAlignment = TextAlignment::Left);
 
 // A line of text that can be clicked like a button.
 auto selectable(char const* str) -> bool;
@@ -96,7 +96,7 @@ void progress_bar(optional<float> progress, string_view text);
 struct PlotValues {
 	char const* name;
 	span<float const> data;
-	vec4 color;
+	float4 color;
 };
 
 struct PlotMarker {
@@ -106,7 +106,7 @@ struct PlotMarker {
 	};
 	Type type;
 	float value;
-	vec4 color;
+	float4 color;
 };
 
 // A simple line plot of an array of values.

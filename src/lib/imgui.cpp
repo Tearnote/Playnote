@@ -13,7 +13,6 @@ or distributed except according to those terms.
 #include "implot.h"
 #include "imgui.h"
 #include "preamble.hpp"
-#include "lib/vulkan.hpp"
 #include "lib/glfw.hpp"
 
 namespace playnote::lib::imgui {
@@ -91,7 +90,7 @@ auto init(glfw::Window window, vuk::Allocator& global_allocator) -> Context
 	vuk::create_graphics_pipeline(ctx, "imgui", imgui_spv);
 	return imgui_ctx;
 }
- 
+
 void begin()
 {
 	ImGui_ImplGlfw_NewFrame();
@@ -221,7 +220,7 @@ auto render(vuk::Allocator& frame_allocator, vuk::ManagedImage&& target, Context
 
 void begin_window(char const* title) { ImGui::Begin(title); }
 
-void begin_window(char const* title, uvec2 pos, uint32 width, WindowStyle style)
+void begin_window(char const* title, uint2 pos, uint32 width, WindowStyle style)
 {
 	ImGui::SetNextWindowPos({static_cast<float>(pos.x()), static_cast<float>(pos.y())});
 	ImGui::SetNextWindowSize({static_cast<float>(width), 0});
@@ -238,7 +237,7 @@ auto button(char const* str) -> bool { return ImGui::Button(str); }
 
 void text(string_view str) { ImGui::TextWrapped("%s", string{str}.c_str()); }
 
-void text_styled(string_view str, optional<vec4> color, float size, TextAlignment alignment)
+void text_styled(string_view str, optional<float4> color, float size, TextAlignment alignment)
 {
 	if (size != 1.0f) ImGui::SetWindowFontScale(size);
 	if (color) ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{color->r(), color->g(), color->b(), color->a()});

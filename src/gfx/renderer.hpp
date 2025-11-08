@@ -21,15 +21,15 @@ class Renderer {
 public:
 	// Solid color rectangle primitive.
 	struct Rect {
-		ivec2 pos;
-		ivec2 size;
-		vec4 color;
+		int2 pos;
+		int2 size;
+		float4 color;
 	};
 
 	struct Circle {
-		vec2 position;
-		vec2 velocity;
-		vec4 color;
+		float2 position;
+		float2 velocity;
+		float4 color;
 		float radius;
 		float _pad0[3];
 	};
@@ -72,12 +72,12 @@ private:
 		span<Circle const>) -> lib::vuk::ManagedImage;
 };
 
-inline auto srgb_decode(vec4 color) -> vec4
+inline auto srgb_decode(float4 color) -> float4
 {
-	float r = color.r() < 0.04045 ? (1.0 / 12.92) * color.r() : pow((color.r() + 0.055) * (1.0 / 1.055), 2.4);
-	float g = color.g() < 0.04045 ? (1.0 / 12.92) * color.g() : pow((color.g() + 0.055) * (1.0 / 1.055), 2.4);
-	float b = color.b() < 0.04045 ? (1.0 / 12.92) * color.b() : pow((color.b() + 0.055) * (1.0 / 1.055), 2.4);
-	return {r, g, b, color.a()};
+	auto const r = color.r() < 0.04045 ? (1.0 / 12.92) * color.r() : pow((color.r() + 0.055) * (1.0 / 1.055), 2.4);
+	auto const g = color.g() < 0.04045 ? (1.0 / 12.92) * color.g() : pow((color.g() + 0.055) * (1.0 / 1.055), 2.4);
+	auto const b = color.b() < 0.04045 ? (1.0 / 12.92) * color.b() : pow((color.b() + 0.055) * (1.0 / 1.055), 2.4);
+	return {static_cast<float>(r), static_cast<float>(g), static_cast<float>(b), color.a()};
 }
 
 inline auto Renderer::Queue::enqueue_rect(id layer, Rect rect) -> Queue&
