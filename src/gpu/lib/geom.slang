@@ -9,8 +9,9 @@ or distributed except according to those terms.
 
 #language slang 2026
 
-module lib;
-__include "lib/color";
-__include "lib/geom";
-__include "lib/math";
-__include "lib/sdf";
+implementing lib;
+
+public struct AABB<T:IArithmetic> {
+	public vector<T, 2> top_left;
+	public vector<T, 2> bottom_right;
+};

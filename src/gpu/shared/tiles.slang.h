@@ -7,10 +7,10 @@ or https://www.boost.org/LICENSE_1_0.txt>, at your option. This file may not be 
 or distributed except according to those terms.
 */
 
-#language slang 2026
+#pragma once
 
-module lib;
-__include "lib/color";
-__include "lib/geom";
-__include "lib/math";
-__include "lib/sdf";
+struct TileRef {
+	int2 tile;
+	int primitive_idx;
+	int _pad0;
+};

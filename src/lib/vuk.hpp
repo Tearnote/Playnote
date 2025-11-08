@@ -31,6 +31,9 @@ using namespace ::vuk;
 // A shorthand for an image attachment currently being managed by vuk's rendergraph.
 using ManagedImage = Value<ImageAttachment>;
 
+// A shorthand for a buffer currently being managed by vuk's rendergraph.
+using ManagedBuffer = Value<Buffer>;
+
 // Initialize vuk by building a Runtime object.
 // Throws if vuk throws.
 auto create_runtime(vk::Instance instance, vk::Device device, vk::QueueSet const& queues) -> Runtime;

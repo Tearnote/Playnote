@@ -13,6 +13,7 @@ include(cmake/FetchSlang.cmake)
 set(SHADER_DIR_PREFIX src/gpu/)
 set(SHADER_SOURCES
 	primitives.slang
+	gen_tiles.slang
 	rects.slang
 	imgui.slang
 )

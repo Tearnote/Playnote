@@ -24,10 +24,10 @@ struct VertexOut {
 };
 
 [shader("vertex")]
-VertexOut vertexMain(VertexIn in, uniform float2 scale, uniform float2 translate)
+VertexOut vertexMain(VertexIn in, uniform float2 Scale, uniform float2 Translate)
 {
 	var out = VertexOut();
-    out.position = {in.position * scale + translate, 0.0, 1.0};
+    out.position = {in.position * Scale + Translate, 0.0, 1.0};
     out.color = in.color;
     out.uv = in.uv;
     return out;

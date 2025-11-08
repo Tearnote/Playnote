@@ -47,12 +47,12 @@ func motion_blurred_circle_coverage(p: float2, v: float2, r: float) -> float
     return cosShutterIntegral(overlap_start, overlap_end);
 }
 
-func circle_coverage(primitive: Primitive, at: float2) -> float
+func circle_coverage(circle: Primitive, at: float2) -> float
 {
-	let params = reinterpret<CircleParams>(primitive.params);
-	let scaled_velocity = primitive.velocity * WindowScale * 2;
+	let params = reinterpret<CircleParams>(circle.params);
+	let scaled_velocity = circle.velocity * WindowScale * 2;
 	let velocity_offset = scaled_velocity / 4;
-	let center = at - velocity_offset - primitive.position * WindowScale;
+	let center = at - velocity_offset - circle.position * WindowScale;
 	let velocity_len = length(scaled_velocity);
 
 	if (velocity_len > MaxMotionSupersample) {
@@ -81,7 +81,7 @@ func circle_coverage(primitive: Primitive, at: float2) -> float
 
 [shader("compute")]
 [numthreads(16, 16)]
-void computeMain(int2 threadId: SV_DispatchThreadID, uniform uint PrimitiveCount)
+void computeMain(int2 threadId: SV_DispatchThreadID, uniform int PrimitiveCount)
 {
     if (any(threadId >= ViewportSize)) return;
     let self_pos = float2(threadId) + 0.5;
