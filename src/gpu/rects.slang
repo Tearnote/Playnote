@@ -10,12 +10,7 @@ or distributed except according to those terms.
 #language slang 2026
 
 import lib;
-
-struct Rect {
-    int2 pos;
-    int2 size;
-    float4 color;
-};
+#include "shared/rects.slang.h"
 
 [SpecializationConstant] let ViewportWidth = 0u;
 [SpecializationConstant] let ViewportHeight = 0u;

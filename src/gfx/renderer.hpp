@@ -19,21 +19,8 @@ namespace playnote::gfx {
 
 class Renderer {
 public:
-	// Solid color rectangle primitive.
-	struct Rect {
-		int2 pos;
-		int2 size;
-		float4 color;
-	};
-
-	struct Circle {
-		float2 position;
-		float2 velocity;
-		float4 color;
-		float radius;
-		float _pad0[3];
-	};
-	static_assert(alignof(Circle) == sizeof(float));
+#include "gpu/shared/rects.slang.h"
+#include "gpu/shared/circles.slang.h"
 
 	// An accumulator of primitives to draw.
 	class Queue {

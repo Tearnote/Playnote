@@ -10,14 +10,7 @@ or distributed except according to those terms.
 #language slang 2026
 
 import lib;
-
-struct Circle {
-    float2 position;
-    float2 velocity;
-    float4 color;
-    float radius;
-    float _pad0[3];
-};
+#include "shared/circles.slang.h"
 
 StructuredBuffer<Circle> b_circles;
 RWTexture2D<float4> i_target;
