@@ -20,7 +20,7 @@ struct Rect {
 [SpecializationConstant] let ViewportWidth = 0u;
 [SpecializationConstant] let ViewportHeight = 0u;
 [SpecializationConstant] let WindowScale = 0.0;
-static let ViewportSize = uint2(ViewportWidth, ViewportHeight);
+static let ViewportSize = int2(ViewportWidth, ViewportHeight);
 
 StructuredBuffer<Rect> b_rects;
 

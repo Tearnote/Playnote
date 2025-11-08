@@ -220,7 +220,7 @@ auto render(vuk::Allocator& frame_allocator, vuk::ManagedImage&& target, Context
 
 void begin_window(char const* title) { ImGui::Begin(title); }
 
-void begin_window(char const* title, uint2 pos, int width, WindowStyle style)
+void begin_window(char const* title, int2 pos, int width, WindowStyle style)
 {
 	ImGui::SetNextWindowPos({static_cast<float>(pos.x()), static_cast<float>(pos.y())});
 	ImGui::SetNextWindowSize({static_cast<float>(width), 0});

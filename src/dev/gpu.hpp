@@ -96,7 +96,7 @@ private:
 
 	// Logging wrappers.
 	[[nodiscard]] auto select_physical_device(Instance const&, Surface const&) const -> lib::vk::PhysicalDevice;
-	auto create_swapchain(lib::vuk::Allocator& allocator, Device& device, uint2 size,
+	auto create_swapchain(lib::vuk::Allocator& allocator, Device& device, int2 size,
 		optional<lib::vuk::Swapchain> old = nullopt) const -> lib::vuk::Swapchain;
 
 	dev::Window& window;
@@ -154,7 +154,7 @@ inline GPU::Device::~Device() noexcept
 	return physical_device;
 }
 
-auto inline GPU::create_swapchain(lib::vuk::Allocator& allocator, Device& device, uint2 size,
+auto inline GPU::create_swapchain(lib::vuk::Allocator& allocator, Device& device, int2 size,
 	optional<lib::vuk::Swapchain> old) const -> lib::vuk::Swapchain
 {
 	auto const recreating = old.has_value();

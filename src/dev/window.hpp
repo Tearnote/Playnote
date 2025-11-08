@@ -47,7 +47,7 @@ public:
 	using MouseButton = lib::glfw::MouseButton;
 	using MouseButtonAction = lib::glfw::MouseButtonAction;
 
-	Window(string_view title, uint2 size);
+	Window(string_view title, int2 size);
 
 	// true if application close was requested (the X was pressed, or triggered manually from code
 	// to mark a user-requested quit event).
@@ -60,7 +60,7 @@ public:
 	void request_close() { lib::glfw::set_window_closing_flag(window_handle.get(), true); }
 
 	// Size of the window's framebuffer.
-	[[nodiscard]] auto size() const -> uint2;
+	[[nodiscard]] auto size() const -> int2;
 
 	// Scale factor of the window, useful for converting pixel coordinates.
 	[[nodiscard]] auto scale() const -> float;
@@ -134,7 +134,7 @@ inline GLFW::~GLFW() noexcept
 	INFO("GLFW cleaned up");
 }
 
-inline Window::Window(string_view title, uint2 size) {
+inline Window::Window(string_view title, int2 size) {
 	ASSERT(size.x() > 0 && size.y() > 0);
 
 	window_handle = WindowHandle{lib::glfw::create_window(size, title)};
@@ -175,7 +175,7 @@ inline Window::Window(string_view title, uint2 size) {
 	INFO("Created window {}, size {}", title, size);
 }
 
-inline auto Window::size() const -> uint2
+inline auto Window::size() const -> int2
 {
 	return lib::glfw::get_window_framebuffer_size(window_handle.get());
 }

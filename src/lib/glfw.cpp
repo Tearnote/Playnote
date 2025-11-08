@@ -99,7 +99,7 @@ catch (runtime_error const&) {
 	ASSERT(false);
 }
 
-auto create_window(uint2 size, string_view title) -> Window
+auto create_window(int2 size, string_view title) -> Window
 {
 	return ASSUME_VAL(glfwCreateWindow(size.x(), size.y(), string{title}.c_str(), nullptr, nullptr));
 }
@@ -111,13 +111,13 @@ try {
 }
 catch (runtime_error const&) {}
 
-[[nodiscard]] auto get_window_framebuffer_size(Window window) -> uint2
+[[nodiscard]] auto get_window_framebuffer_size(Window window) -> int2
 {
 	ASSERT(window);
 	auto w = 0;
 	auto h = 0;
 	glfwGetFramebufferSize(window, &w, &h);
-	return uint2{static_cast<uint>(w), static_cast<uint>(h)};
+	return int2{w, h};
 }
 
 auto get_window_content_scale(Window window) -> float

@@ -58,7 +58,7 @@ void set_window_creation_hints();
 
 // Open a new window and return the handle. Close it once done.
 // Throws runtime_error on failure.
-auto create_window(uint2 size, string_view title) -> Window;
+auto create_window(int2 size, string_view title) -> Window;
 
 // Destroy a previously opened window.
 // Errors are ignored.
@@ -252,7 +252,7 @@ void set_window_file_drop_handler(Window window, Func&& func)
 
 // Return the size of the window's framebuffer in pixels.
 // Throws runtime_error on failure.
-[[nodiscard]] auto get_window_framebuffer_size(Window window) -> uint2;
+[[nodiscard]] auto get_window_framebuffer_size(Window window) -> int2;
 
 // Return the scale of the display's content.
 // Throws runtime_error on failure.

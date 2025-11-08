@@ -62,7 +62,7 @@ auto create_runtime(vk::Instance instance, vk::Device device, vk::QueueSet const
 	}};
 }
 
-[[nodiscard]] auto create_swapchain(Allocator& allocator, vk::Device device, uint2 size, optional<Swapchain> old) -> Swapchain
+[[nodiscard]] auto create_swapchain(Allocator& allocator, vk::Device device, int2 size, optional<Swapchain> old) -> Swapchain
 {
 	auto vkbswapchain_result = vkb::SwapchainBuilder{*device}
 		.set_old_swapchain(old? old->swapchain : VK_NULL_HANDLE)

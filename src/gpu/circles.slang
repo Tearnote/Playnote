@@ -25,7 +25,7 @@ RWTexture2D<float4> i_target;
 [SpecializationConstant] let ViewportWidth = 0u;
 [SpecializationConstant] let ViewportHeight = 0u;
 [SpecializationConstant] let WindowScale = 0.0;
-static let ViewportSize = uint2(ViewportWidth, ViewportHeight);
+static let ViewportSize = int2(ViewportWidth, ViewportHeight);
 
 static let MaxMotionSupersample = 4u;
 static let SamplePattern4x: float2[4] = {
@@ -87,7 +87,7 @@ func circle_coverage(circle: Circle, at: float2) -> float
 
 [shader("compute")]
 [numthreads(16, 16)]
-void computeMain(uint2 threadId: SV_DispatchThreadID, uniform uint circle_count, uniform float timer)
+void computeMain(int2 threadId: SV_DispatchThreadID, uniform uint circle_count, uniform float timer)
 {
     if (any(threadId >= ViewportSize)) return;
     let self_pos = float2(threadId) + 0.5;

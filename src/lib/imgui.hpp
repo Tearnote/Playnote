@@ -50,7 +50,7 @@ enum class WindowStyle {
 
 // Start a new ImGui window at a specific position and size. If static_frame is true, the window
 // will have no title and won't be able to be modified by the user.
-void begin_window(char const* title, uint2 pos, int width, WindowStyle);
+void begin_window(char const* title, int2 pos, int width, WindowStyle);
 
 // Finalize a started window.
 void end_window();

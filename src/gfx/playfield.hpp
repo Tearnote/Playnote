@@ -372,7 +372,7 @@ inline void Playfield::enqueue_judgment(bms::Score::Judgment const& judgment, in
 	to_upper(judge_str);
 	auto const judge_color = judgement_color(judgment.type);
 	lib::imgui::begin_window(judge_name.c_str(),
-		uint2{position} + uint2{static_cast<uint>(size.x() / 2 - JudgeWidth / 2), JudgeY}, JudgeWidth,
+		position + int2{size.x() / 2 - JudgeWidth / 2, JudgeY}, JudgeWidth,
 		lib::imgui::WindowStyle::Transparent);
 	lib::imgui::text_styled(judge_str, judge_color, 3.0f, lib::imgui::TextAlignment::Center);
 	lib::imgui::end_window();
@@ -383,7 +383,7 @@ inline void Playfield::enqueue_judgment(bms::Score::Judgment const& judgment, in
 	to_upper(timing_str);
 	auto const time_color = timing_color(judgment.timing);
 	lib::imgui::begin_window(timing_name.c_str(),
-		uint2{position} + uint2{static_cast<uint>(size.x() / 2 - TimingWidth / 2), TimingY}, TimingWidth,
+		position + int2{size.x() / 2 - TimingWidth / 2, TimingY}, TimingWidth,
 		lib::imgui::WindowStyle::Transparent);
 	lib::imgui::text_styled(timing_str, time_color, 1.0f, lib::imgui::TextAlignment::Center);
 	lib::imgui::end_window();
