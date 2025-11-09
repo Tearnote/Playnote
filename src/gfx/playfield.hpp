@@ -293,70 +293,83 @@ inline auto Playfield::make_field(bms::Playstyle playstyle, Side side) -> vector
 
 inline void Playfield::enqueue_field_border(Renderer::Queue& queue, int2 position, int2 size)
 {
-	queue.enqueue_rect("judgment_line"_id, {
+	/*
+	queue.rect("judgment_line"_180, {
 		{position.x(), position.y() + size.y() - JudgmentLineHeight},
 		{size.x(), JudgmentLineHeight},
 		JudgmentLineColor,
 	});
-	queue.enqueue_rect("frame"_id, {
+	queue.rect("frame"_200, {
 		{position.x() - FieldBorderWidth, position.y()},
 		{FieldBorderWidth, size.y() + FieldBorderWidth},
 		FieldBorderColor,
 	});
-	queue.enqueue_rect("frame"_id, {
+	queue.rect("frame"_200, {
 		{position.x() - FieldBorderWidth, size.y()},
 		{size.x() + FieldBorderWidth * 2, FieldBorderWidth},
 		FieldBorderColor,
 	});
-	queue.enqueue_rect("frame"_id, {
+	queue.rect("frame"_200, {
 		{position.x() + size.x(), position.y()},
 		{FieldBorderWidth, size.y() + FieldBorderWidth},
 		FieldBorderColor,
 	});
+	*/
 }
 
 inline void Playfield::enqueue_lane(Renderer::Queue& queue, int2 position, int length, Lane const& lane, bool left_border, bool pressed)
 {
 	auto const width = lane_width(lane.visual);
-	queue.enqueue_rect("frame"_id, {
+	/*
+	queue.rect("frame"_200, {
 		{position.x(), position.y()},
 		{width, length},
-		lane_background_color(lane.visual)});
+		lane_background_color(lane.visual)
+	});
+	*/
 	for (auto const& note: lane.notes) {
 		if (note.y_pos + note.ln_height < 0.0f) continue;
 		auto const y_pos_clipped = max(0.0f, note.y_pos);
 		auto const ln_overflow = max(0.0f, -note.y_pos);
 		auto const ln_height_clipped = note.ln_height - ln_overflow;
-		queue.enqueue_rect("notes"_id, {
+		/*
+		queue.rect("notes"_100, {
 			{position.x(), static_cast<int>(position.y() + length - ceil((y_pos_clipped + ln_height_clipped) * length) - NoteHeight)},
 			{width, NoteHeight + static_cast<int>(ceil(ln_height_clipped * length))},
 			lane_note_color(lane.visual),
 		});
+		*/
 	}
 	if (left_border) {
-		queue.enqueue_rect("frame"_id, {
+		/*
+		queue.rect("frame"_200, {
 			{position.x() - LaneSeparatorWidth, position.y()},
 			{LaneSeparatorWidth, length - JudgmentLineHeight},
 			LaneSeparatorColor,
 		});
+		*/
 	}
 	if (pressed) {
-		queue.enqueue_rect("pressed"_id, {
+		/*
+		queue.rect("pressed"_80, {
 			{position.x() + LanePressedMargin, position.y() + length + LanePressedMargin * 2 + FieldBorderWidth},
 			{width - LanePressedMargin * 2, width - LanePressedMargin * 2},
 			LanePressedColor,
 		});
+		*/
 	}
 }
 
 inline void Playfield::enqueue_measure_lines(Renderer::Queue& queue, span<float const> measure_lines, int2 position, int2 size)
 {
 	for (auto y_pos: measure_lines) {
-		queue.enqueue_rect("measure"_id, {
+		/*
+		queue.rect(gfx::Renderer::Rect{"measure"_190, {
 			{position.x(), static_cast<int>(position.y() + size.y() - ceil(y_pos * size.y()) - MeasureLineHeight)},
 			{size.x(), MeasureLineHeight},
 			MeasureLineColor,
 		});
+		*/
 	}
 }
 

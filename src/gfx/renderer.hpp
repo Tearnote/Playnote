@@ -9,38 +9,59 @@ or distributed except according to those terms.
 
 #pragma once
 #include "preamble.hpp"
+#include "preamble/algorithm.hpp"
 #include "utils/logger.hpp"
 #include "lib/vuk.hpp"
 #include "dev/window.hpp"
 #include "dev/gpu.hpp"
 #include "gfx/imgui.hpp"
-#include "vuk/RenderGraph.hpp"
-#include "vuk/Types.hpp"
 
 namespace playnote::gfx {
 
 class Renderer {
+#include "gpu/shared/primitive.slang.h"
+#include "gpu/shared/worklist.slang.h"
+
 public:
-#include "gpu/shared/rects.slang.h"
-#include "gpu/shared/primitives.slang.h"
-#include "gpu/shared/tiles.slang.h"
+	struct Drawable {
+		float2 position; // Center of the shape
+		float2 velocity; // Delta from previous frame's position
+		float4 color;    // [0.0-1.0] RGBA, in sRGB
+		int depth;       // 0 or higher; smaller depth value = in front. If depth is equal to
+		                 // another overlapping shape, the order is unspecified and might flicker.
+	};
+
+	struct RectParams {
+		float2 size; // Total width and height
+	};
+
+	struct CircleParams {
+		float radius;
+	};
 
 	// An accumulator of primitives to draw.
 	class Queue {
 	public:
-		// Add a solid color rectangle to the draw queue.
-		auto enqueue_rect(id layer, Rect) -> Queue&;
+		// Draw a group of several shapes as a compound shape by enqueuing them within
+		// the provided function. Shapes in the same group must have the same depth.
+		template<callable<void()> Func>
+		void group(Func&&);
 
-		auto add_circle(Primitive) -> Queue&;
+		// Enqueue shapes for drawing.
+
+		auto rect(Drawable, RectParams) -> Queue&;
+		auto circle(Drawable, CircleParams) -> Queue&;
+
+		// Internal.
+		[[nodiscard]] auto to_primitive_list() const -> vector<Primitive>;
 
 	private:
-		struct Layer {
-			vector<Rect> rects;
-		};
+		bool inside_group = false;
+		vector<tuple<Drawable, RectParams, int>> rects; // third: group id
+		vector<tuple<Drawable, CircleParams, int>> circles; // third: group id
+		mutable vector<pair<int, int>> group_depths; // first: group id (initially equal to index), second: depth
 
-		friend Renderer;
-		unordered_map<id, Layer> layers;
-		vector<Primitive> primitives;
+		void transform(Drawable&);
 	};
 
 	explicit Renderer(dev::Window&, Logger::Category);
@@ -49,17 +70,15 @@ public:
 	// Each call will wait block until the next frame begins.
 	// imgui:: calls are only allowed within the function argument.
 	template<callable<void(Queue&)> Func>
-	void frame(initializer_list<id> layer_order, Func&&);
+	void frame(Func&&);
 
 private:
 	Logger::Category cat;
 	dev::GPU gpu;
 	Imgui imgui;
 
-	auto generate_tile_lists(lib::vuk::Allocator&, span<Primitive const>) -> tuple<lib::vuk::ManagedBuffer, lib::vuk::ManagedBuffer>;
-	[[nodiscard]] auto draw_rects(lib::vuk::Allocator&, lib::vuk::ManagedImage&&,
-		span<Rect const>) -> lib::vuk::ManagedImage;
-	[[nodiscard]] auto draw_primitives(lib::vuk::Allocator&, lib::vuk::ManagedImage&&, span<Primitive const>) -> lib::vuk::ManagedImage;
+	auto generate_worklists(lib::vuk::Allocator&, lib::vuk::Buffer const&) -> tuple<lib::vuk::ManagedBuffer, lib::vuk::ManagedBuffer>;
+	[[nodiscard]] auto draw_all(lib::vuk::Allocator&, lib::vuk::ManagedImage&&, lib::vuk::Buffer const&) -> lib::vuk::ManagedImage;
 };
 
 inline auto srgb_decode(float4 color) -> float4
@@ -70,18 +89,73 @@ inline auto srgb_decode(float4 color) -> float4
 	return {static_cast<float>(r), static_cast<float>(g), static_cast<float>(b), color.a()};
 }
 
-inline auto Renderer::Queue::enqueue_rect(id layer, Rect rect) -> Queue&
+template<callable<void()> Func>
+inline void Renderer::Queue::group(Func&& func)
 {
-	rect.color = srgb_decode(rect.color);
-	layers[layer].rects.emplace_back(rect);
+	inside_group = true;
+	group_depths.emplace_back(group_depths.size(), -1);
+	func();
+	inside_group = false;
+	if (group_depths.back().second == -1) group_depths.pop_back();
+}
+
+inline auto Renderer::Queue::rect(Drawable common, RectParams rect) -> Queue&
+{
+	transform(common);
+	if (!inside_group) group_depths.emplace_back(group_depths.size(), -1);
+	rects.emplace_back(common, rect, group_depths.size() - 1);
+	group_depths.back().second = common.depth;
 	return *this;
 }
 
-inline auto Renderer::Queue::add_circle(Primitive primitive) -> Queue&
+inline auto Renderer::Queue::circle(Drawable common, CircleParams circle) -> Queue&
 {
-	primitive.color = srgb_decode(primitive.color);
-	primitives.emplace_back(primitive);
+	transform(common);
+	if (!inside_group) group_depths.emplace_back(group_depths.size(), -1);
+	circles.emplace_back(common, circle, group_depths.size() - 1);
+	group_depths.back().second = common.depth;
 	return *this;
+}
+
+inline void Renderer::Queue::transform(Drawable& drawable)
+{
+	drawable.color = srgb_decode(drawable.color);
+}
+
+inline auto Renderer::Queue::to_primitive_list() const -> vector<Primitive>
+{
+	// Create a group remapping table so that the groups are sorted by depth
+	sort(group_depths, [](auto const& a, auto const& b) {
+		return a.second > b.second; // From largest to smallest depth value
+	});
+	auto group_remapping = vector<int>{};
+	group_remapping.resize(group_depths.size());
+	for (auto [idx, val]: group_depths | views::enumerate)
+		group_remapping[val.first] = idx;
+
+	auto primitives = vector<Primitive>{};
+	primitives.reserve(rects.size() + circles.size());
+	for (auto [common, rect, group]: rects) {
+		primitives.emplace_back(Primitive{
+			.type = Primitive::Type::Rect,
+			.group_id = group_remapping[group],
+			.position = common.position,
+			.velocity = common.velocity,
+			.color = common.color,
+			.rect_params = Primitive::RectParams{.size = rect.size},
+		});
+	}
+	for (auto [common, circle, group]: circles) {
+		primitives.emplace_back(Primitive{
+			.type = Primitive::Type::Circle,
+			.group_id = group_remapping[group],
+			.position = common.position,
+			.velocity = common.velocity,
+			.color = common.color,
+			.circle_params = Primitive::CircleParams{.radius = circle.radius},
+		});
+	}
+	return primitives;
 }
 
 inline Renderer::Renderer(dev::Window& window, Logger::Category cat):
@@ -91,108 +165,80 @@ inline Renderer::Renderer(dev::Window& window, Logger::Category cat):
 {
 	auto& context = gpu.get_global_allocator().get_context();
 
-#include "spv/rects.slang.spv.h"
-	lib::vuk::create_graphics_pipeline(context, "rects", rects_spv);
-	DEBUG_AS(cat, "Compiled rects pipeline");
+#include "spv/worklist_gen.slang.spv.h"
+	lib::vuk::create_compute_pipeline(context, "worklist_gen", worklist_gen_spv);
+	DEBUG_AS(cat, "Compiled worklist_gen pipeline");
 
-#include "spv/gen_tiles.slang.spv.h"
-	lib::vuk::create_compute_pipeline(context, "gen_tiles", gen_tiles_spv);
-	DEBUG_AS(cat, "Compiled gen_tiles pipeline");
-
-#include "spv/primitives.slang.spv.h"
-	lib::vuk::create_compute_pipeline(context, "primitives", primitives_spv);
-	DEBUG_AS(cat, "Compiled primitives pipeline");
+#include "spv/draw_all.slang.spv.h"
+	lib::vuk::create_compute_pipeline(context, "draw_all", draw_all_spv);
+	DEBUG_AS(cat, "Compiled draw_all pipeline");
 
 	INFO_AS(cat, "Renderer initialized");
 }
 
 template<callable<void(Renderer::Queue&)> Func>
-void Renderer::frame(initializer_list<id> layer_order, Func&& func)
+void Renderer::frame(Func&& func)
 {
 	auto queue = Queue{};
 	imgui.enqueue([&]() { func(queue); });
+	auto primitives = queue.to_primitive_list();
 
 	gpu.frame([&, this](auto& allocator, auto&& target) -> lib::vuk::ManagedImage {
 		auto next = lib::vuk::clear_image(move(target), {0.0f, 0.0f, 0.0f, 1.0f});
-
-		for (auto const& layer: layer_order |
-			views::filter([&](auto id) { return queue.layers.contains(id); }) |
-			views::transform([&](auto id) -> Queue::Layer const& { return queue.layers.at(id); }))
-		{
-			auto result = draw_rects(allocator, move(next), layer.rects);
-			next = move(result);
-		}
-		if (!queue.primitives.empty()) {
-			auto [refs_buf, ref_count_buf] = generate_tile_lists(allocator, queue.primitives);
-			next = draw_primitives(allocator, move(next), queue.primitives);
+		if (!primitives.empty()) {
+			auto primitives_buf = lib::vuk::create_scratch_buffer(allocator, span{primitives});
+			auto [worklists_buf, worklist_sizes_buf] = generate_worklists(allocator, primitives_buf);
+			next = draw_all(allocator, move(next), primitives_buf);
 		}
 		return imgui.draw(allocator, move(next));
 	});
 }
 
-inline auto Renderer::generate_tile_lists(lib::vuk::Allocator& allocator,
-	span<Primitive const> primitives) -> tuple<lib::vuk::ManagedBuffer, lib::vuk::ManagedBuffer>
+inline auto Renderer::generate_worklists(lib::vuk::Allocator& allocator,
+	lib::vuk::Buffer const& primitives_buf) -> tuple<lib::vuk::ManagedBuffer, lib::vuk::ManagedBuffer>
 {
 	auto const window_size = gpu.get_window().size();
-	auto const tile_bound = (window_size + int2{15, 15}) % int2{16, 16};
-	auto ref_count_init = lib::vuk::DispatchIndirectCommand{0, 1, 1};
-	auto primitives_buf = lib::vuk::create_scratch_buffer(allocator, primitives);
-	auto refs_buf = lib::vuk::declare_buf("refs");
-	refs_buf->size = sizeof(TileRef) * tile_bound.x() * tile_bound.y() * primitives.size();
-	refs_buf->memory_usage = lib::vuk::MemoryUsage::eGPUonly;
-	auto ref_count_buf_raw = lib::vuk::create_scratch_buffer(allocator, span{&ref_count_init, 1});
-	auto ref_count_buf = lib::vuk::acquire_buf("ref_count", ref_count_buf_raw, lib::vuk::Access::eHostWrite);
+	auto const tile_bound = (window_size + int2{TILE_SIZE - 1, TILE_SIZE - 1}) % int2{TILE_SIZE, TILE_SIZE};
+	auto const tile_count = tile_bound.x() * tile_bound.y();
 
-	auto pass = lib::vuk::make_pass("gen_tiles",
-		[window_size, primitives_buf, primitives_count = primitives.size()]
-		(lib::vuk::CommandBuffer& cmd, VUK_BA(lib::vuk::eComputeWrite) refs_buf, VUK_BA(lib::vuk::eComputeRW) ref_count_buf)
+	auto worklists_buf = lib::vuk::declare_buf("worklists");
+	worklists_buf->size = tile_count * sizeof(WorklistItem) * WORKLIST_MAX_SIZE;
+	worklists_buf->memory_usage = lib::vuk::MemoryUsage::eGPUonly;
+
+	auto worklist_sizes = vector<int>{};
+	worklist_sizes.resize(tile_count);
+	auto worklist_sizes_buf_raw = lib::vuk::create_scratch_buffer(allocator, span{worklist_sizes});
+	auto worklist_sizes_buf = lib::vuk::acquire_buf("worklist_sizes", worklist_sizes_buf_raw, lib::vuk::Access::eHostWrite);
+
+	auto pass = lib::vuk::make_pass("worklist_gen",
+		[window_size, primitives_buf, primitives_count = primitives_buf.size / sizeof(Primitive)]
+		(lib::vuk::CommandBuffer& cmd, VUK_BA(lib::vuk::eComputeWrite) worklists_buf, VUK_BA(lib::vuk::eComputeRW) worklist_sizes_buf)
 	{
 		cmd
-			.bind_compute_pipeline("gen_tiles")
+			.bind_compute_pipeline("worklist_gen")
 			.bind_buffer(0, 0, primitives_buf)
-			.bind_buffer(0, 1, refs_buf)
-			.bind_buffer(0, 2, ref_count_buf)
+			.bind_buffer(0, 1, worklists_buf)
+			.bind_buffer(0, 2, worklist_sizes_buf)
 			.push_constants(lib::vuk::ShaderStageFlagBits::eCompute, 0, static_cast<int>(primitives_count))
 			.specialize_constants(0, window_size.x()).specialize_constants(1, window_size.y())
 			.dispatch_invocations(primitives_count, 1, 1);
-		return make_tuple(refs_buf, ref_count_buf);
+		return make_tuple(worklists_buf, worklist_sizes_buf);
 	});
-	return pass(move(refs_buf), move(ref_count_buf));
+	return pass(move(worklists_buf), move(worklist_sizes_buf));
 }
 
-inline auto Renderer::draw_rects(lib::vuk::Allocator& allocator, lib::vuk::ManagedImage&& dest,
-	span<Rect const> rects) -> lib::vuk::ManagedImage
+inline auto Renderer::draw_all(lib::vuk::Allocator& allocator, lib::vuk::ManagedImage&& dest, lib::vuk::Buffer const& primitives_buf) -> lib::vuk::ManagedImage
 {
-	auto rects_buf = lib::vuk::create_scratch_buffer(allocator, rects);
-	auto pass = lib::vuk::make_pass("rects",
-		[window_size = gpu.get_window().size(), window_scale = gpu.get_window().scale(), rects_buf, rects_count = rects.size()]
-		(lib::vuk::CommandBuffer& cmd, VUK_IA(lib::vuk::Access::eColorWrite) target)
-	{
-		lib::vuk::set_cmd_defaults(cmd)
-			.bind_graphics_pipeline("rects")
-			.bind_buffer(0, 0, rects_buf)
-			.specialize_constants(0, window_size.x()).specialize_constants(1, window_size.y())
-			.specialize_constants(2, window_scale)
-			.draw(6 * rects_count, 1, 0, 0);
-		return target;
-	});
-	return pass(move(dest));
-}
-
-inline auto Renderer::draw_primitives(lib::vuk::Allocator& allocator, lib::vuk::ManagedImage&& dest, span<Primitive const> primitives) -> lib::vuk::ManagedImage
-{
-	auto primitives_buf = lib::vuk::create_scratch_buffer(allocator, primitives);
-	auto pass = lib::vuk::make_pass("circles",
-		[window_size = gpu.get_window().size(), window_scale = gpu.get_window().scale(), primitives_buf, primitives_count = primitives.size()]
+	auto pass = lib::vuk::make_pass("draw_all",
+		[window_size = gpu.get_window().size(), primitives_buf, primitives_count = primitives_buf.size / sizeof(Primitive)]
 		(lib::vuk::CommandBuffer& cmd, VUK_IA(lib::vuk::Access::eComputeRW) target)
 	{
 		cmd
-			.bind_compute_pipeline("primitives")
+			.bind_compute_pipeline("draw_all")
 			.bind_buffer(0, 0, primitives_buf)
 			.bind_image(0, 1, target)
 			.push_constants(lib::vuk::ShaderStageFlagBits::eCompute, 0, static_cast<int>(primitives_count))
 			.specialize_constants(0, window_size.x()).specialize_constants(1, window_size.y())
-			.specialize_constants(2, window_scale)
 			.dispatch_invocations(window_size.x(), window_size.y(), 1);
 		return target;
 	});

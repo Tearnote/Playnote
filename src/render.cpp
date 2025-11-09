@@ -197,84 +197,32 @@ static void render_select(gfx::Renderer::Queue& queue, GameState& state)
 	context.circle.update({
 		64.0f,
 		256.0f + 32.0f + sinf(time * 12.0f) * 160.0f});
-	queue.add_circle(gfx::Renderer::Primitive{
+	queue.circle({
 		.position = context.circle.position,
 		.velocity = context.circle.velocity,
 		.color = {0.1f, 0.3f, 0.9f, 1.0f},
-		.circle_params = {.radius = 24.0f},
+		.depth = 100,
+	}, {
+		.radius = 24.0f,
 	});
-	queue.add_circle(gfx::Renderer::Primitive{
+	queue.circle({
 		.position = context.circle.position + float2{64.0f, 0.0f},
 		.velocity = {},
 		.color = {0.1f, 0.3f, 0.9f, 1.0f},
-		.circle_params = {.radius = 24.0f},
+		.depth = 100,
+	}, {
+		.radius = 24.0f,
 	});
 
 	// Mouse
 	context.mouse.update(state.window.cursor_position());
-	queue.add_circle(gfx::Renderer::Primitive{
+	queue.circle({
 		.position = context.mouse.position,
 		.velocity = context.mouse.velocity,
 		.color = {0.8f, 0.7f, 0.9f, 1.0f},
-		.circle_params = {.radius = 8.0f},
-	});
-
-	// Connections
-	queue.add_circle(gfx::Renderer::Primitive{
-		.position = {256.0f + 128.0f, 64.0f},
-		.velocity = {4.0f, 0.0f},
-		.color = {0.2f, 0.4f, 0.0f, 1.0f},
-		.circle_params = {.radius = 10.0f},
-	});
-	queue.add_circle(gfx::Renderer::Primitive{
-		.position = {256.0f + 132.0f, 64.0f},
-		.velocity = {4.0f, 0.0f},
-		.color = {0.2f, 0.4f, 0.0f, 1.0f},
-		.circle_params = {.radius = 10.0f},
-	});
-	queue.add_circle(gfx::Renderer::Primitive{
-		.position = {256.0f + 136.0f, 64.0f},
-		.velocity = {4.0f, 0.0f},
-		.color = {0.2f, 0.4f, 0.0f, 1.0f},
-		.circle_params = {.radius = 10.0f},
-	});
-
-	queue.add_circle(gfx::Renderer::Primitive{
-		.position = {256.0f + 128.0f, 96.0f},
-		.velocity = {16.0f, 0.0f},
-		.color = {0.2f, 0.4f, 0.0f, 1.0f},
-		.circle_params = {.radius = 10.0f},
-	});
-	queue.add_circle(gfx::Renderer::Primitive{
-		.position = {256.0f + 144.0f, 96.0f},
-		.velocity = {16.0f, 0.0f},
-		.color = {0.2f, 0.4f, 0.0f, 1.0f},
-		.circle_params = {.radius = 10.0f},
-	});
-	queue.add_circle(gfx::Renderer::Primitive{
-		.position = {256.0f + 160.0f, 96.0f},
-		.velocity = {16.0f, 0.0f},
-		.color = {0.2f, 0.4f, 0.0f, 1.0f},
-		.circle_params = {.radius = 10.0f},
-	});
-
-	queue.add_circle(gfx::Renderer::Primitive{
-		.position = {256.0f + 128.0f, 128.0f},
-		.velocity = {64.0f, 0.0f},
-		.color = {0.2f, 0.4f, 0.0f, 1.0f},
-		.circle_params = {.radius = 10.0f},
-	});
-	queue.add_circle(gfx::Renderer::Primitive{
-		.position = {256.0f + 192.0f, 128.0f},
-		.velocity = {64.0f, 0.0f},
-		.color = {0.2f, 0.4f, 0.0f, 1.0f},
-		.circle_params = {.radius = 10.0f},
-	});
-	queue.add_circle(gfx::Renderer::Primitive{
-		.position = {256.0f + 256.0f, 128.0f},
-		.velocity = {64.0f, 0.0f},
-		.color = {0.2f, 0.4f, 0.0f, 1.0f},
-		.circle_params = {.radius = 10.0f},
+		.depth = 0,
+	}, {
+		.radius = 8.0f,
 	});
 }
 
@@ -438,9 +386,16 @@ static void run_render(Broadcaster& broadcaster, dev::Window& window, Logger::Ca
 		}
 
 		// Render a frame
-		renderer.frame({"bg"_id, "frame"_id, "measure"_id, "judgment_line"_id, "notes"_id, "pressed"_id}, [&](gfx::Renderer::Queue& queue) {
+		renderer.frame([&](gfx::Renderer::Queue& queue) {
 			// Background
-			queue.enqueue_rect("bg"_id, {{0, 0}, {1280, 720}, {0.060f, 0.060f, 0.060f, 1.000f}});
+			queue.rect({
+				.position = {640.0f, 360.0f},
+				.velocity = {0.0f, 0.0f},
+				.color = {0.060f, 0.060f, 0.060f, 1.000f},
+				.depth = 1000,
+			}, {
+				.size = {1280.0f, 720.0f},
+			});
 
 			switch (state.current) {
 			case State::Select: render_select(queue, state); break;

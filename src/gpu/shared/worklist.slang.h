@@ -9,8 +9,10 @@ or distributed except according to those terms.
 
 #pragma once
 
-struct TileRef {
-	int2 tile;
+#define TILE_SIZE 16
+#define WORKLIST_MAX_SIZE 64
+
+struct WorklistItem {
 	int primitive_idx;
-	int _pad0;
+	int group_id;
 };

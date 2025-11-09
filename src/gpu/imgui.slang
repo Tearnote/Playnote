@@ -19,22 +19,22 @@ struct VertexIn {
 
 struct VertexOut {
 	float4 position: SV_Position;
-    float4 color;
-    float2 uv;
+	float4 color;
+	float2 uv;
 };
 
 [shader("vertex")]
 VertexOut vertexMain(VertexIn in, uniform float2 Scale, uniform float2 Translate)
 {
 	var out = VertexOut();
-    out.position = {in.position * Scale + Translate, 0.0, 1.0};
-    out.color = in.color;
-    out.uv = in.uv;
-    return out;
+	out.position = {in.position * Scale + Translate, 0.0, 1.0};
+	out.color = in.color;
+	out.uv = in.uv;
+	return out;
 }
 
 [shader("fragment")]
 float4 fragmentMain(VertexOut in): SV_Target
 {
-    return in.color * s_font.Sample(in.uv);
+	return in.color * s_font.Sample(in.uv);
 }
