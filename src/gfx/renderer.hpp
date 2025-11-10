@@ -129,7 +129,7 @@ inline auto Renderer::Queue::to_primitive_list() const -> vector<Primitive>
 {
 	// Create a group remapping table so that the groups are sorted by depth
 	sort(group_depths, [](auto const& a, auto const& b) {
-		return a.second > b.second; // From largest to smallest depth value
+		return a.second < b.second;
 	});
 	auto group_remapping = vector<int>{};
 	group_remapping.resize(group_depths.size());
