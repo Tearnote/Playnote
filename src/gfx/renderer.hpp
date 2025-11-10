@@ -15,6 +15,7 @@ or distributed except according to those terms.
 #include "dev/window.hpp"
 #include "dev/gpu.hpp"
 #include "gfx/imgui.hpp"
+#include "vuk/Types.hpp"
 
 namespace playnote::gfx {
 
@@ -78,7 +79,9 @@ private:
 	Imgui imgui;
 
 	auto generate_worklists(lib::vuk::Allocator&, lib::vuk::Buffer const&) -> tuple<lib::vuk::ManagedBuffer, lib::vuk::ManagedBuffer>;
-	[[nodiscard]] auto draw_all(lib::vuk::Allocator&, lib::vuk::ManagedImage&&, lib::vuk::Buffer const&) -> lib::vuk::ManagedImage;
+	[[nodiscard]] auto draw_all(lib::vuk::Allocator&, lib::vuk::ManagedImage&&,
+		lib::vuk::Buffer const& primitives_buf, lib::vuk::ManagedBuffer&& worklists_buf,
+		lib::vuk::ManagedBuffer&& worklist_sizes_buf) -> lib::vuk::ManagedImage;
 };
 
 inline auto srgb_decode(float4 color) -> float4
@@ -192,7 +195,7 @@ void Renderer::frame(Func&& func)
 		if (!primitives.empty()) {
 			auto primitives_buf = lib::vuk::create_scratch_buffer(allocator, span{primitives});
 			auto [worklists_buf, worklist_sizes_buf] = generate_worklists(allocator, primitives_buf);
-			next = draw_all(allocator, move(next), primitives_buf);
+			next = draw_all(allocator, move(next), primitives_buf, move(worklists_buf), move(worklist_sizes_buf));
 		}
 		return imgui.draw(allocator, move(next));
 	});
@@ -202,7 +205,7 @@ inline auto Renderer::generate_worklists(lib::vuk::Allocator& allocator,
 	lib::vuk::Buffer const& primitives_buf) -> tuple<lib::vuk::ManagedBuffer, lib::vuk::ManagedBuffer>
 {
 	auto const window_size = gpu.get_window().size();
-	auto const tile_bound = (window_size + int2{TILE_SIZE - 1, TILE_SIZE - 1}) % int2{TILE_SIZE, TILE_SIZE};
+	auto const tile_bound = (window_size + int2{TILE_SIZE - 1, TILE_SIZE - 1}) / int2{TILE_SIZE, TILE_SIZE};
 	auto const tile_count = tile_bound.x() * tile_bound.y();
 
 	auto worklists_buf = lib::vuk::declare_buf("worklists");
@@ -244,22 +247,26 @@ inline auto Renderer::generate_worklists(lib::vuk::Allocator& allocator,
 	return sort_pass(move(worklists_buf_generated), move(worklist_sizes_buf_generated));
 }
 
-inline auto Renderer::draw_all(lib::vuk::Allocator& allocator, lib::vuk::ManagedImage&& dest, lib::vuk::Buffer const& primitives_buf) -> lib::vuk::ManagedImage
+inline auto Renderer::draw_all(lib::vuk::Allocator& allocator, lib::vuk::ManagedImage&& dest,
+	lib::vuk::Buffer const& primitives_buf, lib::vuk::ManagedBuffer&& worklists_buf,
+	lib::vuk::ManagedBuffer&& worklist_sizes_buf) -> lib::vuk::ManagedImage
 {
 	auto pass = lib::vuk::make_pass("draw_all",
-		[window_size = gpu.get_window().size(), primitives_buf, primitives_count = primitives_buf.size / sizeof(Primitive)]
-		(lib::vuk::CommandBuffer& cmd, VUK_IA(lib::vuk::Access::eComputeRW) target)
+		[window_size = gpu.get_window().size(), primitives_buf]
+		(lib::vuk::CommandBuffer& cmd, VUK_IA(lib::vuk::Access::eComputeRW) target,
+			VUK_BA(lib::vuk::Access::eComputeRead) worklists_buf, VUK_BA(lib::vuk::Access::eComputeRead) worklist_sizes_buf)
 	{
 		cmd
 			.bind_compute_pipeline("draw_all")
 			.bind_buffer(0, 0, primitives_buf)
-			.bind_image(0, 1, target)
-			.push_constants(lib::vuk::ShaderStageFlagBits::eCompute, 0, static_cast<int>(primitives_count))
+			.bind_buffer(0, 1, worklists_buf)
+			.bind_buffer(0, 2, worklist_sizes_buf)
+			.bind_image(0, 3, target)
 			.specialize_constants(0, window_size.x()).specialize_constants(1, window_size.y())
 			.dispatch_invocations(window_size.x(), window_size.y(), 1);
 		return target;
 	});
-	return pass(move(dest));
+	return pass(move(dest), move(worklists_buf), move(worklist_sizes_buf));
 }
 
 }

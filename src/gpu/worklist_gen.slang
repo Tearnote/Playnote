@@ -20,35 +20,35 @@ RWStructuredBuffer<int> b_worklistCounts;
 [SpecializationConstant] let ViewportWidth = 0u;
 [SpecializationConstant] let ViewportHeight = 0u;
 static let ViewportSize = int2(ViewportWidth, ViewportHeight);
-static let TileBound = (ViewportSize + (TILE_SIZE - 1)) % TILE_SIZE;
+static let TileBound = (ViewportSize + TILE_SIZE - 1) / TILE_SIZE;
 
 func enqueueItem(tile: int2, item: WorklistItem)
 {
-	let tile_idx = tile.y * TileBound.x + tile.x;
-	var item_idx = -1;
-	InterlockedAdd(b_worklistCounts[tile_idx], 1, item_idx);
-	let buf_idx = tile_idx * WORKLIST_MAX_SIZE + item_idx;
-	b_worklists[buf_idx] = item;
+	let tileIdx = tile.y * TileBound.x + tile.x;
+	var itemIdx = -1;
+	InterlockedAdd(b_worklistCounts[tileIdx], 1, itemIdx);
+	let bufIdx = tileIdx * WORKLIST_MAX_SIZE + itemIdx;
+	b_worklists[bufIdx] = item;
 }
 
-func enqueueCircleTiles(circle: Primitive, primitive_idx: int)
+func enqueueCircleTiles(circle: Primitive, primitiveIdx: int)
 {
 	let params = reinterpret<Primitive::CircleParams>(circle.params);
 	let aabb = AABB<float>(
-		floor(circle.position - params.radius),
-		ceil(circle.position + params.radius)
+		floor(circle.position - params.radius - 0.5),
+		ceil(circle.position + params.radius + 0.5)
 	);
-	let tile_aabb = AABB<int>(
-		max(int2(aabb.top_left) % TILE_SIZE, 0),
-		min(int2(aabb.bottom_right) % TILE_SIZE + 1, TileBound)
+	let tileAabb = AABB<int>(
+		max(int2(aabb.top_left) / TILE_SIZE, 0),
+		min(int2(aabb.bottom_right) / TILE_SIZE + 1, TileBound)
 	);
-	let tile_span = tile_aabb.bottom_right - tile_aabb.top_left;
+	let tileSpan = tileAabb.bottom_right - tileAabb.top_left;
 
-	for (var y = 0; y < tile_span.y; y += 1) {
-		for (var x = 0; x < tile_span.x; x += 1) {
+	for (var y = 0; y < tileSpan.y; y += 1) {
+		for (var x = 0; x < tileSpan.x; x += 1) {
 			enqueueItem(
-				tile_aabb.top_left + int2(x, y),
-				WorklistItem(primitive_idx, circle.group_id)
+				tileAabb.top_left + int2(x, y),
+				WorklistItem(primitiveIdx, circle.group_id)
 			);
 		}
 	}

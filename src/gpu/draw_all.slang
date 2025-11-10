@@ -11,13 +11,17 @@ or distributed except according to those terms.
 
 import lib;
 #include "shared/primitive.slang.h"
+#include "shared/worklist.slang.h"
 
 StructuredBuffer<Primitive> b_primitives;
+StructuredBuffer<WorklistItem> b_worklists;
+StructuredBuffer<int> b_worklistSizes;
 RWTexture2D<float4> i_target;
 
 [SpecializationConstant] let ViewportWidth = 0u;
 [SpecializationConstant] let ViewportHeight = 0u;
 static let ViewportSize = int2(ViewportWidth, ViewportHeight);
+static let TileBound = (ViewportSize + TILE_SIZE - 1) / TILE_SIZE;
 
 static let MaxMotionSupersample = 4u;
 static let SamplePattern4x: float2[4] = {
@@ -80,16 +84,23 @@ func circle_coverage(circle: Primitive, at: float2) -> float
 
 [shader("compute")]
 [numthreads(16, 16)]
-void computeMain(int2 threadId: SV_DispatchThreadID, uniform int PrimitiveCount)
+void computeMain(int2 threadId: SV_DispatchThreadID)
 {
 	if (any(threadId >= ViewportSize)) return;
-	let self_pos = float2(threadId) + 0.5;
+	let tile = threadId / TILE_SIZE;
+	let tileIdx = tile.y * TileBound.x + tile.x;
+	let worklistOffset = tileIdx * WORKLIST_MAX_SIZE;
+	let worklistSize = b_worklistSizes[tileIdx];
+	if (worklistSize <= 0) return;
 
+	let self_pos = float2(threadId) + 0.5;
 	var color = i_target.Load(threadId);
+	color += float4(0.1, 0.0, 0.0, 1.0);
 	color = float4(srgbDecode(color.rgb), color.a);
 
-	for (int i = 0; i < PrimitiveCount; i += 1) {
-		let primitive = b_primitives[i];
+	for (int i = 0; i < worklistSize; i += 1) {
+		let item = b_worklists[worklistOffset + i];
+		let primitive = b_primitives[item.primitive_idx];
 		switch (primitive.type) {
 		case Primitive::Type::Circle:
 			let coverage = circle_coverage(primitive, self_pos);
