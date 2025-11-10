@@ -65,5 +65,7 @@ void computeMain(int threadId: SV_DispatchThreadID, uniform int PrimitiveCount)
 	case Primitive::Type::Circle:
 		enqueueCircleTiles(primitive, threadId);
 		break;
+	case Primitive::Type::Rect:
+		break; //TODO
 	}
 }

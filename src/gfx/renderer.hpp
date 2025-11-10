@@ -166,8 +166,12 @@ inline Renderer::Renderer(dev::Window& window, Logger::Category cat):
 	auto& context = gpu.get_global_allocator().get_context();
 
 #include "spv/worklist_gen.slang.spv.h"
-	lib::vuk::create_compute_pipeline(context, "worklist_gen", worklist_gen_spv);
-	DEBUG_AS(cat, "Compiled worklist_gen pipeline");
+		lib::vuk::create_compute_pipeline(context, "worklist_gen", worklist_gen_spv);
+		DEBUG_AS(cat, "Compiled worklist_gen pipeline");
+
+#include "spv/worklist_sort.slang.spv.h"
+			lib::vuk::create_compute_pipeline(context, "worklist_sort", worklist_sort_spv);
+			DEBUG_AS(cat, "Compiled worklist_sort pipeline");
 
 #include "spv/draw_all.slang.spv.h"
 	lib::vuk::create_compute_pipeline(context, "draw_all", draw_all_spv);
@@ -210,7 +214,7 @@ inline auto Renderer::generate_worklists(lib::vuk::Allocator& allocator,
 	auto worklist_sizes_buf_raw = lib::vuk::create_scratch_buffer(allocator, span{worklist_sizes});
 	auto worklist_sizes_buf = lib::vuk::acquire_buf("worklist_sizes", worklist_sizes_buf_raw, lib::vuk::Access::eHostWrite);
 
-	auto pass = lib::vuk::make_pass("worklist_gen",
+	auto gen_pass = lib::vuk::make_pass("worklist_gen",
 		[window_size, primitives_buf, primitives_count = primitives_buf.size / sizeof(Primitive)]
 		(lib::vuk::CommandBuffer& cmd, VUK_BA(lib::vuk::eComputeWrite) worklists_buf, VUK_BA(lib::vuk::eComputeRW) worklist_sizes_buf)
 	{
@@ -224,7 +228,20 @@ inline auto Renderer::generate_worklists(lib::vuk::Allocator& allocator,
 			.dispatch_invocations(primitives_count, 1, 1);
 		return make_tuple(worklists_buf, worklist_sizes_buf);
 	});
-	return pass(move(worklists_buf), move(worklist_sizes_buf));
+	auto sort_pass = lib::vuk::make_pass("worklist_sort",
+		[tile_count]
+		(lib::vuk::CommandBuffer& cmd, VUK_BA(lib::vuk::eComputeRW) worklists_buf, VUK_BA(lib::vuk::eComputeRead) worklist_sizes_buf)
+	{
+		cmd
+			.bind_compute_pipeline("worklist_sort")
+			.bind_buffer(0, 0, worklists_buf)
+			.bind_buffer(0, 1, worklist_sizes_buf)
+			.dispatch_invocations(WORKLIST_MAX_SIZE / 2, tile_count, 1);
+		return make_tuple(worklists_buf, worklist_sizes_buf);
+	});
+
+	auto [worklists_buf_generated, worklist_sizes_buf_generated] = gen_pass(move(worklists_buf), move(worklist_sizes_buf));
+	return sort_pass(move(worklists_buf_generated), move(worklist_sizes_buf_generated));
 }
 
 inline auto Renderer::draw_all(lib::vuk::Allocator& allocator, lib::vuk::ManagedImage&& dest, lib::vuk::Buffer const& primitives_buf) -> lib::vuk::ManagedImage
