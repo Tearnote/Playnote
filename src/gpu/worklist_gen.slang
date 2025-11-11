@@ -30,12 +30,25 @@ func enqueueItem(tile: int2, item: WorklistItem)
 	b_worklists[bufIdx] = item;
 }
 
+func circleAabb(float2 position, float radius) -> AABB<float>
+{
+	return AABB<float>(
+		floor(position - radius - 0.5),
+		ceil(position + radius + 0.5)
+	);
+}
+
 func enqueueCircleTiles(circle: Primitive, primitiveIdx: int)
 {
 	let params = reinterpret<Primitive::CircleParams>(circle.params);
+	let halfVelocity = circle.velocity / 2.0;
+	let head = circle.position + halfVelocity;
+	let tail = circle.position - halfVelocity * 3.0;
+	let headAabb = circleAabb(head, params.radius);
+	let tailAabb = circleAabb(tail, params.radius);
 	let aabb = AABB<float>(
-		floor(circle.position - params.radius - 0.5),
-		ceil(circle.position + params.radius + 0.5)
+		min(headAabb.top_left, tailAabb.top_left),
+		max(headAabb.bottom_right, tailAabb.bottom_right)
 	);
 	let tileAabb = AABB<int>(
 		max(int2(aabb.top_left) / TILE_SIZE, 0),
