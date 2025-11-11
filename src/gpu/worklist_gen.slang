@@ -15,7 +15,7 @@ import lib;
 
 StructuredBuffer<Primitive> b_primitives;
 RWStructuredBuffer<WorklistItem> b_worklists;
-RWStructuredBuffer<int> b_worklistCounts;
+RWStructuredBuffer<Atomic<int>> b_worklistCounts;
 
 [SpecializationConstant] let ViewportWidth = 0u;
 [SpecializationConstant] let ViewportHeight = 0u;
@@ -25,8 +25,7 @@ static let TileBound = (ViewportSize + TILE_SIZE - 1) / TILE_SIZE;
 func enqueueItem(tile: int2, item: WorklistItem)
 {
 	let tileIdx = tile.y * TileBound.x + tile.x;
-	var itemIdx = -1;
-	InterlockedAdd(b_worklistCounts[tileIdx], 1, itemIdx);
+	var itemIdx = b_worklistCounts[tileIdx].increment();
 	let bufIdx = tileIdx * WORKLIST_MAX_SIZE + itemIdx;
 	b_worklists[bufIdx] = item;
 }
