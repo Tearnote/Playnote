@@ -9,13 +9,11 @@ or distributed except according to those terms.
 
 #pragma once
 #include "preamble.hpp"
-#include "preamble/algorithm.hpp"
 #include "utils/logger.hpp"
 #include "lib/vuk.hpp"
 #include "dev/window.hpp"
 #include "dev/gpu.hpp"
 #include "gfx/imgui.hpp"
-#include "vuk/Types.hpp"
 
 namespace playnote::gfx {
 

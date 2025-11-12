@@ -224,6 +224,108 @@ static void render_select(gfx::Renderer::Queue& queue, GameState& state)
 	}, {
 		.radius = 8.0f,
 	});
+
+	// Connections
+	queue.circle({
+		.position = {256.0f + 128.0f, 64.0f},
+		.velocity = {4.0f, 0.0f},
+		.color = {0.2f, 0.4f, 0.0f, 1.0f},
+		.depth = 10,
+	}, {
+		.radius = 10.0f,
+	});
+	queue.circle({
+		.position = {256.0f + 132.0f, 64.0f},
+		.velocity = {4.0f, 0.0f},
+		.color = {0.2f, 0.4f, 0.0f, 1.0f},
+		.depth = 10,
+	}, {
+		.radius = 10.0f,
+	});
+	queue.circle({
+		.position = {256.0f + 136.0f, 64.0f},
+		.velocity = {4.0f, 0.0f},
+		.color = {0.2f, 0.4f, 0.0f, 1.0f},
+		.depth = 10,
+	}, {
+		.radius = 10.0f,
+	});
+
+	queue.circle({
+		.position = {256.0f + 128.0f, 96.0f},
+		.velocity = {16.0f, 0.0f},
+		.color = {0.2f, 0.4f, 0.0f, 1.0f},
+		.depth = 10,
+	}, {
+		.radius = 10.0f,
+	});
+	queue.circle({
+		.position = {256.0f + 144.0f, 96.0f},
+		.velocity = {16.0f, 0.0f},
+		.color = {0.2f, 0.4f, 0.0f, 1.0f},
+		.depth = 10,
+	}, {
+		.radius = 10.0f,
+	});
+	queue.circle({
+		.position = {256.0f + 160.0f, 96.0f},
+		.velocity = {16.0f, 0.0f},
+		.color = {0.2f, 0.4f, 0.0f, 1.0f},
+		.depth = 10,
+	}, {
+		.radius = 10.0f,
+	});
+
+	queue.circle({
+		.position = {256.0f + 128.0f, 128.0f},
+		.velocity = {64.0f, 0.0f},
+		.color = {0.2f, 0.4f, 0.0f, 1.0f},
+		.depth = 10,
+	}, {
+		.radius = 10.0f,
+	});
+	queue.circle({
+		.position = {256.0f + 192.0f, 128.0f},
+		.velocity = {64.0f, 0.0f},
+		.color = {0.2f, 0.4f, 0.0f, 1.0f},
+		.depth = 10,
+	}, {
+		.radius = 10.0f,
+	});
+	queue.circle({
+		.position = {256.0f + 256.0f, 128.0f},
+		.velocity = {64.0f, 0.0f},
+		.color = {0.2f, 0.4f, 0.0f, 1.0f},
+		.depth = 10,
+	}, {
+		.radius = 10.0f,
+	});
+
+	// Stack test
+	queue.circle({
+		.position = {16.0f, 16.0f},
+		.velocity = {0.0f, 0.0f},
+		.color = {1.0f, 0.0f, 0.0f, 1.0f},
+		.depth = 100,
+	}, {
+		.radius = 12.0f,
+	});
+	queue.circle({
+		.position = {18.0f, 18.0f},
+		.velocity = {0.0f, 0.0f},
+		.color = {0.0f, 1.0f, 0.0f, 1.0f},
+		.depth = 200,
+	}, {
+		.radius = 12.0f,
+	});
+	queue.circle({
+		.position = {20.0f, 20.0f},
+		.velocity = {0.0f, 0.0f},
+		.color = {0.0f, 0.0f, 1.0f, 1.0f},
+		.depth = 300,
+	}, {
+		.radius = 12.0f,
+	});
 }
 
 static void render_gameplay(gfx::Renderer::Queue& queue, GameState& state)

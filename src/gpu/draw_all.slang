@@ -31,7 +31,15 @@ static let SamplePattern4x: float2[4] = {
 	{0.625, 0.875}
 };
 
-func motion_blurred_circle_coverage(p: float2, v: float2, r: float) -> float
+func supersample<let N: int, let M: int>(position: float2, pattern: float2[M], sampleFunc: IFunc<vector<float, N>, float2>) -> vector<float, N>
+{
+	var result = vector<float, N>(0.0);
+	for (var i = 0; i < M; i += 1)
+		result += sampleFunc(position + (pattern[i] - 0.5));
+	return result / float(M);
+}
+
+func motionBlurredCircleCoverage(p: float2, v: float2, r: float) -> float
 {
 	let a = dot2(v);
 	if (a < 0.001) return sdf::circle(p, r) <= 0.0? 1.0 : 0.0;
@@ -41,44 +49,41 @@ func motion_blurred_circle_coverage(p: float2, v: float2, r: float) -> float
 	let delta = b * b - 4.0 * a * c;
 	if (delta < 0.0) return 0.0;
 
-	let sqrt_delta = sqrt(delta);
-	let t1 = (-b - sqrt_delta) / (2.0 * a);
-	let t2 = (-b + sqrt_delta) / (2.0 * a);
+	let sqrtDelta = sqrt(delta);
+	let t1 = (-b - sqrtDelta) / (2.0 * a);
+	let t2 = (-b + sqrtDelta) / (2.0 * a);
 
-	let overlap_start = max(0.0, t1);
-	let overlap_end = min(1.0, t2);
-	return cosShutterIntegral(overlap_start, overlap_end);
+	let overlapStart = max(0.0, t1);
+	let overlapEnd = min(1.0, t2);
+	return cosShutterIntegral(overlapStart, overlapEnd);
 }
 
 func circle_coverage(circle: Primitive, at: float2) -> float
 {
 	let params = reinterpret<Primitive::CircleParams>(circle.params);
-	let scaled_velocity = circle.velocity * 2;
-	let velocity_offset = scaled_velocity / 4;
-	let center = at - velocity_offset - circle.position;
-	let velocity_len = length(scaled_velocity);
+	let scaledVelocity = circle.velocity * 2;
+	let velocityOffset = scaledVelocity / 4;
+	let center = at - velocityOffset - circle.position;
+	let velocityLen = length(scaledVelocity);
 
-	if (velocity_len > MaxMotionSupersample) {
+	if (velocityLen > MaxMotionSupersample) {
 		// Analytical motion blur with supersampled AA
-		var alpha = 0.0;
-		for (var i = 0u; i < 4; i += 1) {
-			let sample_center = center + (SamplePattern4x[i] - 0.5);
-			alpha += motion_blurred_circle_coverage(sample_center, -scaled_velocity, params.radius);
-		}
-		return alpha / 4;
+		return supersample(center, SamplePattern4x, (float2 position) =>
+			vector<float, 1>(motionBlurredCircleCoverage(position, -scaledVelocity, params.radius))
+		);
 	} else {
 		// Analytical AA with supersampled motion blur
-		let sample_count = clamp(uint(ceil(velocity_len)), 1, MaxMotionSupersample);
-		let step = sample_count == 1? -scaled_velocity : -scaled_velocity / (sample_count - 1);
-		let shutter_step = 1.0 / sample_count;
-		var accum_alpha = 0.0;
-		for (var i = 0u; i < sample_count; i += 1) {
-			let step_center = center - step * i;
-			let alpha = sdf::aa(sdf::circle(step_center, params.radius));
-			let shutter = cosShutterIntegral(shutter_step * i, shutter_step * (i + 1));
-			accum_alpha += alpha * shutter;
+		let sampleCount = clamp(uint(ceil(velocityLen)), 1, MaxMotionSupersample);
+		let step = sampleCount == 1? -scaledVelocity : -scaledVelocity / (sampleCount - 1);
+		let shutterStep = 1.0 / sampleCount;
+		var accumAlpha = 0.0;
+		for (var i = 0u; i < sampleCount; i += 1) {
+			let stepCenter = center - step * i;
+			let alpha = sdf::aa(sdf::circle(stepCenter, params.radius));
+			let shutter = cosShutterIntegral(shutterStep * i, shutterStep * (i + 1));
+			accumAlpha += alpha * shutter;
 		}
-		return accum_alpha;
+		return accumAlpha;
 	}
 }
 
@@ -95,7 +100,7 @@ void computeMain(int2 threadId: SV_DispatchThreadID)
 
 	let self_pos = float2(threadId) + 0.5;
 	var color = i_target.Load(threadId);
-	color += float4(0.1, 0.0, 0.0, 1.0);
+	color += float4(0.1 * worklistSize, 0.0, 0.0, 1.0);
 	color = float4(srgbDecode(color.rgb), color.a);
 
 	for (int i = 0; i < worklistSize; i += 1) {
