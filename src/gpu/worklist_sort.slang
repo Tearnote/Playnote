@@ -17,6 +17,27 @@ StructuredBuffer<int> b_worklistCounts;
 
 groupshared var worklist: WorklistItem[WORKLIST_MAX_SIZE];
 
+func bitonicSort<T, let N: int>(inout arr: T[N], threadId: int, comp: functype(T, T) -> bool)
+{
+	for (int k = 2; k <= N; k <<= 1) {
+		for (int j = k >> 1; j > 0; j >>= 1) {
+			let t = threadId;
+			let i = (t & (j - 1)) | ((t & ~(j - 1)) << 1);
+			let l = i + j;
+
+			let a = arr[i];
+			let b = arr[l];
+
+			let up = (i & k) == 0;
+			if (up == comp(a, b)) {
+				arr[i] = b;
+				arr[l] = a;
+			}
+			GroupMemoryBarrierWithGroupSync();
+		}
+	}
+}
+
 [shader("compute")]
 [numthreads(WORKLIST_MAX_SIZE / 2)]
 void computeMain(int2 threadId: SV_DispatchThreadID)
@@ -33,24 +54,7 @@ void computeMain(int2 threadId: SV_DispatchThreadID)
 	worklist[readLoc2] = readLoc2 < count? b_worklists[offset + readLoc2] : WorklistItem(-1, -1);
 	GroupMemoryBarrierWithGroupSync();
 
-	// Bitonic sort
-	for (int k = 2; k <= WORKLIST_MAX_SIZE; k <<= 1) {
-		for (int j = k >> 1; j > 0; j >>= 1) {
-			let t = thread;
-			let i = (t & (j - 1)) | ((t & ~(j - 1)) << 1);
-			let l = i + j;
-
-			let a = worklist[i];
-			let b = worklist[l];
-
-			let up = (i & k) == 0;
-			if (up == (a.group_id < b.group_id)) {
-				worklist[i] = b;
-				worklist[l] = a;
-			}
-			GroupMemoryBarrierWithGroupSync();
-		}
-	}
+	bitonicSort(worklist, thread, (WorklistItem a, WorklistItem b) => a.group_id < b.group_id);
 
 	// Copy data back to global memory
 	b_worklists[offset + thread] = worklist[thread];
