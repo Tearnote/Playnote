@@ -18,10 +18,19 @@ public func aa(dist: float) -> float {
 	return saturate(0.5 - dist);
 }
 
+// SDF functions adapted from https://iquilezles.org/articles/distfunctions2d/
+
+// Signed distance from an axis-aligned rectangle.
+public func rect(p: float2, size: float2) -> float
+{
+	let d = abs(p) - size;
+	return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0);
+}
+
 // Signed distance from the edge of a circle.
 public func circle(p: float2, radius: float) -> float
 {
-    return length(p) - radius;
+	return length(p) - radius;
 }
 
 }
