@@ -13,6 +13,8 @@ import lib;
 #include "shared/primitive.slang.h"
 #include "shared/worklist.slang.h"
 
+#define WORKLIST_DEBUG 0
+
 StructuredBuffer<Primitive> b_primitives;
 StructuredBuffer<WorklistItem> b_worklists;
 StructuredBuffer<int> b_worklistSizes;
@@ -58,7 +60,7 @@ func motionBlurredCircleCoverage(p: float2, v: float2, r: float) -> float
 	return cosShutterIntegral(overlapStart, overlapEnd);
 }
 
-func circle_coverage(circle: Primitive, at: float2) -> float
+func circleCoverage(circle: Primitive, at: float2) -> float
 {
 	let params = reinterpret<Primitive::CircleParams>(circle.params);
 	let scaledVelocity = circle.velocity * 2;
@@ -100,7 +102,9 @@ void computeMain(int2 threadId: SV_DispatchThreadID)
 
 	let self_pos = float2(threadId) + 0.5;
 	var color = i_target.Load(threadId);
+#if WORKLIST_DEBUG
 	color += float4(0.1 * worklistSize, 0.0, 0.0, 1.0);
+#endif
 	color = float4(srgbDecode(color.rgb), color.a);
 
 	for (int i = 0; i < worklistSize; i += 1) {
@@ -108,7 +112,7 @@ void computeMain(int2 threadId: SV_DispatchThreadID)
 		let primitive = b_primitives[item.primitive_idx];
 		switch (primitive.type) {
 		case Primitive::Type::Circle:
-			let coverage = circle_coverage(primitive, self_pos);
+			let coverage = circleCoverage(primitive, self_pos);
 			color = blend(color, float4(primitive.color.rgb, primitive.color.a * coverage));
 			break;
 		case Primitive::Type::Rect:

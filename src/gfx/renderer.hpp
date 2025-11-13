@@ -13,6 +13,7 @@ or distributed except according to those terms.
 #include "lib/vuk.hpp"
 #include "dev/window.hpp"
 #include "dev/gpu.hpp"
+#include "gpu/shaders.hpp"
 #include "gfx/imgui.hpp"
 
 namespace playnote::gfx {
@@ -166,16 +167,11 @@ inline Renderer::Renderer(dev::Window& window, Logger::Category cat):
 {
 	auto& context = gpu.get_global_allocator().get_context();
 
-#include "spv/worklist_gen.slang.spv.h"
-		lib::vuk::create_compute_pipeline(context, "worklist_gen", worklist_gen_spv);
-		DEBUG_AS(cat, "Compiled worklist_gen pipeline");
-
-#include "spv/worklist_sort.slang.spv.h"
-			lib::vuk::create_compute_pipeline(context, "worklist_sort", worklist_sort_spv);
-			DEBUG_AS(cat, "Compiled worklist_sort pipeline");
-
-#include "spv/draw_all.slang.spv.h"
-	lib::vuk::create_compute_pipeline(context, "draw_all", draw_all_spv);
+	lib::vuk::create_compute_pipeline(context, "worklist_gen", gpu::worklist_gen_spv);
+	DEBUG_AS(cat, "Compiled worklist_gen pipeline");
+	lib::vuk::create_compute_pipeline(context, "worklist_sort", gpu::worklist_sort_spv);
+	DEBUG_AS(cat, "Compiled worklist_sort pipeline");
+	lib::vuk::create_compute_pipeline(context, "draw_all", gpu::draw_all_spv);
 	DEBUG_AS(cat, "Compiled draw_all pipeline");
 
 	INFO_AS(cat, "Renderer initialized");

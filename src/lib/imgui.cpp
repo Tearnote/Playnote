@@ -14,6 +14,7 @@ or distributed except according to those terms.
 #include "imgui.h"
 #include "preamble.hpp"
 #include "lib/glfw.hpp"
+#include "gpu/shaders.hpp"
 
 namespace playnote::lib::imgui {
 
@@ -86,8 +87,7 @@ auto init(glfw::Window window, vuk::Allocator& global_allocator) -> Context
 	imgui_ctx->font_ia.layout = vuk::ImageLayout::eReadOnlyOptimal;
 	ctx.set_name(imgui_ctx->font_image_view->payload, "ImGui/font");
 
-#include "spv/imgui.slang.spv.h"
-	vuk::create_graphics_pipeline(ctx, "imgui", imgui_spv);
+	vuk::create_graphics_pipeline(ctx, "imgui", gpu::imgui_spv);
 	return imgui_ctx;
 }
 
