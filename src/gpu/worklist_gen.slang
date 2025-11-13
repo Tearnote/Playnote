@@ -30,22 +30,30 @@ func enqueueItem(tile: int2, item: WorklistItem)
 	b_worklists[bufIdx] = item;
 }
 
-func circleAabb(float2 position, float radius) -> AABB<float>
+func rectAabb(float2 position, Primitive::RectParams params) -> AABB<float>
 {
 	return AABB<float>(
-		floor(position - radius - 0.5),
-		ceil(position + radius + 0.5)
+		floor(position - params.size / 2.0 - 0.5),
+		ceil(position + params.size / 2.0 + 0.5)
 	);
 }
 
-func enqueueCircleTiles(circle: Primitive, primitiveIdx: int)
+func circleAabb(float2 position, Primitive::CircleParams params) -> AABB<float>
 {
-	let params = reinterpret<Primitive::CircleParams>(circle.params);
-	let halfVelocity = circle.velocity / 2.0;
-	let head = circle.position + halfVelocity;
-	let tail = circle.position - halfVelocity * 3.0;
-	let headAabb = circleAabb(head, params.radius);
-	let tailAabb = circleAabb(tail, params.radius);
+	return AABB<float>(
+		floor(position - params.radius - 0.5),
+		ceil(position + params.radius + 0.5)
+	);
+}
+
+func enqueuePrimitiveTiles<T>(primitive: Primitive, primitiveIdx: int, aabbFunc: functype(float2, T) -> AABB<float>)
+{
+	let params = reinterpret<T>(primitive.params);
+	let halfVelocity = primitive.velocity / 2.0;
+	let head = primitive.position + halfVelocity;
+	let tail = primitive.position - halfVelocity * 3.0;
+	let headAabb = aabbFunc(head, params);
+	let tailAabb = aabbFunc(tail, params);
 	let aabb = AABB<float>(
 		min(headAabb.top_left, tailAabb.top_left),
 		max(headAabb.bottom_right, tailAabb.bottom_right)
@@ -60,7 +68,7 @@ func enqueueCircleTiles(circle: Primitive, primitiveIdx: int)
 		for (var x = 0; x < tileSpan.x; x += 1) {
 			enqueueItem(
 				tileAabb.top_left + int2(x, y),
-				WorklistItem(primitiveIdx, circle.group_id)
+				WorklistItem(primitiveIdx, primitive.group_id)
 			);
 		}
 	}
@@ -74,10 +82,11 @@ void computeMain(int threadId: SV_DispatchThreadID, uniform int PrimitiveCount)
 
 	let primitive = b_primitives[threadId];
 	switch (primitive.type) {
-	case Primitive::Type::Circle:
-		enqueueCircleTiles(primitive, threadId);
-		break;
 	case Primitive::Type::Rect:
-		break; //TODO
+		enqueuePrimitiveTiles(primitive, threadId, rectAabb);
+		break;
+	case Primitive::Type::Circle:
+		enqueuePrimitiveTiles(primitive, threadId, circleAabb);
+		break;
 	}
 }
