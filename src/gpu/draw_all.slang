@@ -33,12 +33,34 @@ static let SamplePattern4x: float2[4] = {
 	{0.625, 0.875}
 };
 
-func supersample<let N: int, let M: int>(position: float2, pattern: float2[M], sampleFunc: IFunc<vector<float, N>, float2>) -> vector<float, N>
+func supersample<let N: int, let M: int>(
+	position: float2, pattern: float2[M],
+	sampleFunc: IFunc<vector<float, N>, float2>
+) -> vector<float, N>
 {
 	var result = vector<float, N>(0.0);
 	for (var i = 0; i < M; i += 1)
 		result += sampleFunc(position + (pattern[i] - 0.5));
 	return result / float(M);
+}
+
+func linearIntegrationSupersample(
+	positionFrom: float2, positionTo: float2, samples: int,
+	windowIntegralFunc: functype(float, float) -> float,
+	coverageFunc: IFunc<float, float2>
+) -> float
+{
+	let span = positionTo - positionFrom;
+	let step = samples == 1? span : span / (samples - 1);
+	let shutterStep = 1.0 / float(samples);
+	var accum = 0.0;
+	for (var i = 0u; i < samples; i += 1) {
+		let stepCenter = positionFrom + step * i;
+		let alpha = coverageFunc(stepCenter);
+		let shutter = windowIntegralFunc(shutterStep * i, shutterStep * (i + 1));
+		accum += alpha * shutter;
+	}
+	return accum;
 }
 
 func motionBlurredCircleCoverage(p: float2, v: float2, r: float) -> float
@@ -76,16 +98,9 @@ func circleCoverage(circle: Primitive, at: float2) -> float
 	} else {
 		// Analytical AA with supersampled motion blur
 		let sampleCount = clamp(uint(ceil(velocityLen)), 1, MaxMotionSupersample);
-		let step = sampleCount == 1? -scaledVelocity : -scaledVelocity / (sampleCount - 1);
-		let shutterStep = 1.0 / sampleCount;
-		var accumAlpha = 0.0;
-		for (var i = 0u; i < sampleCount; i += 1) {
-			let stepCenter = center - step * i;
-			let alpha = sdf::aa(sdf::circle(stepCenter, params.radius));
-			let shutter = cosShutterIntegral(shutterStep * i, shutterStep * (i + 1));
-			accumAlpha += alpha * shutter;
-		}
-		return accumAlpha;
+		return linearIntegrationSupersample(center, center + scaledVelocity, sampleCount, cosShutterIntegral,
+			(float2 pos) => sdf::aa(sdf::circle(pos, params.radius))
+		);
 	}
 }
 
