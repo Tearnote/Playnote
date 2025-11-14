@@ -33,40 +33,9 @@ static let SamplePattern4x: float2[4] = {
 	{0.625, 0.875}
 };
 
-func supersample<let N: int, let M: int>(
-	position: float2, pattern: float2[M],
-	sampleFunc: IFunc<vector<float, N>, float2>
-) -> vector<float, N>
-{
-	var result = vector<float, N>(0.0);
-	for (var i = 0; i < M; i += 1)
-		result += sampleFunc(position + (pattern[i] - 0.5));
-	return result / float(M);
-}
-
-func linearIntegrationSupersample(
-	positionFrom: float2, positionTo: float2, samples: int,
-	windowIntegralFunc: functype(float, float) -> float,
-	coverageFunc: IFunc<float, float2>
-) -> float
-{
-	let span = positionTo - positionFrom;
-	let step = samples == 1? span : span / (samples - 1);
-	let shutterStep = 1.0 / float(samples);
-	var accum = 0.0;
-	for (var i = 0u; i < samples; i += 1) {
-		let stepCenter = positionFrom + step * i;
-		let alpha = coverageFunc(stepCenter);
-		let shutter = windowIntegralFunc(shutterStep * i, shutterStep * (i + 1));
-		accum += alpha * shutter;
-	}
-	return accum;
-}
-
-func motionBlurredCircleCoverage(p: float2, v: float2, r: float) -> float
+func velocityIntegratedCircleCoverage(p: float2, v: float2, r: float) -> float
 {
 	let a = dot2(v);
-	if (a < 0.001) return sdf::circle(p, r) <= 0.0? 1.0 : 0.0;
 	let b = -2.0 * dot(p, v);
 	let c = dot2(p) - r * r;
 
@@ -82,25 +51,36 @@ func motionBlurredCircleCoverage(p: float2, v: float2, r: float) -> float
 	return cosShutterIntegral(overlapStart, overlapEnd);
 }
 
-func circleCoverage(circle: Primitive, at: float2) -> float
+func primitiveCoverage(
+	primitive: Primitive, at: float2,
+	sdfFunc: IFunc<float, float2>,
+	velocityIntegratedCoverageFunc: IFunc<float, float2, float2>
+) -> float
 {
-	let params = reinterpret<Primitive::CircleParams>(circle.params);
-	let scaledVelocity = circle.velocity * 2;
+	let scaledVelocity = primitive.velocity * 2;
 	let velocityOffset = scaledVelocity / 4;
-	let center = at - velocityOffset - circle.position;
+	let center = at - velocityOffset - primitive.position;
 	let velocityLen = length(scaledVelocity);
 
 	if (velocityLen > MaxMotionSupersample) {
 		// Analytical motion blur with supersampled AA
-		return supersample(center, SamplePattern4x, (float2 position) =>
-			vector<float, 1>(motionBlurredCircleCoverage(position, -scaledVelocity, params.radius))
-		);
+		var accum = 0.0;
+		for (var i = 0; i < SamplePattern4x.getCount(); i += 1)
+			accum += velocityIntegratedCoverageFunc(center + (SamplePattern4x[i] - 0.5), -scaledVelocity);
+		return accum / float(SamplePattern4x.getCount());
 	} else {
 		// Analytical AA with supersampled motion blur
 		let sampleCount = clamp(uint(ceil(velocityLen)), 1, MaxMotionSupersample);
-		return linearIntegrationSupersample(center, center + scaledVelocity, sampleCount, cosShutterIntegral,
-			(float2 pos) => sdf::aa(sdf::circle(pos, params.radius))
-		);
+		let step = sampleCount == 1? scaledVelocity : scaledVelocity / (sampleCount - 1);
+		let shutterStep = 1.0 / float(sampleCount);
+		var accum = 0.0;
+		for (var i = 0; i < sampleCount; i += 1) {
+			let stepCenter = center + step * i;
+			let coverage = sdf::aa(sdfFunc(stepCenter));
+			let shutter = cosShutterIntegral(shutterStep * i, shutterStep * (i + 1));
+			accum += coverage * shutter;
+		}
+		return accum;
 	}
 }
 
@@ -125,14 +105,19 @@ void computeMain(int2 threadId: SV_DispatchThreadID)
 	for (int i = 0; i < worklistSize; i += 1) {
 		let item = b_worklists[worklistOffset + i];
 		let primitive = b_primitives[item.primitive_idx];
+		var coverage = 0.0;
 		switch (primitive.type) {
 		case Primitive::Type::Circle:
-			let coverage = circleCoverage(primitive, self_pos);
-			color = blend(color, float4(primitive.color.rgb, primitive.color.a * coverage));
+			let params = reinterpret<Primitive::CircleParams>(primitive.params);
+			coverage = primitiveCoverage(primitive, self_pos,
+				(float2 pos) => sdf::circle(pos, params.radius),
+				(float2 pos, float2 v) => velocityIntegratedCircleCoverage(pos, v, params.radius)
+			);
 			break;
 		case Primitive::Type::Rect:
 			break; //TODO
 		}
+		color = blend(color, float4(primitive.color.rgb, primitive.color.a * coverage));
 	}
 
 	color = float4(srgbEncode(color.rgb), color.a);
