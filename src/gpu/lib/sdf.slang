@@ -23,7 +23,7 @@ public func aa(dist: float) -> float {
 // Signed distance from an axis-aligned rectangle.
 public func rect(p: float2, size: float2) -> float
 {
-	let d = abs(p) - size;
+	let d = abs(p) - size / 2.0;
 	return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0);
 }
 

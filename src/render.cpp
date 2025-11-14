@@ -232,7 +232,7 @@ static void render_select(gfx::Renderer::Queue& queue, GameState& state)
 		.color = {0.8f, 0.7f, 0.9f, 1.0f},
 		.depth = 0,
 	}, {
-		.size = {8.0f, 8.0f},
+		.size = {16.0f, 16.0f},
 	});
 
 	// Connections

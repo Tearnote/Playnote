@@ -35,18 +35,18 @@ static let SamplePattern4x: float2[4] = {
 
 func velocityIntegratedRectCoverage(p: float2, v: float2, s: float2) -> float
 {
-	let t1 = (p - s) / v;
-	let t2 = (p + s) / v;
-	let t_min_per_axis = min(t1, t2);
-	let t_max_per_axis = max(t1, t2);
-	let t_near = max(t_min_per_axis.x, t_min_per_axis.y);
-	let t_far = min(t_max_per_axis.x, t_max_per_axis.y);
-	if (t_near >= t_far) {
+	let t1 = (p - s / 2.0) / v;
+	let t2 = (p + s / 2.0) / v;
+	let tMinPerAxis = min(t1, t2);
+	let tMaxPerAxis = max(t1, t2);
+	let tNear = max(tMinPerAxis.x, tMinPerAxis.y);
+	let tFar = min(tMaxPerAxis.x, tMaxPerAxis.y);
+	if (tNear >= tFar) {
 		return 0.0;
 	}
 
-	let overlapStart = max(0.0, t_near);
-	let overlapEnd = min(1.0, t_far);
+	let overlapStart = max(0.0, tNear);
+	let overlapEnd = min(1.0, tFar);
 	if (overlapStart >= overlapEnd) return 0.0;
 	return cosShutterIntegral(overlapStart, overlapEnd);
 }
