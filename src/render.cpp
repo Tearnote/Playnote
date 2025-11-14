@@ -352,9 +352,8 @@ static void run_render(Broadcaster& broadcaster, dev::Window& window, Logger::Ca
 		// Render a frame
 		renderer.frame([&](gfx::Renderer::Queue& queue) {
 			// Background
-			queue.rect({
-				.position = {640.0f, 360.0f},
-				.velocity = {0.0f, 0.0f},
+			queue.rect_tl({
+				.position = {0.0f, 0.0f},
 				.color = {0.060f, 0.060f, 0.060f, 1.000f},
 				.depth = 1000,
 			}, {

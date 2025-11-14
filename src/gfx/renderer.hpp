@@ -50,6 +50,7 @@ public:
 		// Enqueue shapes for drawing.
 
 		auto rect(Drawable, RectParams) -> Queue&;
+		auto rect_tl(Drawable, RectParams) -> Queue&; // Position in top-left rather than center
 		auto circle(Drawable, CircleParams) -> Queue&;
 
 		// Internal.
@@ -108,6 +109,12 @@ inline auto Renderer::Queue::rect(Drawable common, RectParams rect) -> Queue&
 	rects.emplace_back(common, rect, group_depths.size() - 1);
 	group_depths.back().second = common.depth;
 	return *this;
+}
+
+inline auto Renderer::Queue::rect_tl(Drawable common, RectParams rect) -> Queue&
+{
+	common.position += rect.size / float2{2.0, 2.0};
+	return this->rect(common, rect);
 }
 
 inline auto Renderer::Queue::circle(Drawable common, CircleParams circle) -> Queue&

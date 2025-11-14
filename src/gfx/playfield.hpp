@@ -293,83 +293,89 @@ inline auto Playfield::make_field(bms::Playstyle playstyle, Side side) -> vector
 
 inline void Playfield::enqueue_field_border(Renderer::Queue& queue, int2 position, int2 size)
 {
-	/*
-	queue.rect("judgment_line"_180, {
-		{position.x(), position.y() + size.y() - JudgmentLineHeight},
-		{size.x(), JudgmentLineHeight},
-		JudgmentLineColor,
+	queue.rect_tl({
+		.position = {static_cast<float>(position.x()), static_cast<float>(position.y() + size.y() - JudgmentLineHeight)},
+		.color = JudgmentLineColor,
+		.depth = 180,
+	}, {
+		.size = {static_cast<float>(size.x()), JudgmentLineHeight},
 	});
-	queue.rect("frame"_200, {
-		{position.x() - FieldBorderWidth, position.y()},
-		{FieldBorderWidth, size.y() + FieldBorderWidth},
-		FieldBorderColor,
+	queue.rect_tl({
+		.position = {static_cast<float>(position.x() - FieldBorderWidth), static_cast<float>(position.y())},
+		.color = FieldBorderColor,
+		.depth = 200,
+	}, {
+		.size = {FieldBorderWidth, static_cast<float>(size.y() + FieldBorderWidth)},
 	});
-	queue.rect("frame"_200, {
-		{position.x() - FieldBorderWidth, size.y()},
-		{size.x() + FieldBorderWidth * 2, FieldBorderWidth},
-		FieldBorderColor,
+	queue.rect_tl({
+		.position = {static_cast<float>(position.x() - FieldBorderWidth), static_cast<float>(size.y())},
+		.color = FieldBorderColor,
+		.depth = 200,
+	}, {
+		.size = {static_cast<float>(size.x() + FieldBorderWidth * 2), FieldBorderWidth},
 	});
-	queue.rect("frame"_200, {
-		{position.x() + size.x(), position.y()},
-		{FieldBorderWidth, size.y() + FieldBorderWidth},
-		FieldBorderColor,
+	queue.rect_tl({
+		.position = {static_cast<float>(position.x() + size.x()), static_cast<float>(position.y())},
+		.color = FieldBorderColor,
+		.depth = 200,
+	}, {
+		.size = {FieldBorderWidth, static_cast<float>(size.y() + FieldBorderWidth)},
 	});
-	*/
 }
 
 inline void Playfield::enqueue_lane(Renderer::Queue& queue, int2 position, int length, Lane const& lane, bool left_border, bool pressed)
 {
 	auto const width = lane_width(lane.visual);
-	/*
-	queue.rect("frame"_200, {
-		{position.x(), position.y()},
-		{width, length},
-		lane_background_color(lane.visual)
+	queue.rect_tl({
+		.position = {static_cast<float>(position.x()), static_cast<float>(position.y())},
+		.color = lane_background_color(lane.visual),
+		.depth = 200,
+	}, {
+		.size = {static_cast<float>(width), static_cast<float>(length)},
 	});
-	*/
 	for (auto const& note: lane.notes) {
 		if (note.y_pos + note.ln_height < 0.0f) continue;
 		auto const y_pos_clipped = max(0.0f, note.y_pos);
 		auto const ln_overflow = max(0.0f, -note.y_pos);
 		auto const ln_height_clipped = note.ln_height - ln_overflow;
-		/*
-		queue.rect("notes"_100, {
-			{position.x(), static_cast<int>(position.y() + length - ceil((y_pos_clipped + ln_height_clipped) * length) - NoteHeight)},
-			{width, NoteHeight + static_cast<int>(ceil(ln_height_clipped * length))},
-			lane_note_color(lane.visual),
+		queue.rect_tl({
+			.position = {static_cast<float>(position.x()), position.y() + length - ceil((y_pos_clipped + ln_height_clipped) * length) - NoteHeight},
+			.color = lane_note_color(lane.visual),
+			.depth = 100,
+		}, {
+			.size = {static_cast<float>(width), static_cast<float>(NoteHeight + static_cast<int>(ceil(ln_height_clipped * length)))},
 		});
-		*/
 	}
 	if (left_border) {
-		/*
-		queue.rect("frame"_200, {
-			{position.x() - LaneSeparatorWidth, position.y()},
-			{LaneSeparatorWidth, length - JudgmentLineHeight},
-			LaneSeparatorColor,
+		queue.rect_tl({
+			.position = {static_cast<float>(position.x() - LaneSeparatorWidth), static_cast<float>(position.y())},
+			.color = LaneSeparatorColor,
+			.depth = 200,
+		}, {
+			.size = {LaneSeparatorWidth, static_cast<float>(length - JudgmentLineHeight)},
 		});
-		*/
 	}
 	if (pressed) {
-		/*
-		queue.rect("pressed"_80, {
-			{position.x() + LanePressedMargin, position.y() + length + LanePressedMargin * 2 + FieldBorderWidth},
-			{width - LanePressedMargin * 2, width - LanePressedMargin * 2},
-			LanePressedColor,
+		queue.rect_tl({
+			.position = {static_cast<float>(position.x() + LanePressedMargin), static_cast<float>(position.y() + length + LanePressedMargin * 2 + FieldBorderWidth)},
+			.color = LanePressedColor,
+			.depth = 80,
+		}, {
+			.size = {static_cast<float>(width - LanePressedMargin * 2), static_cast<float>(width - LanePressedMargin * 2)},
 		});
-		*/
 	}
 }
 
 inline void Playfield::enqueue_measure_lines(Renderer::Queue& queue, span<float const> measure_lines, int2 position, int2 size)
 {
 	for (auto y_pos: measure_lines) {
-		/*
-		queue.rect(gfx::Renderer::Rect{"measure"_190, {
-			{position.x(), static_cast<int>(position.y() + size.y() - ceil(y_pos * size.y()) - MeasureLineHeight)},
-			{size.x(), MeasureLineHeight},
-			MeasureLineColor,
+		queue.rect_tl({
+			.position = {static_cast<float>(position.x()), static_cast<float>(static_cast<int>(position.y() + size.y() - ceil(y_pos * size.y()) - MeasureLineHeight))},
+			.color = MeasureLineColor,
+			.depth = 190,
+		}, {
+			.size = {static_cast<float>(size.x()), static_cast<float>(MeasureLineHeight)},
 		});
-		*/
 	}
 }
 
