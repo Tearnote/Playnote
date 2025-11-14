@@ -33,6 +33,24 @@ static let SamplePattern4x: float2[4] = {
 	{0.625, 0.875}
 };
 
+func velocityIntegratedRectCoverage(p: float2, v: float2, s: float2) -> float
+{
+	let t1 = (p - s) / v;
+	let t2 = (p + s) / v;
+	let t_min_per_axis = min(t1, t2);
+	let t_max_per_axis = max(t1, t2);
+	let t_near = max(t_min_per_axis.x, t_min_per_axis.y);
+	let t_far = min(t_max_per_axis.x, t_max_per_axis.y);
+	if (t_near >= t_far) {
+		return 0.0;
+	}
+
+	let overlapStart = max(0.0, t_near);
+	let overlapEnd = min(1.0, t_far);
+	if (overlapStart >= overlapEnd) return 0.0;
+	return cosShutterIntegral(overlapStart, overlapEnd);
+}
+
 func velocityIntegratedCircleCoverage(p: float2, v: float2, r: float) -> float
 {
 	let a = dot2(v);
@@ -108,14 +126,19 @@ void computeMain(int2 threadId: SV_DispatchThreadID)
 		var coverage = 0.0;
 		switch (primitive.type) {
 		case Primitive::Type::Circle:
-			let params = reinterpret<Primitive::CircleParams>(primitive.params);
+			let circleParams = reinterpret<Primitive::CircleParams>(primitive.params);
 			coverage = primitiveCoverage(primitive, self_pos,
-				(float2 pos) => sdf::circle(pos, params.radius),
-				(float2 pos, float2 v) => velocityIntegratedCircleCoverage(pos, v, params.radius)
+				(float2 pos) => sdf::circle(pos, circleParams.radius),
+				(float2 pos, float2 v) => velocityIntegratedCircleCoverage(pos, v, circleParams.radius)
 			);
 			break;
 		case Primitive::Type::Rect:
-			break; //TODO
+			let rectParams = reinterpret<Primitive::RectParams>(primitive.params);
+			coverage = primitiveCoverage(primitive, self_pos,
+				(float2 pos) => sdf::rect(pos, rectParams.size),
+				(float2 pos, float2 v) => velocityIntegratedRectCoverage(pos, v, rectParams.size)
+			);
+			break;
 		}
 		color = blend(color, float4(primitive.color.rgb, primitive.color.a * coverage));
 	}

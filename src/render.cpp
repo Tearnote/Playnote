@@ -216,6 +216,7 @@ static void render_select(gfx::Renderer::Queue& queue, GameState& state)
 
 	// Mouse
 	context.mouse.update(state.window.cursor_position());
+	/*
 	queue.circle({
 		.position = context.mouse.position,
 		.velocity = context.mouse.velocity,
@@ -223,6 +224,15 @@ static void render_select(gfx::Renderer::Queue& queue, GameState& state)
 		.depth = 0,
 	}, {
 		.radius = 8.0f,
+	});
+	*/
+	queue.rect({
+		.position = context.mouse.position,
+		.velocity = context.mouse.velocity,
+		.color = {0.8f, 0.7f, 0.9f, 1.0f},
+		.depth = 0,
+	}, {
+		.size = {8.0f, 8.0f},
 	});
 
 	// Connections

@@ -15,7 +15,6 @@ or distributed except according to those terms.
 #include "vuk/runtime/vk/Allocator.hpp"
 #include "vuk/runtime/vk/VkRuntime.hpp"
 #include "vuk/runtime/vk/Pipeline.hpp"
-#include "vuk/runtime/vk/Image.hpp"
 #include "vuk/runtime/CommandBuffer.hpp"
 #include "vuk/runtime/ThisThreadExecutor.hpp"
 #include "vuk/Executor.hpp"
