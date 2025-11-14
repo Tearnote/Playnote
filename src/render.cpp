@@ -18,7 +18,6 @@ except according to those terms.
 #include "dev/window.hpp"
 #include "gfx/playfield.hpp"
 #include "gfx/renderer.hpp"
-#include "gfx/entity.hpp"
 #include "audio/player.hpp"
 #include "bms/library.hpp"
 #include "bms/cursor.hpp"
@@ -49,8 +48,6 @@ struct SelectContext {
 	vector<bms::Library::ChartEntry> charts;
 	optional<future<vector<bms::Library::ChartEntry>>> library_reload_result;
 	optional<future<shared_ptr<bms::Chart const>>> chart_load_result;
-	gfx::Position circle;
-	gfx::Position mouse;
 };
 
 struct GameplayContext {
@@ -167,7 +164,7 @@ static void show_results(bms::Score const& score)
 	lib::imgui::text(" Rank: {}", enum_name(score.get_rank()));
 }
 
-static void render_select(gfx::Renderer::Queue& queue, GameState& state)
+static void render_select(gfx::Renderer::Queue&, GameState& state)
 {
 	auto& context = state.select_context();
 	lib::imgui::begin_window("library", {8, 8}, 800, lib::imgui::WindowStyle::Static);
@@ -191,151 +188,6 @@ static void render_select(gfx::Renderer::Queue& queue, GameState& state)
 		lib::imgui::text("Loading...");
 		lib::imgui::end_window();
 	}
-
-	// Sine movement
-	auto const time = ratio(globals::glfw->get_time(), 1s);
-	context.circle.update({
-		64.0f,
-		256.0f + 32.0f + sinf(time * 12.0f) * 160.0f});
-	queue.circle({
-		.position = context.circle.position,
-		.velocity = context.circle.velocity,
-		.color = {0.1f, 0.3f, 0.9f, 1.0f},
-		.depth = 100,
-	}, {
-		.radius = 24.0f,
-	});
-	queue.circle({
-		.position = context.circle.position + float2{64.0f, 0.0f},
-		.velocity = {},
-		.color = {0.1f, 0.3f, 0.9f, 1.0f},
-		.depth = 100,
-	}, {
-		.radius = 24.0f,
-	});
-
-	// Mouse
-	context.mouse.update(state.window.cursor_position());
-	/*
-	queue.circle({
-		.position = context.mouse.position,
-		.velocity = context.mouse.velocity,
-		.color = {0.8f, 0.7f, 0.9f, 1.0f},
-		.depth = 0,
-	}, {
-		.radius = 8.0f,
-	});
-	*/
-	queue.rect({
-		.position = context.mouse.position,
-		.velocity = context.mouse.velocity,
-		.color = {0.8f, 0.7f, 0.9f, 1.0f},
-		.depth = 0,
-	}, {
-		.size = {16.0f, 16.0f},
-	});
-
-	// Connections
-	queue.circle({
-		.position = {256.0f + 128.0f, 64.0f},
-		.velocity = {4.0f, 0.0f},
-		.color = {0.2f, 0.4f, 0.0f, 1.0f},
-		.depth = 10,
-	}, {
-		.radius = 10.0f,
-	});
-	queue.circle({
-		.position = {256.0f + 132.0f, 64.0f},
-		.velocity = {4.0f, 0.0f},
-		.color = {0.2f, 0.4f, 0.0f, 1.0f},
-		.depth = 10,
-	}, {
-		.radius = 10.0f,
-	});
-	queue.circle({
-		.position = {256.0f + 136.0f, 64.0f},
-		.velocity = {4.0f, 0.0f},
-		.color = {0.2f, 0.4f, 0.0f, 1.0f},
-		.depth = 10,
-	}, {
-		.radius = 10.0f,
-	});
-
-	queue.circle({
-		.position = {256.0f + 128.0f, 96.0f},
-		.velocity = {16.0f, 0.0f},
-		.color = {0.2f, 0.4f, 0.0f, 1.0f},
-		.depth = 10,
-	}, {
-		.radius = 10.0f,
-	});
-	queue.circle({
-		.position = {256.0f + 144.0f, 96.0f},
-		.velocity = {16.0f, 0.0f},
-		.color = {0.2f, 0.4f, 0.0f, 1.0f},
-		.depth = 10,
-	}, {
-		.radius = 10.0f,
-	});
-	queue.circle({
-		.position = {256.0f + 160.0f, 96.0f},
-		.velocity = {16.0f, 0.0f},
-		.color = {0.2f, 0.4f, 0.0f, 1.0f},
-		.depth = 10,
-	}, {
-		.radius = 10.0f,
-	});
-
-	queue.circle({
-		.position = {256.0f + 128.0f, 128.0f},
-		.velocity = {64.0f, 0.0f},
-		.color = {0.2f, 0.4f, 0.0f, 1.0f},
-		.depth = 10,
-	}, {
-		.radius = 10.0f,
-	});
-	queue.circle({
-		.position = {256.0f + 192.0f, 128.0f},
-		.velocity = {64.0f, 0.0f},
-		.color = {0.2f, 0.4f, 0.0f, 1.0f},
-		.depth = 10,
-	}, {
-		.radius = 10.0f,
-	});
-	queue.circle({
-		.position = {256.0f + 256.0f, 128.0f},
-		.velocity = {64.0f, 0.0f},
-		.color = {0.2f, 0.4f, 0.0f, 1.0f},
-		.depth = 10,
-	}, {
-		.radius = 10.0f,
-	});
-
-	// Stack test
-	queue.circle({
-		.position = {16.0f, 16.0f},
-		.velocity = {0.0f, 0.0f},
-		.color = {1.0f, 0.0f, 0.0f, 1.0f},
-		.depth = 100,
-	}, {
-		.radius = 12.0f,
-	});
-	queue.circle({
-		.position = {18.0f, 18.0f},
-		.velocity = {0.0f, 0.0f},
-		.color = {0.0f, 1.0f, 0.0f, 1.0f},
-		.depth = 200,
-	}, {
-		.radius = 12.0f,
-	});
-	queue.circle({
-		.position = {20.0f, 20.0f},
-		.velocity = {0.0f, 0.0f},
-		.color = {0.0f, 0.0f, 1.0f, 1.0f},
-		.depth = 300,
-	}, {
-		.radius = 12.0f,
-	});
 }
 
 static void render_gameplay(gfx::Renderer::Queue& queue, GameState& state)
