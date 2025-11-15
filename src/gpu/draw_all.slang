@@ -115,9 +115,6 @@ void computeMain(int2 threadId: SV_DispatchThreadID)
 
 	let self_pos = float2(threadId) + 0.5;
 	var color = i_target.Load(threadId);
-#if WORKLIST_DEBUG
-	color += float4(0.1 * worklistSize, 0.0, 0.0, 1.0);
-#endif
 	color = float4(srgbDecode(color.rgb), color.a);
 
 	for (int i = 0; i < worklistSize; i += 1) {
@@ -144,5 +141,8 @@ void computeMain(int2 threadId: SV_DispatchThreadID)
 	}
 
 	color = float4(srgbEncode(color.rgb), color.a);
+#if WORKLIST_DEBUG
+	color.r += 0.08 * worklistSize;
+#endif
 	i_target.Store(threadId, color);
 }
