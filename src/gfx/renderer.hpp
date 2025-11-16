@@ -23,6 +23,8 @@ class Renderer {
 #include "gpu/shared/worklist.slang.h"
 
 public:
+	static constexpr auto VirtualViewportSize = float2{960.0f, 540.0f};
+
 	struct Drawable {
 		float2 position; // Center of the shape
 		float2 velocity; // Delta from previous frame's position
@@ -61,8 +63,6 @@ public:
 		vector<tuple<Drawable, RectParams, int>> rects; // third: group id
 		vector<tuple<Drawable, CircleParams, int>> circles; // third: group id
 		mutable vector<pair<int, int>> group_depths; // first: group id (initially equal to index), second: depth
-
-		void transform(Drawable&);
 	};
 
 	explicit Renderer(dev::Window&, Logger::Category);
@@ -78,10 +78,11 @@ private:
 	dev::GPU gpu;
 	Imgui imgui;
 
-	auto generate_worklists(lib::vuk::Allocator&, lib::vuk::Buffer const&) -> tuple<lib::vuk::ManagedBuffer, lib::vuk::ManagedBuffer>;
-	[[nodiscard]] auto draw_all(lib::vuk::Allocator&, lib::vuk::ManagedImage&&,
-		lib::vuk::Buffer const& primitives_buf, lib::vuk::ManagedBuffer&& worklists_buf,
-		lib::vuk::ManagedBuffer&& worklist_sizes_buf) -> lib::vuk::ManagedImage;
+	auto generate_worklists(lib::vuk::Allocator&, span<Primitive const>) ->
+		tuple<lib::vuk::ManagedBuffer, lib::vuk::ManagedBuffer, lib::vuk::ManagedBuffer>;
+	[[nodiscard]] auto draw_all(lib::vuk::ManagedImage&&, lib::vuk::ManagedBuffer&& primitives_buf,
+		lib::vuk::ManagedBuffer&& worklists_buf, lib::vuk::ManagedBuffer&& worklist_sizes_buf) ->
+		lib::vuk::ManagedImage;
 };
 
 inline auto srgb_decode(float4 color) -> float4
@@ -104,7 +105,6 @@ inline void Renderer::Queue::group(Func&& func)
 
 inline auto Renderer::Queue::rect(Drawable common, RectParams rect) -> Queue&
 {
-	transform(common);
 	if (!inside_group) group_depths.emplace_back(group_depths.size(), -1);
 	rects.emplace_back(common, rect, group_depths.size() - 1);
 	group_depths.back().second = common.depth;
@@ -119,16 +119,10 @@ inline auto Renderer::Queue::rect_tl(Drawable common, RectParams rect) -> Queue&
 
 inline auto Renderer::Queue::circle(Drawable common, CircleParams circle) -> Queue&
 {
-	transform(common);
 	if (!inside_group) group_depths.emplace_back(group_depths.size(), -1);
 	circles.emplace_back(common, circle, group_depths.size() - 1);
 	group_depths.back().second = common.depth;
 	return *this;
-}
-
-inline void Renderer::Queue::transform(Drawable& drawable)
-{
-	drawable.color = srgb_decode(drawable.color);
 }
 
 inline auto Renderer::Queue::to_primitive_list() const -> vector<Primitive>
@@ -194,20 +188,21 @@ void Renderer::frame(Func&& func)
 	gpu.frame([&, this](auto& allocator, auto&& target) -> lib::vuk::ManagedImage {
 		auto next = lib::vuk::clear_image(move(target), {0.0f, 0.0f, 0.0f, 1.0f});
 		if (!primitives.empty()) {
-			auto primitives_buf = lib::vuk::create_scratch_buffer(allocator, span{primitives});
-			auto [worklists_buf, worklist_sizes_buf] = generate_worklists(allocator, primitives_buf);
-			next = draw_all(allocator, move(next), primitives_buf, move(worklists_buf), move(worklist_sizes_buf));
+			auto [primitives_buf, worklists_buf, worklist_sizes_buf] = generate_worklists(allocator, primitives);
+			next = draw_all(move(next), move(primitives_buf), move(worklists_buf), move(worklist_sizes_buf));
 		}
 		return imgui.draw(allocator, move(next));
 	});
 }
 
-inline auto Renderer::generate_worklists(lib::vuk::Allocator& allocator,
-	lib::vuk::Buffer const& primitives_buf) -> tuple<lib::vuk::ManagedBuffer, lib::vuk::ManagedBuffer>
+inline auto Renderer::generate_worklists(lib::vuk::Allocator& allocator, span<Primitive const> primitives) ->
+	tuple<lib::vuk::ManagedBuffer, lib::vuk::ManagedBuffer, lib::vuk::ManagedBuffer>
 {
 	auto const window_size = gpu.get_window().size();
 	auto const tile_bound = (window_size + int2{TILE_SIZE - 1, TILE_SIZE - 1}) / int2{TILE_SIZE, TILE_SIZE};
 	auto const tile_count = tile_bound.x() * tile_bound.y();
+
+	auto primitives_buf = lib::vuk::create_gpu_buffer(allocator, span{primitives});
 
 	auto worklists_buf = lib::vuk::declare_buf("worklists");
 	worklists_buf->size = tile_count * sizeof(WorklistItem) * WORKLIST_MAX_SIZE;
@@ -219,8 +214,12 @@ inline auto Renderer::generate_worklists(lib::vuk::Allocator& allocator,
 	auto worklist_sizes_buf = lib::vuk::acquire_buf("worklist_sizes", worklist_sizes_buf_raw, lib::vuk::Access::eHostWrite);
 
 	auto gen_pass = lib::vuk::make_pass("worklist_gen",
-		[window_size, primitives_buf, primitives_count = primitives_buf.size / sizeof(Primitive)]
-		(lib::vuk::CommandBuffer& cmd, VUK_BA(lib::vuk::eComputeWrite) worklists_buf, VUK_BA(lib::vuk::eComputeRW) worklist_sizes_buf)
+		[window_size, primitives_count = primitives.size()] (
+			lib::vuk::CommandBuffer& cmd,
+			VUK_BA(lib::vuk::eComputeRW) primitives_buf,
+			VUK_BA(lib::vuk::eComputeWrite) worklists_buf,
+			VUK_BA(lib::vuk::eComputeRW) worklist_sizes_buf
+		)
 	{
 		cmd
 			.bind_compute_pipeline("worklist_gen")
@@ -230,11 +229,14 @@ inline auto Renderer::generate_worklists(lib::vuk::Allocator& allocator,
 			.push_constants(lib::vuk::ShaderStageFlagBits::eCompute, 0, static_cast<int>(primitives_count))
 			.specialize_constants(0, window_size.x()).specialize_constants(1, window_size.y())
 			.dispatch_invocations(primitives_count, 1, 1);
-		return make_tuple(worklists_buf, worklist_sizes_buf);
+		return make_tuple(primitives_buf, worklists_buf, worklist_sizes_buf);
 	});
 	auto sort_pass = lib::vuk::make_pass("worklist_sort",
-		[tile_count]
-		(lib::vuk::CommandBuffer& cmd, VUK_BA(lib::vuk::eComputeRW) worklists_buf, VUK_BA(lib::vuk::eComputeRead) worklist_sizes_buf)
+		[tile_count] (
+			lib::vuk::CommandBuffer& cmd,
+			VUK_BA(lib::vuk::eComputeRW) worklists_buf,
+			VUK_BA(lib::vuk::eComputeRead) worklist_sizes_buf
+		)
 	{
 		cmd
 			.bind_compute_pipeline("worklist_sort")
@@ -244,18 +246,24 @@ inline auto Renderer::generate_worklists(lib::vuk::Allocator& allocator,
 		return make_tuple(worklists_buf, worklist_sizes_buf);
 	});
 
-	auto [worklists_buf_generated, worklist_sizes_buf_generated] = gen_pass(move(worklists_buf), move(worklist_sizes_buf));
-	return sort_pass(move(worklists_buf_generated), move(worklist_sizes_buf_generated));
+	auto [primitives_buf_processed, worklists_buf_generated, worklist_sizes_buf_generated] =
+		gen_pass(move(primitives_buf), move(worklists_buf), move(worklist_sizes_buf));
+	auto [worklists_buf_sorted, worklist_sizes_buf_sorted] =
+		sort_pass(move(worklists_buf_generated), move(worklist_sizes_buf_generated));
+	return make_tuple(primitives_buf_processed, worklists_buf_sorted, worklist_sizes_buf_sorted);
 }
 
-inline auto Renderer::draw_all(lib::vuk::Allocator& allocator, lib::vuk::ManagedImage&& dest,
-	lib::vuk::Buffer const& primitives_buf, lib::vuk::ManagedBuffer&& worklists_buf,
+inline auto Renderer::draw_all(lib::vuk::ManagedImage&& dest,
+	lib::vuk::ManagedBuffer&& primitives_buf, lib::vuk::ManagedBuffer&& worklists_buf,
 	lib::vuk::ManagedBuffer&& worklist_sizes_buf) -> lib::vuk::ManagedImage
 {
 	auto pass = lib::vuk::make_pass("draw_all",
-		[window_size = gpu.get_window().size(), primitives_buf]
-		(lib::vuk::CommandBuffer& cmd, VUK_IA(lib::vuk::Access::eComputeRW) target,
-			VUK_BA(lib::vuk::Access::eComputeRead) worklists_buf, VUK_BA(lib::vuk::Access::eComputeRead) worklist_sizes_buf)
+		[window_size = gpu.get_window().size()] (
+			lib::vuk::CommandBuffer& cmd,
+			VUK_IA(lib::vuk::Access::eComputeRW) target,
+			VUK_BA(lib::vuk::Access::eComputeRead) primitives_buf,
+			VUK_BA(lib::vuk::Access::eComputeRead) worklists_buf,
+			VUK_BA(lib::vuk::Access::eComputeRead) worklist_sizes_buf)
 	{
 		cmd
 			.bind_compute_pipeline("draw_all")
@@ -267,7 +275,7 @@ inline auto Renderer::draw_all(lib::vuk::Allocator& allocator, lib::vuk::Managed
 			.dispatch_invocations(window_size.x(), window_size.y(), 1);
 		return target;
 	});
-	return pass(move(dest), move(worklists_buf), move(worklist_sizes_buf));
+	return pass(move(dest), move(primitives_buf), move(worklists_buf), move(worklist_sizes_buf));
 }
 
 }

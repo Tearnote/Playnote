@@ -83,6 +83,17 @@ auto create_scratch_buffer(Allocator& allocator, span<T> data) -> Buffer
 	return buf.release();
 }
 
+// Create a GPU-only buffer with the provided data. The returned value is a future of the data
+// upload. Memory is never freed, so use with a frame allocator.
+// Throws if vuk throws.
+template<typename T>
+auto create_gpu_buffer(Allocator& allocator, span<T> data) -> ManagedBuffer
+{
+	auto [buf, fut] = create_buffer(allocator, MemoryUsage::eGPUonly, DomainFlagBits::eTransferOnGraphics, data);
+	buf.release();
+	return fut;
+}
+
 // Set the default command buffer configuration used by this application.
 // Throws if vuk throws.
 auto set_cmd_defaults(CommandBuffer& cmd) -> CommandBuffer&;

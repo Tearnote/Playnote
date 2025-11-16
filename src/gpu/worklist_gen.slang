@@ -13,7 +13,7 @@ import lib;
 #include "shared/primitive.slang.h"
 #include "shared/worklist.slang.h"
 
-StructuredBuffer<Primitive> b_primitives;
+RWStructuredBuffer<Primitive> b_primitives;
 RWStructuredBuffer<WorklistItem> b_worklists;
 RWStructuredBuffer<Atomic<int>> b_worklistCounts;
 
@@ -21,6 +21,11 @@ RWStructuredBuffer<Atomic<int>> b_worklistCounts;
 [SpecializationConstant] let ViewportHeight = 0u;
 static let ViewportSize = int2(ViewportWidth, ViewportHeight);
 static let TileBound = (ViewportSize + TILE_SIZE - 1) / TILE_SIZE;
+
+func processPrimitive(inout primitive: Primitive)
+{
+	primitive.color.rgb = srgbDecode(primitive.color.rgb);
+}
 
 func enqueueItem(tile: int2, item: WorklistItem)
 {
@@ -80,7 +85,8 @@ void computeMain(int threadId: SV_DispatchThreadID, uniform int PrimitiveCount)
 {
 	if (threadId >= PrimitiveCount) return;
 
-	let primitive = b_primitives[threadId];
+	var primitive = b_primitives[threadId];
+	processPrimitive(primitive);
 	switch (primitive.type) {
 	case Primitive::Type::Rect:
 		enqueuePrimitiveTiles(primitive, threadId, rectAabb);
@@ -89,4 +95,5 @@ void computeMain(int threadId: SV_DispatchThreadID, uniform int PrimitiveCount)
 		enqueuePrimitiveTiles(primitive, threadId, circleAabb);
 		break;
 	}
+	b_primitives[threadId] = primitive;
 }
