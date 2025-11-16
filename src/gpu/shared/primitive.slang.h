@@ -30,7 +30,7 @@ struct Primitive {
 	int2 _pad1;
 	float4 color;
 #ifndef __cplusplus
-	int params[4]; // Reinterpret as one of the union members
+	float4 params; // Reinterpret as one of the union members
 #else
 	union {
 		RectParams rect_params;

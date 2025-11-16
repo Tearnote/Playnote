@@ -33,7 +33,7 @@ foreach(SHADER_PATH ${SHADER_SOURCES})
 	add_custom_command(
 		OUTPUT ${SHADER_OUTPUT}
 		COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/$<CONFIG>/generated/spv/${SHADER_DIR}
-		COMMAND ${SLANGC_EXECUTABLE} -target spirv -capability vk_mem_model -fvk-use-entrypoint-name -source-embed-style u32 -source-embed-name ${SHADER_ID}_spv $<$<CONFIG:Debug,RelWithDebInfo>:-g> -depfile ${SHADER_OUTPUT}.d -o ${SHADER_OUTPUT} ${PROJECT_SOURCE_DIR}/${SHADER_DIR_PREFIX}${SHADER_PATH}
+		COMMAND ${SLANGC_EXECUTABLE} -target spirv -capability vk_mem_model -fvk-use-entrypoint-name -source-embed-style u32 -source-embed-name ${SHADER_ID}_spv $<$<CONFIG:Debug,RelWithDebInfo>:-g> -O2 -depfile ${SHADER_OUTPUT}.d -o ${SHADER_OUTPUT} ${PROJECT_SOURCE_DIR}/${SHADER_DIR_PREFIX}${SHADER_PATH}
 		DEPENDS ${SHADER_DIR_PREFIX}${SHADER_PATH}
 		DEPFILE ${SHADER_OUTPUT}.d
 		VERBATIM COMMAND_EXPAND_LISTS
