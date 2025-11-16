@@ -22,9 +22,35 @@ RWStructuredBuffer<Atomic<int>> b_worklistCounts;
 static let ViewportSize = int2(ViewportWidth, ViewportHeight);
 static let TileBound = (ViewportSize + TILE_SIZE - 1) / TILE_SIZE;
 
-func processPrimitive(inout primitive: Primitive)
+func unpackTransform(float4 packed) -> float3x3
 {
+	let offset = packed.xy;
+	let scale = packed.zw;
+	return {
+		{scale.x,     0.0, offset.x},
+		{    0.0, scale.y, offset.y},
+		{    0.0,     0.0,      1.0}
+	};
+}
+
+func processPrimitive(inout primitive: Primitive, float3x3 transform)
+{
+	primitive.position = mul(transform, float3(primitive.position, 1.0)).xy;
+	primitive.velocity = mul(transform, float3(primitive.velocity, 0.0)).xy;
 	primitive.color.rgb = srgbDecode(primitive.color.rgb);
+
+	switch (primitive.type) {
+	case Primitive::Type::Rect:
+		var rectParams = reinterpret<Primitive::RectParams>(primitive.params);
+		rectParams.size = mul(transform, float3(rectParams.size, 0.0)).xy;
+		primitive.params = reinterpret<float4>(rectParams);
+		break;
+	case Primitive::Type::Circle:
+		var circleParams = reinterpret<Primitive::CircleParams>(primitive.params);
+		circleParams.radius = mul(transform, float3(circleParams.radius, 0.0, 0.0)).x;
+		primitive.params = reinterpret<float4>(circleParams);
+		break;
+	}
 }
 
 func enqueueItem(tile: int2, item: WorklistItem)
@@ -81,12 +107,15 @@ func enqueuePrimitiveTiles<T>(primitive: Primitive, primitiveIdx: int, aabbFunc:
 
 [shader("compute")]
 [numthreads(64)]
-void computeMain(int threadId: SV_DispatchThreadID, uniform int PrimitiveCount)
-{
+void computeMain(
+	int threadId: SV_DispatchThreadID,
+	uniform float4 Transform,
+	uniform int PrimitiveCount
+) {
 	if (threadId >= PrimitiveCount) return;
 
 	var primitive = b_primitives[threadId];
-	processPrimitive(primitive);
+	processPrimitive(primitive, unpackTransform(Transform));
 	switch (primitive.type) {
 	case Primitive::Type::Rect:
 		enqueuePrimitiveTiles(primitive, threadId, rectAabb);

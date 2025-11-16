@@ -9,6 +9,7 @@ or distributed except according to those terms.
 
 #pragma once
 #include "preamble.hpp"
+#include "preamble/math_ext.hpp"
 #include "utils/logger.hpp"
 #include "lib/vuk.hpp"
 #include "dev/window.hpp"
@@ -23,7 +24,8 @@ class Renderer {
 #include "gpu/shared/worklist.slang.h"
 
 public:
-	static constexpr auto VirtualViewportSize = float2{960.0f, 540.0f};
+	static constexpr auto VirtualViewportSize = float2{900.0f, 480.0f};
+	static constexpr auto VirtualViewportMargin = 40.0f;
 
 	struct Drawable {
 		float2 position; // Center of the shape
@@ -78,6 +80,7 @@ private:
 	dev::GPU gpu;
 	Imgui imgui;
 
+	auto generate_transform(int2 window_size, float window_scale) -> float4;
 	auto generate_worklists(lib::vuk::Allocator&, span<Primitive const>) ->
 		tuple<lib::vuk::ManagedBuffer, lib::vuk::ManagedBuffer, lib::vuk::ManagedBuffer>;
 	[[nodiscard]] auto draw_all(lib::vuk::ManagedImage&&, lib::vuk::ManagedBuffer&& primitives_buf,
@@ -195,12 +198,24 @@ void Renderer::frame(Func&& func)
 	});
 }
 
+inline auto Renderer::generate_transform(int2 window_size, float window_scale) -> float4
+{
+	auto const base_margin_physical = VirtualViewportMargin * window_scale;
+	auto const playable_area = float2{window_size} - float2{base_margin_physical * 2.0f, base_margin_physical * 2.0f};
+	auto const scale_wh = playable_area / VirtualViewportSize;
+	auto const scale = min(scale_wh.x(), scale_wh.y());
+	auto const virtual_viewport_size_physical = VirtualViewportSize * float2{scale, scale};
+	auto const margin = (float2{window_size} - virtual_viewport_size_physical) / float2{2.0f, 2.0f};
+	return {margin.x(), margin.y(), scale, scale};
+}
+
 inline auto Renderer::generate_worklists(lib::vuk::Allocator& allocator, span<Primitive const> primitives) ->
 	tuple<lib::vuk::ManagedBuffer, lib::vuk::ManagedBuffer, lib::vuk::ManagedBuffer>
 {
 	auto const window_size = gpu.get_window().size();
 	auto const tile_bound = (window_size + int2{TILE_SIZE - 1, TILE_SIZE - 1}) / int2{TILE_SIZE, TILE_SIZE};
 	auto const tile_count = tile_bound.x() * tile_bound.y();
+	auto const transform = generate_transform(window_size, gpu.get_window().scale());
 
 	auto primitives_buf = lib::vuk::create_gpu_buffer(allocator, span{primitives});
 
@@ -214,7 +229,7 @@ inline auto Renderer::generate_worklists(lib::vuk::Allocator& allocator, span<Pr
 	auto worklist_sizes_buf = lib::vuk::acquire_buf("worklist_sizes", worklist_sizes_buf_raw, lib::vuk::Access::eHostWrite);
 
 	auto gen_pass = lib::vuk::make_pass("worklist_gen",
-		[window_size, primitives_count = primitives.size()] (
+		[window_size, primitives_count = primitives.size(), transform] (
 			lib::vuk::CommandBuffer& cmd,
 			VUK_BA(lib::vuk::eComputeRW) primitives_buf,
 			VUK_BA(lib::vuk::eComputeWrite) worklists_buf,
@@ -226,7 +241,8 @@ inline auto Renderer::generate_worklists(lib::vuk::Allocator& allocator, span<Pr
 			.bind_buffer(0, 0, primitives_buf)
 			.bind_buffer(0, 1, worklists_buf)
 			.bind_buffer(0, 2, worklist_sizes_buf)
-			.push_constants(lib::vuk::ShaderStageFlagBits::eCompute, 0, static_cast<int>(primitives_count))
+			.push_constants(lib::vuk::ShaderStageFlagBits::eCompute, 0, transform)
+			.push_constants(lib::vuk::ShaderStageFlagBits::eCompute, sizeof(float4), static_cast<int>(primitives_count))
 			.specialize_constants(0, window_size.x()).specialize_constants(1, window_size.y())
 			.dispatch_invocations(primitives_count, 1, 1);
 		return make_tuple(primitives_buf, worklists_buf, worklist_sizes_buf);

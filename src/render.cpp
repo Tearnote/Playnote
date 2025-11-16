@@ -357,7 +357,7 @@ static void run_render(Broadcaster& broadcaster, dev::Window& window, Logger::Ca
 				.color = {0.060f, 0.060f, 0.060f, 1.000f},
 				.depth = 1000,
 			}, {
-				.size = {1280.0f, 720.0f},
+				.size = gfx::Renderer::VirtualViewportSize,
 			});
 
 			switch (state.current) {
