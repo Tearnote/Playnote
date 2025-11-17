@@ -18,12 +18,6 @@ set(SHADER_SOURCES
 	imgui.slang
 )
 
-if(WIN32)
-	find_program(GLSLC glslc REQUIRED)
-else()
-	set(GLSLC ${Vulkan_GLSLC_EXECUTABLE})
-endif()
-
 foreach(SHADER_PATH ${SHADER_SOURCES})
 	get_filename_component(SHADER_DIR ${SHADER_PATH} DIRECTORY)
 	get_filename_component(SHADER_ID ${SHADER_PATH} NAME_WLE)
