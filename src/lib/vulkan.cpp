@@ -59,15 +59,13 @@ auto create_instance(string_view name, Logger::Category debug_logger) -> Instanc
 	if (globals::config->get_entry<bool>("vulkan", "validation_enabled")) {
 		instance_builder
 			.enable_layer("VK_LAYER_KHRONOS_validation")
-			.add_validation_feature_enable(
-				VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT)
-			.add_validation_feature_enable(VK_VALIDATION_FEATURE_ENABLE_DEBUG_PRINTF_EXT)
+			.add_validation_feature_enable(VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT)
 			.set_debug_callback(debug_callback)
 			.set_debug_callback_user_data_pointer(debug_logger)
 			.set_debug_messenger_severity(
 				VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT |
 				VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
-				VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT // Verbose, but debug printf messages are INFO
+				VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT
 			)
 			.set_debug_messenger_type(
 				VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
@@ -77,8 +75,7 @@ auto create_instance(string_view name, Logger::Category debug_logger) -> Instanc
 	}
 	auto instance_result = instance_builder.build();
 	if (!instance_result)
-		throw runtime_error_fmt("Failed to create a Vulkan instance: {}",
-			instance_result.error().message());
+		throw runtime_error_fmt("Failed to create a Vulkan instance: {}", instance_result.error().message());
 	auto* instance = new vkb::Instance{instance_result.value()};
 
 	// Load volk function pointers
