@@ -233,7 +233,7 @@ auto init(Logger::Category cat, bool exclusive_mode, function<void(span<Sample>)
 		auto hr = client->Initialize(AUDCLNT_SHAREMODE_EXCLUSIVE, AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
 			period, period, reinterpret_cast<WAVEFORMATEX*>(&format), nullptr);
 		if (hr == AUDCLNT_E_BUFFER_SIZE_NOT_ALIGNED) {
-			auto buffer_size = uint32{};
+			auto buffer_size = uint{};
 			ret_check(client->GetBufferSize(&buffer_size), "Failed to retrieve audio buffer size");
 			auto new_period = static_cast<REFERENCE_TIME>((10000.0 * 1000 / format.Format.nSamplesPerSec * buffer_size) + 0.5);
 			client->Release();
@@ -247,7 +247,7 @@ auto init(Logger::Category cat, bool exclusive_mode, function<void(span<Sample>)
 	device->Release();
 	auto buffer_event = ptr_check(CreateEvent(nullptr, false, false, nullptr));
 	ret_check(client->SetEventHandle(buffer_event), "Failed to set WASAPI buffer callback");
-	auto buffer_size = uint32{0};
+	auto buffer_size = 0u;
 	ret_check(client->GetBufferSize(&buffer_size), "Failed to retrieve audio buffer size");
 	auto* renderer = static_cast<IAudioRenderClient*>(nullptr);
 	ret_check(client->GetService(__uuidof(IAudioRenderClient), reinterpret_cast<void**>(&renderer)), "Failed to retrieve IAudioRenderClient interface");
