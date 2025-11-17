@@ -12,7 +12,7 @@ or distributed except according to those terms.
 
 namespace playnote::gfx {
 
-// A position keeper that keeps track of the last movement's delta.
+// A position tracker that maintains last movement's delta.
 class Position {
 public:
 	float2 position;

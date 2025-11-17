@@ -19,14 +19,14 @@ or distributed except according to those terms.
 
 namespace playnote::gfx {
 
-class Playfield {
+class LegacyPlayfield {
 public:
 	enum class Side {
 		Left,
 		Right,
 	};
 
-	Playfield(int2 position, int length, bms::Playstyle);
+	LegacyPlayfield(int2 position, int length, bms::Playstyle);
 
 	void enqueue_from_cursor(Renderer::Queue&, bms::Cursor const&, bms::Score const&, float scroll_speed, nanoseconds offset);
 
@@ -82,7 +82,7 @@ private:
 	static void enqueue_judgment(bms::Score::Judgment const&, int field_id, int2 position, int2 size);
 };
 
-inline Playfield::Playfield(int2 position, int length, bms::Playstyle playstyle):
+inline LegacyPlayfield::LegacyPlayfield(int2 position, int length, bms::Playstyle playstyle):
 	position{position},
 	length{length},
 	playstyle{playstyle}
@@ -108,7 +108,7 @@ inline Playfield::Playfield(int2 position, int length, bms::Playstyle playstyle)
 	}
 }
 
-inline void Playfield::enqueue_from_cursor(Renderer::Queue& queue, bms::Cursor const& cursor, bms::Score const& score,
+inline void LegacyPlayfield::enqueue_from_cursor(Renderer::Queue& queue, bms::Cursor const& cursor, bms::Score const& score,
 	float scroll_speed, nanoseconds offset)
 {
 	for (auto& field: fields)
@@ -148,7 +148,7 @@ inline void Playfield::enqueue_from_cursor(Renderer::Queue& queue, bms::Cursor c
 	}
 }
 
-inline auto Playfield::get_lane(bms::Lane::Type type) -> Lane&
+inline auto LegacyPlayfield::get_lane(bms::Lane::Type type) -> Lane&
 {
 	switch (playstyle) {
 	case bms::Playstyle::_5K:
@@ -193,7 +193,7 @@ inline auto Playfield::get_lane(bms::Lane::Type type) -> Lane&
 	}
 }
 
-inline auto Playfield::lane_width(Lane::Visual visual) -> int
+inline auto LegacyPlayfield::lane_width(Lane::Visual visual) -> int
 {
 	switch (visual) {
 	case Lane::Visual::Odd:     return 40;
@@ -203,7 +203,7 @@ inline auto Playfield::lane_width(Lane::Visual visual) -> int
 	}
 }
 
-inline auto Playfield::lane_background_color(Lane::Visual visual) -> float4
+inline auto LegacyPlayfield::lane_background_color(Lane::Visual visual) -> float4
 {
 	switch (visual) {
 	case Lane::Visual::Scratch:
@@ -213,7 +213,7 @@ inline auto Playfield::lane_background_color(Lane::Visual visual) -> float4
 	}
 }
 
-inline auto Playfield::lane_note_color(Lane::Visual visual) -> float4
+inline auto LegacyPlayfield::lane_note_color(Lane::Visual visual) -> float4
 {
 	switch (visual) {
 	case Lane::Visual::Odd:     return {0.800f, 0.800f, 0.800f, 1.000f};
@@ -223,7 +223,7 @@ inline auto Playfield::lane_note_color(Lane::Visual visual) -> float4
 	}
 }
 
-inline auto Playfield::judgement_color(bms::Score::JudgmentType judge) -> float4
+inline auto LegacyPlayfield::judgement_color(bms::Score::JudgmentType judge) -> float4
 {
 	switch (judge) {
 	case bms::Score::JudgmentType::PGreat: return {0.533f, 0.859f, 0.961f, 1.000f};
@@ -234,7 +234,7 @@ inline auto Playfield::judgement_color(bms::Score::JudgmentType judge) -> float4
 	}
 }
 
-inline auto Playfield::timing_color(bms::Score::Timing timing) -> float4
+inline auto LegacyPlayfield::timing_color(bms::Score::Timing timing) -> float4
 {
 	switch (timing) {
 	case bms::Score::Timing::Early: return {0.200f, 0.400f, 0.961f, 1.000f};
@@ -243,7 +243,7 @@ inline auto Playfield::timing_color(bms::Score::Timing timing) -> float4
 	}
 }
 
-inline auto Playfield::make_field(bms::Playstyle playstyle, Side side) -> vector<Lane>
+inline auto LegacyPlayfield::make_field(bms::Playstyle playstyle, Side side) -> vector<Lane>
 {
 	auto result = vector<Lane>{};
 	switch (playstyle) {
@@ -291,7 +291,7 @@ inline auto Playfield::make_field(bms::Playstyle playstyle, Side side) -> vector
 	}
 }
 
-inline void Playfield::enqueue_field_border(Renderer::Queue& queue, int2 position, int2 size)
+inline void LegacyPlayfield::enqueue_field_border(Renderer::Queue& queue, int2 position, int2 size)
 {
 	queue.rect_tl({
 		.position = {static_cast<float>(position.x()), static_cast<float>(position.y() + size.y() - JudgmentLineHeight)},
@@ -323,7 +323,7 @@ inline void Playfield::enqueue_field_border(Renderer::Queue& queue, int2 positio
 	});
 }
 
-inline void Playfield::enqueue_lane(Renderer::Queue& queue, int2 position, int length, Lane const& lane, bool left_border, bool pressed)
+inline void LegacyPlayfield::enqueue_lane(Renderer::Queue& queue, int2 position, int length, Lane const& lane, bool left_border, bool pressed)
 {
 	auto const width = lane_width(lane.visual);
 	queue.rect_tl({
@@ -366,7 +366,7 @@ inline void Playfield::enqueue_lane(Renderer::Queue& queue, int2 position, int l
 	}
 }
 
-inline void Playfield::enqueue_measure_lines(Renderer::Queue& queue, span<float const> measure_lines, int2 position, int2 size)
+inline void LegacyPlayfield::enqueue_measure_lines(Renderer::Queue& queue, span<float const> measure_lines, int2 position, int2 size)
 {
 	for (auto y_pos: measure_lines) {
 		queue.rect_tl({
@@ -379,7 +379,7 @@ inline void Playfield::enqueue_measure_lines(Renderer::Queue& queue, span<float 
 	}
 }
 
-inline void Playfield::enqueue_judgment(bms::Score::Judgment const& judgment, int field_id, int2 position, int2 size)
+inline void LegacyPlayfield::enqueue_judgment(bms::Score::Judgment const& judgment, int field_id, int2 position, int2 size)
 {
 	constexpr auto JudgeWidth = 200;
 	constexpr auto JudgeY = 332;
