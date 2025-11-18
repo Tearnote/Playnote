@@ -276,9 +276,9 @@ auto init(Logger::Category cat, bool exclusive_mode, function<void(span<Sample>)
 
 	*ctx = Context_t{
 		.properties = AudioProperties{
-			.sampling_rate = f32.Format.nSamplesPerSec,
+			.sampling_rate = static_cast<int>(f32.Format.nSamplesPerSec),
 			.sample_format = sample_format,
-			.buffer_size = buffer_size,
+			.buffer_size = static_cast<int>(buffer_size),
 		},
 		.exclusive_mode = exclusive_mode,
 		.client = client,
