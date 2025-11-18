@@ -87,7 +87,7 @@ private:
 	Imgui imgui;
 
 	auto generate_transform(int2 window_size, float window_scale) -> float4;
-	auto generate_worklists(lib::vuk::Allocator&, span<Primitive const>) ->
+	auto generate_worklists(lib::vuk::Allocator&, span<Primitive const>, float4 transform) ->
 		tuple<lib::vuk::ManagedBuffer, lib::vuk::ManagedBuffer, lib::vuk::ManagedBuffer>;
 	[[nodiscard]] auto draw_all(lib::vuk::ManagedImage&&, lib::vuk::ManagedBuffer&& primitives_buf,
 		lib::vuk::ManagedBuffer&& worklists_buf, lib::vuk::ManagedBuffer&& worklist_sizes_buf) ->
@@ -209,7 +209,7 @@ void Renderer::frame(Func&& func)
 	gpu.frame([&, this](auto& allocator, auto&& target) -> lib::vuk::ManagedImage {
 		auto next = lib::vuk::clear_image(move(target), {0.0f, 0.0f, 0.0f, 1.0f});
 		if (!primitives.empty()) {
-			auto [primitives_buf, worklists_buf, worklist_sizes_buf] = generate_worklists(allocator, primitives);
+			auto [primitives_buf, worklists_buf, worklist_sizes_buf] = generate_worklists(allocator, primitives, transform);
 			next = draw_all(move(next), move(primitives_buf), move(worklists_buf), move(worklist_sizes_buf));
 		}
 		return imgui.draw(allocator, move(next));
@@ -227,13 +227,12 @@ inline auto Renderer::generate_transform(int2 window_size, float window_scale) -
 	return {margin.x(), margin.y(), scale, scale};
 }
 
-inline auto Renderer::generate_worklists(lib::vuk::Allocator& allocator, span<Primitive const> primitives) ->
-	tuple<lib::vuk::ManagedBuffer, lib::vuk::ManagedBuffer, lib::vuk::ManagedBuffer>
+inline auto Renderer::generate_worklists(lib::vuk::Allocator& allocator, span<Primitive const> primitives,
+	float4 transform) -> tuple<lib::vuk::ManagedBuffer, lib::vuk::ManagedBuffer, lib::vuk::ManagedBuffer>
 {
 	auto const window_size = gpu.get_window().size();
 	auto const tile_bound = (window_size + int2{TILE_SIZE - 1, TILE_SIZE - 1}) / int2{TILE_SIZE, TILE_SIZE};
 	auto const tile_count = tile_bound.x() * tile_bound.y();
-	auto const transform = generate_transform(window_size, gpu.get_window().scale());
 
 	auto primitives_buf = lib::vuk::create_gpu_buffer(allocator, span{primitives});
 
