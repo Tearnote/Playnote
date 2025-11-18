@@ -109,6 +109,8 @@ private:
 	lib::vuk::GlobalResource global_resource;
 	lib::vuk::Allocator global_allocator;
 	lib::vuk::Swapchain swapchain;
+
+	nanoseconds last_submit = {};
 };
 
 inline GPU::Instance::Instance(Logger::Category cat):
@@ -185,11 +187,21 @@ inline GPU::GPU(dev::Window& window, Logger::Category cat):
 template<callable<ManagedImage(lib::vuk::Allocator&, ManagedImage&&)> Func>
 void GPU::frame(Func&& func)
 {
+	auto sleep_duration = [&] {
+		if (!globals::config->get_entry<bool>("vulkan", "low_latency")) return 0ns;
+		auto sleep = last_submit - 2ms; // Leave 2ms for rendergraph and Vulkan overhead
+		if (sleep < 2ms) return 0ns; // Don't sleep at all if gain is too small
+		return sleep;
+	}();
+	if (sleep_duration > 0ns) sleep_for(sleep_duration);
+
 	auto frame_allocator = lib::vuk::begin_frame(runtime, global_resource);
 	auto swapchain_image = lib::vuk::acquire_swapchain_image(swapchain, "swp_img");
 	auto result = func(frame_allocator, move(swapchain_image));
-	lib::vuk::submit(frame_allocator, move(result));
 
+	auto const before_submit = globals::glfw->get_time();
+	lib::vuk::submit(frame_allocator, move(result));
+	last_submit = sleep_duration + (globals::glfw->get_time() - before_submit);
 }
 
 }

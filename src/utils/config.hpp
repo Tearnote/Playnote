@@ -149,7 +149,12 @@ inline void Config::create_defaults()
 	entries.emplace_back(Entry{
 		.category = "vulkan",
 		.name = "frames_in_flight",
-		.value = 1,
+		.value = 2,
+	});
+	entries.emplace_back(Entry{
+		.category = "vulkan",
+		.name = "low_latency",
+		.value = true,
 	});
 	entries.emplace_back(Entry{
 		.category = "vulkan",
