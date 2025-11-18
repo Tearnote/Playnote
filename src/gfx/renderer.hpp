@@ -51,20 +51,26 @@ public:
 		template<callable<void()> Func>
 		void group(Func&&);
 
+		// Convert a position from physical window coordinates to logical coordinates.
+		auto physical_to_logical(float2) -> float2;
+
 		// Enqueue shapes for drawing.
 
 		auto rect(Drawable, RectParams) -> Queue&;
 		auto rect_tl(Drawable, RectParams) -> Queue&; // Position in top-left rather than center
 		auto circle(Drawable, CircleParams) -> Queue&;
 
-		// Internal.
-		[[nodiscard]] auto to_primitive_list() const -> vector<Primitive>;
-
 	private:
+		friend class Renderer;
+
 		bool inside_group = false;
 		vector<tuple<Drawable, RectParams, int>> rects; // third: group id
 		vector<tuple<Drawable, CircleParams, int>> circles; // third: group id
 		mutable vector<pair<int, int>> group_depths; // first: group id (initially equal to index), second: depth
+		float4 inv_transform;
+
+		explicit Queue(float4 inv_transform): inv_transform{inv_transform} {}
+		[[nodiscard]] auto to_primitive_list() const -> vector<Primitive>;
 	};
 
 	explicit Renderer(dev::Window&, Logger::Category);
@@ -104,6 +110,11 @@ inline void Renderer::Queue::group(Func&& func)
 	func();
 	inside_group = false;
 	if (group_depths.back().second == -1) group_depths.pop_back();
+}
+
+inline auto Renderer::Queue::physical_to_logical(float2 pos) -> float2
+{
+	return (pos + float2{inv_transform.x(), inv_transform.y()}) * float2{inv_transform.z(), inv_transform.w()};
 }
 
 inline auto Renderer::Queue::rect(Drawable common, RectParams rect) -> Queue&
@@ -184,7 +195,14 @@ inline Renderer::Renderer(dev::Window& window, Logger::Category cat):
 template<callable<void(Renderer::Queue&)> Func>
 void Renderer::frame(Func&& func)
 {
-	auto queue = Queue{};
+	auto const transform = generate_transform(gpu.get_window().size(), gpu.get_window().scale());
+	auto const inverse_transform = float4{
+		-transform.x(),
+		-transform.y(),
+		1.0f / transform.z(),
+		1.0f / transform.w(),
+	};
+	auto queue = Queue{inverse_transform};
 	imgui.enqueue([&]() { func(queue); });
 	auto primitives = queue.to_primitive_list();
 

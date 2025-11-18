@@ -18,6 +18,7 @@ except according to those terms.
 #include "dev/window.hpp"
 #include "gfx/playfield_legacy.hpp"
 #include "gfx/renderer.hpp"
+#include "gfx/entity.hpp"
 #include "audio/player.hpp"
 #include "bms/library.hpp"
 #include "bms/cursor.hpp"
@@ -48,6 +49,7 @@ struct SelectContext {
 	vector<bms::Library::ChartEntry> charts;
 	optional<future<vector<bms::Library::ChartEntry>>> library_reload_result;
 	optional<future<shared_ptr<bms::Chart const>>> chart_load_result;
+	gfx::Position mouse;
 };
 
 struct GameplayContext {
@@ -164,7 +166,7 @@ static void show_results(bms::Score const& score)
 	lib::imgui::text(" Rank: {}", enum_name(score.get_rank()));
 }
 
-static void render_select(gfx::Renderer::Queue&, GameState& state)
+static void render_select(gfx::Renderer::Queue& queue, GameState& state)
 {
 	auto& context = state.select_context();
 	lib::imgui::begin_window("library", {8, 8}, 800, lib::imgui::WindowStyle::Static);
@@ -188,6 +190,16 @@ static void render_select(gfx::Renderer::Queue&, GameState& state)
 		lib::imgui::text("Loading...");
 		lib::imgui::end_window();
 	}
+
+	context.mouse.update(queue.physical_to_logical(state.window.cursor_position()));
+	queue.circle({
+		.position = context.mouse.position,
+		.velocity = context.mouse.velocity,
+		.color = {0.8f, 0.7f, 0.9f, 1.0f},
+		.depth = 0,
+	}, {
+		.radius = 8.0f,
+	});
 }
 
 static void render_gameplay(gfx::Renderer::Queue& queue, GameState& state)
