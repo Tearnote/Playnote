@@ -191,6 +191,11 @@ void GPU::frame(Func&& func)
 		if (!globals::config->get_entry<bool>("vulkan", "low_latency")) return 0ns;
 		auto sleep = last_submit - 2ms; // Leave 2ms for rendergraph and Vulkan overhead
 		if (sleep < 2ms) return 0ns; // Don't sleep at all if gain is too small
+		if (sleep > 16ms) {
+			// Disable sleep if lagspike detected
+			WARN_AS(cat, "Renderer lagspike frame: {}ms", last_submit / 1ms);
+			return 0ns;
+		}
 		return sleep;
 	}();
 	if (sleep_duration > 0ns) sleep_for(sleep_duration);
