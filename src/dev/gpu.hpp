@@ -180,7 +180,7 @@ inline GPU::GPU(dev::Window& window, Logger::Category cat):
 	physical_device{select_physical_device(instance, surface)},
 	device{cat, physical_device},
 	runtime{lib::vuk::create_runtime(instance.instance, device.device, lib::vk::retrieve_device_queues(device.device))},
-	global_resource{runtime, static_cast<uint>(globals::config->get_entry<int>("vulkan", "frames_in_flight"))},
+	global_resource{runtime, 2},
 	global_allocator{global_resource},
 	swapchain{create_swapchain(global_allocator, device, window.size())}
 {
