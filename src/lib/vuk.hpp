@@ -43,10 +43,10 @@ auto create_runtime(vk::Instance instance, vk::Device device, vk::QueueSet const
 using GlobalResource = DeviceSuperFrameResource;
 
 // Create a swapchain object from a device's surface. The swapchain image is RGB8 Unorm, non-linear.
-// FIFO presentation mode is used.
+// FIFO presentation mode is used. Actual image count might be larger than requested.
 // Throws runtime_error on failure, or if vuk throws.
 [[nodiscard]] auto create_swapchain(Allocator& allocator, vk::Device device, int2 size,
-	optional<Swapchain> old = nullopt) -> Swapchain;
+	int image_count, optional<Swapchain> old = nullopt) -> Swapchain;
 
 // Start a new frame and create its single-frame allocator.
 // Throws if vuk throws.

@@ -61,7 +61,8 @@ auto create_runtime(vk::Instance instance, vk::Device device, vk::QueueSet const
 	}};
 }
 
-[[nodiscard]] auto create_swapchain(Allocator& allocator, vk::Device device, int2 size, optional<Swapchain> old) -> Swapchain
+[[nodiscard]] auto create_swapchain(Allocator& allocator, vk::Device device, int2 size,
+	int image_count, optional<Swapchain> old) -> Swapchain
 {
 	auto vkbswapchain_result = vkb::SwapchainBuilder{*device}
 		.set_old_swapchain(old? old->swapchain : VK_NULL_HANDLE)
@@ -76,6 +77,7 @@ auto create_runtime(vk::Instance instance, vk::Device device, vk::QueueSet const
 		})
 		.set_desired_present_mode(VK_PRESENT_MODE_FIFO_RELAXED_KHR)
 		.add_fallback_present_mode(VK_PRESENT_MODE_FIFO_KHR)
+		.set_desired_min_image_count(image_count)
 		.set_image_usage_flags(
 			VK_IMAGE_USAGE_TRANSFER_DST_BIT |
 			VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT

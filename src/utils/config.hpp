@@ -153,6 +153,11 @@ inline void Config::create_defaults()
 	});
 	entries.emplace_back(Entry{
 		.category = "vulkan",
+		.name = "swapchain_image_count",
+		.value = 2,
+	});
+	entries.emplace_back(Entry{
+		.category = "vulkan",
 		.name = "low_latency",
 		.value = true,
 	});

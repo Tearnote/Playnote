@@ -160,11 +160,14 @@ auto inline GPU::create_swapchain(lib::vuk::Allocator& allocator, Device& device
 	optional<lib::vuk::Swapchain> old) const -> lib::vuk::Swapchain
 {
 	auto const recreating = old.has_value();
-	auto swapchain = lib::vuk::create_swapchain(allocator, device.device, size, move(old));
+	auto const requested_images = globals::config->get_entry<int>("vulkan", "swapchain_image_count");
+	auto swapchain = lib::vuk::create_swapchain(allocator, device.device, size, requested_images, move(old));
 	if (!recreating)
 		DEBUG_AS(cat, "Created swapchain, size {}", size);
 	else
 		DEBUG_AS(cat, "Recreated swapchain, size {}", size);
+	if (swapchain.images.size() != requested_images)
+		WARN_AS(cat, "Requested {} swapchain images, got {} instead", requested_images, swapchain.images.size());
 	return swapchain;
 }
 
