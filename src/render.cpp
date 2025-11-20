@@ -191,10 +191,10 @@ static void render_select(gfx::Renderer::Queue& queue, GameState& state)
 		lib::imgui::end_window();
 	}
 
-	context.mouse.update(queue.physical_to_logical(state.window.cursor_position()));
+	context.mouse.move_to(queue.physical_to_logical(state.window.cursor_position()));
 	queue.circle({
-		.position = context.mouse.position,
-		.velocity = context.mouse.velocity,
+		.position = context.mouse.get_position(),
+		.velocity = context.mouse.get_velocity(),
 		.color = {0.8f, 0.7f, 0.9f, 1.0f},
 		.depth = 0,
 	}, {
