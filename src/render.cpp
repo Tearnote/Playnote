@@ -17,8 +17,8 @@ except according to those terms.
 #include "lib/os.hpp"
 #include "dev/window.hpp"
 #include "gfx/playfield_legacy.hpp"
+#include "gfx/transform.hpp"
 #include "gfx/renderer.hpp"
-#include "gfx/entity.hpp"
 #include "audio/player.hpp"
 #include "bms/library.hpp"
 #include "bms/cursor.hpp"
@@ -49,7 +49,7 @@ struct SelectContext {
 	vector<bms::Library::ChartEntry> charts;
 	optional<future<vector<bms::Library::ChartEntry>>> library_reload_result;
 	optional<future<shared_ptr<bms::Chart const>>> chart_load_result;
-	gfx::Position mouse;
+	gfx::Transform mouse;
 };
 
 struct GameplayContext {
