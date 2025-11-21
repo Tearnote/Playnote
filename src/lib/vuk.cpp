@@ -11,6 +11,7 @@ or distributed except according to those terms.
 
 #include <vector>
 #include <memory>
+#include <vulkan/vulkan_core.h>
 #include "vuk/runtime/vk/VkSwapchain.hpp"
 #include "vuk/runtime/vk/Allocator.hpp"
 #include "vuk/runtime/vk/VkRuntime.hpp"
@@ -80,7 +81,8 @@ auto create_runtime(vk::Instance instance, vk::Device device, vk::QueueSet const
 		.set_desired_min_image_count(image_count)
 		.set_image_usage_flags(
 			VK_IMAGE_USAGE_TRANSFER_DST_BIT |
-			VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
+			VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+			VK_IMAGE_USAGE_STORAGE_BIT
 		)
 		.build();
 	if (!vkbswapchain_result)

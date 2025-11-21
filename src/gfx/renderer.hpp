@@ -243,7 +243,7 @@ inline auto Renderer::generate_worklists(lib::vuk::Allocator& allocator, span<Pr
 	auto worklist_sizes = vector<int>{};
 	worklist_sizes.resize(tile_count);
 	auto worklist_sizes_buf_raw = lib::vuk::create_scratch_buffer(allocator, span{worklist_sizes});
-	auto worklist_sizes_buf = lib::vuk::acquire_buf("worklist_sizes", worklist_sizes_buf_raw, lib::vuk::Access::eHostWrite);
+	auto worklist_sizes_buf = lib::vuk::acquire_buf("worklist_sizes", worklist_sizes_buf_raw, lib::vuk::Access::eNone);
 
 	auto gen_pass = lib::vuk::make_pass("worklist_gen",
 		[window_size, primitives_count = primitives.size(), transform] (
