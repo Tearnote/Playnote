@@ -31,6 +31,7 @@ private:
 	};
 
 	struct Note {
+		isize_t idx;
 		Transform transform;
 		float ln_height; // Fraction of height
 	};
@@ -42,6 +43,7 @@ private:
 			Scratch,
 		};
 
+		Transform transform;
 		Visual visual;
 		bms::Lane::Type type;
 		vector<Note> notes;
@@ -82,9 +84,30 @@ inline Playfield::Playfield(Transform transform, float height, bms::Cursor const
 inline void Playfield::enqueue(Renderer::Queue& queue, float scroll_speed)
 {
 	// Update notes
+
+	// Remove judged notes
+	for (auto& field: fields) {
+		for (auto& lane: field) {
+			auto const next_note_idx = cursor.next_note_idx(lane.type);
+			auto range = remove_if(lane.notes, [&](Note const& note) {
+				return note.idx < next_note_idx;
+			});
+			lane.notes.erase(range.begin(), range.end());
+		}
+	}
+
+	// Add/modify remaining notes
+	scroll_speed /= 4.0f; // 1 beat -> 1 standard measure
+	scroll_speed *= 120.0f / cursor.get_chart().metadata.bpm_range.main; // Normalize to 120 BPM
 	auto const max_distance = 1.0f / scroll_speed;
 	cursor.upcoming_notes(max_distance, [&](bms::Note const& note, auto type, auto idx, auto distance) {
-
+		auto& lane = [&] -> Lane& {
+			for (auto& field: fields)
+				for (auto& lane: field)
+					if (lane.type == type) return lane;
+			PANIC();
+		}();
+		auto existing = find(lane.notes, idx, &Note::idx);
 	});
 }
 
