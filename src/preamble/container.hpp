@@ -26,6 +26,7 @@ or distributed except according to those terms.
 #include <boost/container/vector.hpp>
 #include "readerwriterqueue.h"
 #include "concurrentqueue.h"
+#include "plf_colony.h"
 #include "preamble/types.hpp"
 
 namespace playnote {
@@ -33,6 +34,7 @@ namespace playnote {
 using boost::container::vector;
 using boost::container::static_vector;
 using boost::container::small_vector;
+using plf::colony;
 using std::back_inserter;
 using std::array;
 using std::to_array;

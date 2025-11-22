@@ -60,6 +60,7 @@ target_link_libraries(Playnote
 	PRIVATE ebur128
 	PRIVATE libcoro
 	PRIVATE SQLite::SQLite3
+	PRIVATE colony
 	PRIVATE implot
 	PRIVATE Boost::container
 	PRIVATE Boost::boost

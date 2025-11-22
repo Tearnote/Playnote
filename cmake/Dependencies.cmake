@@ -184,3 +184,11 @@ FetchContent_Declare(concurrentqueue # Lock-free MPMC queue
 	GIT_TAG v1.0.4
 )
 FetchContent_MakeAvailable(concurrentqueue)
+
+FetchContent_Declare(colony # Memory-stable unordered container
+	GIT_REPOSITORY https://github.com/mattreecebentley/plf_colony
+	GIT_TAG 1a5b13268e0e2f97605ef130b2159aa4ed5c6eba
+)
+FetchContent_MakeAvailable(colony)
+add_library(colony INTERFACE ${colony_SOURCE_DIR}/plf_colony.h)
+target_include_directories(colony INTERFACE ${colony_SOURCE_DIR})
