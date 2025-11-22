@@ -9,6 +9,7 @@ or distributed except according to those terms. teehee~
 
 #pragma once
 #include "preamble.hpp"
+#include "utils/service.hpp"
 
 namespace playnote::gfx {
 
@@ -53,5 +54,24 @@ inline auto Transform::get_velocity() const -> float2
 	else
 		return velocity;
 }
+
+namespace globals {
+
+inline auto transform_pool = Service<colony<Transform>>{};
+
+using TransformRef = unique_ptr<Transform, decltype([](auto* t) {
+	auto it = transform_pool->get_iterator(t);
+	transform_pool->erase(it);
+})>;
+
+template<typename... Args>
+auto create_transform(Args&&... args) -> TransformRef
+{
+	return TransformRef{&*transform_pool->emplace(forward<Args>(args)...)};
+}
+
+}
+
+using TransformRef = globals::TransformRef;
 
 }

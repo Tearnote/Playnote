@@ -49,7 +49,7 @@ struct SelectContext {
 	vector<bms::Library::ChartEntry> charts;
 	optional<future<vector<bms::Library::ChartEntry>>> library_reload_result;
 	optional<future<shared_ptr<bms::Chart const>>> chart_load_result;
-	gfx::Transform mouse;
+	gfx::TransformRef mouse;
 };
 
 struct GameplayContext {
@@ -191,10 +191,10 @@ static void render_select(gfx::Renderer::Queue& queue, GameState& state)
 		lib::imgui::end_window();
 	}
 
-	context.mouse.move_to(queue.physical_to_logical(state.window.cursor_position()));
+	context.mouse->move_to(queue.physical_to_logical(state.window.cursor_position()));
 	queue.circle({
-		.position = context.mouse.get_position(),
-		.velocity = context.mouse.get_velocity(),
+		.position = context.mouse->get_position(),
+		.velocity = context.mouse->get_velocity(),
 		.color = {0.8f, 0.7f, 0.9f, 1.0f},
 		.depth = 0,
 	}, {
@@ -278,6 +278,7 @@ static void run_render(Broadcaster& broadcaster, dev::Window& window, Logger::Ca
 	auto audio_cat =  globals::logger->create_category("Audio",
 		*enum_cast<Logger::Level>(globals::config->get_entry<string>("logging", "audio")));
 	auto mixer_stub = globals::mixer.provide(audio_cat);
+	auto transform_pool_stub = gfx::globals::transform_pool.provide();
 	auto renderer = gfx::Renderer{window, cat};
 
 	// Init game state
@@ -296,6 +297,7 @@ static void run_render(Broadcaster& broadcaster, dev::Window& window, Logger::Ca
 				});
 			}
 			state.context.emplace<SelectContext>();
+			state.select_context().mouse = gfx::globals::create_transform();
 			state.select_context().library_reload_result = pollable_fg(
 				[](shared_ptr<bms::Library> library) -> task<vector<bms::Library::ChartEntry>> {
 					co_return co_await library->list_charts();
@@ -333,7 +335,8 @@ static void run_render(Broadcaster& broadcaster, dev::Window& window, Logger::Ca
 				state.select_context().library_reload_result = pollable_fg(
 					[](shared_ptr<bms::Library> library) -> task<vector<bms::Library::ChartEntry>> {
 						co_return co_await library->list_charts();
-					}(state.library));
+					}(state.library)
+				);
 			}
 			if (context.library_reload_result && context.library_reload_result->wait_for(0s) == future_status::ready) {
 				context.charts = context.library_reload_result->get();
