@@ -96,6 +96,10 @@ public:
 	template<callable<void(Note const&, Lane::Type, isize_t, float)> Func>
 	void upcoming_notes(float max_units, Func&& func, nanoseconds offset = 0ns, bool adjust_for_latency = false) const;
 
+	// For a given lane, return the index of the next note to be judged. Every note with a smaller
+	// index should not be visible.
+	auto next_note_idx(Lane::Type lane) const -> isize_t { return lane_progress[+lane].next_note; }
+
 	Cursor(Cursor const& other) { *this = other; }
 	auto operator=(Cursor const&) -> Cursor&;
 
