@@ -120,7 +120,7 @@ inline void LegacyPlayfield::enqueue_from_cursor(Renderer::Queue& queue, bms::Cu
 	scroll_speed /= 4.0f; // 1 beat -> 1 standard measure
 	scroll_speed *= 120.0f / cursor.get_chart().metadata.bpm_range.main; // Normalize to 120 BPM
 	auto const max_distance = 1.0f / scroll_speed;
-	cursor.upcoming_notes(max_distance, [&](bms::Note const& note, auto type, auto distance) {
+	cursor.upcoming_notes(max_distance, [&](bms::Note const& note, auto type, auto, auto distance) {
 		auto const y_pos = distance / max_distance;
 		if (type == bms::Lane::Type::MeasureLine) {
 			measure_lines.emplace_back(y_pos);
