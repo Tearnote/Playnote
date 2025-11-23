@@ -16,43 +16,44 @@ namespace playnote::gfx {
 // A stateful hierarchical transform.
 class Transform {
 public:
+	float2 position = {};
+
 	Transform() = default;
-	explicit Transform(float2 pos): position{pos}, velocity{} {}
-	explicit Transform(float x, float y): position{x, y}, velocity{} {}
+	explicit Transform(float2 pos): position{pos} {}
+	explicit Transform(float x, float y): position{x, y} {}
 
-	void set_parent(Transform& parent) { this->parent = parent; }
-	void unset_parent() { parent = nullopt; }
-	void move_to(float2 new_position);
+	auto set_parent(Transform& parent) -> Transform& { this->parent = parent; return *this; }
+	auto unset_parent() -> Transform& { parent = nullopt; return *this; }
 
-	auto get_position() const -> float2;
-	auto get_velocity() const -> float2;
+	auto update() -> Transform&;
+	auto global_position() const -> float2;
+	auto global_velocity() const -> float2;
 
 private:
-	float2 position;
-	float2 velocity;
+	float2 prev_position = position;
 	optional<reference_wrapper<Transform>> parent = nullopt;
 };
 
-inline void Transform::move_to(float2 new_position)
+inline auto Transform::update() -> Transform&
 {
-	velocity = new_position - position;
-	position = new_position;
+	prev_position = position;
+	return *this;
 }
 
-inline auto Transform::get_position() const -> float2
+inline auto Transform::global_position() const -> float2
 {
 	if (parent)
-		return position + parent->get().get_position();
+		return position + parent->get().global_position();
 	else
 		return position;
 }
 
-inline auto Transform::get_velocity() const -> float2
+inline auto Transform::global_velocity() const -> float2
 {
 	if (parent)
-		return velocity + parent->get().get_velocity();
+		return position - prev_position + parent->get().global_velocity();
 	else
-		return velocity;
+		return position - prev_position;
 }
 
 namespace globals {
@@ -68,6 +69,11 @@ template<typename... Args>
 auto create_transform(Args&&... args) -> TransformRef
 {
 	return TransformRef{&*transform_pool->emplace(forward<Args>(args)...)};
+}
+
+inline void update_transforms()
+{
+	for(auto& t: *transform_pool) t.update();
 }
 
 }

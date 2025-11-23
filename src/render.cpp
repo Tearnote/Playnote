@@ -191,10 +191,10 @@ static void render_select(gfx::Renderer::Queue& queue, GameState& state)
 		lib::imgui::end_window();
 	}
 
-	context.mouse->move_to(queue.physical_to_logical(state.window.cursor_position()));
+	context.mouse->position = queue.physical_to_logical(state.window.cursor_position());
 	queue.circle({
-		.position = context.mouse->get_position(),
-		.velocity = context.mouse->get_velocity(),
+		.position = context.mouse->global_position(),
+		.velocity = context.mouse->global_velocity(),
 		.color = {0.8f, 0.7f, 0.9f, 1.0f},
 		.depth = 0,
 	}, {
@@ -289,6 +289,8 @@ static void run_render(Broadcaster& broadcaster, dev::Window& window, Logger::Ca
 	state.requested = State::Select;
 
 	while (!window.is_closing()) {
+		gfx::globals::update_transforms();
+		
 		// Handle state changes
 		if (state.requested == State::Select) {
 			if (holds_alternative<GameplayContext>(state.context)) {

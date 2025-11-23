@@ -18,7 +18,7 @@ namespace playnote::gfx {
 
 class Playfield {
 public:
-	Transform transform;
+	TransformRef transform;
 
 	Playfield(Transform, float height, bms::Cursor const&);
 
@@ -43,7 +43,7 @@ private:
 			Scratch,
 		};
 
-		Transform transform;
+		gfx::TransformRef transform;
 		Visual visual;
 		bms::Lane::Type type;
 		vector<Note> notes;
@@ -52,13 +52,13 @@ private:
 	float height;
 	bms::Cursor const& cursor;
 	vector<vector<Lane>> fields;
-	vector<Transform> measure_lines;
+	vector<TransformRef> measure_lines;
 
-	static auto make_field(bms::Playstyle, Side = Side::Left) -> vector<Lane>;
+	auto make_field(bms::Playstyle, Side = Side::Left) -> vector<Lane>;
 };
 
 inline Playfield::Playfield(Transform transform, float height, bms::Cursor const& cursor):
-	transform{transform}, height{height}, cursor{cursor}
+	transform{globals::create_transform(transform)}, height{height}, cursor{cursor}
 {
 	switch (cursor.get_chart().metadata.playstyle) {
 	case bms::Playstyle::_5K:
@@ -116,32 +116,32 @@ inline auto Playfield::make_field(bms::Playstyle playstyle, Side side) -> vector
 	auto result = vector<Lane>{};
 	switch (playstyle) {
 	case bms::Playstyle::_5K:
-		result.emplace_back(Lane::Visual::Scratch, bms::Lane::Type::P1_KeyS);
-		result.emplace_back(Lane::Visual::Odd,     bms::Lane::Type::P1_Key1);
-		result.emplace_back(Lane::Visual::Even,    bms::Lane::Type::P1_Key2);
-		result.emplace_back(Lane::Visual::Odd,     bms::Lane::Type::P1_Key3);
-		result.emplace_back(Lane::Visual::Even,    bms::Lane::Type::P1_Key4);
-		result.emplace_back(Lane::Visual::Odd,     bms::Lane::Type::P1_Key5);
+		result.emplace_back(globals::create_transform()->set_parent(*transform), Lane::Visual::Scratch, bms::Lane::Type::P1_KeyS);
+		result.emplace_back(globals::create_transform()->set_parent(*transform), Lane::Visual::Odd,     bms::Lane::Type::P1_Key1);
+		result.emplace_back(globals::create_transform()->set_parent(*transform), Lane::Visual::Even,    bms::Lane::Type::P1_Key2);
+		result.emplace_back(globals::create_transform()->set_parent(*transform), Lane::Visual::Odd,     bms::Lane::Type::P1_Key3);
+		result.emplace_back(globals::create_transform()->set_parent(*transform), Lane::Visual::Even,    bms::Lane::Type::P1_Key4);
+		result.emplace_back(globals::create_transform()->set_parent(*transform), Lane::Visual::Odd,     bms::Lane::Type::P1_Key5);
 		return result;
 	case bms::Playstyle::_7K:
 		if (side == Side::Left) {
-			result.emplace_back(Lane::Visual::Scratch, bms::Lane::Type::P1_KeyS);
-			result.emplace_back(Lane::Visual::Odd,     bms::Lane::Type::P1_Key1);
-			result.emplace_back(Lane::Visual::Even,    bms::Lane::Type::P1_Key2);
-			result.emplace_back(Lane::Visual::Odd,     bms::Lane::Type::P1_Key3);
-			result.emplace_back(Lane::Visual::Even,    bms::Lane::Type::P1_Key4);
-			result.emplace_back(Lane::Visual::Odd,     bms::Lane::Type::P1_Key5);
-			result.emplace_back(Lane::Visual::Even,    bms::Lane::Type::P1_Key6);
-			result.emplace_back(Lane::Visual::Odd,     bms::Lane::Type::P1_Key7);
+			result.emplace_back(globals::create_transform()->set_parent(*transform), Lane::Visual::Scratch, bms::Lane::Type::P1_KeyS);
+			result.emplace_back(globals::create_transform()->set_parent(*transform), Lane::Visual::Odd,     bms::Lane::Type::P1_Key1);
+			result.emplace_back(globals::create_transform()->set_parent(*transform), Lane::Visual::Even,    bms::Lane::Type::P1_Key2);
+			result.emplace_back(globals::create_transform()->set_parent(*transform), Lane::Visual::Odd,     bms::Lane::Type::P1_Key3);
+			result.emplace_back(globals::create_transform()->set_parent(*transform), Lane::Visual::Even,    bms::Lane::Type::P1_Key4);
+			result.emplace_back(globals::create_transform()->set_parent(*transform), Lane::Visual::Odd,     bms::Lane::Type::P1_Key5);
+			result.emplace_back(globals::create_transform()->set_parent(*transform), Lane::Visual::Even,    bms::Lane::Type::P1_Key6);
+			result.emplace_back(globals::create_transform()->set_parent(*transform), Lane::Visual::Odd,     bms::Lane::Type::P1_Key7);
 		} else {
-			result.emplace_back(Lane::Visual::Odd,     bms::Lane::Type::P2_Key1);
-			result.emplace_back(Lane::Visual::Even,    bms::Lane::Type::P2_Key2);
-			result.emplace_back(Lane::Visual::Odd,     bms::Lane::Type::P2_Key3);
-			result.emplace_back(Lane::Visual::Even,    bms::Lane::Type::P2_Key4);
-			result.emplace_back(Lane::Visual::Odd,     bms::Lane::Type::P2_Key5);
-			result.emplace_back(Lane::Visual::Even,    bms::Lane::Type::P2_Key6);
-			result.emplace_back(Lane::Visual::Odd,     bms::Lane::Type::P2_Key7);
-			result.emplace_back(Lane::Visual::Scratch, bms::Lane::Type::P2_KeyS);
+			result.emplace_back(globals::create_transform()->set_parent(*transform), Lane::Visual::Odd,     bms::Lane::Type::P2_Key1);
+			result.emplace_back(globals::create_transform()->set_parent(*transform), Lane::Visual::Even,    bms::Lane::Type::P2_Key2);
+			result.emplace_back(globals::create_transform()->set_parent(*transform), Lane::Visual::Odd,     bms::Lane::Type::P2_Key3);
+			result.emplace_back(globals::create_transform()->set_parent(*transform), Lane::Visual::Even,    bms::Lane::Type::P2_Key4);
+			result.emplace_back(globals::create_transform()->set_parent(*transform), Lane::Visual::Odd,     bms::Lane::Type::P2_Key5);
+			result.emplace_back(globals::create_transform()->set_parent(*transform), Lane::Visual::Even,    bms::Lane::Type::P2_Key6);
+			result.emplace_back(globals::create_transform()->set_parent(*transform), Lane::Visual::Odd,     bms::Lane::Type::P2_Key7);
+			result.emplace_back(globals::create_transform()->set_parent(*transform), Lane::Visual::Scratch, bms::Lane::Type::P2_KeyS);
 		}
 		return result;
 	case bms::Playstyle::_9K: //TODO
