@@ -17,6 +17,7 @@ except according to those terms.
 #include "lib/os.hpp"
 #include "dev/window.hpp"
 #include "gfx/playfield_legacy.hpp"
+#include "gfx/playfield.hpp"
 #include "gfx/transform.hpp"
 #include "gfx/renderer.hpp"
 #include "audio/player.hpp"

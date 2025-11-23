@@ -89,7 +89,7 @@ inline void Playfield::enqueue(Renderer::Queue& queue, float scroll_speed)
 	for (auto& field: fields) {
 		for (auto& lane: field) {
 			auto const next_note_idx = cursor.next_note_idx(lane.type);
-			auto range = remove_if(lane.notes, [&](Note const& note) {
+			auto range = remove_if(lane.notes, [&](auto const& note) {
 				return note.idx < next_note_idx;
 			});
 			lane.notes.erase(range.begin(), range.end());
@@ -100,7 +100,7 @@ inline void Playfield::enqueue(Renderer::Queue& queue, float scroll_speed)
 	scroll_speed /= 4.0f; // 1 beat -> 1 standard measure
 	scroll_speed *= 120.0f / cursor.get_chart().metadata.bpm_range.main; // Normalize to 120 BPM
 	auto const max_distance = 1.0f / scroll_speed;
-	cursor.upcoming_notes(max_distance, [&](bms::Note const& note, auto type, auto idx, auto distance) {
+	cursor.upcoming_notes(max_distance, [&](auto const& note, auto type, auto idx, auto distance) {
 		auto& lane = [&] -> Lane& {
 			for (auto& field: fields)
 				for (auto& lane: field)
@@ -116,44 +116,44 @@ inline auto Playfield::make_field(bms::Playstyle playstyle, Side side) -> vector
 	auto result = vector<Lane>{};
 	switch (playstyle) {
 	case bms::Playstyle::_5K:
-		result.emplace_back(globals::create_transform()->set_parent(*transform), Lane::Visual::Scratch, bms::Lane::Type::P1_KeyS);
-		result.emplace_back(globals::create_transform()->set_parent(*transform), Lane::Visual::Odd,     bms::Lane::Type::P1_Key1);
-		result.emplace_back(globals::create_transform()->set_parent(*transform), Lane::Visual::Even,    bms::Lane::Type::P1_Key2);
-		result.emplace_back(globals::create_transform()->set_parent(*transform), Lane::Visual::Odd,     bms::Lane::Type::P1_Key3);
-		result.emplace_back(globals::create_transform()->set_parent(*transform), Lane::Visual::Even,    bms::Lane::Type::P1_Key4);
-		result.emplace_back(globals::create_transform()->set_parent(*transform), Lane::Visual::Odd,     bms::Lane::Type::P1_Key5);
+		result.emplace_back(globals::create_child_transform(transform), Lane::Visual::Scratch, bms::Lane::Type::P1_KeyS);
+		result.emplace_back(globals::create_child_transform(transform), Lane::Visual::Odd,     bms::Lane::Type::P1_Key1);
+		result.emplace_back(globals::create_child_transform(transform), Lane::Visual::Even,    bms::Lane::Type::P1_Key2);
+		result.emplace_back(globals::create_child_transform(transform), Lane::Visual::Odd,     bms::Lane::Type::P1_Key3);
+		result.emplace_back(globals::create_child_transform(transform), Lane::Visual::Even,    bms::Lane::Type::P1_Key4);
+		result.emplace_back(globals::create_child_transform(transform), Lane::Visual::Odd,     bms::Lane::Type::P1_Key5);
 		return result;
 	case bms::Playstyle::_7K:
 		if (side == Side::Left) {
-			result.emplace_back(globals::create_transform()->set_parent(*transform), Lane::Visual::Scratch, bms::Lane::Type::P1_KeyS);
-			result.emplace_back(globals::create_transform()->set_parent(*transform), Lane::Visual::Odd,     bms::Lane::Type::P1_Key1);
-			result.emplace_back(globals::create_transform()->set_parent(*transform), Lane::Visual::Even,    bms::Lane::Type::P1_Key2);
-			result.emplace_back(globals::create_transform()->set_parent(*transform), Lane::Visual::Odd,     bms::Lane::Type::P1_Key3);
-			result.emplace_back(globals::create_transform()->set_parent(*transform), Lane::Visual::Even,    bms::Lane::Type::P1_Key4);
-			result.emplace_back(globals::create_transform()->set_parent(*transform), Lane::Visual::Odd,     bms::Lane::Type::P1_Key5);
-			result.emplace_back(globals::create_transform()->set_parent(*transform), Lane::Visual::Even,    bms::Lane::Type::P1_Key6);
-			result.emplace_back(globals::create_transform()->set_parent(*transform), Lane::Visual::Odd,     bms::Lane::Type::P1_Key7);
+			result.emplace_back(globals::create_child_transform(transform), Lane::Visual::Scratch, bms::Lane::Type::P1_KeyS);
+			result.emplace_back(globals::create_child_transform(transform), Lane::Visual::Odd,     bms::Lane::Type::P1_Key1);
+			result.emplace_back(globals::create_child_transform(transform), Lane::Visual::Even,    bms::Lane::Type::P1_Key2);
+			result.emplace_back(globals::create_child_transform(transform), Lane::Visual::Odd,     bms::Lane::Type::P1_Key3);
+			result.emplace_back(globals::create_child_transform(transform), Lane::Visual::Even,    bms::Lane::Type::P1_Key4);
+			result.emplace_back(globals::create_child_transform(transform), Lane::Visual::Odd,     bms::Lane::Type::P1_Key5);
+			result.emplace_back(globals::create_child_transform(transform), Lane::Visual::Even,    bms::Lane::Type::P1_Key6);
+			result.emplace_back(globals::create_child_transform(transform), Lane::Visual::Odd,     bms::Lane::Type::P1_Key7);
 		} else {
-			result.emplace_back(globals::create_transform()->set_parent(*transform), Lane::Visual::Odd,     bms::Lane::Type::P2_Key1);
-			result.emplace_back(globals::create_transform()->set_parent(*transform), Lane::Visual::Even,    bms::Lane::Type::P2_Key2);
-			result.emplace_back(globals::create_transform()->set_parent(*transform), Lane::Visual::Odd,     bms::Lane::Type::P2_Key3);
-			result.emplace_back(globals::create_transform()->set_parent(*transform), Lane::Visual::Even,    bms::Lane::Type::P2_Key4);
-			result.emplace_back(globals::create_transform()->set_parent(*transform), Lane::Visual::Odd,     bms::Lane::Type::P2_Key5);
-			result.emplace_back(globals::create_transform()->set_parent(*transform), Lane::Visual::Even,    bms::Lane::Type::P2_Key6);
-			result.emplace_back(globals::create_transform()->set_parent(*transform), Lane::Visual::Odd,     bms::Lane::Type::P2_Key7);
-			result.emplace_back(globals::create_transform()->set_parent(*transform), Lane::Visual::Scratch, bms::Lane::Type::P2_KeyS);
+			result.emplace_back(globals::create_child_transform(transform), Lane::Visual::Odd,     bms::Lane::Type::P2_Key1);
+			result.emplace_back(globals::create_child_transform(transform), Lane::Visual::Even,    bms::Lane::Type::P2_Key2);
+			result.emplace_back(globals::create_child_transform(transform), Lane::Visual::Odd,     bms::Lane::Type::P2_Key3);
+			result.emplace_back(globals::create_child_transform(transform), Lane::Visual::Even,    bms::Lane::Type::P2_Key4);
+			result.emplace_back(globals::create_child_transform(transform), Lane::Visual::Odd,     bms::Lane::Type::P2_Key5);
+			result.emplace_back(globals::create_child_transform(transform), Lane::Visual::Even,    bms::Lane::Type::P2_Key6);
+			result.emplace_back(globals::create_child_transform(transform), Lane::Visual::Odd,     bms::Lane::Type::P2_Key7);
+			result.emplace_back(globals::create_child_transform(transform), Lane::Visual::Scratch, bms::Lane::Type::P2_KeyS);
 		}
 		return result;
 	case bms::Playstyle::_9K: //TODO
-		result.emplace_back(Lane::Visual::Odd);
-		result.emplace_back(Lane::Visual::Even);
-		result.emplace_back(Lane::Visual::Odd);
-		result.emplace_back(Lane::Visual::Even);
-		result.emplace_back(Lane::Visual::Odd);
-		result.emplace_back(Lane::Visual::Even);
-		result.emplace_back(Lane::Visual::Odd);
-		result.emplace_back(Lane::Visual::Even);
-		result.emplace_back(Lane::Visual::Odd);
+		result.emplace_back(globals::create_child_transform(transform), Lane::Visual::Odd);
+		result.emplace_back(globals::create_child_transform(transform), Lane::Visual::Even);
+		result.emplace_back(globals::create_child_transform(transform), Lane::Visual::Odd);
+		result.emplace_back(globals::create_child_transform(transform), Lane::Visual::Even);
+		result.emplace_back(globals::create_child_transform(transform), Lane::Visual::Odd);
+		result.emplace_back(globals::create_child_transform(transform), Lane::Visual::Even);
+		result.emplace_back(globals::create_child_transform(transform), Lane::Visual::Odd);
+		result.emplace_back(globals::create_child_transform(transform), Lane::Visual::Even);
+		result.emplace_back(globals::create_child_transform(transform), Lane::Visual::Odd);
 		return result;
 	default: PANIC();
 	}

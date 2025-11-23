@@ -71,6 +71,14 @@ auto create_transform(Args&&... args) -> TransformRef
 	return TransformRef{&*transform_pool->emplace(forward<Args>(args)...)};
 }
 
+template<typename... Args>
+auto create_child_transform(TransformRef const& parent, Args&&... args) -> TransformRef
+{
+	auto t = create_transform(forward<Args>(args)...);
+	t->set_parent(*parent);
+	return t;
+}
+
 inline void update_transforms()
 {
 	for(auto& t: *transform_pool) t.update();
