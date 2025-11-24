@@ -92,7 +92,7 @@ public:
 	// - Note data,
 	// - Lane type,
 	// - Index of the note within the lane,
-	// -
+	// - Distance from current position in units.
 	template<callable<void(Note const&, Lane::Type, isize_t, float)> Func>
 	void upcoming_notes(float max_units, Func&& func, nanoseconds offset = 0ns, bool adjust_for_latency = false) const;
 
@@ -242,7 +242,10 @@ void Cursor::upcoming_notes(float max_units, Func&& func, nanoseconds offset, bo
 	auto const current_y = bpm_section.y_pos + section_progress / beat_duration * bpm_ratio * bpm_section.scroll_speed;
 	for (auto [idx, lane, progress]: views::zip(views::iota(0z), chart->timeline.lanes, lane_progress)) {
 		if (!lane.visible) continue;
-		for (auto [note_idx, note]: span{lane.notes.begin() + progress.next_note, lane.notes.size() - progress.next_note} | views::enumerate) {
+		for (auto [note_idx, note]: views::zip(
+			views::iota(progress.next_note),
+			span{lane.notes.begin() + progress.next_note, lane.notes.size() - progress.next_note}
+		)) {
 			auto const distance = note.y_pos - current_y;
 			if (distance > max_units) break;
 			func(note, static_cast<Lane::Type>(idx), note_idx, distance);
