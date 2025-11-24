@@ -321,7 +321,7 @@ static void run_render(Broadcaster& broadcaster, dev::Window& window, Logger::Ca
 				.queue = weak_ptr{context.player.get_input_queue()},
 			});
 			context.player.add_cursor(context.cursor, bms::Mapper{});
-			context.playfield = gfx::LegacyPlayfield{{44, 0}, 545, context.cursor->get_chart().metadata.playstyle};
+			context.playfield = gfx::LegacyPlayfield{{44, 0}, 420, context.cursor->get_chart().metadata.playstyle};
 			context.scroll_speed = globals::config->get_entry<double>("gameplay", "scroll_speed"),
 			context.offset = milliseconds{globals::config->get_entry<int>("gameplay", "note_offset")};
 			state.current = State::Gameplay;
