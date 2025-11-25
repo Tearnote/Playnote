@@ -40,13 +40,16 @@ private:
 		};
 		Type type;
 		isize_t lane_idx;
-		Transform transform;
-		float ln_height; // Fraction of playfield height
+		TransformRef transform;
+		float ln_height; // In transform units
 	};
 
 	float height;
 	bms::Cursor const& cursor;
 	array<vector<Note>, enum_count<bms::Lane::Type>()> lanes;
+
+	auto lane_to_note_type(bms::Lane::Type) const -> Note::Type;
+	auto lane_offset(bms::Lane::Type) const -> float;
 };
 
 inline Playfield::Playfield(Transform transform, float height, bms::Cursor const& cursor):
@@ -70,17 +73,64 @@ inline void Playfield::enqueue(Renderer::Queue& queue, float scroll_speed)
 	scroll_speed /= 4.0f; // 1 beat -> 1 standard measure
 	scroll_speed *= 120.0f / cursor.get_chart().metadata.bpm_range.main; // Normalize to 120 BPM
 	auto const max_distance = 1.0f / scroll_speed;
-	cursor.upcoming_notes(max_distance, [&](auto const& note, auto type, auto idx, auto distance) {
+	cursor.upcoming_notes(max_distance, [&](bms::Note const& note, auto type, auto idx, auto distance) {
 		auto& lane = lanes[+type];
 		auto existing = find(lane, idx, &Note::lane_idx);
 		if (existing == lane.end()) {
-			// ...
+			lane.emplace_back(Note{
+				.type = lane_to_note_type(type),
+				.lane_idx = idx,
+				.transform = globals::create_child_transform(transform,
+					lane_offset(type),
+					(1.0f - (distance / max_distance)) * height
+				),
+				.ln_height = note.type_is<bms::Note::LN>()?
+					note.params<bms::Note::LN>().height / max_distance * height :
+					0.0f,
+			});
 		} else {
 			// ...
 		}
 	});
 
 	// ...
+}
+
+inline auto Playfield::lane_to_note_type(bms::Lane::Type lane) const -> Note::Type
+{
+	if (cursor.get_chart().metadata.playstyle != bms::Playstyle::_9K) {
+		switch (lane) {
+			case bms::Lane::Type::P1_Key1:
+			case bms::Lane::Type::P1_Key3:
+			case bms::Lane::Type::P1_Key5:
+			case bms::Lane::Type::P1_Key7:
+			case bms::Lane::Type::P2_Key1:
+			case bms::Lane::Type::P2_Key3:
+			case bms::Lane::Type::P2_Key5:
+			case bms::Lane::Type::P2_Key7:
+				return Note::Type::Odd;
+			case bms::Lane::Type::P1_Key2:
+			case bms::Lane::Type::P1_Key4:
+			case bms::Lane::Type::P1_Key6:
+			case bms::Lane::Type::P2_Key2:
+			case bms::Lane::Type::P2_Key4:
+			case bms::Lane::Type::P2_Key6:
+				return Note::Type::Even;
+			case bms::Lane::Type::P1_KeyS:
+			case bms::Lane::Type::P2_KeyS:
+				return Note::Type::Scratch;
+			case bms::Lane::Type::MeasureLine:
+				return Note::Type::MeasureLine;
+			default: PANIC();
+		}
+	} else {
+		PANIC(); // PMS is unimplemented
+	}
+}
+
+inline auto Playfield::lane_offset(bms::Lane::Type lane) const -> float
+{
+	//TODO
 }
 
 }
