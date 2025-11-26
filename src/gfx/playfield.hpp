@@ -61,7 +61,7 @@ inline Playfield::Playfield(Transform transform, float height, bms::Cursor const
 	transform{globals::create_transform(transform)}, cursor{cursor}
 {
 	static constexpr auto FieldSpacing = 94.0f;
-	
+
 	// Precalc lane offsets
 	auto order = lane_order();
 	auto offset = 0.0f;
@@ -118,13 +118,14 @@ inline void Playfield::enqueue(Renderer::Queue& queue, float scroll_speed)
 	// Enqueue visible notes
 	for (auto const& lane: lanes) {
 		for (auto const& note: lane) {
+			auto size = note_size(note.type);
 			queue.rect_tl({
-				.position = note.transform->global_position(),
+				.position = note.transform->global_position() - float2{0.0f, size.y()},
 				.velocity = note.transform->global_velocity(),
 				.color = note_color(note.type),
 				.depth = note.type == Note::Type::MeasureLine? 190 : 100,
 			}, {
-				.size = note_size(note.type),
+				.size = size,
 			});
 		}
 	}
