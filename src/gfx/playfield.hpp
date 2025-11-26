@@ -118,7 +118,7 @@ inline void Playfield::enqueue(Renderer::Queue& queue, float scroll_speed)
 	// Enqueue visible notes
 	for (auto const& lane: lanes) {
 		for (auto const& note: lane) {
-			auto size = note_size(note.type);
+			auto const size = note_size(note.type) + float2{0.0f, note.ln_height};
 			queue.rect_tl({
 				.position = note.transform->global_position() - float2{0.0f, size.y()},
 				.velocity = note.transform->global_velocity(),
