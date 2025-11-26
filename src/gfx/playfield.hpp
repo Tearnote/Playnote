@@ -10,6 +10,7 @@ or distributed except according to those terms.
 #pragma once
 #include "bms/chart.hpp"
 #include "preamble.hpp"
+#include "preamble/math_ext.hpp"
 #include "utils/assert.hpp"
 #include "gfx/transform.hpp"
 #include "gfx/renderer.hpp"
@@ -26,8 +27,6 @@ public:
 	void enqueue(Renderer::Queue&, float scroll_speed);
 
 private:
-	static constexpr auto FieldSpacing = 94.0f;
-
 	enum class Side {
 		Left,
 		Right,
@@ -46,19 +45,23 @@ private:
 		float ln_height; // In transform units
 	};
 
-	float height;
+	float2 size;
 	bms::Cursor const& cursor;
 	array<vector<Note>, enum_count<bms::Lane::Type>()> lanes;
 	array<TransformRef, enum_count<bms::Lane::Type>()> lane_offsets;
 
-	auto lane_to_note_type(bms::Lane::Type) const -> Note::Type;
-	auto note_width(Note::Type) const -> float;
 	auto lane_order() const -> span<isize_t const>;
+	auto lane_to_note_type(bms::Lane::Type) const -> Note::Type;
+	auto lane_width(Note::Type) const -> float;
+	auto note_color(Note::Type) const -> float4;
+	auto note_size(Note::Type) const -> float2;
 };
 
 inline Playfield::Playfield(Transform transform, float height, bms::Cursor const& cursor):
-	transform{globals::create_transform(transform)}, height{height}, cursor{cursor}
+	transform{globals::create_transform(transform)}, cursor{cursor}
 {
+	static constexpr auto FieldSpacing = 94.0f;
+	
 	// Precalc lane offsets
 	auto order = lane_order();
 	auto offset = 0.0f;
@@ -70,10 +73,11 @@ inline Playfield::Playfield(Transform transform, float height, bms::Cursor const
 		auto const lane_type = bms::Lane::Type{lane_idx};
 		lane_offsets[lane_idx] = globals::create_child_transform(this->transform, offset, 0.0f);
 		auto const note_type = lane_to_note_type(lane_type);
-		auto const width = note_width(note_type);
+		auto const width = lane_width(note_type);
 		offset += width;
 	}
 	lane_offsets[+bms::Lane::Type::MeasureLine] = globals::create_child_transform(this->transform);
+	size = {offset, height};
 }
 
 inline void Playfield::enqueue(Renderer::Queue& queue, float scroll_speed)
@@ -101,61 +105,28 @@ inline void Playfield::enqueue(Renderer::Queue& queue, float scroll_speed)
 				.type = lane_to_note_type(type),
 				.lane_idx = idx,
 				.transform = globals::create_child_transform(lane_offsets[+type],
-					0.0f, (1.0f - (distance / max_distance)) * height),
+					0.0f, (1.0f - (distance / max_distance)) * size.y()),
 				.ln_height = note.type_is<bms::Note::LN>()?
-					note.params<bms::Note::LN>().height / max_distance * height :
+					note.params<bms::Note::LN>().height / max_distance * size.y() :
 					0.0f,
 			});
 		} else {
-			// ...
+			existing->transform->position.y() = (1.0f - (distance / max_distance)) * size.y();
 		}
 	});
 
-	// ...
-}
-
-inline auto Playfield::lane_to_note_type(bms::Lane::Type lane) const -> Note::Type
-{
-	if (cursor.get_chart().metadata.playstyle != bms::Playstyle::_9K) {
-		switch (lane) {
-			case bms::Lane::Type::P1_Key1:
-			case bms::Lane::Type::P1_Key3:
-			case bms::Lane::Type::P1_Key5:
-			case bms::Lane::Type::P1_Key7:
-			case bms::Lane::Type::P2_Key1:
-			case bms::Lane::Type::P2_Key3:
-			case bms::Lane::Type::P2_Key5:
-			case bms::Lane::Type::P2_Key7:
-				return Note::Type::Odd;
-			case bms::Lane::Type::P1_Key2:
-			case bms::Lane::Type::P1_Key4:
-			case bms::Lane::Type::P1_Key6:
-			case bms::Lane::Type::P2_Key2:
-			case bms::Lane::Type::P2_Key4:
-			case bms::Lane::Type::P2_Key6:
-				return Note::Type::Even;
-			case bms::Lane::Type::P1_KeyS:
-			case bms::Lane::Type::P2_KeyS:
-				return Note::Type::Scratch;
-			case bms::Lane::Type::MeasureLine:
-				return Note::Type::MeasureLine;
-			default: PANIC();
+	// Enqueue visible notes
+	for (auto const& lane: lanes) {
+		for (auto const& note: lane) {
+			queue.rect_tl({
+				.position = note.transform->global_position(),
+				.velocity = note.transform->global_velocity(),
+				.color = note_color(note.type),
+				.depth = note.type == Note::Type::MeasureLine? 190 : 100,
+			}, {
+				.size = note_size(note.type),
+			});
 		}
-	} else {
-		PANIC(); // PMS is unimplemented
-	}
-}
-
-inline auto Playfield::note_width(Note::Type type) const -> float
-{
-	switch (type) {
-		case Note::Type::Odd:
-			return 40.0f;
-		case Note::Type::Even:
-			return 32.0f;
-		case Note::Type::Scratch:
-			return 72.0f;
-		default: PANIC();
 	}
 }
 
@@ -218,6 +189,73 @@ inline auto Playfield::lane_order() const -> span<isize_t const>
 	case bms::Playstyle::_7K: return LaneOrder7K;
 	case bms::Playstyle::_10K: return LaneOrder10K;
 	case bms::Playstyle::_14K: return LaneOrder14K;
+	default: PANIC();
+	}
+}
+
+inline auto Playfield::lane_to_note_type(bms::Lane::Type lane) const -> Note::Type
+{
+	if (cursor.get_chart().metadata.playstyle != bms::Playstyle::_9K) {
+		switch (lane) {
+			case bms::Lane::Type::P1_Key1:
+			case bms::Lane::Type::P1_Key3:
+			case bms::Lane::Type::P1_Key5:
+			case bms::Lane::Type::P1_Key7:
+			case bms::Lane::Type::P2_Key1:
+			case bms::Lane::Type::P2_Key3:
+			case bms::Lane::Type::P2_Key5:
+			case bms::Lane::Type::P2_Key7:
+				return Note::Type::Odd;
+			case bms::Lane::Type::P1_Key2:
+			case bms::Lane::Type::P1_Key4:
+			case bms::Lane::Type::P1_Key6:
+			case bms::Lane::Type::P2_Key2:
+			case bms::Lane::Type::P2_Key4:
+			case bms::Lane::Type::P2_Key6:
+				return Note::Type::Even;
+			case bms::Lane::Type::P1_KeyS:
+			case bms::Lane::Type::P2_KeyS:
+				return Note::Type::Scratch;
+			case bms::Lane::Type::MeasureLine:
+				return Note::Type::MeasureLine;
+			default: PANIC();
+		}
+	} else {
+		PANIC(); // PMS is unimplemented
+	}
+}
+
+inline auto Playfield::lane_width(Note::Type type) const -> float
+{
+	switch (type) {
+		case Note::Type::Odd:
+			return 40.0f;
+		case Note::Type::Even:
+			return 32.0f;
+		case Note::Type::Scratch:
+			return 72.0f;
+		default: PANIC();
+	}
+}
+
+inline auto Playfield::note_color(Note::Type type) const -> float4
+{
+	switch (type) {
+	case Note::Type::Odd:         return {0.800f, 0.800f, 0.800f, 1.000f};
+	case Note::Type::Even:        return {0.200f, 0.600f, 0.800f, 1.000f};
+	case Note::Type::Scratch:     return {0.800f, 0.200f, 0.200f, 1.000f};
+	case Note::Type::MeasureLine: return {0.267f, 0.267f, 0.267f, 1.000f};
+	default: PANIC();
+	}
+}
+
+inline auto Playfield::note_size(Note::Type type) const -> float2
+{
+	switch (type) {
+	case Note::Type::Odd:         return {40.0f, 13.0f};
+	case Note::Type::Even:        return {32.0f, 13.0f};
+	case Note::Type::Scratch:     return {72.0f, 13.0f};
+	case Note::Type::MeasureLine: return {size.x(), 1.0f};
 	default: PANIC();
 	}
 }
