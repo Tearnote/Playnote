@@ -119,13 +119,14 @@ inline void Playfield::enqueue(Renderer::Queue& queue, float scroll_speed)
 	for (auto const& lane: lanes) {
 		for (auto const& note: lane) {
 			auto const size = note_size(note.type) + float2{0.0f, note.ln_height};
+			auto const ln_overflow = max(0.0f, note.transform->position.y() - this->size.y());
 			queue.rect_tl({
 				.position = note.transform->global_position() - float2{0.0f, size.y()},
 				.velocity = note.transform->global_velocity(),
 				.color = note_color(note.type),
 				.depth = note.type == Note::Type::MeasureLine? 190 : 100,
 			}, {
-				.size = size,
+				.size = size - float2{0.0f, ln_overflow},
 			});
 		}
 	}
