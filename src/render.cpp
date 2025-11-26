@@ -129,6 +129,7 @@ static void show_playback_controls(GameState& state)
 		context.cursor = make_shared<bms::Cursor>(context.chart, false);
 		context.player.add_cursor(context.cursor, bms::Mapper{});
 		context.score = bms::Score{*context.chart};
+		context.playfield.emplace(gfx::Transform{44.0f, 0.0f}, 420.f, *context.cursor);
 	}
 	lib::imgui::same_line();
 	if (lib::imgui::button("Autoplay")) {
@@ -136,6 +137,7 @@ static void show_playback_controls(GameState& state)
 		context.cursor = make_shared<bms::Cursor>(context.chart, true);
 		context.player.add_cursor(context.cursor, bms::Mapper{});
 		context.score = bms::Score{*context.chart};
+		context.playfield.emplace(gfx::Transform{44.0f, 0.0f}, 420.f, *context.cursor);
 	}
 	lib::imgui::same_line();
 	if (lib::imgui::button("Back")) state.requested = State::Select;
