@@ -16,7 +16,7 @@ except according to those terms.
 #include "lib/imgui.hpp"
 #include "lib/os.hpp"
 #include "dev/window.hpp"
-#include "gfx/playfield_legacy.hpp"
+// #include "gfx/playfield_legacy.hpp"
 #include "gfx/playfield.hpp"
 #include "gfx/transform.hpp"
 #include "gfx/renderer.hpp"
@@ -58,7 +58,8 @@ struct GameplayContext {
 	shared_ptr<bms::Cursor> cursor;
 	optional<bms::Score> score;
 	audio::Player player;
-	optional<gfx::LegacyPlayfield> playfield;
+	// optional<gfx::LegacyPlayfield> legacy_playfield;
+	optional<gfx::Playfield> playfield;
 	double scroll_speed;
 	milliseconds offset;
 };
@@ -218,7 +219,8 @@ static void render_gameplay(gfx::Renderer::Queue& queue, GameState& state)
 	show_playback_controls(state);
 	lib::imgui::text("");
 	show_scroll_speed_controls(context.scroll_speed);
-	context.playfield->enqueue_from_cursor(queue, cursor, score, context.scroll_speed, context.offset);
+	// context.legacy_playfield->enqueue_from_cursor(queue, cursor, score, context.scroll_speed, context.offset);
+	context.playfield->enqueue(queue, context.scroll_speed);
 	lib::imgui::end_window();
 
 	lib::imgui::begin_window("judgements", {860, 436}, 120, lib::imgui::WindowStyle::Static);
@@ -321,7 +323,8 @@ static void run_render(Broadcaster& broadcaster, dev::Window& window, Logger::Ca
 				.queue = weak_ptr{context.player.get_input_queue()},
 			});
 			context.player.add_cursor(context.cursor, bms::Mapper{});
-			context.playfield = gfx::LegacyPlayfield{{44, 0}, 420, context.cursor->get_chart().metadata.playstyle};
+			// context.legacy_playfield = gfx::LegacyPlayfield{{44, 0}, 420, context.cursor->get_chart().metadata.playstyle};
+			context.playfield.emplace(gfx::Transform{44.0f, 0.0f}, 420.f, *context.cursor);
 			context.scroll_speed = globals::config->get_entry<double>("gameplay", "scroll_speed"),
 			context.offset = milliseconds{globals::config->get_entry<int>("gameplay", "note_offset")};
 			state.current = State::Gameplay;
