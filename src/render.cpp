@@ -129,7 +129,7 @@ static void show_playback_controls(GameState& state)
 		context.cursor = make_shared<bms::Cursor>(context.chart, false);
 		context.player.add_cursor(context.cursor, bms::Mapper{});
 		context.score = bms::Score{*context.chart};
-		context.playfield.emplace(gfx::Transform{44.0f, 0.0f}, 420.f, *context.cursor);
+		context.playfield.emplace(gfx::Transform{30.0f, 0.0f}, 420.f, *context.cursor, *context.score);
 	}
 	lib::imgui::same_line();
 	if (lib::imgui::button("Autoplay")) {
@@ -137,7 +137,7 @@ static void show_playback_controls(GameState& state)
 		context.cursor = make_shared<bms::Cursor>(context.chart, true);
 		context.player.add_cursor(context.cursor, bms::Mapper{});
 		context.score = bms::Score{*context.chart};
-		context.playfield.emplace(gfx::Transform{44.0f, 0.0f}, 420.f, *context.cursor);
+		context.playfield.emplace(gfx::Transform{30.0f, 0.0f}, 420.f, *context.cursor, *context.score);
 	}
 	lib::imgui::same_line();
 	if (lib::imgui::button("Back")) state.requested = State::Select;
@@ -326,7 +326,7 @@ static void run_render(Broadcaster& broadcaster, dev::Window& window, Logger::Ca
 			});
 			context.player.add_cursor(context.cursor, bms::Mapper{});
 			// context.legacy_playfield = gfx::LegacyPlayfield{{44, 0}, 420, context.cursor->get_chart().metadata.playstyle};
-			context.playfield.emplace(gfx::Transform{44.0f, 0.0f}, 420.f, *context.cursor);
+			context.playfield.emplace(gfx::Transform{30.0f, 0.0f}, 420.f, *context.cursor, *context.score);
 			context.scroll_speed = globals::config->get_entry<double>("gameplay", "scroll_speed"),
 			context.offset = milliseconds{globals::config->get_entry<int>("gameplay", "note_offset")};
 			state.current = State::Gameplay;

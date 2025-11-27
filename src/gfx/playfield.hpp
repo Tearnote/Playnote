@@ -8,13 +8,15 @@ or distributed except according to those terms.
 */
 
 #pragma once
-#include "bms/chart.hpp"
 #include "preamble.hpp"
 #include "preamble/math_ext.hpp"
 #include "utils/assert.hpp"
+#include "utils/config.hpp"
 #include "gfx/transform.hpp"
 #include "gfx/renderer.hpp"
 #include "bms/cursor.hpp"
+#include "bms/chart.hpp"
+#include "bms/score.hpp"
 
 namespace playnote::gfx {
 
@@ -22,7 +24,7 @@ class Playfield {
 public:
 	TransformRef transform;
 
-	Playfield(Transform, float height, bms::Cursor const&);
+	Playfield(Transform, float height, bms::Cursor const&, bms::Score const&);
 
 	void enqueue(Renderer::Queue&, float scroll_speed);
 
@@ -47,6 +49,7 @@ private:
 
 	float2 size;
 	bms::Cursor const& cursor;
+	bms::Score const& score;
 	static_vector<Field, 2> fields;
 	array<vector<Note>, enum_count<bms::Lane::Type>()> lanes;
 	array<TransformRef, enum_count<bms::Lane::Type>()> lane_offsets;
@@ -57,10 +60,13 @@ private:
 	auto lane_width(Note::Type) const -> float;
 	auto note_color(Note::Type) const -> float4;
 	auto note_size(Note::Type) const -> float2;
+	auto judgement_color(bms::Score::JudgmentType) const -> float4;
+	auto timing_color(bms::Score::Timing) const -> float4;
 };
 
-inline Playfield::Playfield(Transform transform, float height, bms::Cursor const& cursor):
-	transform{globals::create_transform(transform)}, cursor{cursor}
+inline Playfield::Playfield(Transform transform, float height, bms::Cursor const& cursor,
+	bms::Score const& score):
+	transform{globals::create_transform(transform)}, cursor{cursor}, score{score}
 {
 	static constexpr auto FieldSpacing = 70.0f;
 
@@ -149,8 +155,8 @@ inline void Playfield::enqueue(Renderer::Queue& queue, float scroll_speed)
 		}
 	}
 
-	// Enqueue judgment line
-	for (auto const& field: fields) {
+	// Enqueue judgment line and judgment display
+	for (auto [idx, field]: fields | views::enumerate) {
 		queue.rect_tl({
 			.position = transform->global_position() + float2{field.start, size.y() - JudgmentLineHeight},
 			.velocity = transform->global_velocity(),
@@ -159,6 +165,37 @@ inline void Playfield::enqueue(Renderer::Queue& queue, float scroll_speed)
 		}, {
 			.size = {field.length, JudgmentLineHeight},
 		});
+
+		constexpr auto JudgeWidth = 200.0f;
+		constexpr auto JudgeY = 249.0f;
+		constexpr auto TimingWidth = 64.0f;
+		constexpr auto TimingY = 237.0f;
+
+		auto const judgment = score.get_latest_judgment(idx);
+		if (judgment && cursor.get_progress_ns() - judgment->timestamp <= milliseconds{playnote::globals::config->get_entry<int>("gameplay", "judgment_timeout")}) {
+			auto const judge_name = format("judgment{}", idx);
+			auto judge_str = string{enum_name(judgment->type)};
+			to_upper(judge_str);
+			auto const judge_color = judgement_color(judgment->type);
+			lib::imgui::begin_window(judge_name.c_str(),
+				int2{queue.logical_to_physical(transform->global_position() + float2{field.start, 0.0f} + float2{field.length / 2.0f - JudgeWidth / 2.0f, JudgeY})},
+				JudgeWidth,
+				lib::imgui::WindowStyle::Transparent);
+			lib::imgui::text_styled(judge_str, judge_color, 3.0f, lib::imgui::TextAlignment::Center);
+			lib::imgui::end_window();
+
+			if (judgment->timing == bms::Score::Timing::None || judgment->timing == bms::Score::Timing::OnTime) continue;
+			auto const timing_name = format("timing{}", idx);
+			auto timing_str = string{enum_name(judgment->timing)};
+			to_upper(timing_str);
+			auto const time_color = timing_color(judgment->timing);
+			lib::imgui::begin_window(timing_name.c_str(),
+				int2{queue.logical_to_physical(transform->global_position() + float2{field.start, 0.0f} + float2{field.length / 2.0f - TimingWidth / 2.0f, TimingY})},
+				TimingWidth,
+				lib::imgui::WindowStyle::Transparent);
+			lib::imgui::text_styled(timing_str, time_color, 1.0f, lib::imgui::TextAlignment::Center);
+			lib::imgui::end_window();
+		}
 	}
 
 	// Enqueue visible notes
@@ -316,6 +353,26 @@ inline auto Playfield::note_size(Note::Type type) const -> float2
 	case Note::Type::Scratch:     return {54.0f, 10.0f};
 	case Note::Type::MeasureLine: return {size.x(), 0.75f};
 	default: PANIC();
+	}
+}
+
+inline auto Playfield::judgement_color(bms::Score::JudgmentType judge) const -> float4
+{
+	switch (judge) {
+	case bms::Score::JudgmentType::PGreat: return {0.533f, 0.859f, 0.961f, 1.000f};
+	case bms::Score::JudgmentType::Great:  return {0.980f, 0.863f, 0.380f, 1.000f};
+	case bms::Score::JudgmentType::Good:   return {0.796f, 0.576f, 0.191f, 1.000f};
+	case bms::Score::JudgmentType::Bad:    return {0.933f, 0.525f, 0.373f, 1.000f};
+	case bms::Score::JudgmentType::Poor:   return {0.606f, 0.207f, 0.171f, 1.000f};
+	}
+}
+
+inline auto Playfield::timing_color(bms::Score::Timing timing) const -> float4
+{
+	switch (timing) {
+	case bms::Score::Timing::Early: return {0.200f, 0.400f, 0.961f, 1.000f};
+	case bms::Score::Timing::Late:  return {0.933f, 0.300f, 0.300f, 1.000f};
+	default:                        return {1.000f, 1.000f, 1.000f, 1.000f};
 	}
 }
 

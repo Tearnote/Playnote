@@ -54,6 +54,9 @@ public:
 		// Convert a position from physical window coordinates to logical coordinates.
 		auto physical_to_logical(float2) -> float2;
 
+		// Convert a position from logical window coordinates to physical coordinates.
+		auto logical_to_physical(float2) -> float2;
+
 		// Enqueue shapes for drawing.
 
 		auto rect(Drawable, RectParams) -> Queue&;
@@ -67,9 +70,10 @@ public:
 		vector<tuple<Drawable, RectParams, int>> rects; // third: group id
 		vector<tuple<Drawable, CircleParams, int>> circles; // third: group id
 		mutable vector<pair<int, int>> group_depths; // first: group id (initially equal to index), second: depth
+		float4 transform;
 		float4 inv_transform;
 
-		explicit Queue(float4 inv_transform): inv_transform{inv_transform} {}
+		Queue(float4 transform, float4 inv_transform): transform{transform}, inv_transform{inv_transform} {}
 		[[nodiscard]] auto to_primitive_list() const -> vector<Primitive>;
 	};
 
@@ -115,6 +119,11 @@ inline void Renderer::Queue::group(Func&& func)
 inline auto Renderer::Queue::physical_to_logical(float2 pos) -> float2
 {
 	return (pos + float2{inv_transform.x(), inv_transform.y()}) * float2{inv_transform.z(), inv_transform.w()};
+}
+
+inline auto Renderer::Queue::logical_to_physical(float2 pos) -> float2
+{
+	return (pos + float2{transform.x(), transform.y()}) * float2{transform.z(), transform.w()};
 }
 
 inline auto Renderer::Queue::rect(Drawable common, RectParams rect) -> Queue&
@@ -202,7 +211,7 @@ void Renderer::frame(Func&& func)
 		1.0f / transform.z(),
 		1.0f / transform.w(),
 	};
-	auto queue = Queue{inverse_transform};
+	auto queue = Queue{transform, inverse_transform};
 	imgui.enqueue([&]() { func(queue); });
 	auto primitives = queue.to_primitive_list();
 
