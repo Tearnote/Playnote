@@ -52,6 +52,7 @@ private:
 
 	auto lane_order() const -> span<isize_t const>;
 	auto lane_to_note_type(bms::Lane::Type) const -> Note::Type;
+	auto lane_background_color(bms::Lane::Type) const -> float4;
 	auto lane_width(Note::Type) const -> float;
 	auto note_color(Note::Type) const -> float4;
 	auto note_size(Note::Type) const -> float2;
@@ -114,6 +115,20 @@ inline void Playfield::enqueue(Renderer::Queue& queue, float scroll_speed)
 			existing->transform->position.y() = (1.0f - (distance / max_distance)) * size.y();
 		}
 	});
+
+	// Enqueue lane backgrounds
+	for (auto [idx, lane, lane_transform]: views::zip(views::iota(0), lanes, lane_offsets)) {
+		auto const lane_type = bms::Lane::Type{idx};
+		if (!lane_transform || lane_type == bms::Lane::Type::MeasureLine) continue;
+		queue.rect_tl({
+			.position = lane_transform->global_position(),
+			.velocity = lane_transform->global_velocity(),
+			.color = lane_background_color(lane_type),
+			.depth = 200,
+		}, {
+			.size = {lane_width(lane_to_note_type(lane_type)), size.y()},
+		});
+	}
 
 	// Enqueue visible notes
 	for (auto const& lane: lanes) {
@@ -224,6 +239,17 @@ inline auto Playfield::lane_to_note_type(bms::Lane::Type lane) const -> Note::Ty
 		}
 	} else {
 		PANIC(); // PMS is unimplemented
+	}
+}
+
+inline auto Playfield::lane_background_color(bms::Lane::Type type) const -> float4
+{
+	auto const note_type = lane_to_note_type(type);
+	switch (note_type) {
+		case Note::Type::Scratch:
+		case Note::Type::Odd:     return {0.000f, 0.000f, 0.000f, 1.000f};
+		case Note::Type::Even:    return {0.035f, 0.035f, 0.035f, 1.000f};
+		default: PANIC();
 	}
 }
 
