@@ -27,9 +27,9 @@ public:
 	void enqueue(Renderer::Queue&, float scroll_speed);
 
 private:
-	enum class Side {
-		Left,
-		Right,
+	struct Field {
+		float start;
+		float length;
 	};
 
 	struct Note {
@@ -47,6 +47,7 @@ private:
 
 	float2 size;
 	bms::Cursor const& cursor;
+	static_vector<Field, 2> fields;
 	array<vector<Note>, enum_count<bms::Lane::Type>()> lanes;
 	array<TransformRef, enum_count<bms::Lane::Type>()> lane_offsets;
 
@@ -66,9 +67,12 @@ inline Playfield::Playfield(Transform transform, float height, bms::Cursor const
 	// Precalc lane offsets
 	auto order = lane_order();
 	auto offset = 0.0f;
+	auto field_start = 0.0f;
 	for (auto lane_idx: order) {
 		if (lane_idx == -1) {
+			fields.emplace_back(field_start, offset - field_start);
 			offset += FieldSpacing;
+			field_start = offset;
 			continue;
 		}
 		auto const lane_type = bms::Lane::Type{lane_idx};
@@ -77,12 +81,15 @@ inline Playfield::Playfield(Transform transform, float height, bms::Cursor const
 		auto const width = lane_width(note_type);
 		offset += width;
 	}
+	fields.emplace_back(field_start, offset - field_start);
 	lane_offsets[+bms::Lane::Type::MeasureLine] = globals::create_child_transform(this->transform);
 	size = {offset, height};
 }
 
 inline void Playfield::enqueue(Renderer::Queue& queue, float scroll_speed)
 {
+	static constexpr auto JudgmentLineHeight = 6.0f;
+
 	// Update notes
 
 	// Remove judged notes
@@ -127,6 +134,18 @@ inline void Playfield::enqueue(Renderer::Queue& queue, float scroll_speed)
 			.depth = 200,
 		}, {
 			.size = {lane_width(lane_to_note_type(lane_type)), size.y()},
+		});
+	}
+
+	// Enqueue judgment line
+	for (auto const& field: fields) {
+		queue.rect_tl({
+			.position = transform->global_position() + float2{field.start, size.y() - JudgmentLineHeight},
+			.velocity = transform->global_velocity(),
+			.color = {1.000f, 0.200f, 0.200f, 1.000f},
+			.depth = 180,
+		}, {
+			.size = {field.length, JudgmentLineHeight},
 		});
 	}
 
