@@ -89,6 +89,7 @@ inline Playfield::Playfield(Transform transform, float height, bms::Cursor const
 inline void Playfield::enqueue(Renderer::Queue& queue, float scroll_speed)
 {
 	static constexpr auto JudgmentLineHeight = 4.5f;
+	static constexpr auto LanePressedMargin = 3.0f;
 
 	// Update notes
 
@@ -123,18 +124,29 @@ inline void Playfield::enqueue(Renderer::Queue& queue, float scroll_speed)
 		}
 	});
 
-	// Enqueue lane backgrounds
+	// Enqueue lane backgrounds and hold display
 	for (auto [idx, lane, lane_transform]: views::zip(views::iota(0), lanes, lane_offsets)) {
 		auto const lane_type = bms::Lane::Type{idx};
 		if (!lane_transform || lane_type == bms::Lane::Type::MeasureLine) continue;
+		auto const width = lane_width(lane_to_note_type(lane_type));
 		queue.rect_tl({
 			.position = lane_transform->global_position(),
 			.velocity = lane_transform->global_velocity(),
 			.color = lane_background_color(lane_type),
 			.depth = 200,
 		}, {
-			.size = {lane_width(lane_to_note_type(lane_type)), size.y()},
+			.size = {width, size.y()},
 		});
+		if (cursor.is_pressed(lane_type)) {
+			queue.rect_tl({
+				.position = lane_transform->global_position() + float2{LanePressedMargin, size.y() + LanePressedMargin * 2.0f},
+				.velocity = lane_transform->global_velocity(),
+				.color = {1.000f, 1.000f, 1.000f, 1.000f},
+				.depth = 80,
+			}, {
+				.size = {width - LanePressedMargin * 2.0f, width - LanePressedMargin * 2.0f},
+			});
+		}
 	}
 
 	// Enqueue judgment line
