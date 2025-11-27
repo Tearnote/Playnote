@@ -23,12 +23,12 @@ or distributed except according to those terms.
 #undef ERROR
 #endif
 
-#define TRACE(...) LOG_TRACE_L1(globals::logger->global, __VA_ARGS__)
-#define DEBUG(...) LOG_DEBUG(globals::logger->global, __VA_ARGS__)
-#define INFO(...) LOG_INFO(globals::logger->global, __VA_ARGS__)
-#define WARN(...) LOG_WARNING(globals::logger->global, __VA_ARGS__)
-#define ERROR(...) LOG_ERROR(globals::logger->global, __VA_ARGS__)
-#define CRIT(...) LOG_CRITICAL(globals::logger->global, __VA_ARGS__)
+#define TRACE(...) LOG_TRACE_L1(playnote::globals::logger->global, __VA_ARGS__)
+#define DEBUG(...) LOG_DEBUG(playnote::globals::logger->global, __VA_ARGS__)
+#define INFO(...) LOG_INFO(playnote::globals::logger->global, __VA_ARGS__)
+#define WARN(...) LOG_WARNING(playnote::globals::logger->global, __VA_ARGS__)
+#define ERROR(...) LOG_ERROR(playnote::globals::logger->global, __VA_ARGS__)
+#define CRIT(...) LOG_CRITICAL(playnote::globals::logger->global, __VA_ARGS__)
 
 // Log to a specific category
 
