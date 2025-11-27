@@ -62,7 +62,7 @@ private:
 inline Playfield::Playfield(Transform transform, float height, bms::Cursor const& cursor):
 	transform{globals::create_transform(transform)}, cursor{cursor}
 {
-	static constexpr auto FieldSpacing = 94.0f;
+	static constexpr auto FieldSpacing = 70.0f;
 
 	// Precalc lane offsets
 	auto order = lane_order();
@@ -88,7 +88,7 @@ inline Playfield::Playfield(Transform transform, float height, bms::Cursor const
 
 inline void Playfield::enqueue(Renderer::Queue& queue, float scroll_speed)
 {
-	static constexpr auto JudgmentLineHeight = 6.0f;
+	static constexpr auto JudgmentLineHeight = 4.5f;
 
 	// Update notes
 
@@ -276,11 +276,11 @@ inline auto Playfield::lane_width(Note::Type type) const -> float
 {
 	switch (type) {
 		case Note::Type::Odd:
-			return 40.0f;
+			return 30.0f;
 		case Note::Type::Even:
-			return 32.0f;
+			return 24.0f;
 		case Note::Type::Scratch:
-			return 72.0f;
+			return 54.0f;
 		default: PANIC();
 	}
 }
@@ -299,10 +299,10 @@ inline auto Playfield::note_color(Note::Type type) const -> float4
 inline auto Playfield::note_size(Note::Type type) const -> float2
 {
 	switch (type) {
-	case Note::Type::Odd:         return {40.0f, 13.0f};
-	case Note::Type::Even:        return {32.0f, 13.0f};
-	case Note::Type::Scratch:     return {72.0f, 13.0f};
-	case Note::Type::MeasureLine: return {size.x(), 1.0f};
+	case Note::Type::Odd:         return {30.0f, 10.0f};
+	case Note::Type::Even:        return {24.0f, 10.0f};
+	case Note::Type::Scratch:     return {54.0f, 10.0f};
+	case Note::Type::MeasureLine: return {size.x(), 0.75f};
 	default: PANIC();
 	}
 }

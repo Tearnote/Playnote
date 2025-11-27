@@ -295,7 +295,7 @@ static void run_render(Broadcaster& broadcaster, dev::Window& window, Logger::Ca
 
 	while (!window.is_closing()) {
 		gfx::globals::update_transforms();
-		
+
 		// Handle state changes
 		if (state.requested == State::Select) {
 			if (holds_alternative<GameplayContext>(state.context)) {
