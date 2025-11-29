@@ -29,6 +29,7 @@ find_package(ICU REQUIRED # Charset detection and conversion
 find_package(glfw3 REQUIRED) # Windowing support
 find_package(Boost REQUIRED # Rational numbers, improved containers, string algorithms, resource wrapper
 	COMPONENTS container)
+find_package(HarfBuzz REQUIRED) # Text shaping
 if(UNIX)
 	pkg_search_module(libswresample REQUIRED IMPORTED_TARGET libswresample) # Sample rate conversion
 	pkg_search_module(libavformat REQUIRED IMPORTED_TARGET libavformat) # Audio file demuxing

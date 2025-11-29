@@ -58,5 +58,8 @@
   }, {
     "name" : "libpng",
     "version>=" : "1.6.50"
+  }, {
+    "name" : "harfbuzz",
+    "version>=" : "12.2.0"
   } ]
 }
