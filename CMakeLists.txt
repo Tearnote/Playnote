@@ -56,6 +56,7 @@ target_link_libraries(Playnote
 	PRIVATE LibArchive::LibArchive
 	PRIVATE magic_enum::magic_enum
 	PRIVATE libassert::assert
+	PRIVATE Freetype::Freetype
 	PRIVATE harfbuzz::harfbuzz
 	PRIVATE zpp_bits
 	PRIVATE OpenSSL::Crypto

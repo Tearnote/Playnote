@@ -29,6 +29,7 @@ find_package(ICU REQUIRED # Charset detection and conversion
 find_package(glfw3 REQUIRED) # Windowing support
 find_package(Boost REQUIRED # Rational numbers, improved containers, string algorithms, resource wrapper
 	COMPONENTS container)
+find_package(Freetype REQUIRED) # Font file processing
 find_package(HarfBuzz REQUIRED) # Text shaping
 if(UNIX)
 	pkg_search_module(libswresample REQUIRED IMPORTED_TARGET libswresample) # Sample rate conversion
@@ -198,7 +199,6 @@ set(MSDF_ATLAS_BUILD_STANDALONE OFF CACHE BOOL "" FORCE)
 set(MSDF_ATLAS_USE_VCPKG OFF CACHE BOOL "" FORCE)
 set(MSDF_ATLAS_USE_SKIA OFF CACHE BOOL "" FORCE)
 set(MSDF_ATLAS_NO_ARTERY_FONT ON CACHE BOOL "" FORCE)
-find_package(Freetype REQUIRED)
 find_package(PNG REQUIRED)
 FetchContent_Declare(msdf-atlas-gen # Font atlas generation
 	GIT_REPOSITORY https://github.com/Chlumsky/msdf-atlas-gen
