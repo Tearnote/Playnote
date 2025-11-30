@@ -26,6 +26,7 @@ class Renderer {
 public:
 	static constexpr auto VirtualViewportSize = float2{900.0f, 480.0f};
 	static constexpr auto VirtualViewportMargin = 40.0f;
+	static constexpr auto FontPath = "assets/MPLUS2Variable.ttf";
 
 	struct Drawable {
 		float2 position; // Center of the shape
@@ -77,7 +78,7 @@ public:
 		[[nodiscard]] auto to_primitive_list() const -> vector<Primitive>;
 	};
 
-	explicit Renderer(dev::Window&, Logger::Category);
+	Renderer(dev::Window&, Logger::Category);
 
 	// Provide a queue to the function argument, and then draw contents of the queue to the screen.
 	// Each call will wait block until the next frame begins.

@@ -14,6 +14,7 @@ include(cmake/Flags.cmake)
 include(cmake/Dependencies.cmake)
 
 add_executable(Playnote WIN32
+	src/lib/freetype.cpp
 	src/lib/archive.cpp
 	src/lib/ebur128.cpp
 	src/lib/openssl.cpp
