@@ -9,13 +9,13 @@ or distributed except according to those terms.
 
 #pragma once
 #include "preamble.hpp"
-#include "preamble/math_ext.hpp"
 #include "utils/logger.hpp"
 #include "lib/vuk.hpp"
 #include "dev/window.hpp"
 #include "dev/gpu.hpp"
 #include "gpu/shaders.hpp"
 #include "gfx/imgui.hpp"
+#include "gfx/text.hpp"
 
 namespace playnote::gfx {
 
@@ -90,6 +90,7 @@ private:
 	Logger::Category cat;
 	dev::GPU gpu;
 	Imgui imgui;
+	TextShaper text_shaper;
 
 	auto generate_transform(int2 window_size, float window_scale) -> float4;
 	auto generate_worklists(lib::vuk::Allocator&, span<Primitive const>, float4 transform) ->
@@ -188,7 +189,8 @@ inline auto Renderer::Queue::to_primitive_list() const -> vector<Primitive>
 inline Renderer::Renderer(dev::Window& window, Logger::Category cat):
 	cat{cat},
 	gpu{window, cat},
-	imgui{gpu}
+	imgui{gpu},
+	text_shaper{cat, {FontPath}}
 {
 	auto& context = gpu.get_global_allocator().get_context();
 
