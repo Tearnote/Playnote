@@ -60,6 +60,6 @@
     "version>=" : "1.6.50"
   }, {
     "name" : "harfbuzz",
-    "version>=" : "12.2.0"
+    "version>=" : "11.3.3"
   } ]
 }
