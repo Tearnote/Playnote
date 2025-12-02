@@ -15,6 +15,7 @@ namespace playnote {
 template<typename T = void>
 using task = coro::task<T>;
 using task_container = coro::task_container<coro::thread_pool>;
+using coro::generator;
 using coro::when_all;
 using coro::when_any;
 using coro::sync_wait;

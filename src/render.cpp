@@ -330,9 +330,8 @@ static void run_render(Broadcaster& broadcaster, dev::Window& window, Logger::Ca
 		}
 
 		// Handle chart library
-		broadcaster.receive_all<FileDrop>([&](auto const& ev) {
+		for (auto ev: broadcaster.receive_all<FileDrop>())
 			for (auto const& path: ev.paths) state.library->import(path);
-		});
 		if (state.current == State::Select) {
 			auto& context = state.select_context();
 			if (state.library->is_dirty() && !context.library_reload_result) {

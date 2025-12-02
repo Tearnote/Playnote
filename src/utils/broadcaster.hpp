@@ -40,17 +40,9 @@ public:
 	template<typename T, typename... Args>
 	void make_shout(Args&&... args);
 
-	// Call the provided function once for every pending message of type T. Must have previously
-	// subscribed to this type. Returns true if at least one message was processed.
-	template<typename T, callable<void(T&&)> Func>
-	auto receive_all(Func&& func) -> bool;
-
-	// Block until a message of type T is received. The sleep callback is called repeatedly until
-	// the message arrives. Function might be called more than once if multiple messages were sent
-	// in rapid succession. Be careful, as there's no timeout. Must have previously subscribed
-	// to this type.
-	template<typename T, callable<void(T&&)> Func, callable<void()> SleepFunc>
-	void await(Func&& func, SleepFunc&& sleep);
+	// Return all pending messages of type T. Must have previously subscribed to this type.
+	template<typename T>
+	auto receive_all() -> generator<T>;
 
 private:
 	inline static thread_local auto endpoint_id = -1z;
@@ -88,26 +80,16 @@ void Broadcaster::make_shout(Args&&... args)
 	}
 }
 
-template<typename T, callable<void(T&&)> Func>
-auto Broadcaster::receive_all(Func&& func) -> bool
+template<typename T>
+auto Broadcaster::receive_all() -> generator<T>
 {
 	using Type = remove_cvref_t<T>;
 	ASSUME(endpoint_id != -1z);
 	ASSUME(queues[endpoint_id].contains(typeid(Type)));
 	auto& out_queue = *static_pointer_cast<mpmc_queue<Type>>(queues[endpoint_id][typeid(Type)]);
 	auto message = Type{};
-	auto processed = 0z;
-	while (out_queue.try_dequeue(message)) {
-		func(move(message));
-		processed += 1;
-	}
-	return processed;
-}
-
-template<typename T, callable<void(T&&)> Func, callable<void()> SleepFunc>
-void Broadcaster::await(Func&& func, SleepFunc&& sleep)
-{
-	while (!receive_all<T>(forward<Func>(func))) sleep();
+	while (out_queue.try_dequeue(message))
+		co_yield move(message);
 }
 
 }

@@ -42,11 +42,11 @@ static void run_input(Broadcaster& broadcaster, dev::Window& window, Logger::Cat
 
 	while (!window.is_closing()) {
 		// Handle queue changes
-		broadcaster.receive_all<RegisterInputQueue>([&](auto const& q) {
+		for (auto q: broadcaster.receive_all<RegisterInputQueue>()) {
 			input_queues.emplace_back(q.queue.lock());
 			TRACE_AS(cat, "Registered input queue");
-		});
-		broadcaster.receive_all<UnregisterInputQueue>([&](auto const& q) {
+		}
+		for (auto q: broadcaster.receive_all<UnregisterInputQueue>()) {
 			auto queue = q.queue.lock();
 			auto it = find(input_queues, queue);
 			if (it != input_queues.end()) {
@@ -55,7 +55,7 @@ static void run_input(Broadcaster& broadcaster, dev::Window& window, Logger::Cat
 			} else {
 				WARN_AS(cat, "Attempted to unregister input queue that was not registered");
 			}
-		});
+		}
 
 		// Poll and handle input events
 		globals::glfw->poll();
