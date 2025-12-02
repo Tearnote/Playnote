@@ -35,11 +35,9 @@ auto open_read(span<byte const>) -> ReadArchive;
 // Open an archive for writing.
 auto open_write(fs::path const&) -> WriteArchive;
 
-// Call the provided function on each entry in the archive. The function can optionally call
-// read_data() or read_data_block() to retrieve the entry's contents. If the function returns false,
-// iteration is aborted.
-template<callable<bool(string_view)> Func>
-void for_each_entry(ReadArchive&, Func&&);
+// Return every entry in the archive. You can optionally call read_data() or read_data_block()
+// to retrieve the entry's contents.
+auto for_each_entry(ReadArchive&) -> generator<string_view>;
 
 // Read the contents of the current entry. To be used from within a for_each_entry() callback.
 auto read_data(ReadArchive&) -> vector<byte>;
@@ -58,19 +56,8 @@ template<callable<optional<span<byte const>>()> Func>
 void write_entry(WriteArchive&, fs::path const& pathname, isize_t total_size, Func&&);
 
 namespace detail {
-auto next_entry(ReadArchive&) -> optional<string_view>;
 void write_header_for(WriteArchive&, fs::path const& pathname, isize_t total_size);
 void write_data(WriteArchive&, span<byte const> data);
-}
-
-template<callable<bool(string_view)> Func>
-void for_each_entry(ReadArchive& archive, Func&& func)
-{
-	while (true) {
-		auto pathname_opt = detail::next_entry(archive);
-		if (!pathname_opt) break;
-		if (!func(*pathname_opt)) break;
-	}
 }
 
 template<callable<optional<span<byte const>>()> Func>

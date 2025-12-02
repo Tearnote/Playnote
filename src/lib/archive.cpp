@@ -59,6 +59,18 @@ void detail::WriteArchiveDeleter::operator()(::archive* ar) noexcept
 	archive_write_free(ar);
 }
 
+auto for_each_entry(ReadArchive& archive) -> generator<string_view>
+{
+	while (true) {
+		auto* entry = static_cast<archive_entry*>(nullptr);
+		auto const ret = archive_read_next_header(archive.get(), &entry);
+		if (ret == ARCHIVE_EOF) co_return;
+		if (archive_entry_filetype(entry) != AE_IFREG) continue;
+		ret_check(ret, archive);
+		co_yield archive_entry_pathname(entry);
+	}
+}
+
 auto read_data(ReadArchive& archive) -> vector<byte>
 {
 	auto result = vector<byte>{};
@@ -92,16 +104,6 @@ auto read_data_block(ReadArchive& archive) -> optional<span<byte const>>
 void write_entry(WriteArchive& archive, fs::path const& pathname, span<byte const> data) {
 	detail::write_header_for(archive, pathname, data.size());
 	detail::write_data(archive, data);
-}
-
-auto detail::next_entry(ReadArchive& archive) -> optional<string_view>
-{
-	auto* entry = static_cast<archive_entry*>(nullptr);
-	auto const ret = archive_read_next_header(archive.get(), &entry);
-	if (ret == ARCHIVE_EOF) return nullopt;
-	if (archive_entry_filetype(entry) != AE_IFREG) return next_entry(archive);
-	ret_check(ret, archive);
-	return archive_entry_pathname(entry);
 }
 
 void detail::write_header_for(WriteArchive& archive, fs::path const& pathname, isize_t total_size)

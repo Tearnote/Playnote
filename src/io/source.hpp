@@ -108,11 +108,10 @@ inline Source::Source(fs::path const& path):
 		// Detect encoding
 		auto ar = lib::archive::open_read(archive->file.contents);
 		auto filenames = string{};
-		lib::archive::for_each_entry(ar, [&](string_view pathname) {
+		for (auto pathname: lib::archive::for_each_entry(ar)) {
 			filenames.append(pathname);
 			filenames.append("\n");
-			return true;
-		});
+		}
 		auto encoding = lib::icu::detect_encoding(span{reinterpret_cast<byte const*>(filenames.data()), filenames.size()});
 		archive->encoding = encoding? move(*encoding) : "Shift_JIS";
 
@@ -120,7 +119,7 @@ inline Source::Source(fs::path const& path):
 		auto shortest_prefix = fs::path{};
 		auto shortest_prefix_parts = optional<isize_t>{nullopt};
 		ar = lib::archive::open_read(archive->file.contents);
-		lib::archive::for_each_entry(ar, [&](auto pathname) {
+		for (auto pathname: lib::archive::for_each_entry(ar)) {
 			auto const pathname_bytes = span{reinterpret_cast<byte const*>(pathname.data()), pathname.size()};
 			auto const pathname_utf8 = lib::icu::to_utf8(pathname_bytes, archive->encoding);
 			auto const path = fs::path{pathname_utf8};
@@ -131,8 +130,7 @@ inline Source::Source(fs::path const& path):
 					shortest_prefix_parts = parts;
 				}
 			}
-			return true;
-		});
+		}
 		if (!shortest_prefix_parts)
 			throw runtime_error_fmt("No BMS files found in archive \"{}\"", path);
 		archive->prefix = shortest_prefix;
@@ -143,13 +141,13 @@ template<callable<bool(Source::FileReference)> Func>
 void Source::for_each_file(Func&& func) const {
 	if (archive) {
 		auto ar = lib::archive::open_read(archive->file.contents);
-		lib::archive::for_each_entry(ar, [&](string_view pathname) {
+		for (auto pathname: lib::archive::for_each_entry(ar)) {
 			auto const pathname_bytes = span{reinterpret_cast<byte const*>(pathname.data()), pathname.size()};
 			auto const pathname_utf8 = lib::icu::to_utf8(pathname_bytes, archive->encoding);
 			auto rel_path = fs::relative(pathname_utf8, archive->prefix);
-			if (!rel_path.empty() && *rel_path.begin() == "..") return true;
-			return func(FileReference(rel_path, FileReference::ArchiveEntry{ar}));
-		});
+			if (!rel_path.empty() && *rel_path.begin() == "..") continue;
+			if (!func(FileReference(rel_path, FileReference::ArchiveEntry{ar}))) break;
+		}
 	} else {
 		for (auto const& entry: fs::recursive_directory_iterator{path}) {
 			if (!entry.is_regular_file()) continue;

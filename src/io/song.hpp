@@ -111,15 +111,14 @@ inline Song::Song(Logger::Category cat, ReadFile&& file):
 	auto insert_contents = lib::sqlite::prepare(db, InsertContentsQuery);
 
 	auto archive = lib::archive::open_read(this->file.contents);
-	lib::archive::for_each_entry(archive, [&](auto filepath) {
+	for (auto filepath: lib::archive::for_each_entry(archive)) {
 		auto const data = lib::archive::read_data_block(archive);
-		if (!data) return true;
+		if (!data) continue;
 		auto path = fs::path{filepath};
 		auto const type = type_from_path(path);
 		if (has_extension(path, AudioExtensions)) path.replace_extension();
 		lib::sqlite::execute(insert_contents, path.string(), +type, static_cast<void const*>(data->data()), data->size());
-		return true;
-	});
+	}
 }
 
 inline auto Song::from_source(Logger::Category cat, unique_ptr<thread_pool>& pool,
@@ -159,12 +158,11 @@ inline auto Song::from_source_append(Logger::Category cat, unique_ptr<thread_poo
 	// Copy over contents of base
 	// (We can't just copy the file, because libarchive doesn't support append)
 	auto src_ar = lib::archive::open_read(src.contents);
-	lib::archive::for_each_entry(src_ar, [&](string_view pathname) {
+	for (auto pathname: lib::archive::for_each_entry(src_ar)) {
 		auto data = lib::archive::read_data(src_ar);
 		lib::archive::write_entry(ar, pathname, data);
 		written_paths.emplace(pathname);
-		return true;
-	});
+	}
 
 	auto optimized_files = co_await optimize_files(cat, pool, ext, [&](auto const& path) {
 		return !written_paths.contains(path.string());
