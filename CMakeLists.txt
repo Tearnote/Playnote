@@ -51,6 +51,7 @@ target_link_libraries(Playnote
 	PRIVATE signalsmith-basics
 	PRIVATE readerwriterqueue
 	PRIVATE concurrentqueue
+	PRIVATE mimalloc-static
 	PRIVATE msdf-atlas-gen::msdf-atlas-gen
 	PRIVATE tomlplusplus::tomlplusplus
 	PRIVATE vk-bootstrap

@@ -205,3 +205,13 @@ FetchContent_Declare(msdf-atlas-gen # Font atlas generation
 	GIT_TAG v1.3
 )
 FetchContent_MakeAvailable(msdf-atlas-gen)
+
+set(MI_OPT_ARCH ON CACHE BOOL "" FORCE)
+set(MI_BUILD_SHARED OFF CACHE BOOL "" FORCE)
+set(MI_BUILD_OBJECT OFF CACHE BOOL "" FORCE)
+set(MI_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+FetchContent_Declare(mimalloc # High performance allocator
+	GIT_REPOSITORY https://github.com/microsoft/mimalloc
+	GIT_TAG v2.2.4
+)
+FetchContent_MakeAvailable(mimalloc)
