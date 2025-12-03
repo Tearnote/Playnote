@@ -95,7 +95,7 @@ void execute(DB&, string_view query);
 
 // Execute a list of SQL queries on the database, discarding any output. This must be used for
 // executions that contain multiple statements, as the single-statement version doesn't support
-// splitting by the ";" character.
+// splitting by the ";" character. The queries are automatically bundled into a transaction.
 // Throws runtime_error on sqlite error.
 void execute(DB&, span<string_view const> query);
 

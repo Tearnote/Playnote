@@ -71,7 +71,9 @@ void execute(DB& db, string_view query_str)
 
 void execute(DB& db, span<string_view const> queries)
 {
-	for (auto query: queries) execute(db, query);
+	transaction(db, [&] {
+		for (auto query: queries) execute(db, query);
+	});
 }
 
 void detail::DBDeleter::operator()(sqlite3* db) noexcept
