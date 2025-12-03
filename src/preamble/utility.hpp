@@ -53,6 +53,7 @@ using std::weak_ptr;
 using std::static_pointer_cast;
 using boost::scope::unique_resource;
 using std::type_index;
+using std::void_t;
 using std::decay_t;
 using std::remove_cvref_t;
 using std::bit_cast;
@@ -95,31 +96,5 @@ public:
 private:
 	static inline auto count = 0z;
 };
-
-// Trait for retrieving a function's parameter types as a tuple.
-template<typename T>
-struct function_traits;
-
-// Function pointer specialization
-template<typename R, typename... Args>
-struct function_traits<R(*)(Args...)> {
-	using params = tuple<decay_t<Args>...>;
-};
-
-// Member function pointer specialization
-template<typename R, typename C, typename... Args>
-struct function_traits<R(C::*)(Args...)> {
-	using params = tuple<decay_t<Args>...>;
-};
-
-// Const member function pointer specialization
-template<typename R, typename C, typename... Args>
-struct function_traits<R(C::*)(Args...) const> {
-	using params = tuple<decay_t<Args>...>;
-};
-
-// Functor specialization
-template<typename F>
-struct function_traits: function_traits<decltype(&F::operator())> {};
 
 }

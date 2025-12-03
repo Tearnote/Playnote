@@ -55,18 +55,10 @@ auto open(fs::path const& path) -> DB
 	return db;
 }
 
-auto prepare(DB& db, string_view query) -> Statement
-{
-	auto stmt_raw = static_cast<sqlite3_stmt*>(nullptr);
-	ret_check_ext(db.get(), sqlite3_prepare_v2(db.get(), query.data(), query.size(), &stmt_raw, nullptr));
-	ASSUME(stmt_raw);
-	return Statement{stmt_raw};
-}
-
 void execute(DB& db, string_view query_str)
 {
-	auto stmt = prepare(db, query_str);
-	query(stmt, []{});
+	auto stmt = prepare_raw(db, query_str);
+	detail::step(stmt);
 }
 
 void execute(DB& db, span<string_view const> queries)
@@ -91,43 +83,51 @@ void detail::MutexDeleter::operator()(sqlite3_mutex* m) noexcept
 	sqlite3_mutex_leave(m);
 }
 
+auto detail::prepare_raw(DB& db, string_view query) -> detail::StatementHandle
+{
+	auto stmt_raw = static_cast<sqlite3_stmt*>(nullptr);
+	ret_check_ext(db.get(), sqlite3_prepare_v2(db.get(), query.data(), query.size(), &stmt_raw, nullptr));
+	ASSUME(stmt_raw);
+	return detail::StatementHandle{stmt_raw};
+}
+
 template<>
-void detail::bind<int>(Statement& stmt, int idx, int arg)
+void detail::bind<int>(StatementHandle& stmt, int idx, int arg)
 {
 	ret_check_ext(sqlite3_db_handle(stmt.get()), sqlite3_bind_int(stmt.get(), idx, arg));
 }
 
 template<>
-void detail::bind<int64_t>(Statement& stmt, int idx, int64_t arg)
+void detail::bind<int64_t>(StatementHandle& stmt, int idx, int64_t arg)
 {
 	ret_check_ext(sqlite3_db_handle(stmt.get()), sqlite3_bind_int64(stmt.get(), idx, arg));
 }
 
 template<>
-void detail::bind<double>(Statement& stmt, int idx, double arg)
+void detail::bind<double>(StatementHandle& stmt, int idx, double arg)
 {
 	ret_check_ext(sqlite3_db_handle(stmt.get()), sqlite3_bind_double(stmt.get(), idx, arg));
 }
 
 template<>
-void detail::bind<string_view>(Statement& stmt, int idx, string_view arg)
+void detail::bind<string_view>(StatementHandle& stmt, int idx, string_view arg)
 {
 	ret_check_ext(sqlite3_db_handle(stmt.get()), sqlite3_bind_text(stmt.get(), idx, arg.data(), arg.size(), SQLITE_TRANSIENT));
 }
 
 template<>
-void detail::bind<span<byte const>>(Statement& stmt, int idx, span<byte const> arg)
+void detail::bind<span<byte const>>(StatementHandle& stmt, int idx, span<byte const> arg)
 {
 	ret_check_ext(sqlite3_db_handle(stmt.get()), sqlite3_bind_blob(stmt.get(), idx, arg.data(), arg.size(), SQLITE_TRANSIENT));
 }
 
 template<>
-void detail::bind<void const*>(Statement& stmt, int idx, void const* arg)
+void detail::bind<void const*>(StatementHandle& stmt, int idx, void const* arg)
 {
 	ret_check_ext(sqlite3_db_handle(stmt.get()), sqlite3_bind_blob(stmt.get(), idx, &arg, sizeof(void const*), SQLITE_TRANSIENT));
 }
 
-auto detail::step(Statement& stmt) -> QueryStatus
+auto detail::step(StatementHandle& stmt) -> QueryStatus
 {
 	auto const ret = sqlite3_step(stmt.get());
 	if (ret == SQLITE_DONE || ret == SQLITE_ROW)
@@ -137,7 +137,7 @@ auto detail::step(Statement& stmt) -> QueryStatus
 	unreachable(); // The line above is guaranteed to throw
 }
 
-void detail::reset(Statement& stmt)
+void detail::reset(StatementHandle& stmt)
 {
 	ret_check_ext(sqlite3_db_handle(stmt.get()), sqlite3_reset(stmt.get()));
 }
@@ -159,7 +159,7 @@ void detail::ScopedTransaction::commit()
 	committed = true;
 }
 
-auto detail::last_insert_rowid(Statement& stmt) -> int64_t
+auto detail::last_insert_rowid(StatementHandle& stmt) -> int64_t
 {
 	return sqlite3_last_insert_rowid(sqlite3_db_handle(stmt.get()));
 }
@@ -172,25 +172,25 @@ auto detail::acquire_db_mutex(DB& db) -> Mutex
 }
 
 template<>
-auto detail::get_column<int>(Statement& stmt, int idx) -> int
+auto detail::get_column<int>(StatementHandle& stmt, int idx) -> int
 {
 	return sqlite3_column_int(stmt.get(), idx);
 }
 
 template<>
-auto detail::get_column<int64_t>(Statement& stmt, int idx) -> int64_t
+auto detail::get_column<int64_t>(StatementHandle& stmt, int idx) -> int64_t
 {
 	return sqlite3_column_int64(stmt.get(), idx);
 }
 
 template<>
-auto detail::get_column<double>(Statement& stmt, int idx) -> double
+auto detail::get_column<double>(StatementHandle& stmt, int idx) -> double
 {
 	return sqlite3_column_double(stmt.get(), idx);
 }
 
 template<>
-auto detail::get_column<string_view>(Statement& stmt, int idx) -> string_view
+auto detail::get_column<string_view>(StatementHandle& stmt, int idx) -> string_view
 {
 	auto const* text = reinterpret_cast<char const*>(sqlite3_column_text(stmt.get(), idx));
 	auto const len = sqlite3_column_bytes(stmt.get(), idx);
@@ -200,7 +200,7 @@ auto detail::get_column<string_view>(Statement& stmt, int idx) -> string_view
 }
 
 template<>
-auto detail::get_column<span<byte const>>(Statement& stmt, int idx) -> span<byte const>
+auto detail::get_column<span<byte const>>(StatementHandle& stmt, int idx) -> span<byte const>
 {
 	auto const* blob = reinterpret_cast<byte const*>(sqlite3_column_blob(stmt.get(), idx));
 	auto const size = sqlite3_column_bytes(stmt.get(), idx);
@@ -210,7 +210,7 @@ auto detail::get_column<span<byte const>>(Statement& stmt, int idx) -> span<byte
 }
 
 template<>
-auto detail::get_column<void const*>(Statement& stmt, int idx) -> void const*
+auto detail::get_column<void const*>(StatementHandle& stmt, int idx) -> void const*
 {
 	auto* ptr = static_cast<void const* const*>(sqlite3_column_blob(stmt.get(), idx));
 	return *ptr;

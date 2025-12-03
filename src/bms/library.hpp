@@ -92,18 +92,31 @@ private:
 			path TEXT NOT NULL UNIQUE
 		)
 	)sql"sv;
-	static constexpr auto SongExistsQuery = R"sql(
-		SELECT 1 FROM songs WHERE path = ?1
-	)sql"sv;
-	static constexpr auto SelectSongByIDQuery = R"sql(
-		SELECT path FROM songs WHERE id = ?1
-	)sql"sv;
-	static constexpr auto InsertSongQuery = R"sql(
-		INSERT INTO songs(path) VALUES(?1)
-	)sql"sv;
-	static constexpr auto DeleteSongQuery = R"sql(
-		DELETE FROM songs WHERE id = ?1
-	)sql"sv;
+	struct SongExists {
+		static constexpr auto Query = R"sql(
+			SELECT 1 FROM songs WHERE path = ?1
+		)sql"sv;
+		using Params = tuple<string_view>;
+	};
+	struct SelectSongByID {
+		static constexpr auto Query = R"sql(
+			SELECT path FROM songs WHERE id = ?1
+		)sql"sv;
+		using Params = tuple<isize_t>;
+		using Row = tuple<string_view>;
+	};
+	struct InsertSong {
+		static constexpr auto Query = R"sql(
+			INSERT INTO songs(path) VALUES(?1)
+		)sql"sv;
+		using Params = tuple<string_view>;
+	};
+	struct DeleteSong {
+		static constexpr auto Query = R"sql(
+			DELETE FROM songs WHERE id = ?1
+		)sql"sv;
+		using Params = tuple<isize_t>;
+	};
 
 	static constexpr auto ChartsSchema = to_array({R"sql(
 		CREATE TABLE IF NOT EXISTS charts(
@@ -158,18 +171,29 @@ private:
 	)sql"sv, R"sql(
 		CREATE INDEX IF NOT EXISTS charts_main_bpm ON charts(main_bpm)
 	)sql"sv});
-	static constexpr auto ChartExistsQuery = R"sql(
-		SELECT 1 FROM charts WHERE md5 = ?1
-	)sql"sv;
-	static constexpr auto ChartListingQuery = R"sql(
-		SELECT md5, title, playstyle, difficulty FROM charts
-	)sql"sv;
-	static constexpr auto InsertChartQuery = R"sql(
-		INSERT INTO charts(md5, song_id, path, title, subtitle, artist, subartist, genre, url,
-			email, difficulty, playstyle, has_ln, has_soflan, note_count, chart_duration,
-			audio_duration, loudness, average_nps, peak_nps, min_bpm, max_bpm, main_bpm, preview_id)
-			VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24)
-	)sql"sv;
+	struct ChartExists {
+		static constexpr auto Query = R"sql(
+			SELECT 1 FROM charts WHERE md5 = ?1
+		)sql"sv;
+		using Params = tuple<span<byte const>>;
+	};
+	struct ChartListing {
+		static constexpr auto Query = R"sql(
+			SELECT md5, title, playstyle, difficulty FROM charts
+		)sql"sv;
+		using Row = tuple<span<byte const>, string_view, int, int>;
+	};
+	struct InsertChart {
+		static constexpr auto Query = R"sql(
+			INSERT INTO charts(md5, song_id, path, title, subtitle, artist, subartist, genre, url,
+				email, difficulty, playstyle, has_ln, has_soflan, note_count, chart_duration,
+				audio_duration, loudness, average_nps, peak_nps, min_bpm, max_bpm, main_bpm, preview_id)
+				VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24)
+		)sql"sv;
+		using Params = tuple<span<byte const>, isize_t, string_view, string_view, string_view, string_view, string_view, string_view, string_view,
+			string_view, int, int, int, int, int, int64_t,
+			int64_t, double, double, double, double, double, double, isize_t>;
+	};
 
 	static constexpr auto ChartDensitiesSchema = to_array({R"sql(
 		CREATE TABLE IF NOT EXISTS chart_densities(
@@ -182,9 +206,12 @@ private:
 	)sql"sv, R"sql(
 		CREATE INDEX IF NOT EXISTS chart_densities_md5 ON chart_densities(md5)
 	)sql"sv});
-	static constexpr auto InsertChartDensityQuery = R"sql(
-		INSERT INTO chart_densities(md5, resolution, key, scratch, ln) VALUES(?1, ?2, ?3, ?4, ?5)
-	)sql"sv;
+	struct InsertChartDensity {
+		static constexpr auto Query = R"sql(
+			INSERT INTO chart_densities(md5, resolution, key, scratch, ln) VALUES(?1, ?2, ?3, ?4, ?5)
+		)sql"sv;
+		using Params = tuple<span<byte const>, int, span<byte const>, span<byte const>, span<byte const>>;
+	};
 
 	static constexpr auto ChartImportLogsSchema = R"sql(
 		CREATE TABLE IF NOT EXISTS chart_import_logs(
@@ -192,9 +219,12 @@ private:
 			log TEXT NOT NULL
 		)
 	)sql"sv;
-	static constexpr auto InsertChartImportLogQuery = R"sql(
-		INSERT INTO chart_import_logs(md5, log) VALUES(?1, ?2)
-	)sql"sv;
+	struct InsertChartImportLog {
+		static constexpr auto Query = R"sql(
+			INSERT INTO chart_import_logs(md5, log) VALUES(?1, ?2)
+		)sql"sv;
+		using Params = tuple<span<byte const>, string_view>;
+	};
 
 	static constexpr auto ChartPreviewsSchema = R"sql(
 		CREATE TABLE IF NOT EXISTS chart_previews(
@@ -202,28 +232,68 @@ private:
 			preview BLOB NOT NULL
 		)
 	)sql"sv;
-	static constexpr auto InsertChartPreviewQuery = R"sql(
-		INSERT INTO chart_previews(preview) VALUES(?1)
-	)sql"sv;
-	static constexpr auto DeleteChartPreviewQuery = R"sql(
-		DELETE FROM chart_previews WHERE id = ?1
-	)sql"sv;
+	struct InsertChartPreview {
+		static constexpr auto Query = R"sql(
+			INSERT INTO chart_previews(preview) VALUES(?1)
+		)sql"sv;
+		using Params = tuple<span<byte const>>;
+	};
+	struct DeleteChartPreview {
+		static constexpr auto Query = R"sql(
+			DELETE FROM chart_previews WHERE id = ?1
+		)sql"sv;
+		using Params = tuple<isize_t>;
+	};
+	struct SelectChartPreviewIDs {
+		static constexpr auto Query = R"sql(
+			SELECT preview_id FROM charts WHERE md5 = ?1
+		)sql"sv;
+		using Params = tuple<span<byte const>>;
+		using Row = tuple<isize_t>;
+	};
+	struct ModifyChartPreviewIDs {
+		static constexpr auto Query = R"sql(
+			UPDATE charts SET preview_id = ?2 WHERE preview_id = ?1
+		)sql"sv;
+		using Params = tuple<isize_t, isize_t>;
+	};
+	struct SelectSongPreviews {
+		static constexpr auto Query = R"sql(
+			SELECT chart_previews.id, chart_previews.preview FROM chart_previews
+				INNER JOIN charts ON chart_previews.id = charts.preview_id
+				WHERE charts.song_id = ?1
+		)sql"sv;
+		using Params = tuple<isize_t>;
+		using Row = tuple<isize_t, span<byte const>>;
+	};
 
-	static constexpr auto GetSongFromChartQuery = R"sql(
-		SELECT songs.id, songs.path FROM songs INNER JOIN charts ON songs.id = charts.song_id WHERE charts.md5 = ?1
-	)sql"sv;
-	static constexpr auto SelectSongChartQuery = R"sql(
-		SELECT
-			songs.path, charts.path, charts.date_imported, charts.title, charts.subtitle, charts.artist,
-			charts.subartist, charts.genre, charts.url, charts.email, charts.difficulty, charts.playstyle,
-			charts.has_ln, charts.has_soflan, charts.note_count, charts.chart_duration, charts.audio_duration,
-			charts.loudness, charts.average_nps, charts.peak_nps, charts.min_bpm, charts.max_bpm, charts.main_bpm,
-			chart_densities.resolution, chart_densities.key, chart_densities.scratch, chart_densities.ln
-			FROM charts
-			INNER JOIN songs ON songs.id = charts.song_id
-			INNER JOIN chart_densities ON charts.md5 = chart_densities.md5
-			WHERE charts.md5 = ?1
-	)sql"sv;
+	struct GetSongFromChart {
+		static constexpr auto Query = R"sql(
+			SELECT songs.id, songs.path FROM songs INNER JOIN charts ON songs.id = charts.song_id WHERE charts.md5 = ?1
+		)sql"sv;
+		using Params = tuple<span<byte const>>;
+		using Row = tuple<isize_t, string_view>;
+	};
+	struct SelectSongChart {
+		static constexpr auto Query = R"sql(
+			SELECT
+				songs.path, charts.path, charts.date_imported, charts.title, charts.subtitle, charts.artist,
+				charts.subartist, charts.genre, charts.url, charts.email, charts.difficulty, charts.playstyle,
+				charts.has_ln, charts.has_soflan, charts.note_count, charts.chart_duration, charts.audio_duration,
+				charts.loudness, charts.average_nps, charts.peak_nps, charts.min_bpm, charts.max_bpm, charts.main_bpm,
+				chart_densities.resolution, chart_densities.key, chart_densities.scratch, chart_densities.ln
+				FROM charts
+				INNER JOIN songs ON songs.id = charts.song_id
+				INNER JOIN chart_densities ON charts.md5 = chart_densities.md5
+				WHERE charts.md5 = ?1
+		)sql"sv;
+		using Params = tuple<span<byte const>>;
+		using Row = tuple<string_view, string_view, int64_t, string_view, string_view, string_view,
+			string_view, string_view, string_view, string_view, int, int,
+			int, int, int, int64_t, int64_t,
+			double, double, double, double, double, double,
+			int, span<byte const>, span<byte const>, span<byte const>>;
+	};
 
 	struct ImportStats {
 		atomic<isize_t> songs_processed = 0;
@@ -280,16 +350,16 @@ inline void Library::import(fs::path const& path)
 
 inline auto Library::list_charts() -> task<vector<ChartEntry>>
 {
-	auto chart_listing = lib::sqlite::prepare(db, ChartListingQuery);
+	auto chart_listing = lib::sqlite::prepare<ChartListing>(db);
 	auto result = vector<ChartEntry>{};
-	lib::sqlite::query(chart_listing, [&](span<byte const> md5, string_view title, int playstyle, int difficulty) {
+	for (auto [md5, title, playstyle, difficulty]: lib::sqlite::query(chart_listing)) {
 		auto entry = ChartEntry{};
 		copy(md5, entry.md5.begin());
 		auto const difficulty_str = enum_name(static_cast<Difficulty>(difficulty));
 		auto const playstyle_str = enum_name(static_cast<Playstyle>(playstyle));
 		entry.title = format("{} [{}] [{}]##{}", title, difficulty_str, playstyle_str.substr(1), lib::openssl::md5_to_hex(entry.md5));
 		result.emplace_back(move(entry));
-	});
+	}
 	dirty.store(false);
 	co_return result;
 }
@@ -309,14 +379,13 @@ inline auto Library::load_chart(unique_ptr<thread_pool>& pool, MD5 md5) -> task<
 	auto cache = optional<Metadata>{nullopt};
 	auto song_path = fs::path{};
 	auto chart_path = string{};
-	auto select_song_chart = lib::sqlite::prepare(db, SelectSongChartQuery);
-	lib::sqlite::query(select_song_chart, [&](
-		string_view song_path_sv, string_view chart_path_sv, [[maybe_unused]] int64_t date_imported, string_view title, string_view subtitle,
-		string_view artist, string_view subartist, string_view genre, string_view url, string_view email,
-		int difficulty, int playstyle, int has_ln, int has_soflan, int note_count, int64_t chart_duration,
-		int64_t audio_duration, double loudness, double average_nps, double peak_nps, double min_bpm, double max_bpm,
-		double main_bpm, int density_resolution, span<byte const> density_key, span<byte const> density_scratch,
-		span<byte const> density_ln
+	auto select_song_chart = lib::sqlite::prepare<SelectSongChart>(db);
+	for (auto [
+			song_path_sv, chart_path_sv, date_imported, title, subtitle, artist, subartist, genre,
+			url, email, difficulty, playstyle, has_ln, has_soflan, note_count, chart_duration,
+			audio_duration, loudness, average_nps, peak_nps, min_bpm, max_bpm, main_bpm,
+			density_resolution, density_key, density_scratch, density_ln
+		]: lib::sqlite::query(select_song_chart, md5)
 	) {
 		auto deserialize_density = [](span<byte const> v) {
 			auto in = lib::bits::in(v);
@@ -360,8 +429,8 @@ inline auto Library::load_chart(unique_ptr<thread_pool>& pool, MD5 md5) -> task<
 				.main = static_cast<float>(main_bpm),
 			},
 		};
-		return false;
-	}, md5);
+		break;
+	}
 	if (!cache) throw runtime_error{"Chart not found"};
 
 	auto song = io::Song(cat, io::read_file(song_path));
@@ -377,8 +446,8 @@ inline auto Library::find_available_song_filename(string_view name) -> string
 			format("{}.zip", name) :
 			format("{}-{}.zip", name, i);
 		auto exists = false;
-		auto song_exists = lib::sqlite::prepare(db, SongExistsQuery);
-		lib::sqlite::query(song_exists, [&] { exists = true; }, test);
+		auto song_exists = lib::sqlite::prepare<SongExists>(db);
+		for (auto _: lib::sqlite::query(song_exists, test)) exists = true;
 		if (!exists) return test;
 	}
 	unreachable();
@@ -436,9 +505,9 @@ inline auto Library::import_one(fs::path path) -> task<>
 
 		// Check if there is a duplicate song in the library
 		if (!duplicate) {
-			auto get_song_from_chart = lib::sqlite::prepare(db, GetSongFromChartQuery);
+			auto get_song_from_chart = lib::sqlite::prepare<GetSongFromChart>(db);
 			for (auto const& chart: charts) {
-				lib::sqlite::query(get_song_from_chart, [&](isize_t id, string_view) { song_id = id; }, chart);
+				for (auto [id, _]: lib::sqlite::query(get_song_from_chart, chart)) song_id = id;
 				if (song_id != -1z) {
 					duplicate = true;
 					break;
@@ -452,7 +521,7 @@ inline auto Library::import_one(fs::path path) -> task<>
 			if (song_filename.empty())
 				throw runtime_error_fmt("Failed to import \"{}\": invalid filename", path);
 			song_filename = find_available_song_filename(song_filename);
-			auto insert_song = lib::sqlite::prepare(db, InsertSongQuery);
+			auto insert_song = lib::sqlite::prepare<InsertSong>(db);
 			song_id = lib::sqlite::insert(insert_song, song_filename);
 		}
 
@@ -470,10 +539,9 @@ inline auto Library::import_one(fs::path path) -> task<>
 			// Extending
 			INFO_AS(cat, "Song \"{}\" already exists in library; extending", path);
 			auto existing_song_path = fs::path{};
-			auto select_song_by_id = lib::sqlite::prepare(db, SelectSongByIDQuery);
-			lib::sqlite::query(select_song_by_id, [&](string_view pathname) {
+			auto select_song_by_id = lib::sqlite::prepare<SelectSongByID>(db);
+			for (auto [pathname]: lib::sqlite::query(select_song_by_id, song_id))
 				existing_song_path = fs::path{LibraryPath} / pathname;
-			}, song_id);
 
 			auto tmp_path = existing_song_path;
 			tmp_path.concat(".tmp");
@@ -521,7 +589,7 @@ inline auto Library::import_one(fs::path path) -> task<>
 		if (imported.empty()) {
 			WARN_AS(cat, "No new charts found in song \"{}\"", path);
 			if (!duplicate) {
-				auto delete_song = lib::sqlite::prepare(db, DeleteSongQuery);
+				auto delete_song = lib::sqlite::prepare<DeleteSong>(db);
 				lib::sqlite::execute(delete_song, song_id);
 				move(*song).remove();
 			}
@@ -544,20 +612,20 @@ inline auto Library::import_chart(io::Song& song, isize_t song_id, string chart_
 {
 	if (stopping.load()) throw runtime_error_fmt("Chart import \"{}\" cancelled", chart_path);
 
-	auto chart_exists = lib::sqlite::prepare(db, ChartExistsQuery);
+	auto chart_exists = lib::sqlite::prepare<ChartExists>(db);
 	auto const md5 = lib::openssl::md5(chart_raw);
 	auto exists = false;
-	lib::sqlite::query(chart_exists, [&] { exists = true; }, md5);
+	for (auto _: lib::sqlite::query(chart_exists, md5)) exists = true;
 	if (exists) {
 		INFO_AS(cat, "Chart import \"{}\" skipped (duplicate)", chart_path);
 		import_stats.charts_skipped.fetch_add(1);
 		co_return {};
 	}
 
-	auto insert_chart = lib::sqlite::prepare(db, InsertChartQuery);
-	auto insert_chart_density = lib::sqlite::prepare(db, InsertChartDensityQuery);
-	auto insert_chart_import_log = lib::sqlite::prepare(db, InsertChartImportLogQuery);
-	auto insert_chart_preview = lib::sqlite::prepare(db, InsertChartPreviewQuery);
+	auto insert_chart = lib::sqlite::prepare<InsertChart>(db);
+	auto insert_chart_density = lib::sqlite::prepare<InsertChartDensity>(db);
+	auto insert_chart_import_log = lib::sqlite::prepare<InsertChartImportLog>(db);
+	auto insert_chart_preview = lib::sqlite::prepare<InsertChartPreview>(db);
 	auto builder_cat = globals::logger->create_string_logger(lib::openssl::md5_to_hex(md5));
 	INFO_AS(builder_cat, "Importing chart \"{}\"", chart_path);
 	auto builder = Builder{builder_cat};
@@ -600,35 +668,22 @@ inline auto Library::deduplicate_previews(isize_t song_id, span<MD5 const> new_c
 	// Any of these previews can be a duplicate of a new preview or an old preview.
 
 	// Fetch all previews (decoded) of all charts of the song, with their IDs.
-	static constexpr auto SelectSongPreviewsQuery = R"sql(
-		SELECT chart_previews.id, chart_previews.preview FROM chart_previews
-			INNER JOIN charts ON chart_previews.id = charts.preview_id
-			WHERE charts.song_id = ?1
-	)sql"sv;
-	auto select_song_previews = lib::sqlite::prepare(db, SelectSongPreviewsQuery);
+	auto select_song_previews = lib::sqlite::prepare<SelectSongPreviews>(db);
 	auto previews = unordered_map<isize_t, vector<dev::Sample>>{};
-	lib::sqlite::query(select_song_previews, [&](isize_t id, span<byte const> preview) {
+	for (auto [id, preview]: lib::sqlite::query(select_song_previews, song_id))
 		previews.emplace(id, lib::ffmpeg::decode_and_resample_file_buffer(preview, 48000));
-	}, song_id);
 
 	// Fetch all preview IDs of new charts
-	static constexpr auto SelectChartPreviewIDsQuery = R"sql(
-		SELECT preview_id FROM charts WHERE md5 = ?1
-	)sql"sv;
-	auto select_chart_preview_ids = lib::sqlite::prepare(db, SelectChartPreviewIDsQuery);
+	auto select_chart_preview_ids = lib::sqlite::prepare<SelectChartPreviewIDs>(db);
 	auto new_chart_preview_ids = vector<isize_t>{};
 	for (auto const& md5: new_charts) {
-		lib::sqlite::query(select_chart_preview_ids, [&](isize_t preview_id) {
+		for (auto [preview_id]: lib::sqlite::query(select_chart_preview_ids, md5))
 			new_chart_preview_ids.emplace_back(preview_id);
-		}, md5);
 	}
 
 	// For every new preview, compute average sample difference from every other existing preview
-	static constexpr auto ModifyChartPreviewIDsQuery = R"sql(
-		UPDATE charts SET preview_id = ?2 WHERE preview_id = ?1
-	)sql"sv;
-	auto modify_chart_preview_ids = lib::sqlite::prepare(db, ModifyChartPreviewIDsQuery);
-	auto delete_chart_preview = lib::sqlite::prepare(db, DeleteChartPreviewQuery);
+	auto modify_chart_preview_ids = lib::sqlite::prepare<ModifyChartPreviewIDs>(db);
+	auto delete_chart_preview = lib::sqlite::prepare<DeleteChartPreview>(db);
 	auto previews_removed = 0z;
 	for (auto [md5, preview_id]: views::zip(new_charts, new_chart_preview_ids)) {
 		for (auto [id, preview]: previews) {

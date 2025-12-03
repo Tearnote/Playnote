@@ -67,28 +67,45 @@ private:
 	)sql"sv, R"sql(
 		CREATE INDEX contents_path ON contents(path)
 	)sql"sv});
-	static constexpr auto InsertContentsQuery = R"sql(
-		INSERT INTO contents(path, type, ptr, size) VALUES (?1, ?2, ?3, ?4)
-	)sql"sv;
-	static constexpr auto SelectChartsQuery = R"sql(
-		SELECT path, ptr, size FROM contents WHERE type = 1
-	)sql"sv;
-	static constexpr auto SelectFileQuery = R"sql(
-		SELECT ptr, size FROM contents WHERE path = ?1
-	)sql"sv;
-	static constexpr auto SelectAudioFileQuery = R"sql(
-		SELECT ptr, size FROM contents WHERE type = 2 AND path = ?1
-	)sql"sv;
-	static constexpr auto SelectAudioFilesQuery = R"sql(
-		SELECT path, ptr, size FROM contents WHERE type = 2
-	)sql"sv;
+	struct InsertContents {
+		static constexpr auto Query = R"sql(
+			INSERT INTO contents(path, type, ptr, size) VALUES (?1, ?2, ?3, ?4)
+		)sql"sv;
+		using Params = tuple<string_view, int, void const*, isize_t>;
+	};
+	struct SelectCharts {
+		static constexpr auto Query = R"sql(
+			SELECT path, ptr, size FROM contents WHERE type = 1
+		)sql"sv;
+		using Row = tuple<string_view, void const*, isize_t>;
+	};
+	struct SelectFile {
+		static constexpr auto Query = R"sql(
+			SELECT ptr, size FROM contents WHERE path = ?1
+		)sql"sv;
+		using Params = tuple<string_view>;
+		using Row = tuple<void const*, isize_t>;
+	};
+	struct SelectAudioFile {
+		static constexpr auto Query = R"sql(
+			SELECT ptr, size FROM contents WHERE type = 2 AND path = ?1
+		)sql"sv;
+		using Params = tuple<string_view>;
+		using Row = tuple<void const*, isize_t>;
+	};
+	struct SelectAudioFiles {
+		static constexpr auto Query = R"sql(
+			SELECT path, ptr, size FROM contents WHERE type = 2
+		)sql"sv;
+		using Row = tuple<string_view, void const*, isize_t>;
+	};
 
 	Logger::Category cat;
 	ReadFile file;
 	lib::sqlite::DB db;
-	lib::sqlite::Statement select_charts;
-	lib::sqlite::Statement select_file;
-	lib::sqlite::Statement select_audio_files;
+	lib::sqlite::Statement<SelectCharts> select_charts;
+	lib::sqlite::Statement<SelectFile> select_file;
+	lib::sqlite::Statement<SelectAudioFiles> select_audio_files;
 	unordered_map<string, vector<dev::Sample>, string_hash> audio_cache;
 
 	template<callable<bool(fs::path const&)> Func>
@@ -105,10 +122,10 @@ inline Song::Song(Logger::Category cat, ReadFile&& file):
 	db{lib::sqlite::open(":memory:")}
 {
 	lib::sqlite::execute(db, ContentsSchema);
-	select_charts = lib::sqlite::prepare(db, SelectChartsQuery);
-	select_file = lib::sqlite::prepare(db, SelectFileQuery);
-	select_audio_files = lib::sqlite::prepare(db, SelectAudioFilesQuery);
-	auto insert_contents = lib::sqlite::prepare(db, InsertContentsQuery);
+	select_charts = lib::sqlite::prepare<SelectCharts>(db);
+	select_file = lib::sqlite::prepare<SelectFile>(db);
+	select_audio_files = lib::sqlite::prepare<SelectAudioFiles>(db);
+	auto insert_contents = lib::sqlite::prepare<InsertContents>(db);
 
 	auto archive = lib::archive::open_read(this->file.contents);
 	for (auto filepath: lib::archive::for_each_entry(archive)) {
@@ -190,18 +207,17 @@ inline auto Song::from_source_append(Logger::Category cat, unique_ptr<thread_poo
 template<callable<void(string_view, span<byte const>)> Func>
 void Song::for_each_chart(Func&& func)
 {
-	lib::sqlite::query(select_charts, [&](string_view path, void const* ptr, isize_t size) {
+	for (auto [path, ptr, size]: lib::sqlite::query(select_charts))
 		func(path, span{static_cast<byte const*>(ptr), static_cast<size_t>(size)});
-	});
 }
 
 inline auto Song::load_file(string_view filepath) -> span<byte const>
 {
 	auto file = span<byte const>{};
-	lib::sqlite::query(select_file, [&](void const* ptr, isize_t size) {
+	for (auto [ptr, size]: lib::sqlite::query(select_file, filepath)) {
 		file = span{static_cast<byte const*>(ptr), static_cast<size_t>(size)};
-		return false;
-	}, filepath);
+		break;
+	}
 	if (!file.data())
 		throw runtime_error_fmt("File \"{}\" doesn't exist within the song archive", filepath);
 	return file;
@@ -211,7 +227,7 @@ inline auto Song::preload_audio_files(unique_ptr<thread_pool>& pool, int samplin
 {
 	auto tasks = vector<task<vector<dev::Sample>>>{};
 	auto paths = vector<string>{};
-	lib::sqlite::query(select_audio_files, [&](string_view filepath, void const* ptr, isize_t size) {
+	for (auto [filepath, ptr, size]: lib::sqlite::query(select_audio_files)) {
 		// Normally the db collation handles case-insensitive lookup for us, but we need to do it manually for the cache
 		auto filepath_low = string{filepath};
 		to_lower(filepath_low);
@@ -221,7 +237,7 @@ inline auto Song::preload_audio_files(unique_ptr<thread_pool>& pool, int samplin
 			co_return lib::ffmpeg::decode_and_resample_file_buffer(file, sampling_rate);
 		}(cat, file, sampling_rate)));
 		paths.emplace_back(move(filepath_low));
-	});
+	}
 
 	auto results = co_await when_all(move(tasks));
 	for (auto [result, path]: views::zip(results, paths)) {
@@ -244,11 +260,11 @@ inline auto Song::load_audio_file(string_view filepath, int sampling_rate) -> ve
 	}
 
 	auto file = span<byte const>{};
-	auto select_audio_file = lib::sqlite::prepare(this->db, SelectAudioFileQuery);
-	lib::sqlite::query(select_audio_file, [&](void const* ptr, isize_t size) {
+	auto select_audio_file = lib::sqlite::prepare<SelectAudioFile>(this->db);
+	for (auto [ptr, size]: lib::sqlite::query(select_audio_file, filepath)) {
 		file = span{static_cast<byte const*>(ptr), static_cast<size_t>(size)};
-		return false;
-	}, filepath);
+		break;
+	}
 	if (!file.data())
 		throw runtime_error_fmt("Audio file \"{}\" doesn't exist within the song archive", filepath);
 	lib::ffmpeg::set_thread_log_category(cat);
