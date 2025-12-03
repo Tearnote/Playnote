@@ -27,9 +27,29 @@ or distributed except according to those terms.
 #include <unistd.h>
 #include <sched.h>
 #endif
+#include <cstdlib>
+#include "mimalloc.h"
 #include "preamble.hpp"
+#include "utils/logger.hpp"
 
 namespace playnote::lib::os {
+
+void check_mimalloc()
+{
+	if (mi_version() <= 0) {
+		WARN("mimalloc is not loaded");
+		return;
+	}
+	INFO("mimalloc {}.{}.{} loaded", mi_version() / 100, mi_version() % 100 / 10, mi_version() % 10);
+	auto* p = new int{};
+	auto const new_ok = mi_is_in_heap_region(p);
+	void* q = std::malloc(4);
+	auto const malloc_ok = mi_is_in_heap_region(q);
+	if (!new_ok || !malloc_ok)
+		WARN("mimalloc override is not active (new: {}, malloc: {})", new_ok, malloc_ok);
+	free(q);
+	delete p;
+}
 
 void name_current_thread(string_view name)
 {

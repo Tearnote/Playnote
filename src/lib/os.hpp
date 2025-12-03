@@ -12,6 +12,9 @@ or distributed except according to those terms.
 
 namespace playnote::lib::os {
 
+// Confirm if mimalloc is loaded and active. In case of detected issues, logs a warning.
+void check_mimalloc();
+
 // Set current thread name in the OS scheduler, which can help with debugging.
 // Throws runtime_error on failure.
 void name_current_thread(string_view name);

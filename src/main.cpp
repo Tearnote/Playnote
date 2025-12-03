@@ -22,6 +22,7 @@ except according to those terms.
 #include "utils/config.hpp"
 #include "utils/logger.hpp"
 #include "lib/debug.hpp"
+#include "lib/os.hpp"
 #include "dev/window.hpp"
 #include "dev/os.hpp"
 #include "render.hpp"
@@ -59,6 +60,7 @@ try {
 	auto logger_stub = globals::logger.provide(LogfilePath,
 		*enum_cast<Logger::Level>(globals::config->get_entry<string>("logging", "global")));
 	INFO("{} {}.{}.{} starting up", AppTitle, AppVersion[0], AppVersion[1], AppVersion[2]);
+	lib::os::check_mimalloc();
 	return run();
 }
 catch (exception const& e) {
