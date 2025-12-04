@@ -565,10 +565,10 @@ inline auto Library::import_one(fs::path path) -> task<>
 		// Start chart imports
 		auto chart_import_tasks = vector<task<MD5>>{};
 		auto chart_paths = vector<string>{};
-		song->for_each_chart([&](auto path, auto chart) {
+		for (auto [path, chart]: song->for_each_chart()) {
 			chart_import_tasks.emplace_back(schedule_task_on(pool, import_chart(*song, song_id, string{path}, chart)));
 			chart_paths.emplace_back(path);
-		});
+		}
 		auto results = co_await when_all(move(chart_import_tasks));
 
 		// Report chart import results

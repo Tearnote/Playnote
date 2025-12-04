@@ -33,9 +33,8 @@ public:
 	static auto from_source_append(Logger::Category, unique_ptr<thread_pool>&,
 		ReadFile&& src, Source const& ext, fs::path const& dst) -> task<Song>;
 
-	// Call the provided function for each chart of the song.
-	template<callable<void(string_view, span<byte const>)> Func>
-	void for_each_chart(Func&&);
+	// Return all charts of the song.
+	auto for_each_chart() -> generator<tuple<string_view, span<byte const>>>;
 
 	// Load the requested file.
 	auto load_file(string_view filepath) -> span<byte const>;
@@ -204,11 +203,10 @@ inline auto Song::from_source_append(Logger::Category cat, unique_ptr<thread_poo
 	co_return Song{cat, read_file(dst)};
 }
 
-template<callable<void(string_view, span<byte const>)> Func>
-void Song::for_each_chart(Func&& func)
+inline auto Song::for_each_chart() -> generator<tuple<string_view, span<byte const>>>
 {
 	for (auto [path, ptr, size]: lib::sqlite::query(select_charts))
-		func(path, span{static_cast<byte const*>(ptr), static_cast<size_t>(size)});
+		co_yield {path, span{static_cast<byte const*>(ptr), static_cast<size_t>(size)}};
 }
 
 inline auto Song::load_file(string_view filepath) -> span<byte const>
