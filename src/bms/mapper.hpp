@@ -28,8 +28,8 @@ public:
 	Mapper();
 	[[nodiscard]] auto from_key(KeyInput const&, Playstyle) -> optional<Input>;
 	[[nodiscard]] auto from_button(ButtonInput const&, Playstyle) -> optional<Input>;
-	[[nodiscard]] auto submit_axis_input(AxisInput const&, Playstyle) -> vector<Input>;
-	[[nodiscard]] auto from_axis_state(Playstyle) -> vector<Input>;
+	[[nodiscard]] auto submit_axis_input(AxisInput const&, Playstyle) -> static_vector<Input, 2>;
+	[[nodiscard]] auto from_axis_state(Playstyle) -> static_vector<Input, 2>;
 
 private:
 	struct ConBinding {
@@ -219,7 +219,7 @@ inline auto Mapper::from_button(ButtonInput const& button, Playstyle playstyle) 
 	};
 }
 
-inline auto Mapper::submit_axis_input(AxisInput const& axis, Playstyle playstyle) -> vector<Input>
+inline auto Mapper::submit_axis_input(AxisInput const& axis, Playstyle playstyle) -> static_vector<Input, 2>
 {
 	auto const& playstyle_binds = axis_bindings[+playstyle];
 	auto input = ConBinding{axis.controller, axis.axis};
@@ -233,7 +233,7 @@ inline auto Mapper::submit_axis_input(AxisInput const& axis, Playstyle playstyle
 	auto& tt_state = turntable_states[+playstyle][tt_idx];
 	if (tt_state.value == axis.value) return {};
 
-	auto inputs = vector<Input>{};
+	auto inputs = static_vector<Input, 2>{};
 	auto lane = tt_idx == 0? Lane::Type::P1_KeyS : Lane::Type::P2_KeyS;
 	auto current_direction = tt_direction(tt_state.value, axis.value);
 	auto& last = last_input[+playstyle][+lane];
@@ -265,10 +265,10 @@ inline auto Mapper::submit_axis_input(AxisInput const& axis, Playstyle playstyle
 	return inputs;
 }
 
-inline auto Mapper::from_axis_state(Playstyle playstyle) -> vector<Input>
+inline auto Mapper::from_axis_state(Playstyle playstyle) -> static_vector<Input, 2>
 {
 	auto& turntables = turntable_states[+playstyle];
-	auto inputs = vector<Input>{};
+	auto inputs = static_vector<Input, 2>{};
 
 	// Handle delayed stopping
 	for (auto [lane, tt]: views::zip(
