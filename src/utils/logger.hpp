@@ -13,7 +13,6 @@ or distributed except according to those terms.
 #include "quill/sinks/FileSink.h"
 #include "quill/LogMacros.h"
 #include "quill/Frontend.h"
-#include "quill/Backend.h"
 #include "quill/Logger.h"
 #include "preamble.hpp"
 #include "utils/service.hpp"
@@ -134,69 +133,6 @@ private:
 	shared_ptr<quill::ConsoleSink> console_sink;
 	shared_ptr<quill::FileSink> file_sink;
 };
-
-inline Logger::StringLogger::StringLogger(string_view name, Logger::Level level)
-{
-	auto name_str = string{name};
-	sink = static_pointer_cast<MemorySink>(quill::Frontend::create_or_get_sink<MemorySink>(name_str));
-	category = quill::Frontend::create_or_get_logger(name_str, {sink}, Pattern);
-	category->set_log_level(level);
-}
-
-inline Logger::StringLogger::~StringLogger()
-{
-	quill::Frontend::remove_logger(category);
-}
-
-inline auto Logger::StringLogger::get_buffer() -> string
-{
-	category->flush_log();
-	return sink->get_buffer();
-}
-
-inline auto Logger::StringLogger::MemorySink::get_buffer() -> string
-{
-	auto out_buffer = move(buffer);
-	buffer = string{};
-	return out_buffer;
-}
-
-inline Logger::Logger(string_view log_file_path, Level global_log_level)
-{
-	quill::Backend::start<quill::FrontendOptions>({
-		.thread_name = "Logging",
-		.enable_yield_when_idle = true,
-		.sleep_duration = 0ns,
-		.error_notifier = [&](string const& msg) { WARN_AS(global, "{}", msg); },
-		.check_printable_char = {}, // Allow UTF-8
-		.log_level_short_codes = ShortCodes,
-	}, quill::SignalHandlerOptions{});
-
-	console_sink = static_pointer_cast<quill::ConsoleSink>(
-		quill::Frontend::create_or_get_sink<quill::ConsoleSink>("console"));
-
-	auto file_cfg = quill::FileSinkConfig{};
-	file_cfg.set_open_mode('w');
-	file_sink = static_pointer_cast<quill::FileSink>(
-		quill::Frontend::create_or_get_sink<quill::FileSink>(string{log_file_path}, file_cfg));
-
-	global = create_category("Global", global_log_level);
-}
-
-inline auto Logger::create_category(string_view name, Level level, bool log_to_console, bool log_to_file) -> Category
-{
-	auto* category = quill::Frontend::create_or_get_logger(string{name}, {
-		log_to_console? console_sink : nullptr,
-		log_to_file? file_sink : nullptr
-	}, Pattern);
-	category->set_log_level(level);
-	return category;
-}
-
-inline auto Logger::create_string_logger(string_view name, Level level) -> StringLogger
-{
-	return StringLogger{name, level};
-}
 
 }
 
