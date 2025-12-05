@@ -211,7 +211,8 @@ static void render_gameplay(gfx::Renderer::Queue& queue, GameState& state)
 	auto& score = *context.score;
 
 	// Update scoring
-	context.cursor->each_judgment_event([&](auto&& ev) { score.submit_judgment_event(move(ev)); });
+	for (auto&& ev: context.cursor->pending_judgment_events())
+		score.submit_judgment_event(move(ev));
 
 	lib::imgui::begin_window("info", {860, 8}, 412, lib::imgui::WindowStyle::Static);
 	show_metadata(context);
@@ -219,7 +220,7 @@ static void render_gameplay(gfx::Renderer::Queue& queue, GameState& state)
 	show_playback_controls(state);
 	lib::imgui::text("");
 	show_scroll_speed_controls(context.scroll_speed);
-	context.playfield->enqueue(queue, context.scroll_speed);
+	context.playfield->enqueue(queue, context.scroll_speed, context.offset);
 	lib::imgui::end_window();
 
 	lib::imgui::begin_window("judgements", {860, 436}, 120, lib::imgui::WindowStyle::Static);

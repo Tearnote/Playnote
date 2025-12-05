@@ -26,7 +26,7 @@ public:
 
 	Playfield(Transform, float height, bms::Cursor const&, bms::Score const&);
 
-	void enqueue(Renderer::Queue&, float scroll_speed);
+	void enqueue(Renderer::Queue&, float scroll_speed, nanoseconds offset);
 
 private:
 	struct Field {
@@ -92,7 +92,7 @@ inline Playfield::Playfield(Transform transform, float height, bms::Cursor const
 	size = {offset, height};
 }
 
-inline void Playfield::enqueue(Renderer::Queue& queue, float scroll_speed)
+inline void Playfield::enqueue(Renderer::Queue& queue, float scroll_speed, nanoseconds offset)
 {
 	static constexpr auto JudgmentLineHeight = 4.5f;
 	static constexpr auto LanePressedMargin = 3.0f;
@@ -112,23 +112,23 @@ inline void Playfield::enqueue(Renderer::Queue& queue, float scroll_speed)
 	scroll_speed /= 4.0f; // 1 beat -> 1 standard measure
 	scroll_speed *= 120.0f / cursor.get_chart().metadata.bpm_range.main; // Normalize to 120 BPM
 	auto const max_distance = 1.0f / scroll_speed;
-	cursor.upcoming_notes(max_distance, [&](bms::Note const& note, auto type, auto idx, auto distance) {
-		auto& lane = lanes[+type];
-		auto existing = find(lane, idx, &Note::lane_idx);
+	for (auto&& note: cursor.upcoming_notes(max_distance, offset, true)) {
+		auto& lane = lanes[+note.lane];
+		auto existing = find(lane, note.lane_idx, &Note::lane_idx);
 		if (existing == lane.end()) {
 			lane.emplace_back(Note{
-				.type = lane_to_note_type(type),
-				.lane_idx = idx,
-				.transform = globals::create_child_transform(lane_offsets[+type],
-					0.0f, (1.0f - (distance / max_distance)) * size.y()),
-				.ln_height = note.type_is<bms::Note::LN>()?
-					note.params<bms::Note::LN>().height / max_distance * size.y() :
+				.type = lane_to_note_type(note.lane),
+				.lane_idx = note.lane_idx,
+				.transform = globals::create_child_transform(lane_offsets[+note.lane],
+					0.0f, (1.0f - (note.distance / max_distance)) * size.y()),
+				.ln_height = note.note.type_is<bms::Note::LN>()?
+					note.note.params<bms::Note::LN>().height / max_distance * size.y() :
 					0.0f,
 			});
 		} else {
-			existing->transform->position.y() = (1.0f - (distance / max_distance)) * size.y();
+			existing->transform->position.y() = (1.0f - (note.distance / max_distance)) * size.y();
 		}
-	});
+	}
 
 	// Enqueue lane backgrounds and hold display
 	for (auto [idx, lane, lane_transform]: views::zip(views::iota(0), lanes, lane_offsets)) {

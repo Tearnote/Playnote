@@ -63,9 +63,8 @@ public:
 	// true if a lane is currently being held, false otherwise.
 	[[nodiscard]] auto is_pressed(Lane::Type lane) const -> bool { return lane_progress[+lane].pressed; }
 
-	// Call the provided function for every pending judgment event.
-	template<callable<void(JudgmentEvent&&)> Func>
-	void each_judgment_event(Func&& func);
+	// Return every judgment event since the last time this was called.
+	auto pending_judgment_events() -> generator<JudgmentEvent>;
 
 	// Progress by one audio sample, calling the provided function once for every newly started sound.
 	// Can be optionally provided with inputs that will affect chart playback (ignored if autoplay).
@@ -87,17 +86,17 @@ public:
 	// driven automatically. Otherwise, functions as a fast-forward.
 	void seek_relative(isize_t sample_offset);
 
-	// Call the provided function for every note less than max_units away from current position.
-	// Signature of the callback:
-	// - Note data,
-	// - Lane type,
-	// - Index of the note within the lane,
-	// - Distance from current position in units.
-	template<callable<void(Note const&, Lane::Type, isize_t, float)> Func>
-	void upcoming_notes(float max_units, Func&& func, nanoseconds offset = 0ns, bool adjust_for_latency = false) const;
+	// Return every note less than max_units away from current position.
+	struct UpcomingNote {
+		Note const& note;
+		Lane::Type lane;
+		isize_t lane_idx;
+		float distance; // From current chart position, in units
+	};
+	auto upcoming_notes(float max_units, nanoseconds offset = 0ns, bool adjust_for_latency = false) const -> generator<UpcomingNote>;
 
 	// For a given lane, return the index of the next note to be judged. Every note with a smaller
-	// index should not be visible.
+	// index has already been judged and should not be visible to the player.
 	auto next_note_idx(Lane::Type lane) const -> isize_t { return lane_progress[+lane].next_note; }
 
 	Cursor(Cursor const& other) { *this = other; }
@@ -136,12 +135,10 @@ inline Cursor::Cursor(shared_ptr<Chart const> chart, bool autoplay):
 	}
 }
 
-template<callable<void(Cursor::JudgmentEvent&&)> Func>
-void Cursor::each_judgment_event(Func&& func)
+inline auto Cursor::pending_judgment_events() -> generator<JudgmentEvent>
 {
 	auto event = JudgmentEvent{};
-	while (judgment_events.try_dequeue(event))
-		func(move(event));
+	while (judgment_events.try_dequeue(event)) co_yield move(event);
 }
 
 template<callable<void(Cursor::SoundEvent)> Func>
@@ -230,8 +227,7 @@ inline void Cursor::seek_relative(isize_t sample_offset)
 	for (auto _: views::iota(0z, sample_offset)) advance_one_sample([](auto){});
 }
 
-template<callable<void(Note const&, Lane::Type, isize_t, float)> Func>
-void Cursor::upcoming_notes(float max_units, Func&& func, nanoseconds offset, bool adjust_for_latency) const
+inline auto Cursor::upcoming_notes(float max_units, nanoseconds offset, bool adjust_for_latency) const -> generator<UpcomingNote>
 {
 	auto const latency_adjustment = adjust_for_latency? -globals::mixer->get_latency() : 0ns;
 	auto const progress_timestamp = globals::mixer->get_audio().samples_to_ns(sample_progress, chart->media.sampling_rate) + latency_adjustment - offset;
@@ -248,7 +244,12 @@ void Cursor::upcoming_notes(float max_units, Func&& func, nanoseconds offset, bo
 		)) {
 			auto const distance = note.y_pos - current_y;
 			if (distance > max_units) break;
-			func(note, static_cast<Lane::Type>(idx), note_idx, distance);
+			co_yield UpcomingNote{
+				.note = note,
+				.lane = static_cast<Lane::Type>(idx),
+				.lane_idx = note_idx,
+				.distance = static_cast<float>(distance),
+			};
 		}
 	}
 }
