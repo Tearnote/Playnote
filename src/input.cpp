@@ -59,13 +59,13 @@ static void run_input(Broadcaster& broadcaster, dev::Window& window, Logger::Cat
 
 		// Poll and handle input events
 		globals::glfw->poll();
-		con_dispatcher.poll([&](auto event) {
+		for (auto event: con_dispatcher.poll()) {
 			visit([&](auto&& e) {
 				for (auto& queue: input_queues) {
 					queue->enqueue(move(e));
 				}
 			}, event);
-		});
+		}
 		yield();
 	}
 }

@@ -21,11 +21,11 @@ namespace playnote::dev {
 
 class ControllerDispatcher {
 public:
+	using ControllerEvent = variant<ButtonInput, AxisInput>;
+
 	explicit ControllerDispatcher(Logger::Category);
 
-	using ControllerEvent = variant<ButtonInput, AxisInput>;
-	template<callable<void(ControllerEvent)> Func>
-	void poll(Func&&);
+	auto poll() -> generator<ControllerEvent>;
 
 private:
 	InstanceLimit<ControllerDispatcher, 1> instance_limit;
@@ -52,8 +52,7 @@ inline ControllerDispatcher::ControllerDispatcher(Logger::Category cat):
 	glfwSetJoystickCallback(joystick_event_callback);
 }
 
-template<callable<void(ControllerDispatcher::ControllerEvent)> Func>
-void ControllerDispatcher::poll(Func&& func)
+inline auto ControllerDispatcher::poll() -> generator<ControllerEvent>
 {
 	for (auto jid: views::iota(GLFW_JOYSTICK_1, GLFW_JOYSTICK_LAST + 1)) {
 		if (!glfwJoystickPresent(jid)) continue;
@@ -65,12 +64,12 @@ void ControllerDispatcher::poll(Func&& func)
 		for (auto [idx, previous, current_raw]: views::zip(views::iota(0), controller.buttons, buttons)) {
 			auto current = current_raw == +lib::glfw::Action::Press;
 			if (previous == current) continue;
-			func(ControllerEvent{ButtonInput{
+			co_yield ControllerEvent{ButtonInput{
 				.controller = controller.id,
 				.timestamp = globals::glfw->get_time(),
 				.button = idx,
 				.state = current,
-			}});
+			}};
 			previous = current;
 		}
 
@@ -79,12 +78,12 @@ void ControllerDispatcher::poll(Func&& func)
 		auto axes = span{axes_ptr, static_cast<size_t>(axes_count)};
 		for (auto [idx, previous, current]: views::zip(views::iota(0), controller.axes, axes)) {
 			if (previous == current) continue;
-			func(ControllerEvent{AxisInput{
+			co_yield ControllerEvent{AxisInput{
 				.controller = controller.id,
 				.timestamp = globals::glfw->get_time(),
 				.axis = idx,
 				.value = current,
-			}});
+			}};
 			previous = current;
 		}
 	}
