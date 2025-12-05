@@ -483,11 +483,10 @@ inline auto Library::import_one(fs::path path) -> task<>
 
 		// Collect MD5s of charts to add
 		auto source = io::Source{path};
-		source.for_each_file([&](auto ref) {
-			if (!io::has_extension(ref.get_path(), io::BMSExtensions)) return true;
+		for (auto&& ref: source.for_each_file()) {
+			if (!io::has_extension(ref.get_path(), io::BMSExtensions)) continue;
 			charts.emplace_back(lib::openssl::md5(ref.read()));
-			return true;
-		});
+		}
 
 		// Check if any running task is a duplicate of this one
 		auto lock = co_await staging_lock.scoped_lock();

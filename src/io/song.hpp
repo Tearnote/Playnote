@@ -144,20 +144,19 @@ inline auto Song::from_source(Logger::Category cat, unique_ptr<thread_pool>& poo
 	auto optimized_files = co_await optimize_files(cat, pool, src, [](auto const&) { return true; });
 
 	auto wrote_something = false;
-	src.for_each_file([&](auto ref) {
+	for (auto&& ref: src.for_each_file()) {
 		auto path = ref.get_path();
 		auto optimized = optimized_files.find(path);
 		if (optimized != optimized_files.end()) {
 			auto [opt_path, opt_data] = optimized->second;
 			lib::archive::write_entry(ar, opt_path, opt_data);
 			wrote_something = true;
-			return true;
+			continue;
 		}
 		auto data = ref.read();
 		lib::archive::write_entry(ar, path, data);
 		wrote_something = true;
-		return true;
-	});
+	}
 
 	if (!wrote_something)
 		throw runtime_error_fmt("Failed to create library zip from \"{}\": empty archive", src.get_path());
@@ -185,19 +184,18 @@ inline auto Song::from_source_append(Logger::Category cat, unique_ptr<thread_poo
 	});
 
 	// Append missing files
-	ext.for_each_file([&](auto ref) {
+	for (auto&& ref: ext.for_each_file()) {
 		auto path = ref.get_path();
-		if (written_paths.contains(path.string())) return true;
+		if (written_paths.contains(path.string())) continue;
 		auto optimized = optimized_files.find(path);
 		if (optimized != optimized_files.end()) {
 			auto [opt_path, opt_data] = optimized->second;
 			lib::archive::write_entry(ar, opt_path, opt_data);
-			return true;
+			continue;
 		}
 		auto data = ref.read();
 		lib::archive::write_entry(ar, path, data);
-		return true;
-	});
+	}
 
 	ar.reset(); // Finalize archive
 	co_return Song{cat, read_file(dst)};
@@ -281,15 +279,14 @@ auto Song::optimize_files(Logger::Category cat, unique_ptr<thread_pool>& pool, S
 	// when_all requires an ordered container
 	auto optimize_tasks = vector<task<pair<fs::path, vector<byte>>>>{};
 	auto optimized_paths = vector<fs::path>{};
-	src.for_each_file([&](auto ref) {
+	for (auto&& ref: src.for_each_file()) {
 		auto path = ref.get_path();
-		if (!filter(path)) return true;
-		if (!has_extension(path, WastefulAudioExtensions)) return true;
+		if (!filter(path)) continue;
+		if (!has_extension(path, WastefulAudioExtensions)) continue;
 		auto data = ref.read_owned();
 		optimized_paths.emplace_back(path);
 		optimize_tasks.emplace_back(schedule_task_on(pool, optimize_audio(cat, move(path), move(data))));
-		return true;
-	});
+	}
 	auto optimize_results = co_await when_all(move(optimize_tasks));
 
 	// Convert results to a hashmap for faster lookup

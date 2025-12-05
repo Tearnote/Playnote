@@ -56,10 +56,8 @@ public:
 
 	auto is_archive() const -> bool { return archive.has_value(); }
 
-	// Call the provided method for each contained file. Recurses into subfolders.
-	// Return false from the callback to abort iteration.
-	template<callable<bool(FileReference)> Func>
-	void for_each_file(Func&& func) const;
+	// Return every contained file. Recurses into subfolders.
+	auto for_each_file() const -> generator<FileReference>;
 
 private:
 	struct ArchiveDetails {
@@ -137,8 +135,7 @@ inline Source::Source(fs::path const& path):
 	}
 }
 
-template<callable<bool(Source::FileReference)> Func>
-void Source::for_each_file(Func&& func) const {
+inline auto Source::for_each_file() const -> generator<FileReference> {
 	if (archive) {
 		auto ar = lib::archive::open_read(archive->file.contents);
 		for (auto pathname: lib::archive::for_each_entry(ar)) {
@@ -146,13 +143,13 @@ void Source::for_each_file(Func&& func) const {
 			auto const pathname_utf8 = lib::icu::to_utf8(pathname_bytes, archive->encoding);
 			auto rel_path = fs::relative(pathname_utf8, archive->prefix);
 			if (!rel_path.empty() && *rel_path.begin() == "..") continue;
-			if (!func(FileReference(rel_path, FileReference::ArchiveEntry{ar}))) break;
+			co_yield FileReference(rel_path, FileReference::ArchiveEntry{ar});
 		}
 	} else {
 		for (auto const& entry: fs::recursive_directory_iterator{path}) {
 			if (!entry.is_regular_file()) continue;
 			auto rel_path = fs::relative(entry.path(), path);
-			if (!func(FileReference(rel_path, FileReference::DirEntry{entry}))) break;
+			co_yield FileReference(rel_path, FileReference::DirEntry{entry});
 		}
 	}
 }
