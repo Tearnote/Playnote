@@ -30,6 +30,7 @@ add_executable(Playnote WIN32
 	src/lib/vuk.cpp
 	src/lib/os.cpp
 	src/io/file.cpp
+	src/io/song.cpp
 	src/gpu/shaders.cpp
 	src/utils/config.cpp
 	src/utils/logger.cpp
