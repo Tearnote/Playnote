@@ -20,7 +20,7 @@ namespace playnote::dev {
 ControllerDispatcher::ControllerDispatcher(Logger::Category cat):
 	cat{cat}
 {
-	static_assert(controllers.size() == GLFW_JOYSTICK_LAST + 1);
+	static_assert(tuple_size_v<decltype(controllers)> == GLFW_JOYSTICK_LAST + 1);
 	instance = this;
 	for (auto jid: views::iota(GLFW_JOYSTICK_1, GLFW_JOYSTICK_LAST + 1))
 		if (glfwJoystickPresent(jid)) joystick_event_callback(jid, GLFW_CONNECTED);
