@@ -60,14 +60,6 @@ private:
 	void mix(span<dev::Sample>);
 };
 
-inline Mixer::Mixer(Logger::Category cat):
-	cat{cat},
-	// This might call mix() in another thread before initialization is finished, but we quit early
-	// if no generators were added yet
-	audio{cat, [this](span<dev::Sample> buffer) { this->mix(buffer); }},
-	limiter{audio.get_sampling_rate(), 1ms, 10ms, 100ms}
-{}
-
 template<implements<Generator> T>
 void Mixer::add_generator(T& generator) {
 	auto lock = lock_guard{generator_lock};
@@ -84,25 +76,6 @@ void Mixer::remove_generator(T& generator)
 	auto lock = lock_guard{generator_lock};
 	generators.erase(&generator);
 	TRACE_AS(cat, "Removed generator from the mixer");
-}
-
-inline void Mixer::mix(span<dev::Sample> buffer)
-{
-	// This should only block during startup/shutdown and loadings
-	auto lock = lock_guard{generator_lock};
-	if (generators.empty()) return;
-
-	for (auto const& generator: generators)
-		generator.second.begin_buffer();
-	for (auto& dest: buffer) {
-		auto next = dev::Sample{};
-		for (auto const& generator: generators) {
-			auto const sample = generator.second.next_sample();
-			next.left += sample.left;
-			next.right += sample.right;
-		}
-		dest = limiter.process(next);
-	}
 }
 
 }
