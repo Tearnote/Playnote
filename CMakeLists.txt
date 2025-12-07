@@ -40,6 +40,7 @@ add_executable(Playnote WIN32
 	src/gfx/playfield.cpp
 	src/gfx/renderer.cpp
 	src/bms/builder.cpp
+	src/bms/library.cpp
 	src/bms/cursor.cpp
 	src/utils/config.cpp
 	src/utils/logger.cpp
