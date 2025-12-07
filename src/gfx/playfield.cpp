@@ -265,9 +265,9 @@ auto Playfield::lane_background_color(bms::Lane::Type type) const -> float4
 {
 	auto const note_type = lane_to_note_type(type);
 	switch (note_type) {
+		case Note::Type::Odd:     return {0.035f, 0.035f, 0.035f, 1.000f};
 		case Note::Type::Scratch:
-		case Note::Type::Odd:     return {0.000f, 0.000f, 0.000f, 1.000f};
-		case Note::Type::Even:    return {0.035f, 0.035f, 0.035f, 1.000f};
+		case Note::Type::Even:    return {0.000f, 0.000f, 0.000f, 1.000f};
 		default: PANIC();
 	}
 }
