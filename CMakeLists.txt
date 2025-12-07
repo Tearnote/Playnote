@@ -43,6 +43,7 @@ add_executable(Playnote WIN32
 	src/bms/library.cpp
 	src/bms/cursor.cpp
 	src/bms/mapper.cpp
+	src/bms/score.cpp
 	src/utils/config.cpp
 	src/utils/logger.cpp
 	src/render.cpp
