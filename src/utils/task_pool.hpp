@@ -20,16 +20,12 @@ namespace playnote {
 
 // Launch a fire-and-forget task on a thread pool.
 inline void launch_task_on(unique_ptr<thread_pool>& pool, task<>&& t)
-{
-	pool->spawn(move(t));
-}
+{ pool->spawn(move(t)); }
 
 // Schedule a task on the thread pool. The task will execute once the returned task is awaited.
 template<typename T>
 auto schedule_task_on(unique_ptr<thread_pool>& pool, task<T>&& t) -> task<T>
-{
-	return pool->schedule(move(t));
-}
+{ return pool->schedule(move(t)); }
 
 // Launch a task on the thread pool and return a future to its result, so that its result can be polled synchronously.
 template<typename T>

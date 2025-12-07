@@ -73,9 +73,7 @@ public:
 				std::string_view /** log_level_short_code **/,
 				std::vector<std::pair<std::string, std::string>> const* /** named_args **/,
 				std::string_view /** log_message **/, std::string_view log_statement) override
-			{
-				buffer.append(log_statement);
-			}
+			{ buffer.append(log_statement); }
 
 			auto get_buffer() -> string;
 
@@ -92,11 +90,6 @@ public:
 		};
 
 		friend class Logger;
-
-		static inline auto const Pattern = quill::PatternFormatterOptions{
-			"%(time) [%(log_level_short_code)] %(message)",
-			"%H:%M:%S.%Qms"
-		};
 
 		string buffer;
 		shared_ptr<MemorySink> sink;
@@ -121,15 +114,6 @@ public:
 	auto create_string_logger(string_view name, Level = Level::TraceL1) -> StringLogger;
 
 private:
-	static inline auto const Pattern = quill::PatternFormatterOptions{
-		"%(time) [%(log_level_short_code)] [%(logger)] %(message)",
-		"%H:%M:%S.%Qms"
-	};
-	static inline auto const ShortCodes = to_array<string>({
-		"TR3", "TR2", "TRA", "DBG", "INF", "NTC",
-		"WRN", "ERR", "CRT", "BCT", "___"
-	});
-
 	shared_ptr<quill::ConsoleSink> console_sink;
 	shared_ptr<quill::FileSink> file_sink;
 };

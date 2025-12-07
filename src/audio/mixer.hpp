@@ -24,8 +24,10 @@ public:
 	void begin_buffer() = delete;
 };
 
+// Audio mixer of an arbitrary number of audio generators.
 class Mixer {
 public:
+	// Initialize, attaching to the global audio device.
 	explicit Mixer(Logger::Category);
 
 	// Register an audio generator. A generator is any object that implements the member function

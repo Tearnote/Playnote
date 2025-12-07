@@ -15,18 +15,20 @@ namespace playnote::io {
 
 // Lists of the various known extensions.
 
-static constexpr auto BMSExtensions = to_array({
+static constexpr auto BMSExtensions = {
 	".bms"sv, ".bme"sv, ".bml"sv, ".pms"sv
-});
-static constexpr auto AudioExtensions = to_array({
+};
+static constexpr auto AudioExtensions = {
 	".wav"sv, ".mp3"sv, ".ogg"sv, ".flac"sv, ".wma"sv, ".m4a"sv, ".opus"sv, ".aac"sv, ".aiff"sv, ".aif"sv
-});
-static constexpr auto WastefulAudioExtensions = to_array({
+};
+static constexpr auto WastefulAudioExtensions = {
 	".wav"sv, ".aiff"sv, ".aif"sv
-});
+};
 
 // Text encodings expected to be used by BMS content.
-static constexpr auto KnownEncodings = {"UTF-8"sv, "Shift_JIS"sv, "EUC-KR"sv};
+static constexpr auto KnownEncodings = {
+	"UTF-8"sv, "Shift_JIS"sv, "EUC-KR"sv
+};
 
 // A file open for reading. Contents represents the entire length of the file mapped into memory.
 // Map is a RAII wrapper ensuring contents are available.

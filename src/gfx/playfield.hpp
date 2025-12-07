@@ -17,12 +17,16 @@ or distributed except according to those terms.
 
 namespace playnote::gfx {
 
+// A visual representation of a playing chart.
 class Playfield {
 public:
+	// Overall position of the playfield. Freely editable.
 	TransformRef transform;
 
+	// Create a playfield rendering a given cursor state and certain score details.
 	Playfield(Transform, float height, bms::Cursor const&, bms::Score const&);
 
+	// Render the playfield at the cursor's and score's current states.
 	void enqueue(Renderer::Queue&, float scroll_speed, nanoseconds offset);
 
 private:

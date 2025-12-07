@@ -21,12 +21,24 @@ struct Input {
 	bool state; // true for pressed, false for released
 };
 
+// Converter of input events to logical inputs via configurable bindings.
 class Mapper {
 public:
+	// Initialize the bindings.
 	Mapper();
+
+	// Convert a key input to a logical input. If there is no binding for the key, return nullopt.
 	[[nodiscard]] auto from_key(KeyInput const&, Playstyle) -> optional<Input>;
+
+	// Convert a button input to a logical input. If there is no binding for the button, return nullopt.
 	[[nodiscard]] auto from_button(ButtonInput const&, Playstyle) -> optional<Input>;
+
+	// Submit an axis input for the mapper's axis state tracking. This might return any number of
+	// inputs from 0 to 2.
 	[[nodiscard]] auto submit_axis_input(AxisInput const&, Playstyle) -> static_vector<Input, 2>;
+
+	// Call this even if no axis inputs are available to see if any axis input events are being
+	// generated due to delayed effects.
 	[[nodiscard]] auto from_axis_state(Playstyle) -> static_vector<Input, 2>;
 
 private:

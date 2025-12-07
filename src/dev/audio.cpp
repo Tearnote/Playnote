@@ -33,7 +33,7 @@ Audio::Audio(Logger::Category cat, function<void(span<Sample>)> generator):
 		duration_cast<milliseconds>(lib::audio_latency(context->properties)).count());
 }
 
-Audio::~Audio()
+Audio::~Audio() noexcept
 {
 #ifdef TARGET_LINUX
 	lib::pw::cleanup(move(context));

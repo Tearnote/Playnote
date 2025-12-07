@@ -19,6 +19,7 @@ inline constexpr auto AppVersion = to_array({0u, 0u, 4u});
 #error Build type incorrectly defined
 #endif
 
+// Build target platform
 #ifdef _WIN32
 #define TARGET_WINDOWS
 #elifdef __linux__
@@ -43,6 +44,10 @@ inline constexpr auto ConfigPath = "config.toml"sv;
 
 inline constexpr auto LibraryPath = "library"sv;
 inline constexpr auto LibraryDBPath = "library.db"sv;
+
+// Asset locations
+
+inline constexpr auto FontPath = "assets/MPLUS2Variable.ttf"sv;
 
 // Global runtime configuration, kept in sync with the config file.
 class Config {

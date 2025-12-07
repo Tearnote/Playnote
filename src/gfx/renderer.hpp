@@ -17,14 +17,15 @@ or distributed except according to those terms.
 
 namespace playnote::gfx {
 
+// Renderer of all on-screen shapes and glyphs.
 class Renderer {
 public:
 #include "gpu/shared/primitive.slang.h"
 
 	static constexpr auto VirtualViewportSize = float2{900.0f, 480.0f};
-	static constexpr auto VirtualViewportMargin = 40.0f;
-	static constexpr auto FontPath = "assets/MPLUS2Variable.ttf";
+	static constexpr auto VirtualViewportMargin = 40.0f; // in logical pixels
 
+	// Properties shared by all shapes.
 	struct Drawable {
 		float2 position; // Center of the shape
 		float2 velocity; // Delta from previous frame's position
@@ -75,6 +76,7 @@ public:
 		[[nodiscard]] auto to_primitive_list() const -> vector<Primitive>;
 	};
 
+	// Create a renderer for the given window. Manages the window's GPU context.
 	Renderer(dev::Window&, Logger::Category);
 
 	// Provide a queue to the function argument, and then draw contents of the queue to the screen.

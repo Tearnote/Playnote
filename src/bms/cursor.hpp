@@ -15,6 +15,7 @@ or distributed except according to those terms.
 
 namespace playnote::bms {
 
+// A tracker of chart progress. Produces audio sample start and note hit events as it advances.
 class Cursor {
 public:
 	// Time window during which a note can be hit. No judgment and no impact on note progress happens outside of this.

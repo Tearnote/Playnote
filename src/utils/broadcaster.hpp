@@ -20,6 +20,7 @@ struct Barriers {
 	latch shutdown{N}; // Threads wait on this before exiting
 };
 
+// A cross-thread message bus.
 class Broadcaster {
 public:
 	Broadcaster() = default;

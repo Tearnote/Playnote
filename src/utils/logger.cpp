@@ -14,11 +14,26 @@ or distributed except according to those terms.
 
 namespace playnote {
 
+static auto const StringLoggerPattern = quill::PatternFormatterOptions{
+	"%(time) [%(log_level_short_code)] %(message)",
+	"%H:%M:%S.%Qms"
+};
+
+static auto const LoggerPattern = quill::PatternFormatterOptions{
+	"%(time) [%(log_level_short_code)] [%(logger)] %(message)",
+	"%H:%M:%S.%Qms"
+};
+
+static auto const ShortCodes = to_array<string>({
+	"TR3", "TR2", "TRA", "DBG", "INF", "NTC",
+	"WRN", "ERR", "CRT", "BCT", "___"
+});
+
 Logger::StringLogger::StringLogger(string_view name, Logger::Level level)
 {
 	auto name_str = string{name};
 	sink = static_pointer_cast<MemorySink>(quill::Frontend::create_or_get_sink<MemorySink>(name_str));
-	category = quill::Frontend::create_or_get_logger(name_str, {sink}, Pattern);
+	category = quill::Frontend::create_or_get_logger(name_str, {sink}, StringLoggerPattern);
 	category->set_log_level(level);
 }
 
@@ -67,7 +82,7 @@ auto Logger::create_category(string_view name, Level level, bool log_to_console,
 	auto* category = quill::Frontend::create_or_get_logger(string{name}, {
 		log_to_console? console_sink : nullptr,
 		log_to_file? file_sink : nullptr
-	}, Pattern);
+	}, LoggerPattern);
 	category->set_log_level(level);
 	return category;
 }

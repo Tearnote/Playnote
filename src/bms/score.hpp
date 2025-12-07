@@ -14,19 +14,23 @@ or distributed except according to those terms.
 
 namespace playnote::bms {
 
+// A tracker of a player's ongoing score from playing a chart.
 class Score {
 public:
+	// Judgment windows, extending from the note timestamp in both directions.
 	static constexpr auto   PGreatWindow =  18ms;
 	static constexpr auto    GreatWindow =  36ms;
 	static constexpr auto     GoodWindow = 120ms;
 	static constexpr auto      BadWindow = 240ms;
 	static constexpr auto LNEarlyRelease = 120ms;
 
+	// Overall score rank.
 	enum class Rank {
 		AAA, AA, A,
 		B, C, D, E, F,
 	};
 
+	// A single judgment's rank.
 	enum class JudgmentType {
 		PGreat,
 		Great,
@@ -35,6 +39,7 @@ public:
 		Poor,
 	};
 
+	// In which direction the player's hit was off.
 	enum class Timing {
 		None, // Misses
 		Early,
@@ -42,12 +47,14 @@ public:
 		Late,
 	};
 
+	// A judgment of a player's note hit.
 	struct Judgment {
 		JudgmentType type;
 		Timing timing;
 		nanoseconds timestamp;
 	};
 
+	// Histogram of all judgments so far.
 	struct JudgeTotals {
 		array<ssize_t, enum_count<JudgmentType>()> types;
 		array<ssize_t, enum_count<Timing>()> timings;
@@ -61,9 +68,7 @@ public:
 
 	// Return the latest judgment on given playfield.
 	[[nodiscard]] auto get_latest_judgment(int field_idx) const -> optional<Judgment>
-	{
-		return latest_judgement[field_idx];
-	}
+	{ return latest_judgement[field_idx]; }
 
 	// Return the number of playable notes that were already judged.
 	[[nodiscard]] auto get_judged_notes() const -> ssize_t { return notes_judged; }

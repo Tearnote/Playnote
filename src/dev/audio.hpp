@@ -30,7 +30,7 @@ class Audio {
 public:
 	// Initialize the audio device. The provider generator function is called repeatedly to fill in the sample buffer.
 	Audio(Logger::Category, function<void(span<Sample>)> generator);
-	~Audio();
+	~Audio() noexcept;
 
 	// Return current sampling rate. The value is only valid while an Audio instance exists.
 	[[nodiscard]] auto get_sampling_rate() -> int { return ASSERT_VAL(context->properties.sampling_rate); }

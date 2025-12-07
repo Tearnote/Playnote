@@ -16,6 +16,7 @@ or distributed except according to those terms.
 
 namespace playnote::bms {
 
+// Database of all available charts. Searchable, and can import new charts from folders and archives.
 class Library {
 public:
 	// Minimal metadata about a chart in the library.
@@ -27,7 +28,7 @@ public:
 	// Open an existing library, or create an empty one at the provided path.
 	// The thread pool passed in will be used for import jobs.
 	Library(Logger::Category, unique_ptr<thread_pool>&, fs::path const&);
-	~Library();
+	~Library() noexcept;
 
 	// Import a song and all its charts into the library. Returns instantly; the import happens in the background.
 	// All other methods are safe to call while an import is in progress.

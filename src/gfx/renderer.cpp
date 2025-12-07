@@ -10,6 +10,7 @@ or distributed except according to those terms.
 #include "gfx/renderer.hpp"
 
 #include "preamble.hpp"
+#include "utils/config.hpp"
 #include "lib/vuk.hpp"
 #include "gpu/shaders.hpp"
 

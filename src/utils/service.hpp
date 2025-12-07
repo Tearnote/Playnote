@@ -18,7 +18,6 @@ template<typename T>
 class Service {
 	class Stub;
 public:
-
 	// Create an instance of the underlying service. The service will be destroyed once
 	// the returned stub goes out of scope.
 	template<typename... Args>

@@ -33,8 +33,10 @@ struct FontDeleter {
 using Context = unique_resource<FT_LibraryRec_*, detail::ContextDeleter>;
 using Font = unique_resource<Font_t*, detail::FontDeleter>;
 
+// Create a Freetype context.
 auto init() -> Context;
 
+// Open a font file for reading.
 auto create_font(Context&, io::ReadFile&&) -> Font;
 
 }

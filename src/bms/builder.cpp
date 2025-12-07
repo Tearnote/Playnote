@@ -9,9 +9,24 @@ or distributed except according to those terms.
 
 #include "bms/builder.hpp"
 
+#include "preamble.hpp"
+#include "utils/task_pool.hpp"
+#include "utils/assert.hpp"
+#include "lib/ebur128.hpp"
+#include "lib/openssl.hpp"
+#include "lib/icu.hpp"
+#include "dev/audio.hpp"
+#include "io/file.hpp"
+#include "audio/renderer.hpp"
+#include "audio/mixer.hpp"
+
 #pragma once
 
 namespace playnote::bms {
+
+// BMS header commands which can be followed up with a slot value as part of the header.
+static constexpr auto CommandsWithSlots = {"WAV"sv, "BMP"sv, "BGA"sv, "BPM"sv, "TEXT"sv, "SONG"sv, "@BGA"sv,
+	"STOP"sv, "ARGB"sv, "SEEK"sv, "EXBPM"sv, "EXWAV"sv, "SWBGA"sv, "EXRANK"sv, "CHANGEOPTION"sv};
 
 Builder::Builder(Logger::Category cat):
 	cat{cat}

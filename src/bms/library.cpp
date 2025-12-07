@@ -38,7 +38,7 @@ Library::Library(Logger::Category cat, unique_ptr<thread_pool>& pool, fs::path c
 	INFO_AS(cat, "Opened song library at \"{}\"", path);
 }
 
-Library::~Library()
+Library::~Library() noexcept
 { stopping.store(true); }
 
 void Library::import(fs::path const& path)

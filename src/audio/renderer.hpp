@@ -15,6 +15,7 @@ or distributed except according to those terms.
 
 namespace playnote::audio {
 
+// An "offline" equivalent to audio/player. Instruments a cursor with sample playback, driven manually.
 class Renderer {
 public:
 	// Create a renderer for the given chart.

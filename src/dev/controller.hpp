@@ -15,12 +15,17 @@ or distributed except according to those terms.
 
 namespace playnote::dev {
 
+// Handler of controller connect/disconnect events. Dispatches controller input events.
 class ControllerDispatcher {
 public:
 	using ControllerEvent = variant<ButtonInput, AxisInput>;
 
+	// Initialize the dispatcher. Only one can exist at a time, since it handles all controllers
+	// globally.
 	explicit ControllerDispatcher(Logger::Category);
 
+	// Update state of all connected controllers. If a button state or axis value changed since
+	// the last poll, a corresponding event is generated.
 	auto poll() -> generator<ControllerEvent>;
 
 private:

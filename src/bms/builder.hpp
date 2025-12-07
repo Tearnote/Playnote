@@ -9,17 +9,8 @@ or distributed except according to those terms.
 
 #pragma once
 #include "preamble.hpp"
-#include "utils/task_pool.hpp"
-#include "utils/assert.hpp"
 #include "utils/logger.hpp"
-#include "lib/ebur128.hpp"
-#include "lib/openssl.hpp"
-#include "lib/icu.hpp"
-#include "dev/audio.hpp"
 #include "io/song.hpp"
-#include "io/file.hpp"
-#include "audio/renderer.hpp"
-#include "audio/mixer.hpp"
 #include "bms/chart.hpp"
 
 namespace playnote::bms {
@@ -36,10 +27,6 @@ public:
 		optional<reference_wrapper<Metadata>> cache = nullopt) -> task<shared_ptr<Chart const>>;
 
 private:
-	// BMS header commands which can be followed up with a slot value as part of the header.
-	static constexpr auto CommandsWithSlots = {"WAV"sv, "BMP"sv, "BGA"sv, "BPM"sv, "TEXT"sv, "SONG"sv, "@BGA"sv,
-		"STOP"sv, "ARGB"sv, "SEEK"sv, "EXBPM"sv, "EXWAV"sv, "SWBGA"sv, "EXRANK"sv, "CHANGEOPTION"sv};
-
 	// Whole part - measure, fractional part - position within measure.
 	using NotePosition = rational<int>;
 
@@ -59,7 +46,7 @@ private:
 		string_view value;
 	};
 
-	// This is out of RelativeNote so that it's not unique for each template argument.
+	// These types are outside of RelativeNote so that they're not unique for each template argument.
 	struct Simple {};
 	struct LNToggle {};
 	using RelativeNoteType = variant<Simple, LNToggle>;

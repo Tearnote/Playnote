@@ -17,13 +17,13 @@ or distributed except according to those terms.
 
 namespace playnote::audio {
 
+// Audio generator that drives any number of cursors, and plays back any triggered audio samples.
 class Player: public Generator {
 public:
 
-	// Create the Player and register it as an audio generator.
+	// Initialize and register as an audio generator with the mixer.
 	Player();
-
-	~Player() { globals::mixer->remove_generator(*this); }
+	~Player() noexcept { globals::mixer->remove_generator(*this); }
 
 	// Retrieve the input queue. Input events should be pushed to this queue.
 	auto get_input_queue() -> shared_ptr<spsc_queue<UserInput>> { return inbound_inputs; }
@@ -41,6 +41,7 @@ public:
 	void pause() { paused = true; }
 	void resume() { paused = false; }
 
+	// Generator interface.
 	void begin_buffer();
 	auto next_sample() -> dev::Sample;
 

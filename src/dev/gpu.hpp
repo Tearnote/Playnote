@@ -18,9 +18,10 @@ namespace playnote::dev {
 
 using lib::vuk::ManagedImage;
 
-// RAII encapsulation of GPU state, handling initialization and frame preparation/presentation
+// RAII encapsulation of GPU state, handling initialization and frame preparation/presentation.
 class GPU {
 public:
+	// Initialize the GPU context for the given window.
 	GPU(dev::Window&, Logger::Category);
 	~GPU() { runtime.wait_idle(); }
 

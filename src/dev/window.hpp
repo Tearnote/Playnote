@@ -46,6 +46,7 @@ public:
 	using MouseButton = lib::glfw::MouseButton;
 	using MouseButtonAction = lib::glfw::MouseButtonAction;
 
+	// Create the window. Size is given in logical pixels, so framebuffer size might differ.
 	Window(string_view title, int2 size);
 
 	// true if application close was requested (the X was pressed, or triggered manually from code
@@ -88,6 +89,7 @@ public:
 	// Destruction needs to be handled manually by the caller.
 	auto create_surface(lib::vk::Instance const&) -> lib::vk::Surface;
 
+	// Return current cursor position, relatively to the top-left corner of the window.
 	auto cursor_position() -> float2;
 
 	Window(Window const&) = delete;
