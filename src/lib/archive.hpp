@@ -53,15 +53,15 @@ void write_entry(WriteArchive&, fs::path const& pathname, span<byte const> data)
 // Write an entry into the archive. The provided function is called repeatedly to generate the
 // entry's contents, stopping once it returns nullopt.
 template<callable<optional<span<byte const>>()> Func>
-void write_entry(WriteArchive&, fs::path const& pathname, isize_t total_size, Func&&);
+void write_entry(WriteArchive&, fs::path const& pathname, ssize_t total_size, Func&&);
 
 namespace detail {
-void write_header_for(WriteArchive&, fs::path const& pathname, isize_t total_size);
+void write_header_for(WriteArchive&, fs::path const& pathname, ssize_t total_size);
 void write_data(WriteArchive&, span<byte const> data);
 }
 
 template<callable<optional<span<byte const>>()> Func>
-void write_entry(WriteArchive& archive, fs::path const& pathname, isize_t total_size, Func&& func)
+void write_entry(WriteArchive& archive, fs::path const& pathname, ssize_t total_size, Func&& func)
 {
 	detail::write_header_for(archive, pathname, total_size);
 	while (auto data = func()) detail::write_data(archive, data);

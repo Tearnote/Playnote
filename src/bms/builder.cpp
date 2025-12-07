@@ -521,7 +521,7 @@ auto Builder::build(unique_ptr<thread_pool>& pool, span<byte const> bms_raw, io:
 
 	// Offline audio render pass, handling all related statistics in one sweep
 	auto [loudness, audio_duration, preview] = [&] {
-		static constexpr auto BufferSize = 4096z / static_cast<isize_t>(sizeof(dev::Sample)); // One memory page
+		static constexpr auto BufferSize = 4096z / static_cast<ssize_t>(sizeof(dev::Sample)); // One memory page
 		auto renderer = audio::Renderer{chart};
 		auto ctx = lib::ebur128::init(sampling_rate);
 		auto buffer = vector<dev::Sample>{};
@@ -710,7 +710,7 @@ auto Builder::build(unique_ptr<thread_pool>& pool, span<byte const> bms_raw, io:
 	co_return chart;
 }
 
-auto Builder::slot_hex_to_int(string_view hex) -> isize_t
+auto Builder::slot_hex_to_int(string_view hex) -> ssize_t
 {
 	auto result = 0z;
 	for (auto const c: hex) {
@@ -722,14 +722,14 @@ auto Builder::slot_hex_to_int(string_view hex) -> isize_t
 	return result;
 }
 
-void Builder::extend_measure_lengths(vector<double>& lengths, isize_t max_measure)
+void Builder::extend_measure_lengths(vector<double>& lengths, ssize_t max_measure)
 {
 	auto const min_length = max_measure + 1;
-	if (static_cast<isize_t>(lengths.size()) >= min_length) return;
+	if (static_cast<ssize_t>(lengths.size()) >= min_length) return;
 	lengths.resize(min_length, 1.0);
 }
 
-void Builder::parse_header(string_view line, isize_t line_num, Chart& chart, State& state)
+void Builder::parse_header(string_view line, ssize_t line_num, Chart& chart, State& state)
 {
 	// Extract components
 	auto header = string{substr_until(line, [](auto c) { return c == ' ' || c == '\t'; })};
@@ -756,7 +756,7 @@ void Builder::parse_header(string_view line, isize_t line_num, Chart& chart, Sta
 	(this->*header_handlers.at(header))({line_num, header, slot, value}, chart, state);
 }
 
-void Builder::parse_channel(string_view line, isize_t line_num, Chart& chart, State& state)
+void Builder::parse_channel(string_view line, ssize_t line_num, Chart& chart, State& state)
 {
 	if (line.size() < 3) return; // Not enough space for even the measure
 	auto const measure = lexical_cast<int>(line.substr(0, 3)); // This won't throw (first character is a digit)

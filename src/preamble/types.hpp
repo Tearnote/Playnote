@@ -22,7 +22,7 @@ using std::uint16_t;
 using uint = std::uint32_t;
 using std::uint64_t;
 using std::size_t;
-using isize_t = decltype(0z);
+using ssize_t = decltype(0z);
 using std::byte;
 
 }

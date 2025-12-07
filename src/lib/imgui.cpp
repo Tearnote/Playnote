@@ -286,7 +286,7 @@ void plot(char const* label, initializer_list<PlotValues> values,
 
 	struct ValueRef {
 		span<PlotValues const> values;
-		isize_t idx;
+		ssize_t idx;
 	};
 
 	auto const value_func = [&]() -> ImPlotGetter {

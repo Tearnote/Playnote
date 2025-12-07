@@ -31,7 +31,7 @@ struct Note {
 	Type type;
 	nanoseconds timestamp;
 	double y_pos;
-	isize_t wav_slot;
+	ssize_t wav_slot;
 
 	template<variant_alternative<Type> T>
 	[[nodiscard]] auto type_is() const -> bool { return holds_alternative<T>(type); }
@@ -46,7 +46,7 @@ struct Note {
 // Notes are expected to be sorted by timestamp from earliest.
 struct Lane {
 	// The different types of lanes that a chart can contain.
-	enum class Type: isize_t {
+	enum class Type: ssize_t {
 		P1_Key1, P1_Key2, P1_Key3, P1_Key4, P1_Key5, P1_Key6, P1_Key7, P1_KeyS,
 		P2_Key1, P2_Key2, P2_Key3, P2_Key4, P2_Key5, P2_Key6, P2_Key7, P2_KeyS,
 		BGM, MeasureLine,

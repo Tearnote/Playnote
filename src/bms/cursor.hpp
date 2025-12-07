@@ -43,7 +43,7 @@ public:
 
 	// An audio playback trigger event.
 	struct SoundEvent {
-		isize_t channel; // BMS channel index; the event should interrupt playback of any samples on the same channel
+		ssize_t channel; // BMS channel index; the event should interrupt playback of any samples on the same channel
 		span<dev::Sample const> audio;
 	};
 
@@ -54,7 +54,7 @@ public:
 	[[nodiscard]] auto get_chart() const -> Chart const& { return *chart; }
 
 	// Return the current position of the cursor in samples.
-	[[nodiscard]] auto get_progress() const -> isize_t { return sample_progress; }
+	[[nodiscard]] auto get_progress() const -> ssize_t { return sample_progress; }
 
 	// Return the current position of the cursor in nanoseconds.
 	[[nodiscard]] auto get_progress_ns() const -> nanoseconds { return globals::mixer->get_audio().samples_to_ns(get_progress(), chart->media.sampling_rate); }
@@ -76,42 +76,42 @@ public:
 	// current position and the destination. Note progress will update for the new position, as if
 	// the chart has been autoplayed up to this point. Input queue is unaffected; you might want to
 	// flush it.
-	void seek(isize_t sample_position);
+	void seek(ssize_t sample_position);
 
 	// Seek to a specified timestamp. The same precautions apply as for seek().
 	void seek_ns(nanoseconds timestamp) { seek(globals::mixer->get_audio().ns_to_samples(timestamp, chart->media.sampling_rate)); }
 
 	// Seek relative to current position. If seek is backward, or autoplay is on, lane progress is
 	// driven automatically. Otherwise, functions as a fast-forward.
-	void seek_relative(isize_t sample_offset);
+	void seek_relative(ssize_t sample_offset);
 
 	// Return every note less than max_units away from current position.
 	struct UpcomingNote {
 		Note const& note;
 		Lane::Type lane;
-		isize_t lane_idx;
+		ssize_t lane_idx;
 		float distance; // From current chart position, in units
 	};
 	auto upcoming_notes(float max_units, nanoseconds offset = 0ns, bool adjust_for_latency = false) const -> generator<UpcomingNote>;
 
 	// For a given lane, return the index of the next note to be judged. Every note with a smaller
 	// index has already been judged and should not be visible to the player.
-	auto next_note_idx(Lane::Type lane) const -> isize_t { return lane_progress[+lane].next_note; }
+	auto next_note_idx(Lane::Type lane) const -> ssize_t { return lane_progress[+lane].next_note; }
 
 	Cursor(Cursor const& other) { *this = other; }
 	auto operator=(Cursor const&) -> Cursor&;
 
 private:
 	struct LaneProgress {
-		isize_t next_note; // Index of the earliest note that hasn't been judged yet
-		isize_t active_slot; // Index of the WAV slot that will be triggered on player input
+		ssize_t next_note; // Index of the earliest note that hasn't been judged yet
+		ssize_t active_slot; // Index of the WAV slot that will be triggered on player input
 		bool pressed; // Is the player currently pushing the lane's button?
 		optional<nanoseconds> ln_timing; // If an LN is being held, the value is the timing of the LN's start's hit
 	};
 
 	shared_ptr<Chart const> chart;
 	bool autoplay;
-	isize_t sample_progress = 0;
+	ssize_t sample_progress = 0;
 	array<LaneProgress, enum_count<Lane::Type>()> lane_progress = {};
 	spsc_queue<JudgmentEvent> judgment_events;
 
@@ -137,7 +137,7 @@ auto Cursor::advance_one_sample(Func&& func, span<LaneInput const> inputs) -> bo
 	{
 		// Missed notes
 		{
-			if (progress.next_note >= static_cast<isize_t>(lane.notes.size())) continue;
+			if (progress.next_note >= static_cast<ssize_t>(lane.notes.size())) continue;
 			Note const& note = lane.notes[progress.next_note];
 			if (lane.playable && get_progress_ns() - note.timestamp > HitWindow && !progress.ln_timing)
 				trigger_miss(type);
@@ -145,7 +145,7 @@ auto Cursor::advance_one_sample(Func&& func, span<LaneInput const> inputs) -> bo
 
 		// Autoplay and unplayable inputs
 		if (autoplay || !lane.playable) {
-			if (progress.next_note >= static_cast<isize_t>(lane.notes.size())) continue;
+			if (progress.next_note >= static_cast<ssize_t>(lane.notes.size())) continue;
 			Note const& note = lane.notes[progress.next_note];
 
 			// The note just started
@@ -161,7 +161,7 @@ auto Cursor::advance_one_sample(Func&& func, span<LaneInput const> inputs) -> bo
 
 		// Auto-completed LNs
 		{
-			if (progress.next_note >= static_cast<isize_t>(lane.notes.size())) continue;
+			if (progress.next_note >= static_cast<ssize_t>(lane.notes.size())) continue;
 			Note const& note = lane.notes[progress.next_note];
 			if (lane.playable && note.type_is<Note::LN>() && note.timestamp + note.params<Note::LN>().length <= get_progress_ns())
 				trigger_ln_release(type);
@@ -181,7 +181,7 @@ void Cursor::trigger_input(LaneInput input, Func&& func)
 	if (progress.pressed == input.state) return;
 
 	// Judge input against current/next note
-	if (progress.next_note < static_cast<isize_t>(lane.notes.size())) {
+	if (progress.next_note < static_cast<ssize_t>(lane.notes.size())) {
 		auto const& note = lane.notes[progress.next_note];
 
 		if (input.state) {

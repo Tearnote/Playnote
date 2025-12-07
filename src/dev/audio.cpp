@@ -44,7 +44,7 @@ Audio::~Audio()
 #endif
 }
 
-auto Audio::samples_to_ns(isize_t samples, int sampling_rate) -> nanoseconds
+auto Audio::samples_to_ns(ssize_t samples, int sampling_rate) -> nanoseconds
 {
 	auto const rate = sampling_rate == -1? context->properties.sampling_rate : sampling_rate;
 	ASSERT(rate > 0);
@@ -54,7 +54,7 @@ auto Audio::samples_to_ns(isize_t samples, int sampling_rate) -> nanoseconds
 	return 1s * whole_seconds + ns_per_sample * remainder;
 }
 
-auto Audio::ns_to_samples(nanoseconds ns, int sampling_rate) -> isize_t
+auto Audio::ns_to_samples(nanoseconds ns, int sampling_rate) -> ssize_t
 {
 	auto const rate = sampling_rate == -1? context->properties.sampling_rate : sampling_rate;
 	ASSERT(rate > 0);

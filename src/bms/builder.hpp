@@ -45,7 +45,7 @@ private:
 
 	// Parsed BMS header-type command.
 	struct HeaderCommand {
-		isize_t line_num;
+		ssize_t line_num;
 		string_view header;
 		string_view slot;
 		string_view value;
@@ -53,7 +53,7 @@ private:
 
 	// Parsed BMS channel-type command.
 	struct ChannelCommand {
-		isize_t line_num;
+		ssize_t line_num;
 		NotePosition position;
 		string_view channel;
 		string_view value;
@@ -73,7 +73,7 @@ private:
 		Type type;
 		Lane::Type lane;
 		T position;
-		isize_t wav_slot_idx;
+		ssize_t wav_slot_idx;
 
 		template<variant_alternative<Type> U>
 		[[nodiscard]] auto type_is() const -> bool { return holds_alternative<U>(type); }
@@ -100,12 +100,12 @@ private:
 		using Mapping = unordered_map<string, T, string_hash>;
 
 		struct WavSlot {
-			isize_t idx = -1; // 0-based increasing index
+			ssize_t idx = -1; // 0-based increasing index
 			string filename; // without extension
 			bool used = false; // true if any note uses the slot; if false, audio file load can be skipped
 		};
 		struct BPMSlot {
-			isize_t idx = -1;
+			ssize_t idx = -1;
 			float bpm;
 		};
 
@@ -124,11 +124,11 @@ private:
 	using ChannelHandlerFunc = void(Builder::*)(ChannelCommand, Chart&, State&);
 	unordered_map<string, ChannelHandlerFunc, string_hash> channel_handlers;
 
-	[[nodiscard]] static auto slot_hex_to_int(string_view hex) -> isize_t;
-	static void extend_measure_lengths(vector<double>&, isize_t max_measure);
+	[[nodiscard]] static auto slot_hex_to_int(string_view hex) -> ssize_t;
+	static void extend_measure_lengths(vector<double>&, ssize_t max_measure);
 
-	void parse_header(string_view line, isize_t line_num, Chart&, State&);
-	void parse_channel(string_view line, isize_t line_num, Chart&, State&);
+	void parse_header(string_view line, ssize_t line_num, Chart&, State&);
+	void parse_channel(string_view line, ssize_t line_num, Chart&, State&);
 
 	// Generic handlers
 	void handle_header_ignored(HeaderCommand, Chart&, State&) {}

@@ -39,10 +39,10 @@ public:
 	[[nodiscard]] auto get_latency() -> nanoseconds { return samples_to_ns(context->properties.buffer_size); }
 
 	// Convert a count of samples to their duration.
-	[[nodiscard]] auto samples_to_ns(isize_t, int sampling_rate = -1) -> nanoseconds;
+	[[nodiscard]] auto samples_to_ns(ssize_t, int sampling_rate = -1) -> nanoseconds;
 
 	// Convert a duration to a number of full audio samples.
-	[[nodiscard]] auto ns_to_samples(nanoseconds, int sampling_rate = -1) -> isize_t;
+	[[nodiscard]] auto ns_to_samples(nanoseconds, int sampling_rate = -1) -> ssize_t;
 
 	Audio(Audio const&) = delete;
 	auto operator=(Audio const&) -> Audio& = delete;

@@ -106,7 +106,7 @@ void write_entry(WriteArchive& archive, fs::path const& pathname, span<byte cons
 	detail::write_data(archive, data);
 }
 
-void detail::write_header_for(WriteArchive& archive, fs::path const& pathname, isize_t total_size)
+void detail::write_header_for(WriteArchive& archive, fs::path const& pathname, ssize_t total_size)
 {
 	auto entry = archive_entry_new();
 	archive_entry_set_pathname(entry, pathname.string().c_str());

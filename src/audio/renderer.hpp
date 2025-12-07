@@ -31,9 +31,9 @@ public:
 
 private:
 	struct ActiveSound {
-		isize_t channel;
+		ssize_t channel;
 		span<dev::Sample const> audio;
-		isize_t position;
+		ssize_t position;
 	};
 	shared_ptr<bms::Chart const> chart;
 	shared_ptr<bms::Cursor> cursor;

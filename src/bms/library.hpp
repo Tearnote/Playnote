@@ -43,22 +43,22 @@ public:
 	[[nodiscard]] auto is_dirty() const -> bool { return dirty.load(); }
 
 	// Return the number of songs that were imported so far.
-	[[nodiscard]] auto get_import_songs_processed() const -> isize_t { return import_stats.songs_processed.load(); }
+	[[nodiscard]] auto get_import_songs_processed() const -> ssize_t { return import_stats.songs_processed.load(); }
 
 	// Return the number of songs discovered during import so far.
-	[[nodiscard]] auto get_import_songs_total() const -> isize_t { return import_stats.songs_total.load(); }
+	[[nodiscard]] auto get_import_songs_total() const -> ssize_t { return import_stats.songs_total.load(); }
 
 	// Return the number of songs that failed to import.
-	[[nodiscard]] auto get_import_songs_failed() const -> isize_t { return import_stats.songs_failed.load(); }
+	[[nodiscard]] auto get_import_songs_failed() const -> ssize_t { return import_stats.songs_failed.load(); }
 
 	// Return the number of charts that were imported so far.
-	[[nodiscard]] auto get_import_charts_added() const -> isize_t { return import_stats.charts_added.load(); }
+	[[nodiscard]] auto get_import_charts_added() const -> ssize_t { return import_stats.charts_added.load(); }
 
 	// Return the number of charts that were skipped as duplicates.
-	[[nodiscard]] auto get_import_charts_skipped() const -> isize_t { return import_stats.charts_skipped.load(); }
+	[[nodiscard]] auto get_import_charts_skipped() const -> ssize_t { return import_stats.charts_skipped.load(); }
 
 	// Return the number of charts that failed to import.
-	[[nodiscard]] auto get_import_charts_failed() const -> isize_t { return import_stats.charts_failed.load(); }
+	[[nodiscard]] auto get_import_charts_failed() const -> ssize_t { return import_stats.charts_failed.load(); }
 
 	// Set all import statistics to zero. Can be used during an import, but the values might be inconsistent afterwards.
 	void reset_import_stats();
@@ -88,7 +88,7 @@ private:
 		static constexpr auto Query = R"sql(
 			SELECT path FROM songs WHERE id = ?1
 		)sql"sv;
-		using Params = tuple<isize_t>;
+		using Params = tuple<ssize_t>;
 		using Row = tuple<string_view>;
 	};
 	struct InsertSong {
@@ -101,7 +101,7 @@ private:
 		static constexpr auto Query = R"sql(
 			DELETE FROM songs WHERE id = ?1
 		)sql"sv;
-		using Params = tuple<isize_t>;
+		using Params = tuple<ssize_t>;
 	};
 
 	static constexpr auto ChartsSchema = to_array({R"sql(
@@ -176,9 +176,9 @@ private:
 				audio_duration, loudness, average_nps, peak_nps, min_bpm, max_bpm, main_bpm, preview_id)
 				VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24)
 		)sql"sv;
-		using Params = tuple<span<byte const>, isize_t, string_view, string_view, string_view, string_view, string_view, string_view, string_view,
+		using Params = tuple<span<byte const>, ssize_t, string_view, string_view, string_view, string_view, string_view, string_view, string_view,
 			string_view, int, int, int, int, int, int64_t,
-			int64_t, double, double, double, double, double, double, isize_t>;
+			int64_t, double, double, double, double, double, double, ssize_t>;
 	};
 
 	static constexpr auto ChartDensitiesSchema = to_array({R"sql(
@@ -228,20 +228,20 @@ private:
 		static constexpr auto Query = R"sql(
 			DELETE FROM chart_previews WHERE id = ?1
 		)sql"sv;
-		using Params = tuple<isize_t>;
+		using Params = tuple<ssize_t>;
 	};
 	struct SelectChartPreviewIDs {
 		static constexpr auto Query = R"sql(
 			SELECT preview_id FROM charts WHERE md5 = ?1
 		)sql"sv;
 		using Params = tuple<span<byte const>>;
-		using Row = tuple<isize_t>;
+		using Row = tuple<ssize_t>;
 	};
 	struct ModifyChartPreviewIDs {
 		static constexpr auto Query = R"sql(
 			UPDATE charts SET preview_id = ?2 WHERE preview_id = ?1
 		)sql"sv;
-		using Params = tuple<isize_t, isize_t>;
+		using Params = tuple<ssize_t, ssize_t>;
 	};
 	struct SelectSongPreviews {
 		static constexpr auto Query = R"sql(
@@ -249,8 +249,8 @@ private:
 				INNER JOIN charts ON chart_previews.id = charts.preview_id
 				WHERE charts.song_id = ?1
 		)sql"sv;
-		using Params = tuple<isize_t>;
-		using Row = tuple<isize_t, span<byte const>>;
+		using Params = tuple<ssize_t>;
+		using Row = tuple<ssize_t, span<byte const>>;
 	};
 
 	struct GetSongFromChart {
@@ -258,7 +258,7 @@ private:
 			SELECT songs.id, songs.path FROM songs INNER JOIN charts ON songs.id = charts.song_id WHERE charts.md5 = ?1
 		)sql"sv;
 		using Params = tuple<span<byte const>>;
-		using Row = tuple<isize_t, string_view>;
+		using Row = tuple<ssize_t, string_view>;
 	};
 	struct SelectSongChart {
 		static constexpr auto Query = R"sql(
@@ -282,12 +282,12 @@ private:
 	};
 
 	struct ImportStats {
-		atomic<isize_t> songs_processed = 0;
-		atomic<isize_t> songs_total = 0;
-		atomic<isize_t> songs_failed = 0;
-		atomic<isize_t> charts_added = 0;
-		atomic<isize_t> charts_skipped = 0;
-		atomic<isize_t> charts_failed = 0;
+		atomic<ssize_t> songs_processed = 0;
+		atomic<ssize_t> songs_total = 0;
+		atomic<ssize_t> songs_failed = 0;
+		atomic<ssize_t> charts_added = 0;
+		atomic<ssize_t> charts_skipped = 0;
+		atomic<ssize_t> charts_failed = 0;
 	};
 
 	Logger::Category cat;
@@ -295,9 +295,9 @@ private:
 
 	lib::sqlite::DB db;
 	task_container import_tasks;
-	unordered_map<MD5, isize_t> staging;
+	unordered_map<MD5, ssize_t> staging;
 	coro_mutex staging_lock;
-	unordered_node_map<isize_t, coro_mutex> song_locks;
+	unordered_node_map<ssize_t, coro_mutex> song_locks;
 	atomic<bool> dirty = true;
 	atomic<bool> stopping = false;
 	ImportStats import_stats;
@@ -305,8 +305,8 @@ private:
 	[[nodiscard]] auto find_available_song_filename(string_view name) -> string;
 	auto import_many(fs::path) -> task<>;
 	auto import_one(fs::path) -> task<>;
-	auto import_chart(io::Song& song, isize_t song_id, string chart_path, span<byte const>) -> task<MD5>;
-	auto deduplicate_previews(isize_t song_id, span<MD5 const> new_charts) -> task<isize_t>;
+	auto import_chart(io::Song& song, ssize_t song_id, string chart_path, span<byte const>) -> task<MD5>;
+	auto deduplicate_previews(ssize_t song_id, span<MD5 const> new_charts) -> task<ssize_t>;
 };
 
 }

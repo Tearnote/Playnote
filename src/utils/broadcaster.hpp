@@ -14,7 +14,7 @@ or distributed except according to those terms.
 namespace playnote {
 
 // Simple shared struct for controlling thread lifetime.
-template<isize_t N>
+template<ssize_t N>
 struct Barriers {
 	latch startup{N}; // Threads wait on this after registering with the broadcaster
 	latch shutdown{N}; // Threads wait on this before exiting

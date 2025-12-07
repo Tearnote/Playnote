@@ -166,9 +166,9 @@ void Playfield::enqueue(Renderer::Queue& queue, float scroll_speed, nanoseconds 
 	}
 }
 
-auto Playfield::lane_order() const -> span<isize_t const>
+auto Playfield::lane_order() const -> span<ssize_t const>
 {
-	static constexpr auto LaneOrder5K = to_array<isize_t>({
+	static constexpr auto LaneOrder5K = to_array<ssize_t>({
 		+bms::Lane::Type::P1_KeyS,
 		+bms::Lane::Type::P1_Key1,
 		+bms::Lane::Type::P1_Key2,
@@ -176,7 +176,7 @@ auto Playfield::lane_order() const -> span<isize_t const>
 		+bms::Lane::Type::P1_Key4,
 		+bms::Lane::Type::P1_Key5,
 	});
-	static constexpr auto LaneOrder7K = to_array<isize_t>({
+	static constexpr auto LaneOrder7K = to_array<ssize_t>({
 		+bms::Lane::Type::P1_KeyS,
 		+bms::Lane::Type::P1_Key1,
 		+bms::Lane::Type::P1_Key2,
@@ -186,7 +186,7 @@ auto Playfield::lane_order() const -> span<isize_t const>
 		+bms::Lane::Type::P1_Key6,
 		+bms::Lane::Type::P1_Key7,
 	});
-	static constexpr auto LaneOrder10K = to_array<isize_t>({
+	static constexpr auto LaneOrder10K = to_array<ssize_t>({
 		+bms::Lane::Type::P1_KeyS,
 		+bms::Lane::Type::P1_Key1,
 		+bms::Lane::Type::P1_Key2,
@@ -201,7 +201,7 @@ auto Playfield::lane_order() const -> span<isize_t const>
 		+bms::Lane::Type::P2_Key4,
 		+bms::Lane::Type::P2_Key5,
 	});
-	static constexpr auto LaneOrder14K = to_array<isize_t>({
+	static constexpr auto LaneOrder14K = to_array<ssize_t>({
 		+bms::Lane::Type::P1_KeyS,
 		+bms::Lane::Type::P1_Key1,
 		+bms::Lane::Type::P1_Key2,

@@ -54,19 +54,19 @@ private:
 		shared_ptr<bms::Cursor> cursor;
 		bms::Mapper mapper;
 		float gain;
-		isize_t sample_offset; // Sample count at the time the cursor was started
+		ssize_t sample_offset; // Sample count at the time the cursor was started
 	};
 	struct ActiveSound {
 		bms::MD5 md5;
-		isize_t channel;
+		ssize_t channel;
 		span<dev::Sample const> audio;
-		isize_t position;
+		ssize_t position;
 		float gain;
 	};
 	mutex cursors_lock;
 	small_vector<PlayableCursor, 4> cursors;
 	nanoseconds timer_slop; // Player start time according to the CPU timer. Adjusted over time to maintain sync
-	isize_t samples_processed = 0;
+	ssize_t samples_processed = 0;
 	shared_ptr<spsc_queue<UserInput>> inbound_inputs;
 	small_vector<UserInput, 16> pending_inputs;
 	bool paused = false;

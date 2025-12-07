@@ -31,7 +31,7 @@ auto Cursor::pending_judgment_events() -> generator<JudgmentEvent>
 	while (judgment_events.try_dequeue(event)) co_yield move(event);
 }
 
-void Cursor::seek(isize_t sample_position)
+void Cursor::seek(ssize_t sample_position)
 {
 	sample_progress = sample_position;
 	auto const progress_ns = get_progress_ns();
@@ -58,7 +58,7 @@ void Cursor::seek(isize_t sample_position)
 	}
 }
 
-void Cursor::seek_relative(isize_t sample_offset)
+void Cursor::seek_relative(ssize_t sample_offset)
 {
 	if (sample_offset < 0 || autoplay) {
 		seek(sample_progress + sample_offset);

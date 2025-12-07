@@ -42,12 +42,12 @@ auto Renderer::advance_one_sample() -> optional<dev::Sample>
 	});
 	if (chart_ended && active_sounds.empty()) return nullopt;
 	auto sample_mix = dev::Sample{};
-	for (auto i = 0z; i < static_cast<isize_t>(active_sounds.size());) {
+	for (auto i = 0z; i < static_cast<ssize_t>(active_sounds.size());) {
 		auto& sound = active_sounds[i];
 		sample_mix.left += sound.audio[sound.position].left;
 		sample_mix.right += sound.audio[sound.position].right;
 		sound.position += 1;
-		if (sound.position >= static_cast<isize_t>(sound.audio.size())) {
+		if (sound.position >= static_cast<ssize_t>(sound.audio.size())) {
 			// Swap-and-pop erase
 			active_sounds[i] = move(active_sounds.back());
 			active_sounds.pop_back();

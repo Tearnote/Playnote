@@ -29,7 +29,6 @@ namespace playnote {
 
 using std::optional;
 using std::nullopt;
-using std::make_optional;
 using std::variant;
 using std::monostate;
 using std::holds_alternative;
@@ -41,7 +40,6 @@ using std::pair;
 using std::make_pair;
 using std::tuple;
 using std::make_tuple;
-using std::piecewise_construct;
 using std::reference_wrapper;
 using std::ref;
 using std::initializer_list;
@@ -54,9 +52,7 @@ using std::static_pointer_cast;
 using boost::scope::unique_resource;
 using std::type_index;
 using std::void_t;
-using std::decay_t;
 using std::remove_cvref_t;
-using std::bit_cast;
 using std::index_sequence;
 using std::make_index_sequence;
 using std::tuple_size_v;
@@ -76,11 +72,12 @@ template<typename T>
 concept scoped_enum = std::is_scoped_enum_v<T>;
 
 // Convenient shorthand for getting the value of an enum class
-constexpr auto operator+(scoped_enum auto val) noexcept { return std::to_underlying(val); }
+template<scoped_enum T>
+constexpr auto operator+(T val) noexcept { return std::to_underlying(val); }
 
 // Add as class member to limit the number of simultaneous instances.
 // Throws logic_error if the limit is reached.
-template<typename, isize_t Limit>
+template<typename, ssize_t Limit>
 class InstanceLimit {
 public:
 	InstanceLimit()

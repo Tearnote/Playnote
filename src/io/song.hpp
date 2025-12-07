@@ -61,33 +61,33 @@ private:
 		static constexpr auto Query = R"sql(
 			INSERT INTO contents(path, type, ptr, size) VALUES (?1, ?2, ?3, ?4)
 		)sql"sv;
-		using Params = tuple<string_view, int, void const*, isize_t>;
+		using Params = tuple<string_view, int, void const*, ssize_t>;
 	};
 	struct SelectCharts {
 		static constexpr auto Query = R"sql(
 			SELECT path, ptr, size FROM contents WHERE type = 1
 		)sql"sv;
-		using Row = tuple<string_view, void const*, isize_t>;
+		using Row = tuple<string_view, void const*, ssize_t>;
 	};
 	struct SelectFile {
 		static constexpr auto Query = R"sql(
 			SELECT ptr, size FROM contents WHERE path = ?1
 		)sql"sv;
 		using Params = tuple<string_view>;
-		using Row = tuple<void const*, isize_t>;
+		using Row = tuple<void const*, ssize_t>;
 	};
 	struct SelectAudioFile {
 		static constexpr auto Query = R"sql(
 			SELECT ptr, size FROM contents WHERE type = 2 AND path = ?1
 		)sql"sv;
 		using Params = tuple<string_view>;
-		using Row = tuple<void const*, isize_t>;
+		using Row = tuple<void const*, ssize_t>;
 	};
 	struct SelectAudioFiles {
 		static constexpr auto Query = R"sql(
 			SELECT path, ptr, size FROM contents WHERE type = 2
 		)sql"sv;
-		using Row = tuple<string_view, void const*, isize_t>;
+		using Row = tuple<string_view, void const*, ssize_t>;
 	};
 
 	Logger::Category cat;

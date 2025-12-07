@@ -38,7 +38,7 @@ av_always_inline auto av_err2string(int errnum) -> string {
 
 struct DecoderOutput_t {
 	vector<vector<byte>> data;
-	isize_t sample_count;
+	ssize_t sample_count;
 	AVSampleFormat sample_format;
 	int sample_rate;
 	AVChannelLayout channel_layout;
@@ -115,7 +115,7 @@ using AVFrame = unique_resource<AVFrame*, decltype([](auto* f) {
 // Data buffer wrapper with a cursor for seeking support.
 struct SeekBuffer {
 	span<byte const> buffer;
-	isize_t cursor;
+	ssize_t cursor;
 };
 
 // Memory buffer IO callbacks

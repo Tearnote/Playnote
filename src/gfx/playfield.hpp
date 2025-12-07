@@ -39,7 +39,7 @@ private:
 			MeasureLine,
 		};
 		Type type;
-		isize_t lane_idx;
+		ssize_t lane_idx;
 		TransformRef transform;
 		float ln_height; // In transform units
 	};
@@ -51,7 +51,7 @@ private:
 	array<vector<Note>, enum_count<bms::Lane::Type>()> lanes;
 	array<TransformRef, enum_count<bms::Lane::Type>()> lane_offsets;
 
-	auto lane_order() const -> span<isize_t const>;
+	auto lane_order() const -> span<ssize_t const>;
 	auto lane_to_note_type(bms::Lane::Type) const -> Note::Type;
 	auto lane_background_color(bms::Lane::Type) const -> float4;
 	auto lane_width(Note::Type) const -> float;

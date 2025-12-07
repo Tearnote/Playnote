@@ -18,9 +18,6 @@ or distributed except according to those terms.
 #include <boost/unordered/unordered_node_map.hpp>
 #include <boost/unordered/unordered_flat_map.hpp>
 #include <boost/unordered/unordered_flat_set.hpp>
-#include <boost/container/pmr/monotonic_buffer_resource.hpp>
-#include <boost/container/pmr/polymorphic_allocator.hpp>
-#include <boost/container/pmr/vector.hpp>
 #include <boost/container/static_vector.hpp>
 #include <boost/container/small_vector.hpp>
 #include <boost/container/vector.hpp>
@@ -44,11 +41,6 @@ template<typename Key, typename Hash = boost::hash<Key>>
 using unordered_set = boost::unordered_flat_set<Key, Hash, std::equal_to<>>;
 using boost::unordered_node_map;
 using std::span;
-namespace pmr {
-	using boost::container::pmr::vector;
-	using boost::container::pmr::monotonic_buffer_resource;
-	using boost::container::pmr::polymorphic_allocator;
-}
 
 // Lock-free containers
 template<typename T>

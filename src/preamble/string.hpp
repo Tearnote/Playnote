@@ -36,12 +36,10 @@ using fmtquill::format_string;
 using fmtquill::format;
 using fmtquill::print;
 using boost::iequals;
-using boost::trim;
 using boost::trim_copy;
 using boost::replace_all;
 using boost::to_upper;
 using boost::to_lower;
-using boost::to_lower_copy;
 using boost::lexical_cast;
 using boost::bad_lexical_cast;
 
@@ -76,7 +74,7 @@ struct fmtquill::formatter<std::filesystem::directory_entry>: formatter<std::str
 template<>
 struct quill::Codec<std::filesystem::directory_entry>: DeferredFormatCodec<std::filesystem::directory_entry> {};
 
-template<playnote::isize_t Dim, typename T>
+template<playnote::ssize_t Dim, typename T>
 struct fmtquill::formatter<playnote::vec<Dim, T>> {
 	template<typename Ctx>
 	constexpr auto parse(Ctx& ctx) { return formatter<T>{}.parse(ctx); }
@@ -99,7 +97,7 @@ struct fmtquill::formatter<playnote::vec<Dim, T>> {
 		return format_to(ctx.out(), ")");
 	}
 };
-template<playnote::isize_t Dim, typename T>
+template<playnote::ssize_t Dim, typename T>
 struct quill::Codec<playnote::vec<Dim, T>>: DeferredFormatCodec<playnote::vec<Dim, T>> {};
 
 template<typename T>

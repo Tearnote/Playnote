@@ -37,7 +37,6 @@ namespace views {
 	});
 }
 using std::ranges::any_of;
-using std::ranges::all_of;
 using std::ranges::contains;
 using std::ranges::fill;
 using std::ranges::copy;
@@ -51,13 +50,11 @@ using std::ranges::unique;
 using std::ranges::reverse;
 using std::ranges::remove_if;
 using std::ranges::fold_left;
-using std::ranges::for_each;
 using std::ranges::any_of;
 using std::ranges::min_element;
 using std::ranges::max_element;
 
 using std::distance;
 using std::function;
-using std::invoke;
 
 }

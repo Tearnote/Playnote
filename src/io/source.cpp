@@ -60,7 +60,7 @@ Source::Source(fs::path const& path):
 
 		// Find prefix
 		auto shortest_prefix = fs::path{};
-		auto shortest_prefix_parts = optional<isize_t>{nullopt};
+		auto shortest_prefix_parts = optional<ssize_t>{nullopt};
 		ar = lib::archive::open_read(archive->file.contents);
 		for (auto pathname: lib::archive::for_each_entry(ar)) {
 			auto const pathname_bytes = span{reinterpret_cast<byte const*>(pathname.data()), pathname.size()};

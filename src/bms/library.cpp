@@ -303,7 +303,7 @@ auto Library::import_one(fs::path path) -> task<>
 	}
 }
 
-auto Library::import_chart(io::Song& song, isize_t song_id, string chart_path, span<byte const> chart_raw) -> task<MD5>
+auto Library::import_chart(io::Song& song, ssize_t song_id, string chart_path, span<byte const> chart_raw) -> task<MD5>
 {
 	if (stopping.load()) throw runtime_error_fmt("Chart import \"{}\" cancelled", chart_path);
 
@@ -358,19 +358,19 @@ auto Library::import_chart(io::Song& song, isize_t song_id, string chart_path, s
 	co_return chart->md5;
 }
 
-auto Library::deduplicate_previews(isize_t song_id, span<MD5 const> new_charts) -> task<isize_t> {
+auto Library::deduplicate_previews(ssize_t song_id, span<MD5 const> new_charts) -> task<ssize_t> {
 	// Some or all of the charts of this song were just added, all with their own previews.
 	// Any of these previews can be a duplicate of a new preview or an old preview.
 
 	// Fetch all previews (decoded) of all charts of the song, with their IDs.
 	auto select_song_previews = lib::sqlite::prepare<SelectSongPreviews>(db);
-	auto previews = unordered_map<isize_t, vector<dev::Sample>>{};
+	auto previews = unordered_map<ssize_t, vector<dev::Sample>>{};
 	for (auto [id, preview]: lib::sqlite::query(select_song_previews, song_id))
 		previews.emplace(id, lib::ffmpeg::decode_and_resample_file_buffer(preview, 48000));
 
 	// Fetch all preview IDs of new charts
 	auto select_chart_preview_ids = lib::sqlite::prepare<SelectChartPreviewIDs>(db);
-	auto new_chart_preview_ids = vector<isize_t>{};
+	auto new_chart_preview_ids = vector<ssize_t>{};
 	for (auto const& md5: new_charts) {
 		for (auto [preview_id]: lib::sqlite::query(select_chart_preview_ids, md5))
 			new_chart_preview_ids.emplace_back(preview_id);

@@ -180,7 +180,7 @@ auto Song::preload_audio_files(unique_ptr<thread_pool>& pool, int sampling_rate)
 		auto filepath_low = string{filepath};
 		to_lower(filepath_low);
 		auto file = span{static_cast<byte const*>(ptr), static_cast<size_t>(size)};
-		tasks.emplace_back(schedule_task_on(pool, [](Logger::Category cat, span<byte const> file, isize_t sampling_rate) -> task<vector<dev::Sample>> {
+		tasks.emplace_back(schedule_task_on(pool, [](Logger::Category cat, span<byte const> file, ssize_t sampling_rate) -> task<vector<dev::Sample>> {
 			lib::ffmpeg::set_thread_log_category(cat);
 			co_return lib::ffmpeg::decode_and_resample_file_buffer(file, sampling_rate);
 		}(cat, file, sampling_rate)));
