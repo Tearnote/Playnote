@@ -10,7 +10,8 @@ include_guard()
 set(ASSET_DIR_PREFIX assets/)
 set(ASSET_PATHS
 	unifont-16.0.03.ttf
-	Mplus2-Medium.ttf
+	Mplus2.ttf
+	Pretendard.ttf
 )
 
 foreach(ASSET_PATH ${ASSET_PATHS})

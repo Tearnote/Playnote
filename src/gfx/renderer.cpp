@@ -193,7 +193,7 @@ Renderer::Renderer(dev::Window& window, Logger::Category cat):
 	cat{cat},
 	gpu{window, cat},
 	imgui{gpu},
-	text_shaper{cat, {FontPath}}
+	text_shaper{cat, {LatinJPFontPath, KRFontPath}}
 {
 	auto& context = gpu.get_global_allocator().get_context();
 
