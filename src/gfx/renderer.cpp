@@ -9,6 +9,7 @@ or distributed except according to those terms.
 
 #include "gfx/renderer.hpp"
 
+#include "io/file.hpp"
 #include "preamble.hpp"
 #include "utils/config.hpp"
 #include "lib/vuk.hpp"
@@ -193,9 +194,12 @@ Renderer::Renderer(dev::Window& window, Logger::Category cat):
 	cat{cat},
 	gpu{window, cat},
 	imgui{gpu},
-	text_shaper{cat, {LatinJPFontPath, KRFontPath}}
+	text_shaper{cat}
 {
 	auto& context = gpu.get_global_allocator().get_context();
+
+	text_shaper.load_font(io::read_file(LatinJPFontPath), {500, 800});
+	text_shaper.load_font(io::read_file(KRFontPath), {500, 800});
 
 	lib::vuk::create_compute_pipeline(context, "worklist_gen", gpu::worklist_gen_spv);
 	DEBUG_AS(cat, "Compiled worklist_gen pipeline");

@@ -17,7 +17,9 @@ namespace playnote::gfx {
 
 class TextShaper {
 public:
-	TextShaper(Logger::Category, initializer_list<string_view> fonts);
+	TextShaper(Logger::Category);
+
+	void load_font(io::ReadFile&&, initializer_list<int> weights = {500});
 
 private:
 	Logger::Category cat;
@@ -25,14 +27,17 @@ private:
 	vector<lib::harfbuzz::Font> fonts;
 };
 
-inline TextShaper::TextShaper(Logger::Category cat, initializer_list<string_view> fonts):
+inline TextShaper::TextShaper(Logger::Category cat):
 	cat{cat},
 	ctx{lib::harfbuzz::init()}
+{}
+
+inline void TextShaper::load_font(io::ReadFile&& file, initializer_list<int> weights)
 {
-	for (auto font: fonts) {
-		this->fonts.emplace_back(lib::harfbuzz::create_font(ctx, io::read_file(font)));
-		INFO_AS(cat, "Loaded font at \"{}\"", font);
-	}
+	auto file_ptr = make_shared<io::ReadFile>(move(file));
+	for (auto weight: weights)
+		fonts.emplace_back(lib::harfbuzz::create_font(ctx, file_ptr, weight));
+	INFO_AS(cat, "Loaded font at \"{}\"", file.path);
 }
 
 }

@@ -18,7 +18,7 @@ struct hb_font_t;
 namespace playnote::lib::harfbuzz {
 
 struct Font_t {
-	io::ReadFile file;
+	shared_ptr<io::ReadFile> file;
 	FT_FaceRec_* face;
 	hb_font_t* font;
 };
@@ -39,6 +39,6 @@ using Font = unique_resource<Font_t*, detail::FontDeleter>;
 auto init() -> Context;
 
 // Open a font file for reading.
-auto create_font(Context&, io::ReadFile&&) -> Font;
+auto create_font(Context&, shared_ptr<io::ReadFile>, int weight = 500) -> Font;
 
 }
