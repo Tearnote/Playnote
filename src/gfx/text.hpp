@@ -19,12 +19,12 @@ class TextShaper {
 public:
 	TextShaper(Logger::Category);
 
-	void load_font(io::ReadFile&&, initializer_list<int> weights = {500});
+	void load_font(id, io::ReadFile&&, initializer_list<int> weights = {500});
 
 private:
 	Logger::Category cat;
 	lib::harfbuzz::Context ctx;
-	vector<lib::harfbuzz::Font> fonts;
+	unordered_node_map<pair<id, int>, lib::harfbuzz::Font> fonts; // key: font id, weight
 };
 
 inline TextShaper::TextShaper(Logger::Category cat):
@@ -32,11 +32,11 @@ inline TextShaper::TextShaper(Logger::Category cat):
 	ctx{lib::harfbuzz::init()}
 {}
 
-inline void TextShaper::load_font(io::ReadFile&& file, initializer_list<int> weights)
+inline void TextShaper::load_font(id font_id, io::ReadFile&& file, initializer_list<int> weights)
 {
 	auto file_ptr = make_shared<io::ReadFile>(move(file));
 	for (auto weight: weights)
-		fonts.emplace_back(lib::harfbuzz::create_font(ctx, file_ptr, weight));
+		fonts.emplace(make_pair(font_id, weight), lib::harfbuzz::create_font(ctx, file_ptr, weight));
 	INFO_AS(cat, "Loaded font at \"{}\"", file.path);
 }
 

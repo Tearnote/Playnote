@@ -20,8 +20,6 @@ or distributed except according to those terms.
 #include "audio/renderer.hpp"
 #include "audio/mixer.hpp"
 
-#pragma once
-
 namespace playnote::bms {
 
 // BMS header commands which can be followed up with a slot value as part of the header.

@@ -198,8 +198,8 @@ Renderer::Renderer(dev::Window& window, Logger::Category cat):
 {
 	auto& context = gpu.get_global_allocator().get_context();
 
-	text_shaper.load_font(io::read_file(LatinJPFontPath), {500, 800});
-	text_shaper.load_font(io::read_file(KRFontPath), {500, 800});
+	text_shaper.load_font("Mplus2"_id, io::read_file(Mplus2FontPath), {500, 800});
+	text_shaper.load_font("Pretendard"_id, io::read_file(PretendardFontPath), {500, 800});
 
 	lib::vuk::create_compute_pipeline(context, "worklist_gen", gpu::worklist_gen_spv);
 	DEBUG_AS(cat, "Compiled worklist_gen pipeline");
