@@ -10,7 +10,7 @@ or distributed except according to those terms.
 #pragma once
 #include "preamble.hpp"
 #include "utils/logger.hpp"
-#include "lib/freetype.hpp"
+#include "lib/harfbuzz.hpp"
 #include "io/file.hpp"
 
 namespace playnote::gfx {
@@ -21,16 +21,16 @@ public:
 
 private:
 	Logger::Category cat;
-	lib::freetype::Context freetype;
-	vector<lib::freetype::Font> fonts;
+	lib::harfbuzz::Context ctx;
+	vector<lib::harfbuzz::Font> fonts;
 };
 
 inline TextShaper::TextShaper(Logger::Category cat, initializer_list<string_view> fonts):
 	cat{cat},
-	freetype{lib::freetype::init()}
+	ctx{lib::harfbuzz::init()}
 {
 	for (auto font: fonts) {
-		this->fonts.emplace_back(lib::freetype::create_font(freetype, io::read_file(font)));
+		this->fonts.emplace_back(lib::harfbuzz::create_font(ctx, io::read_file(font)));
 		INFO_AS(cat, "Loaded font at \"{}\"", font);
 	}
 }

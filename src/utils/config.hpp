@@ -47,7 +47,7 @@ inline constexpr auto LibraryDBPath = "library.db"sv;
 
 // Asset locations
 
-inline constexpr auto FontPath = "assets/MPLUS2Variable.ttf"sv;
+inline constexpr auto FontPath = "assets/Mplus2-Medium.ttf"sv;
 
 // Global runtime configuration, kept in sync with the config file.
 class Config {

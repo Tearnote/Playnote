@@ -15,7 +15,7 @@ include(cmake/Dependencies.cmake)
 
 add_executable(Playnote WIN32
 	src/lib/signalsmith.cpp
-	src/lib/freetype.cpp
+	src/lib/harfbuzz.cpp
 	src/lib/archive.cpp
 	src/lib/ebur128.cpp
 	src/lib/openssl.cpp

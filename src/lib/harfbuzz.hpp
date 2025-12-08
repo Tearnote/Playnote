@@ -13,12 +13,14 @@ or distributed except according to those terms.
 
 struct FT_LibraryRec_;
 struct FT_FaceRec_;
+struct hb_font_t;
 
-namespace playnote::lib::freetype {
+namespace playnote::lib::harfbuzz {
 
 struct Font_t {
 	io::ReadFile file;
 	FT_FaceRec_* face;
+	hb_font_t* font;
 };
 
 namespace detail {
@@ -33,7 +35,7 @@ struct FontDeleter {
 using Context = unique_resource<FT_LibraryRec_*, detail::ContextDeleter>;
 using Font = unique_resource<Font_t*, detail::FontDeleter>;
 
-// Create a Freetype context.
+// Create a Freetype context, required for font loading.
 auto init() -> Context;
 
 // Open a font file for reading.
