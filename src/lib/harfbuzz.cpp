@@ -76,4 +76,10 @@ auto create_font(Context& ctx, shared_ptr<io::ReadFile> file, int weight) -> Fon
 	return Font{new Font_t{move(file), face, font}};
 }
 
+auto has_glyph(Font const& font, char32_t scalar) -> bool
+{
+	auto dummy = hb_codepoint_t{};
+	return hb_font_get_nominal_glyph(font->font, scalar, &dummy);
+}
+
 }

@@ -41,4 +41,7 @@ auto init() -> Context;
 // Open a font file for reading.
 auto create_font(Context&, shared_ptr<io::ReadFile>, int weight = 500) -> Font;
 
+// Return true if a font has a nominal glyph for a Unicode scalar.
+auto has_glyph(Font const&, char32_t) -> bool;
+
 }

@@ -26,5 +26,6 @@ auto to_utf8(span<byte const> input, string_view input_charset) -> string;
 // the returned spans might contain one or multiple UTF-8 scalars.
 // Throws on ICU error.
 auto grapheme_clusters(string_view input) -> generator<string_view>;
+auto grapheme_clusters(string&&) -> generator<string_view> = delete; // Prevent dangling views
 
 }
