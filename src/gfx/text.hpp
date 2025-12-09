@@ -11,6 +11,7 @@ or distributed except according to those terms.
 #include "preamble.hpp"
 #include "utils/logger.hpp"
 #include "lib/harfbuzz.hpp"
+#include "lib/icu.hpp"
 #include "io/file.hpp"
 
 namespace playnote::gfx {
@@ -21,6 +22,7 @@ public:
 
 	void load_font(id, io::ReadFile&&, initializer_list<int> weights = {500});
 	void define_style(id, initializer_list<id> fonts, int weight = 500);
+	void shape(id style_id, string_view text); //TODO return value
 
 private:
 	Logger::Category cat;
@@ -50,6 +52,13 @@ inline void TextShaper::define_style(id style_id, initializer_list<id> fonts, in
 		return ref(this->fonts.at(make_pair(font_id, weight)));
 	});
 	styles.emplace(style_id, move(style_fonts));
+}
+
+inline void TextShaper::shape(id style_id, string_view text)
+{
+	auto const& style_fonts = styles.at(style_id);
+	for (auto cluster: lib::icu::grapheme_clusters(text))
+		TRACE_AS(cat, "Cluster: {}", cluster);
 }
 
 }

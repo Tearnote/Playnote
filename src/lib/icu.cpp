@@ -9,7 +9,10 @@ or distributed except according to those terms.
 
 #include "lib/icu.hpp"
 
+#include <unicode/brkiter.h>
+#include <unicode/locid.h>
 #include <unicode/ucsdet.h>
+#include <unicode/utext.h>
 #include <unicode/ucnv.h>
 #include "preamble.hpp"
 #include "utils/assert.hpp"
@@ -80,6 +83,27 @@ auto to_utf8(span<byte const> input, string_view input_charset) -> string
 	contents.resize(converted);
 	ASSUME(contents[contents.size()] == '\0');
 	return contents;
+}
+
+auto grapheme_clusters(string_view input) -> generator<string_view>
+{
+	using UTextResource = unique_resource<UText*, decltype([](UText* ut) noexcept { utext_close(ut); })>;
+	auto err = U_ZERO_ERROR;
+	auto uinput = UTextResource{utext_openUTF8(nullptr, input.data(), input.size(), &err)};
+	handle_icu_error(err);
+	auto iter = unique_ptr<::icu::BreakIterator>{
+		::icu::BreakIterator::createCharacterInstance(::icu::Locale::getDefault(), err)
+	};
+	handle_icu_error(err);
+	iter->setText(uinput.get(), err);
+	handle_icu_error(err);
+
+	auto current = iter->first();
+	auto next = current;
+	while (next = iter->next(), next != ::icu::BreakIterator::DONE) {
+		co_yield input.substr(current, next - current);
+		current = next;
+	}
 }
 
 }

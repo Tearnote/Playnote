@@ -22,4 +22,9 @@ auto detect_encoding(span<byte const> input, initializer_list<string_view> chars
 // as a replacement character.
 auto to_utf8(span<byte const> input, string_view input_charset) -> string;
 
+// Iterate over a UTF-8 string, returning all grapheme clusters in turn. By definition,
+// the returned spans might contain one or multiple UTF-8 scalars.
+// Throws on ICU error.
+auto grapheme_clusters(string_view input) -> generator<string_view>;
+
 }
