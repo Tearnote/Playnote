@@ -14,6 +14,7 @@ or distributed except according to those terms.
 #include <unicode/ucsdet.h>
 #include <unicode/utext.h>
 #include <unicode/ucnv.h>
+#include <unicode/utf8.h>
 #include "preamble.hpp"
 #include "utils/assert.hpp"
 #include "utils/logger.hpp"
@@ -103,6 +104,22 @@ auto grapheme_clusters(string_view input) -> generator<string_view>
 	while (next = iter->next(), next != ::icu::BreakIterator::DONE) {
 		co_yield input.substr(current, next - current);
 		current = next;
+	}
+}
+
+auto scalars(string_view input) -> generator<char32_t>
+{
+	auto const* src = reinterpret_cast<uint8_t const*>(input.data());
+	auto const len = static_cast<int32_t>(input.size());
+	
+	auto i = 0;
+	while (i < len) {
+		auto c = UChar32{};
+		U8_NEXT(src, i, len, c);
+		if (c < 0) [[unlikely]]
+			co_yield 0xFFFD;
+		else
+			co_yield c;
 	}
 }
 
