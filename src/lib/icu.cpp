@@ -12,6 +12,7 @@ or distributed except according to those terms.
 #include <unicode/brkiter.h>
 #include <unicode/locid.h>
 #include <unicode/ucsdet.h>
+#include <unicode/uchar.h>
 #include <unicode/utext.h>
 #include <unicode/ucnv.h>
 #include <unicode/utf8.h>
@@ -111,7 +112,7 @@ auto scalars(string_view input) -> generator<char32_t>
 {
 	auto const* src = reinterpret_cast<uint8_t const*>(input.data());
 	auto const len = static_cast<int32_t>(input.size());
-	
+
 	auto i = 0;
 	while (i < len) {
 		auto c = UChar32{};
@@ -122,5 +123,8 @@ auto scalars(string_view input) -> generator<char32_t>
 			co_yield c;
 	}
 }
+
+auto is_whitespace(char32_t scalar) -> bool
+{ return u_isUWhiteSpace(scalar); }
 
 }

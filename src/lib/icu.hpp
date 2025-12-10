@@ -25,11 +25,14 @@ auto to_utf8(span<byte const> input, string_view input_charset) -> string;
 // Iterate over a UTF-8 string, returning all grapheme clusters in turn. By definition,
 // the returned spans might contain one or multiple UTF-8 scalars.
 // Throws on ICU error.
-auto grapheme_clusters(string_view input) -> generator<string_view>;
+auto grapheme_clusters(string_view) -> generator<string_view>;
 auto grapheme_clusters(string&&) -> generator<string_view> = delete; // Prevent dangling views
 
 // Iterate over a UTF-8 string, returning all scalars. Invalid UTF-8 is replaced by U+FFFD.
-auto scalars(string_view input) -> generator<char32_t>;
+auto scalars(string_view) -> generator<char32_t>;
 auto scalars(string&&) -> generator<char32_t> = delete; // Prevent dangling views
+
+// Return true if the scalar is whitespace, as per its Unicode character class.
+auto is_whitespace(char32_t) -> bool;
 
 }

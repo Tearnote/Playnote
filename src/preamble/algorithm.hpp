@@ -36,6 +36,7 @@ namespace views {
 		return std::string_view{range};
 	});
 }
+using std::ranges::all_of;
 using std::ranges::any_of;
 using std::ranges::contains;
 using std::ranges::fill;

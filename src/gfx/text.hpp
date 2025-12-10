@@ -66,27 +66,48 @@ inline void TextShaper::shape(id style_id, string_view text)
 {
 	auto const& style_fonts = styles.at(style_id);
 	for (auto [run, font]: itemize(text, style_fonts))
-			TRACE_AS(cat, "Run: \"{}\"", run);
+		TRACE_AS(cat, "Run: \"{}\"", run);
 }
 
 inline auto TextShaper::itemize(string_view text, span<FontRef const> fonts) -> generator<Run>
 {
+	ASSUME(!fonts.empty());
+
 	auto current_font = optional<FontRef>{nullopt};
 	auto run_start = text.begin();
+	auto scalars = small_vector<char32_t, 8>{};
 
 	for (auto cluster: lib::icu::grapheme_clusters(text)) {
 		auto best_font = optional<FontRef>{nullopt};
-		for (auto font: fonts) {
-			auto font_suitable = true;
-			for (auto scalar: lib::icu::scalars(cluster)) {
-				if (!lib::harfbuzz::has_glyph(font.get(), scalar)) {
-					font_suitable = false;
+		scalars.clear();
+		copy(lib::icu::scalars(cluster), back_inserter(scalars));
+
+		// Use current font for whitespace if possible
+		if (current_font && all_of(scalars, [](auto s) { return lib::icu::is_whitespace(s); })) {
+			auto current_suitable = true;
+			for (auto scalar: scalars) {
+				if (!lib::harfbuzz::has_glyph(current_font->get(), scalar)) {
+					current_suitable = false;
 					break;
 				}
 			}
-			if (font_suitable) {
-				best_font = font;
-				break;
+			if (current_suitable) best_font = current_font;
+		}
+
+		// Locate first supported font
+		if (!best_font) {
+			for (auto font: fonts) {
+				auto font_suitable = true;
+				for (auto scalar: scalars) {
+					if (!lib::harfbuzz::has_glyph(font.get(), scalar)) {
+						font_suitable = false;
+						break;
+					}
+				}
+				if (font_suitable) {
+					best_font = font;
+					break;
+				}
 			}
 		}
 
@@ -110,7 +131,10 @@ inline auto TextShaper::itemize(string_view text, span<FontRef const> fonts) -> 
 	}
 
 	// Final run
-	if (current_font) co_yield {string_view{run_start, text.end()}, *current_font};
+	if (current_font)
+		co_yield {string_view{run_start, text.end()}, *current_font};
+	else
+		co_yield {text, fonts[0]}; // No character was supported, use default font
 }
 
 }
