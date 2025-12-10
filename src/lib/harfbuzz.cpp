@@ -16,6 +16,7 @@ or distributed except according to those terms.
 #include <hb-ft.h>
 #include "preamble.hpp"
 #include "utils/assert.hpp"
+#include "utils/logger.hpp"
 #include "io/file.hpp"
 
 namespace playnote::lib::harfbuzz {
@@ -80,6 +81,41 @@ auto has_glyph(Font const& font, char32_t scalar) -> bool
 {
 	auto dummy = hb_codepoint_t{};
 	return hb_font_get_nominal_glyph(font->font, scalar, &dummy);
+}
+
+auto shape(string_view context, string_view run, Font const& font) -> ShapedRun
+{
+	// Ensure substring relation
+	ASSUME(run.data() >= context.data());
+	ASSUME(run.data() + run.size() <= context.data() + context.size());
+
+	using Buffer = unique_resource<hb_buffer_t*, decltype([](auto* b) noexcept { hb_buffer_destroy(b); })>;
+	auto buffer = Buffer{hb_buffer_create()};
+	hb_buffer_add_utf8(buffer.get(),
+		context.data(), context.size(),
+		run.data() - context.data(), run.size());
+	hb_buffer_guess_segment_properties(buffer.get());
+
+	hb_shape(font->font, buffer.get(), nullptr, 0);
+
+	auto glyph_count = 0u;
+	auto* infos_raw = hb_buffer_get_glyph_infos(buffer.get(), &glyph_count);
+	auto* positions_raw = hb_buffer_get_glyph_positions(buffer.get(), &glyph_count);
+	auto infos = span{infos_raw, glyph_count};
+	auto positions = span{positions_raw, glyph_count};
+
+	auto result = ShapedRun{};
+	result.glyphs.reserve(glyph_count);
+	auto const scale = 1.0f / 64.0f;
+	auto cursor = float2{0.0f, 0.0f};
+	for (auto [info, position]: views::zip(infos, positions)) {
+		auto const offset  = float2{position.x_offset  * scale, position.y_offset  * scale};
+		auto const advance = float2{position.x_advance * scale, position.y_advance * scale};
+		result.glyphs.emplace_back(info.codepoint, cursor + offset);
+		cursor += advance;
+	}
+	result.advance = cursor;
+	return result;
 }
 
 }

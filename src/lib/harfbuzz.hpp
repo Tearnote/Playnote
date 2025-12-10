@@ -44,4 +44,15 @@ auto create_font(Context&, shared_ptr<io::ReadFile>, int weight = 500) -> Font;
 // Return true if a font has a nominal glyph for a Unicode scalar.
 auto has_glyph(Font const&, char32_t) -> bool;
 
+struct ShapedRun {
+	struct Glyph {
+		uint32_t idx;
+		float2 offset;
+	};
+	vector<Glyph> glyphs;
+	float2 advance;
+};
+
+auto shape(string_view context, string_view run, Font const&) -> ShapedRun;
+
 }

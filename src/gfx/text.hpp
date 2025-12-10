@@ -65,8 +65,15 @@ inline void TextShaper::define_style(id style_id, initializer_list<id> fonts, in
 inline void TextShaper::shape(id style_id, string_view text)
 {
 	auto const& style_fonts = styles.at(style_id);
-	for (auto [run, font]: itemize(text, style_fonts))
-		TRACE_AS(cat, "Run: \"{}\"", run);
+	auto cursor = float2{0.0f, 0.0f};
+	for (auto [run, font]: itemize(text, style_fonts)) {
+		auto const shaped_run = lib::harfbuzz::shape(text, run, font);
+		//TODO add shaped_run.glyphs to result buffer at cursor+shaped_run.offset
+		cursor += shaped_run.advance;
+	}
+	
+	//TODO once result buffer is complete, compute AABB bound relative to origin
+	//TODO return result buffer
 }
 
 inline auto TextShaper::itemize(string_view text, span<FontRef const> fonts) -> generator<Run>
