@@ -442,4 +442,13 @@ static_assert(std::is_trivially_constructible_v<uint2>);
 static_assert(std::is_trivially_constructible_v<uint3>);
 static_assert(std::is_trivially_constructible_v<uint4>);
 
+// Bounding box
+template<typename T>
+struct AABB {
+	T top_left;
+	T bottom_right;
+	
+	auto size() const -> T { return bottom_right - top_left; }
+};
+
 }
