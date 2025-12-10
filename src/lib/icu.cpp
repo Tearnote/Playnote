@@ -94,7 +94,7 @@ auto grapheme_clusters(string_view input) -> generator<string_view>
 	auto uinput = UTextResource{utext_openUTF8(nullptr, input.data(), input.size(), &err)};
 	handle_icu_error(err);
 	auto iter = unique_ptr<::icu::BreakIterator>{
-		::icu::BreakIterator::createCharacterInstance(::icu::Locale::getDefault(), err)
+		::icu::BreakIterator::createCharacterInstance(::icu::Locale::getRoot(), err)
 	};
 	handle_icu_error(err);
 	iter->setText(uinput.get(), err);
