@@ -16,7 +16,6 @@ or distributed except according to those terms.
 #include <hb-ft.h>
 #include "preamble.hpp"
 #include "utils/assert.hpp"
-#include "utils/logger.hpp"
 #include "io/file.hpp"
 
 namespace playnote::lib::harfbuzz {

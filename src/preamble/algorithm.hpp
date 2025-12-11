@@ -20,6 +20,7 @@ namespace views {
 	using std::ranges::views::zip;
 	using std::ranges::views::split;
 	using std::ranges::views::chunk;
+	using std::ranges::views::chunk_by;
 	using std::ranges::views::filter;
 	using std::ranges::views::enumerate;
 	using std::ranges::views::keys;

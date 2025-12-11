@@ -8,6 +8,11 @@ or distributed except according to those terms.
 */
 
 #pragma once
+#include <ft2build.h>
+#include FT_FREETYPE_H
+#include "msdfgen/ext/import-font.h"
+#include "msdf-atlas-gen/msdf-atlas-gen.h"
+
 #include "preamble.hpp"
 #include "preamble/algorithm.hpp"
 #include "utils/logger.hpp"
@@ -31,6 +36,12 @@ public:
 private:
 	using FontRef = reference_wrapper<lib::harfbuzz::Font>;
 	using CacheKey = tuple<FontID, int, ssize_t>; // font id, weight, glyph index
+	using Atlas = msdf_atlas::DynamicAtlas<
+		msdf_atlas::ImmediateAtlasGenerator<
+			float, 4, &msdf_atlas::mtsdfGenerator,
+			msdf_atlas::BitmapAtlasStorage<msdf_atlas::byte, 4>
+		>
+	>;
 
 	struct CachedGlyph {
 		AABB<float2> atlas_bounds;
@@ -41,11 +52,13 @@ private:
 	lib::harfbuzz::Context ctx;
 	unordered_map<pair<FontID, int>, lib::harfbuzz::Font> fonts; // key: font id, weight
 	unordered_map<StyleID, pair<vector<FontID>, int>> styles; // value: font cascade by id, weight
+	Atlas atlas;
 	unordered_map<CacheKey, CachedGlyph> atlas_cache;
 
 	using Run = pair<string_view, ssize_t>;
 	auto itemize(string_view, span<FontRef const>) -> generator<Run>;
 	auto itemize(string&&, span<FontRef const>) -> generator<Run> = delete;
+	void cache_glyphs(span<CacheKey const>);
 };
 
 inline TextShaper::TextShaper(Logger::Category cat):
@@ -113,13 +126,8 @@ inline void TextShaper::shape(id style_id, string_view text)
 	);
 	sort(missing_keys);
 	auto removed = unique(missing_keys);
-	TRACE_AS(cat, "duplicate keys: {}", removed.size());
 	missing_keys.erase(removed.begin(), removed.end());
-	//TODO rasterize missing glyphs into atlas
-
-	for (auto const& missing: missing_keys)
-		TRACE_AS(cat, "missing: font {}, weight {}, idx {}",
-			+get<FontID>(missing), get<int>(missing), get<ssize_t>(missing));
+	cache_glyphs(missing_keys);
 
 	//TODO get atlas UVs for each glyph
 	//TODO compute AABB bound relative to origin
@@ -192,6 +200,58 @@ inline auto TextShaper::itemize(string_view text, span<FontRef const> fonts) -> 
 		co_yield {string_view{run_start, text.end()}, *current_font_idx};
 	else
 		co_yield {text, 0}; // No character was supported, use primary font
+}
+
+inline void TextShaper::cache_glyphs(span<CacheKey const> glyph_keys)
+{
+	auto glyphs = vector<msdf_atlas::GlyphGeometry>{};
+	auto keys = vector<CacheKey>{};
+	glyphs.reserve(glyph_keys.size());
+	keys.reserve(glyph_keys.size());
+
+	// Load glyph geometries from each font
+	for (auto chunk: glyph_keys | views::chunk_by([](auto const& a, auto const& b) {
+		return get<FontID>(a) == get<FontID>(b) && get<int>(a) == get<int>(b);
+	})) {
+		auto [font_id, weight, _] = chunk.front();
+		auto const& font_resource = fonts.at({font_id, weight});
+		auto* font_handle = msdfgen::adoptFreetypeFont(font_resource.get()->face);
+		auto const scale = 1.0 / static_cast<double>(font_resource.get()->face->units_per_EM);
+		for (auto const& key: chunk) {
+			auto const glyph_idx = get<ssize_t>(key);
+			auto glyph = msdf_atlas::GlyphGeometry{};
+			if (glyph.load(font_handle, scale, msdfgen::GlyphIndex{static_cast<uint>(glyph_idx)})) {
+				glyph.edgeColoring(&msdfgen::edgeColoringInkTrap, 3.0, 0);
+				glyph.wrapBox(32.0, 2.0 / 32.0, 1.0); // Scale: 32px/em, Range: 2px, MiterLimit: 1.0
+				glyphs.emplace_back(move(glyph));
+				keys.emplace_back(key);
+			} else {
+				// Failed to load; cache as empty to prevent re-loading attempts
+				atlas_cache.emplace(key, CachedGlyph{});
+			}
+		}
+		msdfgen::destroyFont(font_handle);
+	}
+
+	// Rasterize and pack
+	atlas.add(glyphs.data(), glyphs.size());
+
+	// Update cache
+	for (auto [glyph, key]: views::zip(glyphs, keys)) {
+		auto const rect = glyph.getBoxRect();
+		auto const scale = glyph.getBoxScale();
+		auto const translate = glyph.getBoxTranslate();
+		atlas_cache.emplace(key, CachedGlyph{
+			.atlas_bounds = {
+				{static_cast<float>(rect.x), static_cast<float>(rect.y)},
+				{static_cast<float>(rect.x + rect.w), static_cast<float>(rect.y + rect.h)},
+			},
+			.bearing = float2{
+				static_cast<float>(translate.x * scale),
+				static_cast<float>(rect.h - translate.y * scale),
+			},
+		});
+	}
 }
 
 }
