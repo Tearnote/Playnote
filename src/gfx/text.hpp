@@ -30,11 +30,18 @@ public:
 
 private:
 	using FontRef = reference_wrapper<lib::harfbuzz::Font>;
+	using CacheKey = tuple<FontID, int, ssize_t>; // font id, weight, glyph index
+
+	struct CachedGlyph {
+		AABB<float2> atlas_bounds;
+		float2 bearing; // position of glyph origin within the atlas bounds
+	};
 
 	Logger::Category cat;
 	lib::harfbuzz::Context ctx;
 	unordered_map<pair<FontID, int>, lib::harfbuzz::Font> fonts; // key: font id, weight
 	unordered_map<StyleID, pair<vector<FontID>, int>> styles; // value: font cascade by id, weight
+	unordered_map<CacheKey, CachedGlyph> atlas_cache;
 
 	using Run = pair<string_view, ssize_t>;
 	auto itemize(string_view, span<FontRef const>) -> generator<Run>;
@@ -69,14 +76,37 @@ inline void TextShaper::shape(id style_id, string_view text)
 	style_font_refs.reserve(style_font_ids.size());
 	transform(style_font_ids, back_inserter(style_font_refs), [&](auto fid) { return ref(fonts.at({fid, weight})); });
 
+	// Collect shaping results
+	struct Run {
+		lib::harfbuzz::ShapedRun shaped_run;
+		FontID font_id;
+		float2 position;
+	};
+	auto runs = vector<Run>{};
 	auto cursor = float2{0.0f, 0.0f};
-	for (auto [run, font_idx]: itemize(text, style_font_refs)) {
+	for (auto [run_str, font_idx]: itemize(text, style_font_refs)) {
 		auto const& font = style_font_refs[font_idx];
-		auto const shaped_run = lib::harfbuzz::shape(text, run, font);
-		//TODO accumulate shaped_run.glyphs, positioned at cursor+shaped_run.offset
-		TRACE_AS(cat, "shaped run: {} glyphs, at: {}", shaped_run.glyphs.size(), cursor);
-		cursor += shaped_run.advance;
+		auto shaped_run = lib::harfbuzz::shape(text, run_str, font);
+		auto& run = runs.emplace_back(move(shaped_run), style_font_ids[font_idx], cursor);
+		cursor += run.shaped_run.advance;
 	}
+
+	// Flatten shaping results to a list of glyphs
+	struct PendingGlyph {
+		CacheKey key;
+		float2 position;
+	};
+	auto pending_glyphs = vector<PendingGlyph>{};
+	pending_glyphs.reserve(fold_left(runs, 0z, [](auto acc, auto const& run) { return acc + run.shaped_run.glyphs.size(); }));
+	for (auto const& run: runs) {
+		for (auto const& glyph: run.shaped_run.glyphs)
+			pending_glyphs.emplace_back(CacheKey{run.font_id, weight, glyph.idx}, run.position + glyph.offset);
+	}
+	
+	for (auto const& pending_glyph: pending_glyphs)
+		TRACE_AS(cat, "glyph: font {}, weight {}, idx {}, at {}",
+			+get<FontID>(pending_glyph.key), get<int>(pending_glyph.key), get<ssize_t>(pending_glyph.key),
+			pending_glyph.position);
 
 	//TODO enumerate glyphs not yet in the atlas and rasterize them
 	//TODO get atlas UVs for each glyph
