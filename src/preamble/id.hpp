@@ -26,8 +26,7 @@ public:
 		}
 	}
 
-	constexpr auto operator==(id const&) const -> bool = default;
-	constexpr auto operator!=(id const&) const -> bool = default;
+	constexpr auto operator<=>(id const&) const = default;
 	constexpr auto operator+() const { return val; }
 
 private:
