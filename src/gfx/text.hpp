@@ -102,15 +102,26 @@ inline void TextShaper::shape(id style_id, string_view text)
 		for (auto const& glyph: run.shaped_run.glyphs)
 			pending_glyphs.emplace_back(CacheKey{run.font_id, weight, glyph.idx}, run.position + glyph.offset);
 	}
-	
-	for (auto const& pending_glyph: pending_glyphs)
-		TRACE_AS(cat, "glyph: font {}, weight {}, idx {}, at {}",
-			+get<FontID>(pending_glyph.key), get<int>(pending_glyph.key), get<ssize_t>(pending_glyph.key),
-			pending_glyph.position);
 
-	//TODO enumerate glyphs not yet in the atlas and rasterize them
+	// Update atlas with missing glyphs
+	auto missing_keys = vector<CacheKey>{};
+	missing_keys.reserve(pending_glyphs.size());
+	transform(
+		pending_glyphs | views::filter([&](auto const& g) { return !atlas_cache.contains(g.key); }),
+		back_inserter(missing_keys),
+		[](auto const& g) { return g.key; }
+	);
+	sort(missing_keys);
+	auto removed = unique(missing_keys);
+	TRACE_AS(cat, "duplicate keys: {}", removed.size());
+	missing_keys.erase(removed.begin(), removed.end());
+	//TODO rasterize missing glyphs into atlas
+
+	for (auto const& missing: missing_keys)
+		TRACE_AS(cat, "missing: font {}, weight {}, idx {}",
+			+get<FontID>(missing), get<int>(missing), get<ssize_t>(missing));
+
 	//TODO get atlas UVs for each glyph
-
 	//TODO compute AABB bound relative to origin
 	//TODO return result buffer
 }
