@@ -202,7 +202,7 @@ Renderer::Renderer(dev::Window& window, Logger::Category cat):
 	text_shaper.load_font("Pretendard"_id, io::read_file(PretendardFontPath), {500, 800});
 	text_shaper.define_style("SansMedium"_id, {"Mplus2"_id, "Pretendard"_id}, 500);
 	text_shaper.define_style("SansBold"_id, {"Mplus2"_id, "Pretendard"_id}, 800);
-	text_shaper.shape("SansMedium"_id, "Hello World! の支援によりフ 다른 환경에서 이를 대체할 とかな文字に従来");
+	text_shaper.shape("SansMedium"_id, "Hello World! こんにちは、世界！ 안녕하세요, 세상!");
 
 	lib::vuk::create_compute_pipeline(context, "worklist_gen", gpu::worklist_gen_spv);
 	DEBUG_AS(cat, "Compiled worklist_gen pipeline");

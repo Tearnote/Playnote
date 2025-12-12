@@ -12,6 +12,7 @@ or distributed except according to those terms.
 #include FT_FREETYPE_H
 #include "msdfgen/ext/import-font.h"
 #include "msdf-atlas-gen/msdf-atlas-gen.h"
+#include "msdf-atlas-gen/image-save.h"
 
 #include "preamble.hpp"
 #include "preamble/algorithm.hpp"
@@ -27,11 +28,12 @@ public:
 	using FontID = id;
 	using StyleID = id;
 
-	TextShaper(Logger::Category);
+	explicit TextShaper(Logger::Category);
 
 	void load_font(FontID, io::ReadFile&&, initializer_list<int> weights = {500});
 	void define_style(StyleID, initializer_list<FontID>, int weight = 500);
 	void shape(StyleID, string_view); //TODO return value
+	void dump_atlas(fs::path const&);
 
 private:
 	using FontRef = reference_wrapper<lib::harfbuzz::Font>;
@@ -63,7 +65,8 @@ private:
 
 inline TextShaper::TextShaper(Logger::Category cat):
 	cat{cat},
-	ctx{lib::harfbuzz::init()}
+	ctx{lib::harfbuzz::init()},
+	atlas{256}
 {}
 
 inline void TextShaper::load_font(FontID font_id, io::ReadFile&& file, initializer_list<int> weights)
@@ -129,9 +132,17 @@ inline void TextShaper::shape(id style_id, string_view text)
 	missing_keys.erase(removed.begin(), removed.end());
 	cache_glyphs(missing_keys);
 
-	//TODO get atlas UVs for each glyph
+	//TODO retrieve glyphs from atlas
 	//TODO compute AABB bound relative to origin
 	//TODO return result buffer
+}
+
+inline void TextShaper::dump_atlas(fs::path const& path)
+{
+	if (msdf_atlas::saveImage((msdfgen::BitmapConstRef<msdf_atlas::byte, 4>)atlas.atlasGenerator().atlasStorage(), msdf_atlas::ImageFormat::PNG, path.c_str(), msdf_atlas::YDirection::BOTTOM_UP))
+		INFO_AS(cat, "Exported font atlas to atlas.png");
+	else
+		WARN_AS(cat, "Failed to export font atlas");
 }
 
 inline auto TextShaper::itemize(string_view text, span<FontRef const> fonts) -> generator<Run>
