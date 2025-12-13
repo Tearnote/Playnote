@@ -8,6 +8,8 @@ or distributed except according to those terms.
 */
 
 #pragma once
+
+//TODO move to a lib wrapper once feature-complete
 #include <ft2build.h>
 #include FT_FREETYPE_H
 #include "msdfgen/ext/import-font.h"
@@ -28,12 +30,22 @@ public:
 	using FontID = id;
 	using StyleID = id;
 
+	struct Text {
+		struct Glyph {
+			AABB<float2> atlas_bounds;
+			float2 offset;
+		};
+
+		vector<Glyph> glyphs;
+		AABB<float2> bounds;
+	};
+
 	explicit TextShaper(Logger::Category);
 
 	void load_font(FontID, io::ReadFile&&, initializer_list<int> weights = {500});
 	void define_style(StyleID, initializer_list<FontID>, int weight = 500);
-	void shape(StyleID, string_view); //TODO return value
-	void dump_atlas(fs::path const&);
+	auto shape(StyleID, string_view) -> Text;
+	void dump_atlas(fs::path const&) const;
 
 private:
 	using FontRef = reference_wrapper<lib::harfbuzz::Font>;
@@ -49,6 +61,8 @@ private:
 		AABB<float2> atlas_bounds;
 		float2 bearing; // position of glyph origin within the atlas bounds
 	};
+
+	static constexpr auto PixelsPerEm = 32.0f;
 
 	Logger::Category cat;
 	lib::harfbuzz::Context ctx;
@@ -66,7 +80,7 @@ private:
 inline TextShaper::TextShaper(Logger::Category cat):
 	cat{cat},
 	ctx{lib::harfbuzz::init()},
-	atlas{256}
+	atlas{1024}
 {}
 
 inline void TextShaper::load_font(FontID font_id, io::ReadFile&& file, initializer_list<int> weights)
@@ -85,7 +99,7 @@ inline void TextShaper::define_style(StyleID style_id, initializer_list<FontID> 
 	styles.emplace(style_id, pair{move(style_fonts), weight});
 }
 
-inline void TextShaper::shape(id style_id, string_view text)
+inline auto TextShaper::shape(id style_id, string_view text) -> Text
 {
 	auto const [style_font_ids, weight] = styles.at(style_id);
 	auto style_font_refs = vector<FontRef>{};
@@ -104,6 +118,14 @@ inline void TextShaper::shape(id style_id, string_view text)
 		auto const& font = style_font_refs[font_idx];
 		auto shaped_run = lib::harfbuzz::shape(text, run_str, font);
 		auto& run = runs.emplace_back(move(shaped_run), style_font_ids[font_idx], cursor);
+
+		// Scale to atlas pixels
+		auto const upm = static_cast<float>(font.get()->face->units_per_EM);
+		auto const scale = PixelsPerEm / upm;
+		for (auto& glyph: run.shaped_run.glyphs)
+			glyph.offset *= scale;
+		run.shaped_run.advance *= scale;
+
 		cursor += run.shaped_run.advance;
 	}
 
@@ -132,12 +154,26 @@ inline void TextShaper::shape(id style_id, string_view text)
 	missing_keys.erase(removed.begin(), removed.end());
 	cache_glyphs(missing_keys);
 
-	//TODO retrieve glyphs from atlas
-	//TODO compute AABB bound relative to origin
-	//TODO return result buffer
+	// Collect results
+	auto result = Text{};
+	result.bounds.top_left.x() = numeric_limits<float>::max();
+	result.bounds.top_left.y() = numeric_limits<float>::max();
+	result.bounds.bottom_right.x() = numeric_limits<float>::lowest();
+	result.bounds.bottom_right.y() = numeric_limits<float>::lowest();
+	result.glyphs.reserve(pending_glyphs.size());
+	for (auto const& pending: pending_glyphs) {
+		auto const& cached = atlas_cache.at(pending.key);
+		if (cached.atlas_bounds.size() == float2{0.0f, 0.0f}) continue; // whitespace
+		auto const offset = pending.position - cached.bearing;
+		result.glyphs.emplace_back(cached.atlas_bounds, offset);
+		result.bounds.top_left = min(result.bounds.top_left, offset);
+		result.bounds.bottom_right = max(result.bounds.bottom_right, offset + cached.atlas_bounds.size());
+	}
+	TRACE_AS(cat, "{} glyphs; bounds: {} {}", result.glyphs.size(), result.bounds.top_left, result.bounds.bottom_right);
+	return result;
 }
 
-inline void TextShaper::dump_atlas(fs::path const& path)
+inline void TextShaper::dump_atlas(fs::path const& path) const
 {
 	if (msdf_atlas::saveImage((msdfgen::BitmapConstRef<msdf_atlas::byte, 4>)atlas.atlasGenerator().atlasStorage(), msdf_atlas::ImageFormat::PNG, path.c_str(), msdf_atlas::YDirection::BOTTOM_UP))
 		INFO_AS(cat, "Exported font atlas to atlas.png");
@@ -233,7 +269,7 @@ inline void TextShaper::cache_glyphs(span<CacheKey const> glyph_keys)
 			auto glyph = msdf_atlas::GlyphGeometry{};
 			if (glyph.load(font_handle, scale, msdfgen::GlyphIndex{static_cast<uint>(glyph_idx)})) {
 				glyph.edgeColoring(&msdfgen::edgeColoringInkTrap, 3.0, 0);
-				glyph.wrapBox(32.0, 2.0 / 32.0, 1.0); // Scale: 32px/em, Range: 2px, MiterLimit: 1.0
+				glyph.wrapBox(PixelsPerEm, 2.0 / PixelsPerEm, 1.0);
 				glyphs.emplace_back(move(glyph));
 				keys.emplace_back(key);
 			} else {
@@ -264,5 +300,8 @@ inline void TextShaper::cache_glyphs(span<CacheKey const> glyph_keys)
 		});
 	}
 }
+
+using Text = TextShaper::Text;
+using Glyph = TextShaper::Text::Glyph;
 
 }

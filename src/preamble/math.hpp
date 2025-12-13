@@ -9,6 +9,7 @@ or distributed except according to those terms.
 
 #pragma once
 #include <algorithm>
+#include <limits>
 #include <cmath>
 #include <boost/rational.hpp>
 
@@ -23,6 +24,7 @@ using std::abs;
 using std::pow;
 using std::exp;
 using std::sqrt;
+using std::numeric_limits;
 using boost::rational;
 using boost::rational_cast;
 
