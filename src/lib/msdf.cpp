@@ -22,9 +22,7 @@ GlyphLoader::GlyphLoader(lib::harfbuzz::Font const& ft_font, float pixels_per_em
 {}
 
 GlyphLoader::~GlyphLoader() noexcept
-{
-	msdfgen::destroyFont(font);
-}
+{ msdfgen::destroyFont(font); }
 
 auto GlyphLoader::load_glyph(ssize_t glyph_idx) -> optional<GlyphGeometry>
 {
@@ -77,7 +75,7 @@ void atlas_to_image(MTSDFAtlas const& atlas, fs::path const& path)
 {
 	if (!msdf_atlas::saveImage(
 		static_cast<msdfgen::BitmapConstRef<msdf_atlas::byte, 4>>(atlas.atlasGenerator().atlasStorage()),
-		msdf_atlas::ImageFormat::PNG, path.c_str(), msdf_atlas::YDirection::BOTTOM_UP)
+		msdf_atlas::ImageFormat::PNG, path.string().c_str(), msdf_atlas::YDirection::BOTTOM_UP)
 	)
 		throw runtime_error_fmt("Failed to save font atlas to \"{}\"", path);
 }
