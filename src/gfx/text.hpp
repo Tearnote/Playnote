@@ -18,28 +18,43 @@ or distributed except according to those terms.
 
 namespace playnote::gfx {
 
+// Performs text shaping and manages a glyph atlas.
 class TextShaper {
 public:
 	using FontID = id;
 	using StyleID = id;
 
+	// Visual representation of a line of text, renderable with glyphs in the atlas.
 	struct Text {
 		struct Glyph {
 			AABB<float2> atlas_bounds;
-			float2 offset;
+			float2 offset; // from origin at (0, 0), the start of the baseline
 		};
 
 		vector<Glyph> glyphs;
-		AABB<float2> bounds;
+		AABB<float2> bounds; // can extend to the left of origin, or even not contain origin at all
 	};
 
+	// Initialize with an empty atlas.
 	explicit TextShaper(Logger::Category);
 
+	// Add a font file into available fonts. Weights are generated using the wght variable axis.
 	void load_font(FontID, io::ReadFile&&, initializer_list<int> weights = {500});
+	
+	// Add a style, which is a font fallback cascade at a specified weight. The fonts must all
+	// have been previously added with that exact weight.
 	void define_style(StyleID, initializer_list<FontID>, int weight = 500);
+	
+	// Shape text into glyphs using the specified style. The returned object can be used repeatedly.
 	auto shape(StyleID, string_view) -> Text;
+	
+	// Return true if the atlas bitmap has changed since the last call to get_atlas().
 	auto is_atlas_dirty() const noexcept -> bool { return atlas_dirty; }
+	
+	// Return the current atlas bitmap.
 	auto get_atlas() -> lib::msdf::AtlasView;
+	
+	// Save the atlas to a file for debugging purposes.
 	void dump_atlas(fs::path const&) const;
 
 private:
