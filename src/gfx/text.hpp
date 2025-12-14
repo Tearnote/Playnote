@@ -29,6 +29,7 @@ class TextShaper {
 public:
 	using FontID = id;
 	using StyleID = id;
+	using AtlasView = const_multi_array_ref<byte, 3>;
 
 	struct Text {
 		struct Glyph {
@@ -45,6 +46,8 @@ public:
 	void load_font(FontID, io::ReadFile&&, initializer_list<int> weights = {500});
 	void define_style(StyleID, initializer_list<FontID>, int weight = 500);
 	auto shape(StyleID, string_view) -> Text;
+	auto is_atlas_dirty() const noexcept -> bool { return atlas_dirty; }
+	auto get_atlas() -> AtlasView;
 	void dump_atlas(fs::path const&) const;
 
 private:
@@ -70,6 +73,7 @@ private:
 	unordered_map<StyleID, pair<vector<FontID>, int>> styles; // value: font cascade by id, weight
 	Atlas atlas;
 	unordered_map<CacheKey, CachedGlyph> atlas_cache;
+	bool atlas_dirty = true;
 
 	using Run = pair<string_view, ssize_t>;
 	auto itemize(string_view, span<FontRef const>) -> generator<Run>;
@@ -173,10 +177,21 @@ inline auto TextShaper::shape(id style_id, string_view text) -> Text
 	return result;
 }
 
+inline auto TextShaper::get_atlas() -> AtlasView
+{
+	atlas_dirty = false;
+	auto const& storage = atlas.atlasGenerator().atlasStorage();
+	auto bitmap = static_cast<msdfgen::BitmapConstRef<msdf_atlas::byte, 4>>(storage);
+	return AtlasView{
+		reinterpret_cast<byte const*>(bitmap.pixels),
+		boost::extents[bitmap.height][bitmap.width][4],
+	};
+}
+
 inline void TextShaper::dump_atlas(fs::path const& path) const
 {
-	if (msdf_atlas::saveImage((msdfgen::BitmapConstRef<msdf_atlas::byte, 4>)atlas.atlasGenerator().atlasStorage(), msdf_atlas::ImageFormat::PNG, path.c_str(), msdf_atlas::YDirection::BOTTOM_UP))
-		INFO_AS(cat, "Exported font atlas to atlas.png");
+	if (msdf_atlas::saveImage((msdfgen::BitmapConstRef<msdf_atlas::byte, 4>)atlas.atlasGenerator().atlasStorage(), msdf_atlas::ImageFormat::TIFF, path.c_str(), msdf_atlas::YDirection::BOTTOM_UP))
+		INFO_AS(cat, "Exported font atlas to \"{}\"", path);
 	else
 		WARN_AS(cat, "Failed to export font atlas");
 }
@@ -299,6 +314,8 @@ inline void TextShaper::cache_glyphs(span<CacheKey const> glyph_keys)
 			},
 		});
 	}
+
+	atlas_dirty = true;
 }
 
 using Text = TextShaper::Text;
