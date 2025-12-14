@@ -9,17 +9,10 @@ or distributed except according to those terms.
 
 #pragma once
 
-//TODO move to a lib wrapper once feature-complete
-#include <ft2build.h>
-#include FT_FREETYPE_H
-#include "msdfgen/ext/import-font.h"
-#include "msdf-atlas-gen/msdf-atlas-gen.h"
-#include "msdf-atlas-gen/image-save.h"
-
 #include "preamble.hpp"
-#include "preamble/algorithm.hpp"
 #include "utils/logger.hpp"
 #include "lib/harfbuzz.hpp"
+#include "lib/msdf.hpp"
 #include "lib/icu.hpp"
 #include "io/file.hpp"
 
@@ -29,7 +22,6 @@ class TextShaper {
 public:
 	using FontID = id;
 	using StyleID = id;
-	using AtlasView = const_multi_array_ref<byte, 3>;
 
 	struct Text {
 		struct Glyph {
@@ -47,23 +39,12 @@ public:
 	void define_style(StyleID, initializer_list<FontID>, int weight = 500);
 	auto shape(StyleID, string_view) -> Text;
 	auto is_atlas_dirty() const noexcept -> bool { return atlas_dirty; }
-	auto get_atlas() -> AtlasView;
+	auto get_atlas() -> lib::msdf::AtlasView;
 	void dump_atlas(fs::path const&) const;
 
 private:
 	using FontRef = reference_wrapper<lib::harfbuzz::Font>;
 	using CacheKey = tuple<FontID, int, ssize_t>; // font id, weight, glyph index
-	using Atlas = msdf_atlas::DynamicAtlas<
-		msdf_atlas::ImmediateAtlasGenerator<
-			float, 4, &msdf_atlas::mtsdfGenerator,
-			msdf_atlas::BitmapAtlasStorage<msdf_atlas::byte, 4>
-		>
-	>;
-
-	struct CachedGlyph {
-		AABB<float2> atlas_bounds;
-		float2 bearing; // position of glyph origin within the atlas bounds
-	};
 
 	static constexpr auto PixelsPerEm = 32.0f;
 
@@ -71,8 +52,8 @@ private:
 	lib::harfbuzz::Context ctx;
 	unordered_map<pair<FontID, int>, lib::harfbuzz::Font> fonts; // key: font id, weight
 	unordered_map<StyleID, pair<vector<FontID>, int>> styles; // value: font cascade by id, weight
-	Atlas atlas;
-	unordered_map<CacheKey, CachedGlyph> atlas_cache;
+	lib::msdf::MTSDFAtlas atlas;
+	unordered_map<CacheKey, lib::msdf::GlyphLayout> atlas_cache;
 	bool atlas_dirty = true;
 
 	using Run = pair<string_view, ssize_t>;
@@ -124,8 +105,7 @@ inline auto TextShaper::shape(id style_id, string_view text) -> Text
 		auto& run = runs.emplace_back(move(shaped_run), style_font_ids[font_idx], cursor);
 
 		// Scale to atlas pixels
-		auto const upm = static_cast<float>(font.get()->face->units_per_EM);
-		auto const scale = PixelsPerEm / upm;
+		auto const scale = PixelsPerEm / lib::harfbuzz::units_per_em(font);
 		for (auto& glyph: run.shaped_run.glyphs)
 			glyph.offset *= scale;
 		run.shaped_run.advance *= scale;
@@ -177,23 +157,18 @@ inline auto TextShaper::shape(id style_id, string_view text) -> Text
 	return result;
 }
 
-inline auto TextShaper::get_atlas() -> AtlasView
+inline auto TextShaper::get_atlas() -> lib::msdf::AtlasView
 {
 	atlas_dirty = false;
-	auto const& storage = atlas.atlasGenerator().atlasStorage();
-	auto bitmap = static_cast<msdfgen::BitmapConstRef<msdf_atlas::byte, 4>>(storage);
-	return AtlasView{
-		reinterpret_cast<byte const*>(bitmap.pixels),
-		boost::extents[bitmap.height][bitmap.width][4],
-	};
+	return lib::msdf::get_atlas_contents(atlas);
 }
 
 inline void TextShaper::dump_atlas(fs::path const& path) const
-{
-	if (msdf_atlas::saveImage((msdfgen::BitmapConstRef<msdf_atlas::byte, 4>)atlas.atlasGenerator().atlasStorage(), msdf_atlas::ImageFormat::TIFF, path.c_str(), msdf_atlas::YDirection::BOTTOM_UP))
-		INFO_AS(cat, "Exported font atlas to \"{}\"", path);
-	else
-		WARN_AS(cat, "Failed to export font atlas");
+try {
+	lib::msdf::atlas_to_image(atlas, path);
+	INFO_AS(cat, "Exported font atlas to \"{}\"", path);
+} catch (exception const&) {
+	WARN_AS(cat, "Failed to export font atlas");
 }
 
 inline auto TextShaper::itemize(string_view text, span<FontRef const> fonts) -> generator<Run>
@@ -266,7 +241,7 @@ inline auto TextShaper::itemize(string_view text, span<FontRef const> fonts) -> 
 
 inline void TextShaper::cache_glyphs(span<CacheKey const> glyph_keys)
 {
-	auto glyphs = vector<msdf_atlas::GlyphGeometry>{};
+	auto glyphs = vector<lib::msdf::GlyphGeometry>{};
 	auto keys = vector<CacheKey>{};
 	glyphs.reserve(glyph_keys.size());
 	keys.reserve(glyph_keys.size());
@@ -277,43 +252,25 @@ inline void TextShaper::cache_glyphs(span<CacheKey const> glyph_keys)
 	})) {
 		auto [font_id, weight, _] = chunk.front();
 		auto const& font_resource = fonts.at({font_id, weight});
-		auto* font_handle = msdfgen::adoptFreetypeFont(font_resource.get()->face);
-		auto const scale = 1.0 / static_cast<double>(font_resource.get()->face->units_per_EM);
+		auto loader = lib::msdf::GlyphLoader{font_resource, PixelsPerEm};
 		for (auto const& key: chunk) {
 			auto const glyph_idx = get<ssize_t>(key);
-			auto glyph = msdf_atlas::GlyphGeometry{};
-			if (glyph.load(font_handle, scale, msdfgen::GlyphIndex{static_cast<uint>(glyph_idx)})) {
-				glyph.edgeColoring(&msdfgen::edgeColoringInkTrap, 3.0, 0);
-				glyph.wrapBox(PixelsPerEm, 2.0 / PixelsPerEm, 1.0);
-				glyphs.emplace_back(move(glyph));
+			if (auto glyph = loader.load_glyph(glyph_idx)) {
+				glyphs.emplace_back(move(*glyph));
 				keys.emplace_back(key);
 			} else {
 				// Failed to load; cache as empty to prevent re-loading attempts
-				atlas_cache.emplace(key, CachedGlyph{});
+				atlas_cache.emplace(key, lib::msdf::GlyphLayout{});
 			}
 		}
-		msdfgen::destroyFont(font_handle);
 	}
 
 	// Rasterize and pack
-	atlas.add(glyphs.data(), glyphs.size());
+	auto layouts = lib::msdf::add_glyphs(atlas, glyphs);
 
 	// Update cache
-	for (auto [glyph, key]: views::zip(glyphs, keys)) {
-		auto const rect = glyph.getBoxRect();
-		auto const scale = glyph.getBoxScale();
-		auto const translate = glyph.getBoxTranslate();
-		atlas_cache.emplace(key, CachedGlyph{
-			.atlas_bounds = {
-				{static_cast<float>(rect.x), static_cast<float>(rect.y)},
-				{static_cast<float>(rect.x + rect.w), static_cast<float>(rect.y + rect.h)},
-			},
-			.bearing = float2{
-				static_cast<float>(translate.x * scale),
-				static_cast<float>(rect.h - translate.y * scale),
-			},
-		});
-	}
+	for (auto [layout, key]: views::zip(layouts, keys))
+		atlas_cache.emplace(key, layout);
 
 	atlas_dirty = true;
 }

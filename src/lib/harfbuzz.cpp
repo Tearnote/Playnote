@@ -76,6 +76,11 @@ auto create_font(Context& ctx, shared_ptr<io::ReadFile> file, int weight) -> Fon
 	return Font{new Font_t{move(file), face, font}};
 }
 
+auto units_per_em(Font const& font) -> float
+{
+	return static_cast<float>(font->face->units_per_EM);
+}
+
 auto has_glyph(Font const& font, char32_t scalar) -> bool
 {
 	auto dummy = hb_codepoint_t{};

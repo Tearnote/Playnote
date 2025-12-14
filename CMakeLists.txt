@@ -24,6 +24,7 @@ add_executable(Playnote WIN32
 	src/lib/vulkan.cpp
 	src/lib/debug.cpp
 	src/lib/imgui.cpp
+	src/lib/msdf.cpp
 	src/lib/glfw.cpp
 	src/lib/zstd.cpp
 	src/lib/icu.cpp
