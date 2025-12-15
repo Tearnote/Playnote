@@ -33,6 +33,9 @@
     "name" : "boost-scope",
     "version>=" : "1.88.0"
   }, {
+	  "name" : "boost-multi-array",
+	  "version>=" : "1.88.0"
+	}, {
     "name" : "ffmpeg",
     "version>=" : "7.1.1#4",
     "default-features" : false,
