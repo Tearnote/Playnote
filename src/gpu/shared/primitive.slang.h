@@ -13,15 +13,23 @@ struct Primitive {
 	struct RectParams {
 		float2 size;
 		int _pad0[2];
+		int _pad1[4];
 	};
 	struct CircleParams {
 		float radius;
+		int _pad0[3];
+		int _pad1[4];
+	};
+	struct GlyphParams {
+		AABB<float> atlas_bounds;
+		float size;
 		int _pad0[3];
 	};
 
 	enum class Type: int {
 		Rect,
 		Circle,
+		Glyph,
 	};
 	Type type;
 	int group_id;
@@ -31,10 +39,12 @@ struct Primitive {
 	float4 color;
 #ifndef __cplusplus
 	float4 params; // Reinterpret as one of the union members
+	float4 _pad2;
 #else
 	union {
 		RectParams rect_params;
 		CircleParams circle_params;
+		GlyphParams glyph_params;
 	};
 #endif
 };

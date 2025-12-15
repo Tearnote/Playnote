@@ -50,6 +50,7 @@ struct SelectContext {
 	optional<future<vector<bms::Library::ChartEntry>>> library_reload_result;
 	optional<future<shared_ptr<bms::Chart const>>> chart_load_result;
 	gfx::TransformRef mouse;
+	gfx::Text some_text;
 };
 
 struct GameplayContext {
@@ -202,6 +203,13 @@ static void render_select(gfx::Renderer::Queue& queue, GameState& state)
 	}, {
 		.radius = 8.0f,
 	});
+	queue.text(context.some_text, {
+		.position = {10.0f, 80.0f},
+		.color = {1.0f, 1.0f, 1.0f, 1.0f},
+		.depth = 5,
+	}, {
+		.size = 1,
+	});
 }
 
 static void render_gameplay(gfx::Renderer::Queue& queue, GameState& state)
@@ -303,6 +311,7 @@ static void run_render(Broadcaster& broadcaster, dev::Window& window, Logger::Ca
 			}
 			state.context.emplace<SelectContext>();
 			state.select_context().mouse = gfx::globals::create_transform();
+			state.select_context().some_text = renderer.prepare_text(gfx::Renderer::TextStyle::SansMedium, "Hello World! こんにちは、世界！ 안녕하세요, 세상!");
 			state.select_context().library_reload_result = pollable_fg(
 				[](shared_ptr<bms::Library> library) -> task<vector<bms::Library::ChartEntry>> {
 					co_return co_await library->list_charts();

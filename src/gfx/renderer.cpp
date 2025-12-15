@@ -14,8 +14,6 @@ or distributed except according to those terms.
 #include "lib/vuk.hpp"
 #include "io/file.hpp"
 #include "gpu/shaders.hpp"
-#include "vuk/RenderGraph.hpp"
-#include "vuk/Types.hpp"
 
 namespace playnote::gfx {
 
@@ -137,25 +135,43 @@ auto Renderer::Queue::logical_to_physical(float2 pos) -> float2
 	return (pos + float2{transform.x(), transform.y()}) * float2{transform.z(), transform.w()};
 }
 
-auto Renderer::Queue::rect(Drawable common, RectParams rect) -> Queue&
+auto Renderer::Queue::rect(Drawable common, RectParams params) -> Queue&
 {
 	if (!inside_group) group_depths.emplace_back(group_depths.size(), -1);
-	rects.emplace_back(common, rect, group_depths.size() - 1);
+	rects.emplace_back(common, params, group_depths.size() - 1);
 	group_depths.back().second = common.depth;
 	return *this;
 }
 
-auto Renderer::Queue::rect_tl(Drawable common, RectParams rect) -> Queue&
+auto Renderer::Queue::rect_tl(Drawable common, RectParams params) -> Queue&
 {
-	common.position += rect.size / float2{2.0, 2.0};
-	return this->rect(common, rect);
+	common.position += params.size / float2{2.0, 2.0};
+	return this->rect(common, params);
 }
 
-auto Renderer::Queue::circle(Drawable common, CircleParams circle) -> Queue&
+auto Renderer::Queue::circle(Drawable common, CircleParams params) -> Queue&
 {
 	if (!inside_group) group_depths.emplace_back(group_depths.size(), -1);
-	circles.emplace_back(common, circle, group_depths.size() - 1);
+	circles.emplace_back(common, params, group_depths.size() - 1);
 	group_depths.back().second = common.depth;
+	return *this;
+}
+
+auto Renderer::Queue::text(Text const& text, Drawable common, TextParams params) -> Queue&
+{
+	for (auto const& glyph: text.glyphs) {
+		if (!inside_group) group_depths.emplace_back(group_depths.size(), -1);
+		glyphs.emplace_back(Drawable{
+			.position = common.position + glyph.offset * params.size,
+			.velocity = common.velocity,
+			.color = common.color,
+			.depth = common.depth,
+		}, GlyphParams{
+			.atlas_bounds = glyph.atlas_bounds,
+			.size = params.size,
+		}, group_depths.size() - 1);
+		group_depths.back().second = common.depth;
+	}
 	return *this;
 }
 
@@ -192,6 +208,16 @@ auto Renderer::Queue::to_primitive_list() const -> vector<Primitive>
 			.circle_params = Primitive::CircleParams{.radius = circle.radius},
 		});
 	}
+	for (auto [common, glyph, group]: glyphs) {
+		primitives.emplace_back(Primitive{
+			.type = Primitive::Type::Glyph,
+			.group_id = group_remapping[group],
+			.position = common.position,
+			.velocity = common.velocity,
+			.color = common.color,
+			.glyph_params = Primitive::GlyphParams{.atlas_bounds = glyph.atlas_bounds, .size = glyph.size},
+		});
+	}
 	return primitives;
 }
 
@@ -207,7 +233,6 @@ Renderer::Renderer(dev::Window& window, Logger::Category cat):
 	text_shaper.load_font("Pretendard"_id, io::read_file(PretendardFontPath), {500, 800});
 	text_shaper.define_style("SansMedium"_id, {"Mplus2"_id, "Pretendard"_id}, 500);
 	text_shaper.define_style("SansBold"_id, {"Mplus2"_id, "Pretendard"_id}, 800);
-	some_text = text_shaper.shape("SansMedium"_id, "Hello World! こんにちは、世界！ 안녕하세요, 세상!");
 
 	lib::vuk::create_compute_pipeline(context, "worklist_gen", gpu::worklist_gen_spv);
 	DEBUG_AS(cat, "Compiled worklist_gen pipeline");
@@ -217,6 +242,17 @@ Renderer::Renderer(dev::Window& window, Logger::Category cat):
 	DEBUG_AS(cat, "Compiled draw_all pipeline");
 
 	INFO_AS(cat, "Renderer initialized");
+}
+
+auto Renderer::prepare_text(TextStyle style, string_view text) -> Text
+{
+	auto const style_id = [&] {
+		switch (style) {
+		case TextStyle::SansMedium: return "SansMedium"_id;
+		case TextStyle::SansBold:   return "SansBold"_id;
+		};
+	}();
+	return text_shaper.shape(style_id, text);
 }
 
 auto Renderer::create_queue() -> Queue

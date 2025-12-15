@@ -62,7 +62,7 @@ private:
 
 // How a glyph is positioned within the atlas.
 struct GlyphLayout {
-	AABB<float2> atlas_bounds;
+	AABB<float> atlas_bounds;
 	float2 bearing; // position of glyph origin, relative to atlas_bounds.top_left
 };
 

@@ -14,7 +14,6 @@ or distributed except according to those terms.
 #include "dev/gpu.hpp"
 #include "gfx/imgui.hpp"
 #include "gfx/text.hpp"
-#include "vuk/ImageAttachment.hpp"
 
 namespace playnote::gfx {
 
@@ -43,6 +42,15 @@ public:
 		float radius;
 	};
 
+	struct TextParams {
+		float size; // em-height
+	};
+
+	enum class TextStyle {
+		SansMedium,
+		SansBold,
+	};
+
 	// An accumulator of primitives to draw.
 	class Queue {
 	public:
@@ -62,13 +70,20 @@ public:
 		auto rect(Drawable, RectParams) -> Queue&;
 		auto rect_tl(Drawable, RectParams) -> Queue&; // Position in top-left rather than center
 		auto circle(Drawable, CircleParams) -> Queue&;
+		auto text(Text const&, Drawable, TextParams) -> Queue&;
 
 	private:
 		friend class Renderer;
 
+		struct GlyphParams {
+			AABB<float> atlas_bounds;
+			float size;
+		};
+
 		bool inside_group = false;
 		vector<tuple<Drawable, RectParams, int>> rects; // third: group id
 		vector<tuple<Drawable, CircleParams, int>> circles; // third: group id
+		vector<tuple<Drawable, GlyphParams, int>> glyphs; // third: group id
 		mutable vector<pair<int, int>> group_depths; // first: group id (initially equal to index), second: depth
 		float4 transform;
 		float4 inv_transform;
@@ -79,6 +94,9 @@ public:
 
 	// Create a renderer for the given window. Manages the window's GPU context.
 	Renderer(dev::Window&, Logger::Category);
+
+	// Create a text renderable from a string. Store and reuse.
+	auto prepare_text(TextStyle, string_view) -> Text;
 
 	// Provide a queue to the function argument, and then draw contents of the queue to the screen.
 	// Each call will wait block until the next frame begins.
@@ -92,8 +110,6 @@ private:
 	Imgui imgui;
 	TextShaper text_shaper;
 	lib::vuk::Texture font_atlas;
-
-	Text some_text;
 
 	auto create_queue() -> Queue;
 	void draw_frame(Queue&&);

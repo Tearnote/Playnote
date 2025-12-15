@@ -26,12 +26,12 @@ public:
 	// Visual representation of a line of text, renderable with glyphs in the atlas.
 	struct Text {
 		struct Glyph {
-			AABB<float2> atlas_bounds;
+			AABB<float> atlas_bounds;
 			float2 offset; // from origin at (0, 0), the start of the baseline
 		};
 
 		vector<Glyph> glyphs;
-		AABB<float2> bounds; // can extend to the left of origin, or even not contain origin at all
+		AABB<float> bounds; // can extend to the left of origin, or even not contain origin at all
 	};
 
 	// Initialize with an empty atlas.
