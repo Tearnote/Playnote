@@ -13,6 +13,7 @@ or distributed except according to those terms.
 #include "vuk/runtime/vk/Allocator.hpp" // IWYU pragma: export
 #include "vuk/runtime/vk/VkRuntime.hpp" // IWYU pragma: export
 #include "vuk/runtime/CommandBuffer.hpp"
+#include "vuk/vsl/Core.hpp"
 #include "vuk/ImageAttachment.hpp"
 #include "vuk/Buffer.hpp"
 #include "vuk/Types.hpp"
@@ -33,6 +34,9 @@ using ManagedImage = Value<ImageAttachment>;
 
 // A shorthand for a buffer currently being managed by vuk's rendergraph.
 using ManagedBuffer = Value<Buffer>;
+
+// A shorthand for an owned, long-lived image.
+using Texture = Unique<Image>;
 
 // Initialize vuk by building a Runtime object.
 // Throws if vuk throws.
@@ -92,6 +96,27 @@ auto create_gpu_buffer(Allocator& allocator, span<T> data) -> ManagedBuffer
 	auto [buf, fut] = create_buffer(allocator, MemoryUsage::eGPUonly, DomainFlagBits::eTransferOnGraphics, data);
 	buf.release();
 	return fut;
+}
+
+// Create a GPU-only 2D image with the provided data. Returns the owned image resource and the future
+// of the data upload. The multi-array dimensions are used as texture dimensions, with the 3rd
+// dimension being the channel count. Format must match the data type and channel count; this is
+// not checked.
+// Throws if vuk throws.
+template<typename T>
+auto create_texture(Allocator& allocator, const_multi_array_ref<T, 3> data, Format format) -> pair<Texture, ManagedImage>
+{
+	auto ia = ImageAttachment{
+		.usage = ImageUsageFlagBits::eSampled | ImageUsageFlagBits::eTransferDst,
+		.extent = {data.shape()[0], data.shape()[1], 1},
+		.format = format,
+		.sample_count = Samples::e1,
+		.base_level = 0,
+		.level_count = 1,
+		.base_layer = 0,
+		.layer_count = 1,
+	};
+	return create_image_with_data(allocator, DomainFlagBits::eTransferOnGraphics, ia, data.data());
 }
 
 // Set the default command buffer configuration used by this application.

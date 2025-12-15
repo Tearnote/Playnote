@@ -9,11 +9,13 @@ or distributed except according to those terms.
 
 #include "gfx/renderer.hpp"
 
-#include "io/file.hpp"
 #include "preamble.hpp"
 #include "utils/config.hpp"
 #include "lib/vuk.hpp"
+#include "io/file.hpp"
 #include "gpu/shaders.hpp"
+#include "vuk/RenderGraph.hpp"
+#include "vuk/Types.hpp"
 
 namespace playnote::gfx {
 
@@ -202,7 +204,7 @@ Renderer::Renderer(dev::Window& window, Logger::Category cat):
 	text_shaper.load_font("Pretendard"_id, io::read_file(PretendardFontPath), {500, 800});
 	text_shaper.define_style("SansMedium"_id, {"Mplus2"_id, "Pretendard"_id}, 500);
 	text_shaper.define_style("SansBold"_id, {"Mplus2"_id, "Pretendard"_id}, 800);
-	text_shaper.shape("SansMedium"_id, "Hello World! こんにちは、世界！ 안녕하세요, 세상!");
+	some_text = text_shaper.shape("SansMedium"_id, "Hello World! こんにちは、世界！ 안녕하세요, 세상!");
 
 	lib::vuk::create_compute_pipeline(context, "worklist_gen", gpu::worklist_gen_spv);
 	DEBUG_AS(cat, "Compiled worklist_gen pipeline");
@@ -230,6 +232,17 @@ void Renderer::draw_frame(Queue&& queue)
 {
 	auto primitives = queue.to_primitive_list();
 	gpu.frame([&, this](auto& allocator, auto&& target) -> lib::vuk::ManagedImage {
+		// Update font atlas if needed
+		auto atlas = lib::vuk::ManagedImage{};
+		if (text_shaper.is_atlas_dirty()) {
+			auto [new_atlas, atlas_upload] = lib::vuk::create_texture(gpu.get_global_allocator(), text_shaper.get_atlas(), vuk::Format::eR8G8B8A8Unorm);
+			font_atlas = move(new_atlas);
+			font_atlas_ia = atlas_upload->layer(0);
+			atlas = move(atlas_upload);
+		} else {
+			atlas = lib::vuk::acquire_ia("atlas", font_atlas_ia, lib::vuk::Access::eTransferWrite);
+		}
+
 		auto next = lib::vuk::clear_image(move(target), {0.0f, 0.0f, 0.0f, 1.0f});
 		if (!primitives.empty()) {
 			auto [primitives_buf, worklists_buf, worklist_sizes_buf] = generate_worklists(gpu, allocator, primitives, queue.transform);

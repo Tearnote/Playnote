@@ -14,6 +14,7 @@ or distributed except according to those terms.
 #include "dev/gpu.hpp"
 #include "gfx/imgui.hpp"
 #include "gfx/text.hpp"
+#include "vuk/ImageAttachment.hpp"
 
 namespace playnote::gfx {
 
@@ -90,6 +91,10 @@ private:
 	dev::GPU gpu;
 	Imgui imgui;
 	TextShaper text_shaper;
+	lib::vuk::Texture font_atlas;
+	lib::vuk::ImageAttachment font_atlas_ia;
+
+	Text some_text;
 
 	auto create_queue() -> Queue;
 	void draw_frame(Queue&&);

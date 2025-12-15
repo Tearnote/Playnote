@@ -12,6 +12,7 @@ or distributed except according to those terms.
 #include <vector>
 #include <memory>
 #include <vulkan/vulkan_core.h>
+#include "vuk/ImageAttachment.hpp"
 #include "vuk/runtime/vk/VkSwapchain.hpp"
 #include "vuk/runtime/vk/Allocator.hpp"
 #include "vuk/runtime/vk/VkRuntime.hpp"
@@ -159,9 +160,7 @@ void create_compute_pipeline(Runtime& runtime, string_view name, span<uint const
 }
 
 auto clear_image(ManagedImage&& input, float4 color) -> ManagedImage
-{
-	return clear_image(move(input), ClearColor{color.r(), color.g(), color.b(), color.a()});
-}
+{ return clear_image(move(input), ClearColor{color.r(), color.g(), color.b(), color.a()}); }
 
 auto set_cmd_defaults(CommandBuffer& cmd) -> CommandBuffer&
 {
