@@ -237,13 +237,13 @@ void Renderer::draw_frame(Queue&& queue)
 	gpu.frame([&, this](auto& allocator, auto&& target) -> lib::vuk::ManagedImage {
 		// Update font atlas if needed
 		auto atlas = lib::vuk::ManagedImage{};
-		// if (text_shaper.is_atlas_dirty()) {
+		if (text_shaper.is_atlas_dirty()) {
 			auto [new_atlas, atlas_upload] = lib::vuk::create_texture(gpu.get_global_allocator(), text_shaper.get_atlas(), vuk::Format::eR8G8B8A8Unorm);
 			font_atlas = move(new_atlas);
 			atlas = move(atlas_upload);
-		// } else {
-			// atlas = lib::vuk::acquire_ia("atlas", font_atlas, lib::vuk::Access::eTransferWrite);
-		// }
+		} else {
+			atlas = lib::vuk::acquire_ia("atlas", font_atlas.attachment, lib::vuk::Access::eComputeSampled);
+		}
 
 		auto next = lib::vuk::clear_image(move(target), {0.0f, 0.0f, 0.0f, 1.0f});
 		if (!primitives.empty()) {

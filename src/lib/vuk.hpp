@@ -35,8 +35,12 @@ using ManagedImage = Value<ImageAttachment>;
 // A shorthand for a buffer currently being managed by vuk's rendergraph.
 using ManagedBuffer = Value<Buffer>;
 
-// A shorthand for an owned, long-lived image.
-using Texture = Unique<Image>;
+// An owned, long-lived image.
+struct Texture {
+	Unique<Image> image;
+	Unique<ImageView> view;
+	ImageAttachment attachment;
+};
 
 // Initialize vuk by building a Runtime object.
 // Throws if vuk throws.
@@ -111,12 +115,22 @@ auto create_texture(Allocator& allocator, const_multi_array_ref<T, 3> data, Form
 		.extent = {data.shape()[0], data.shape()[1], 1},
 		.format = format,
 		.sample_count = Samples::e1,
+		.view_type = ImageViewType::e2D,
 		.base_level = 0,
 		.level_count = 1,
 		.base_layer = 0,
 		.layer_count = 1,
 	};
-	return create_image_with_data(allocator, DomainFlagBits::eTransferOnGraphics, ia, data.data());
+	auto image = allocate_image(allocator, ia);
+	ia.image = **image;
+	auto view = allocate_image_view(allocator, ia);
+	ia.image_view = **view;
+	auto result = Texture{
+		.image = move(*image),
+		.view = move(*view),
+		.attachment = ia,
+	};
+	return {move(result), host_data_to_image(allocator, DomainFlagBits::eTransferOnTransfer, ia, data.data())};
 }
 
 // Set the default command buffer configuration used by this application.
