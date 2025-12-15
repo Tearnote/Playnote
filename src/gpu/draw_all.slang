@@ -19,6 +19,7 @@ StructuredBuffer<Primitive> b_primitives;
 StructuredBuffer<WorklistItem> b_worklists;
 StructuredBuffer<int> b_worklistSizes;
 RWTexture2D<float4> i_target;
+Texture2D<float4> i_atlas;
 
 [SpecializationConstant] let ViewportWidth = 0u;
 [SpecializationConstant] let ViewportHeight = 0u;

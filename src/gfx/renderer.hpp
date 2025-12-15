@@ -92,7 +92,6 @@ private:
 	Imgui imgui;
 	TextShaper text_shaper;
 	lib::vuk::Texture font_atlas;
-	lib::vuk::ImageAttachment font_atlas_ia;
 
 	Text some_text;
 

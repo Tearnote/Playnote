@@ -42,7 +42,7 @@ auto generate_transform(int2 window_size, float window_scale) -> float4
 
 auto draw_all(dev::GPU& gpu, lib::vuk::ManagedImage&& dest,
 	lib::vuk::ManagedBuffer&& primitives_buf, lib::vuk::ManagedBuffer&& worklists_buf,
-	lib::vuk::ManagedBuffer&& worklist_sizes_buf) -> lib::vuk::ManagedImage
+	lib::vuk::ManagedBuffer&& worklist_sizes_buf, lib::vuk::ManagedImage&& atlas_ia) -> lib::vuk::ManagedImage
 {
 	auto pass = lib::vuk::make_pass("draw_all",
 		[window_size = gpu.get_window().size()] (
@@ -50,7 +50,9 @@ auto draw_all(dev::GPU& gpu, lib::vuk::ManagedImage&& dest,
 			VUK_IA(lib::vuk::Access::eComputeRW) target,
 			VUK_BA(lib::vuk::Access::eComputeRead) primitives_buf,
 			VUK_BA(lib::vuk::Access::eComputeRead) worklists_buf,
-			VUK_BA(lib::vuk::Access::eComputeRead) worklist_sizes_buf)
+			VUK_BA(lib::vuk::Access::eComputeRead) worklist_sizes_buf,
+			VUK_IA(lib::vuk::Access::eComputeSampled) atlas_ia
+		)
 	{
 		cmd
 			.bind_compute_pipeline("draw_all")
@@ -58,11 +60,12 @@ auto draw_all(dev::GPU& gpu, lib::vuk::ManagedImage&& dest,
 			.bind_buffer(0, 1, worklists_buf)
 			.bind_buffer(0, 2, worklist_sizes_buf)
 			.bind_image(0, 3, target)
+			.bind_image(0, 4, atlas_ia)
 			.specialize_constants(0, window_size.x()).specialize_constants(1, window_size.y())
 			.dispatch_invocations(window_size.x(), window_size.y(), 1);
 		return target;
 	});
-	return pass(move(dest), move(primitives_buf), move(worklists_buf), move(worklist_sizes_buf));
+	return pass(move(dest), move(primitives_buf), move(worklists_buf), move(worklist_sizes_buf), move(atlas_ia));
 }
 
 auto generate_worklists(dev::GPU& gpu, lib::vuk::Allocator& allocator, span<Renderer::Primitive const> primitives,
@@ -234,19 +237,18 @@ void Renderer::draw_frame(Queue&& queue)
 	gpu.frame([&, this](auto& allocator, auto&& target) -> lib::vuk::ManagedImage {
 		// Update font atlas if needed
 		auto atlas = lib::vuk::ManagedImage{};
-		if (text_shaper.is_atlas_dirty()) {
+		// if (text_shaper.is_atlas_dirty()) {
 			auto [new_atlas, atlas_upload] = lib::vuk::create_texture(gpu.get_global_allocator(), text_shaper.get_atlas(), vuk::Format::eR8G8B8A8Unorm);
 			font_atlas = move(new_atlas);
-			font_atlas_ia = atlas_upload->layer(0);
 			atlas = move(atlas_upload);
-		} else {
-			atlas = lib::vuk::acquire_ia("atlas", font_atlas_ia, lib::vuk::Access::eTransferWrite);
-		}
+		// } else {
+			// atlas = lib::vuk::acquire_ia("atlas", font_atlas, lib::vuk::Access::eTransferWrite);
+		// }
 
 		auto next = lib::vuk::clear_image(move(target), {0.0f, 0.0f, 0.0f, 1.0f});
 		if (!primitives.empty()) {
 			auto [primitives_buf, worklists_buf, worklist_sizes_buf] = generate_worklists(gpu, allocator, primitives, queue.transform);
-			next = draw_all(gpu, move(next), move(primitives_buf), move(worklists_buf), move(worklist_sizes_buf));
+			next = draw_all(gpu, move(next), move(primitives_buf), move(worklists_buf), move(worklist_sizes_buf), move(atlas));
 		}
 		return imgui.draw(allocator, move(next));
 	});
