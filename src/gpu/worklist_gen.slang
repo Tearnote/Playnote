@@ -50,6 +50,11 @@ func processPrimitive(inout primitive: Primitive, float3x3 transform)
 		circleParams.radius = mul(transform, float3(circleParams.radius, 0.0, 0.0)).x;
 		primitive.params = reinterpret<float4>(circleParams);
 		break;
+	case Primitive::Type::Glyph:
+		var glyphParams = reinterpret<Primitive::GlyphParams>(primitive.params);
+		glyphParams.size = mul(transform, float3(glyphParams.size, 0.0, 0.0)).x;
+		primitive.params = reinterpret<float4>(glyphParams);
+		break;
 	}
 }
 
@@ -74,6 +79,14 @@ func circleAabb(float2 position, Primitive::CircleParams params) -> AABB<float>
 	return AABB<float>(
 		floor(position - params.radius - 0.5),
 		ceil(position + params.radius + 0.5)
+	);
+}
+
+func glyphAabb(float2 position, Primitive::GlyphParams params) -> AABB<float>
+{
+	return AABB<float>(
+		floor(position),
+		ceil(position + (params.atlas_bounds.bottom_right - params.atlas_bounds.top_left) * params.size)
 	);
 }
 
@@ -122,6 +135,9 @@ void computeMain(
 		break;
 	case Primitive::Type::Circle:
 		enqueuePrimitiveTiles(primitive, threadId, circleAabb);
+		break;
+	case Primitive::Type::Glyph:
+		enqueuePrimitiveTiles(primitive, threadId, glyphAabb);
 		break;
 	}
 	b_primitives[threadId] = primitive;
