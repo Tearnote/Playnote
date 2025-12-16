@@ -204,7 +204,7 @@ static void render_select(gfx::Renderer::Queue& queue, GameState& state)
 		.radius = 8.0f,
 	});
 	queue.text(context.some_text, {
-		.position = {10.0f, 80.0f},
+		.position = {10.0f, 240.0f},
 		.color = {1.0f, 1.0f, 1.0f, 1.0f},
 		.depth = 5,
 	}, {

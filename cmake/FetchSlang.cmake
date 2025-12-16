@@ -9,7 +9,7 @@ include_guard()
 
 include(FetchContent)
 
-set(SLANG_VERSION 2025.21)
+set(SLANG_VERSION 2025.24)
 
 if(WIN32)
 	set(SLANG_OS windows)
