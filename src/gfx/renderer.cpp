@@ -19,6 +19,11 @@ namespace playnote::gfx {
 
 #include "gpu/shared/worklist.slang.h"
 
+static constexpr auto LinearSampler = lib::vuk::SamplerCreateInfo{
+	.magFilter = lib::vuk::Filter::eLinear,
+	.minFilter = lib::vuk::Filter::eLinear,
+};
+
 auto srgb_decode(float4 color) -> float4
 {
 	auto const r = color.r() < 0.04045 ? (1.0 / 12.92) * color.r() : pow((color.r() + 0.055) * (1.0 / 1.055), 2.4);
@@ -57,7 +62,7 @@ auto draw_all(dev::GPU& gpu, lib::vuk::ManagedImage&& dest,
 			.bind_buffer(0, 0, primitives_buf)
 			.bind_buffer(0, 1, worklists_buf)
 			.bind_buffer(0, 2, worklist_sizes_buf)
-			.bind_image(0, 3, atlas_ia).bind_sampler(0, 3, {})
+			.bind_image(0, 3, atlas_ia).bind_sampler(0, 3, LinearSampler)
 			.bind_image(0, 4, target)
 			.specialize_constants(0, window_size.x()).specialize_constants(1, window_size.y())
 			.dispatch_invocations(window_size.x(), window_size.y(), 1);
@@ -252,7 +257,10 @@ auto Renderer::prepare_text(TextStyle style, string_view text) -> Text
 		case TextStyle::SansBold:   return "SansBold"_id;
 		};
 	}();
-	return text_shaper.shape(style_id, text);
+	// return text_shaper.shape(style_id, text);
+	auto result = text_shaper.shape(style_id, text);
+	text_shaper.dump_atlas("atlas.png");
+	return result;
 }
 
 auto Renderer::create_queue() -> Queue

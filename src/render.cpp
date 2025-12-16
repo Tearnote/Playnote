@@ -208,7 +208,7 @@ static void render_select(gfx::Renderer::Queue& queue, GameState& state)
 		.color = {1.0f, 1.0f, 1.0f, 1.0f},
 		.depth = 5,
 	}, {
-		.size = 1,
+		.size = 1.25,
 	});
 }
 
