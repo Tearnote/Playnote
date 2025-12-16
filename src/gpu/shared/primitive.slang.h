@@ -35,11 +35,10 @@ struct Primitive {
 	int group_id;
 	float2 position;
 	float2 velocity;
-	int2 _pad1;
+	int _pad0[2];
 	float4 color;
 #ifndef __cplusplus
-	float4 params; // Reinterpret as one of the union members
-	float4 _pad2;
+	int[8] params; // Space containing one of the union members below, as per the type
 #else
 	union {
 		RectParams rect_params;
@@ -48,3 +47,17 @@ struct Primitive {
 	};
 #endif
 };
+
+#ifndef __cplusplus
+func readPrimitive(buf: RWByteAddressBuffer, idx: int) -> Primitive
+{ return buf.LoadByteOffset<Primitive>(idx * sizeof(Primitive)); }
+
+func writePrimitive(buf: RWByteAddressBuffer, idx: int, prim: Primitive)
+{ buf.StoreByteOffset(idx * sizeof(Primitive), prim); }
+
+func readPrimitiveParams(buf: RWByteAddressBuffer, idx: int) -> int[8]
+{ return buf.LoadByteOffset<int[8]>((idx + 1) * sizeof(Primitive) - sizeof(int[8])); }
+
+func writePrimitiveParams<T>(buf: RWByteAddressBuffer, idx: int, p: T)
+{ buf.StoreByteOffset((idx + 1) * sizeof(Primitive) - sizeof(int[8]), p); }
+#endif

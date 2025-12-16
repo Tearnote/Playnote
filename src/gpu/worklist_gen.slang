@@ -13,7 +13,7 @@ import lib;
 #include "shared/primitive.slang.h"
 #include "shared/worklist.slang.h"
 
-RWStructuredBuffer<Primitive> b_primitives;
+RWByteAddressBuffer b_primitives;
 RWStructuredBuffer<WorklistItem> b_worklists;
 RWStructuredBuffer<Atomic<int>> b_worklistCounts;
 
@@ -31,31 +31,6 @@ func unpackTransform(float4 packed) -> float3x3
 		{    0.0, scale.y, offset.y},
 		{    0.0,     0.0,      1.0}
 	};
-}
-
-func processPrimitive(inout primitive: Primitive, float3x3 transform)
-{
-	primitive.position = mul(transform, float3(primitive.position, 1.0)).xy;
-	primitive.velocity = mul(transform, float3(primitive.velocity, 0.0)).xy;
-	primitive.color.rgb = srgbDecode(primitive.color.rgb);
-
-	switch (primitive.type) {
-	case Primitive::Type::Rect:
-		var rectParams = reinterpret<Primitive::RectParams>(primitive.params);
-		rectParams.size = mul(transform, float3(rectParams.size, 0.0)).xy;
-		primitive.params = reinterpret<float4>(rectParams);
-		break;
-	case Primitive::Type::Circle:
-		var circleParams = reinterpret<Primitive::CircleParams>(primitive.params);
-		circleParams.radius = mul(transform, float3(circleParams.radius, 0.0, 0.0)).x;
-		primitive.params = reinterpret<float4>(circleParams);
-		break;
-	case Primitive::Type::Glyph:
-		var glyphParams = reinterpret<Primitive::GlyphParams>(primitive.params);
-		glyphParams.size = mul(transform, float3(glyphParams.size, 0.0, 0.0)).x;
-		primitive.params = reinterpret<float4>(glyphParams);
-		break;
-	}
 }
 
 func enqueueItem(tile: int2, item: WorklistItem)
@@ -90,14 +65,61 @@ func glyphAabb(float2 position, Primitive::GlyphParams params) -> AABB<float>
 	);
 }
 
-func enqueuePrimitiveTiles<T>(primitive: Primitive, primitiveIdx: int, aabbFunc: functype(float2, T) -> AABB<float>)
-{
-	let params = reinterpret<T>(primitive.params);
+[shader("compute")]
+[numthreads(64)]
+void computeMain(
+	int threadId: SV_DispatchThreadID,
+	uniform float4 Transform,
+	uniform int PrimitiveCount
+) {
+	if (threadId >= PrimitiveCount) return;
+	var primitive = readPrimitive(b_primitives, threadId);
+	var params = readPrimitiveParams(b_primitives, threadId);
+
+	// Initial processing
+	let transform = unpackTransform(Transform);
+	primitive.position = mul(transform, float3(primitive.position, 1.0)).xy;
+	primitive.velocity = mul(transform, float3(primitive.velocity, 0.0)).xy;
+	primitive.color.rgb = srgbDecode(primitive.color.rgb);
+
+	switch (primitive.type) {
+	case Primitive::Type::Rect:
+		var rectParams = reinterpret<Primitive::RectParams>(params);
+		rectParams.size = mul(transform, float3(rectParams.size, 0.0)).xy;
+		params = reinterpret<int[8]>(rectParams);
+		break;
+	case Primitive::Type::Circle:
+		var circleParams = reinterpret<Primitive::CircleParams>(params);
+		circleParams.radius = mul(transform, float3(circleParams.radius, 0.0, 0.0)).x;
+		params = reinterpret<int[8]>(circleParams);
+		break;
+	case Primitive::Type::Glyph:
+		var glyphParams = reinterpret<Primitive::GlyphParams>(params);
+		glyphParams.size = mul(transform, float3(glyphParams.size, 0.0, 0.0)).x;
+		params = reinterpret<int[8]>(glyphParams);
+		break;
+	}
+
+	// Calculate AABB
 	let halfVelocity = primitive.velocity / 2.0;
 	let head = primitive.position + halfVelocity;
 	let tail = primitive.position - halfVelocity * 3.0;
-	let headAabb = aabbFunc(head, params);
-	let tailAabb = aabbFunc(tail, params);
+	var headAabb = AABB<float>();
+	var tailAabb = AABB<float>();
+	switch (primitive.type) {
+	case Primitive::Type::Rect:
+		headAabb = rectAabb(head, reinterpret<Primitive::RectParams>(params));
+		tailAabb = rectAabb(tail, reinterpret<Primitive::RectParams>(params));
+		break;
+	case Primitive::Type::Circle:
+		headAabb = circleAabb(head, reinterpret<Primitive::CircleParams>(params));
+		tailAabb = circleAabb(tail, reinterpret<Primitive::CircleParams>(params));
+		break;
+	case Primitive::Type::Glyph:
+		headAabb = glyphAabb(head, reinterpret<Primitive::GlyphParams>(params));
+		tailAabb = glyphAabb(tail, reinterpret<Primitive::GlyphParams>(params));
+		break;
+	}
 	let aabb = AABB<float>(
 		min(headAabb.top_left, tailAabb.top_left),
 		max(headAabb.bottom_right, tailAabb.bottom_right)
@@ -108,37 +130,17 @@ func enqueuePrimitiveTiles<T>(primitive: Primitive, primitiveIdx: int, aabbFunc:
 	);
 	let tileSpan = tileAabb.bottom_right - tileAabb.top_left;
 
+	// Write out tiles
 	for (var y = 0; y < tileSpan.y; y += 1) {
 		for (var x = 0; x < tileSpan.x; x += 1) {
 			enqueueItem(
 				tileAabb.top_left + int2(x, y),
-				WorklistItem(primitiveIdx, primitive.group_id)
+				WorklistItem(threadId, primitive.group_id)
 			);
 		}
 	}
-}
 
-[shader("compute")]
-[numthreads(64)]
-void computeMain(
-	int threadId: SV_DispatchThreadID,
-	uniform float4 Transform,
-	uniform int PrimitiveCount
-) {
-	if (threadId >= PrimitiveCount) return;
-
-	var primitive = b_primitives[threadId];
-	processPrimitive(primitive, unpackTransform(Transform));
-	switch (primitive.type) {
-	case Primitive::Type::Rect:
-		enqueuePrimitiveTiles(primitive, threadId, rectAabb);
-		break;
-	case Primitive::Type::Circle:
-		enqueuePrimitiveTiles(primitive, threadId, circleAabb);
-		break;
-	case Primitive::Type::Glyph:
-		enqueuePrimitiveTiles(primitive, threadId, glyphAabb);
-		break;
-	}
-	b_primitives[threadId] = primitive;
+	// Write out processed primitive
+	writePrimitive(b_primitives, threadId, primitive);
+	writePrimitiveParams(b_primitives, threadId, params);
 }

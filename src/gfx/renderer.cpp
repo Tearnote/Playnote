@@ -57,8 +57,8 @@ auto draw_all(dev::GPU& gpu, lib::vuk::ManagedImage&& dest,
 			.bind_buffer(0, 0, primitives_buf)
 			.bind_buffer(0, 1, worklists_buf)
 			.bind_buffer(0, 2, worklist_sizes_buf)
-			.bind_image(0, 3, target)
-			.bind_image(0, 4, atlas_ia)
+			.bind_image(0, 3, atlas_ia).bind_sampler(0, 3, {})
+			.bind_image(0, 4, target)
 			.specialize_constants(0, window_size.x()).specialize_constants(1, window_size.y())
 			.dispatch_invocations(window_size.x(), window_size.y(), 1);
 		return target;
