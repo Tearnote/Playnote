@@ -30,7 +30,7 @@ auto GlyphLoader::load_glyph(ssize_t glyph_idx) -> optional<GlyphGeometry>
 	auto const scale = 1.0 / lib::harfbuzz::units_per_em(ft_font);
 	if (glyph.load(font, scale, msdfgen::GlyphIndex{static_cast<uint>(glyph_idx)})) {
 		glyph.edgeColoring(&msdfgen::edgeColoringInkTrap, 3.0, 0);
-		glyph.wrapBox(pixels_per_em, 2.0 / pixels_per_em, 1.0);
+		glyph.wrapBox(pixels_per_em, 8.0 / pixels_per_em, 1.0);
 		return glyph;
 	}
 	return nullopt;

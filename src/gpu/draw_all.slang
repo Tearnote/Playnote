@@ -43,7 +43,7 @@ func sampleGlyphDistance(p: float2, params: Primitive::GlyphParams) -> float
 	let uv = clamped_texel / float2(w, h);
 	let s = s_atlas.SampleLevel(uv, 0).rgb;
 	let sd = msdfMedian(s.r, s.g, s.b);
-	let dist = (0.5 - sd) * 2.0;
+	let dist = (0.5 - sd) * 8.0;
 	let dist_outside = length(texel - clamped_texel);
 	return (dist + dist_outside) * params.size;
 }
