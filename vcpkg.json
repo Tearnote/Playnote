@@ -114,5 +114,9 @@
     "name" : "mimalloc",
     "version>=" : "2.2.4",
     "features": [ "override" ]
+  }, {
+    "name" : "skia",
+    "version>=" : "140",
+    "default-features": false
   } ]
 }
