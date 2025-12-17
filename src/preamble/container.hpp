@@ -23,7 +23,7 @@ or distributed except according to those terms.
 #include <boost/container/small_vector.hpp>
 #include <boost/container/vector.hpp>
 #include "readerwriterqueue.h"
-#include "concurrentqueue.h"
+#include "concurrentqueue/moodycamel/concurrentqueue.h"
 #include "plf_colony.h"
 #include "preamble/types.hpp"
 

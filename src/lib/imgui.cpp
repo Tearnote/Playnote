@@ -9,7 +9,7 @@ or distributed except according to those terms.
 
 #include "lib/imgui.hpp"
 
-#include "backends/imgui_impl_glfw.h"
+#include "imgui_impl_glfw.h"
 #include "implot.h"
 #include "imgui.h"
 #include "preamble.hpp"

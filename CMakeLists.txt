@@ -69,10 +69,10 @@ target_include_directories(Playnote PRIVATE src) # All includes start from src a
 target_compile_definitions(Playnote PRIVATE "$<$<CONFIG:Debug>:BUILD_DEBUG>$<$<CONFIG:RelWithDebInfo>:BUILD_RELDEB>$<$<CONFIG:Release>:BUILD_RELEASE>")
 
 target_link_libraries(Playnote
+	PRIVATE $<IF:$<TARGET_EXISTS:mimalloc-static>,mimalloc-static,mimalloc>
 	PRIVATE signalsmith-basics
-	PRIVATE readerwriterqueue
-	PRIVATE concurrentqueue
-	PRIVATE mimalloc-static
+	PRIVATE readerwriterqueue::readerwriterqueue
+	PRIVATE concurrentqueue::concurrentqueue
 	PRIVATE msdf-atlas-gen::msdf-atlas-gen
 	PRIVATE tomlplusplus::tomlplusplus
 	PRIVATE vk-bootstrap
@@ -81,22 +81,23 @@ target_link_libraries(Playnote
 	PRIVATE libassert::assert
 	PRIVATE Freetype::Freetype
 	PRIVATE harfbuzz::harfbuzz
-	PRIVATE zpp_bits
 	PRIVATE OpenSSL::Crypto
 	PRIVATE ebur128
 	PRIVATE libcoro
-	PRIVATE SQLite::SQLite3
-	PRIVATE colony
+	PRIVATE unofficial::sqlite3::sqlite3
+	PRIVATE Vulkan::Headers
 	PRIVATE implot
 	PRIVATE Boost::container
 	PRIVATE Boost::boost
-	PRIVATE imgui
-	PRIVATE quill
+	PRIVATE quill::quill
+	PRIVATE imgui::imgui
 	PRIVATE zstd::libzstd
+	PRIVATE volk::volk_headers
+	PRIVATE volk::volk
 	PRIVATE glfw
-	PRIVATE volk
-	PRIVATE ICU::i18n
-	PRIVATE ICU::uc
+	PRIVATE PkgConfig::icu-i18n
+	PRIVATE PkgConfig::icu-uc
+	PRIVATE mio::mio-headers
 	PRIVATE mio::mio
 	PRIVATE vuk
 	${FFMPEG_LIBRARIES}
@@ -112,9 +113,12 @@ else()
 		PRIVATE avrt
 	)
 endif()
-target_include_directories(Playnote PRIVATE ${FFMPEG_INCLUDE_DIRS})
+target_include_directories(Playnote
+	PRIVATE ${FFMPEG_INCLUDE_DIRS}
+	PRIVATE ${ZPP_BITS_INCLUDE_DIRS}
+	PRIVATE ${PLF_COLONY_INCLUDE_DIRS})
 target_link_directories(Playnote PRIVATE ${FFMPEG_LIBRARY_DIRS})
-target_compile_definitions(imgui PUBLIC "IMGUI_USER_CONFIG=\"${PROJECT_SOURCE_DIR}/src/lib/imconfig.h\"")
+target_compile_definitions(imgui::imgui INTERFACE "IMGUI_USER_CONFIG=\"${PROJECT_SOURCE_DIR}/src/lib/imconfig.h\"")
 
 include(cmake/Shaders.cmake)
 add_dependencies(Playnote Playnote_Shaders)
