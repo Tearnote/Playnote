@@ -33,7 +33,9 @@ func sampleGlyphDistance(p: float2, params: Primitive::GlyphParams) -> float
 {
 	let min_rect = params.atlas_bounds.top_left;
 	let max_rect = params.atlas_bounds.bottom_right;
-	let texel_offset = p / params.size;
+	let atlas_dims = max_rect - min_rect;
+	let screen_dims = atlas_dims * params.size;
+	let texel_offset = p * (atlas_dims / screen_dims);
 	let texel = float2(min_rect.x + texel_offset.x, max_rect.y - texel_offset.y);
 	let clamped_texel = clamp(texel, min_rect + 0.5, max_rect - 0.5);
 	uint w, h;
@@ -41,7 +43,9 @@ func sampleGlyphDistance(p: float2, params: Primitive::GlyphParams) -> float
 	let uv = clamped_texel / float2(w, h);
 	let s = s_atlas.SampleLevel(uv, 0).rgb;
 	let sd = msdfMedian(s.r, s.g, s.b);
-	return (0.5 - sd) * 2.0 * params.size;
+	let dist = (0.5 - sd) * 2.0;
+	let dist_outside = length(texel - clamped_texel);
+	return (dist + dist_outside) * params.size;
 }
 
 [shader("compute")]
