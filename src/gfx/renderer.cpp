@@ -259,7 +259,6 @@ auto Renderer::prepare_text(TextStyle style, string_view text) -> Text
 	}();
 	// return text_shaper.shape(style_id, text);
 	auto result = text_shaper.shape(style_id, text);
-	text_shaper.dump_atlas("atlas.png");
 	return result;
 }
 

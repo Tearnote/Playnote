@@ -7,9 +7,6 @@
 
 include_guard()
 
-if(UNIX)
-	find_package(PkgConfig REQUIRED)
-endif()
 include(FetchContent)
 
 # Local dependencies
@@ -18,11 +15,7 @@ find_package(LibArchive REQUIRED) # Archive read/write support
 find_package(OpenSSL REQUIRED) # MD5 hash
 find_package(SQLite3 REQUIRED) # Local database
 find_package(zstd REQUIRED) # Lossless compression
-if(WIN32)
-	find_package(VulkanHeaders REQUIRED)
-else()
-	find_package(Vulkan REQUIRED) # GPU API
-endif()
+find_package(VulkanHeaders REQUIRED)
 find_package(ICU REQUIRED # Charset detection and conversion
 	COMPONENTS uc i18n
 )
@@ -31,16 +24,10 @@ find_package(Boost REQUIRED # Rational numbers, improved containers, string algo
 	COMPONENTS container)
 find_package(Freetype REQUIRED) # Font file processing
 find_package(HarfBuzz REQUIRED) # Text shaping
-if(UNIX)
-	pkg_search_module(libswresample REQUIRED IMPORTED_TARGET libswresample) # Sample rate conversion
-	pkg_search_module(libavformat REQUIRED IMPORTED_TARGET libavformat) # Audio file demuxing
-	pkg_search_module(libavcodec REQUIRED IMPORTED_TARGET libavcodec) # Audio file decoding
-	pkg_search_module(libavutil REQUIRED IMPORTED_TARGET libavutil) # FFmpeg utilities
-else()
-	find_package(FFMPEG REQUIRED)
-endif()
+find_package(FFMPEG REQUIRED) # Sample rate conversion, audio file decoding
 
 if(UNIX)
+	find_package(PkgConfig REQUIRED)
 	pkg_search_module(PipeWire REQUIRED IMPORTED_TARGET libpipewire-0.3) # Low latency Linux audio
 endif()
 
