@@ -172,6 +172,10 @@
 			"name": "skia",
 			"version>=": "140",
 			"default-features": false
+		},
+		{
+			"name": "pkgconf",
+			"version>=": "2.5.1"
 		}
 	]
 }

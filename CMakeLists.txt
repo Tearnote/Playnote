@@ -82,7 +82,7 @@ target_link_libraries(Playnote
 	PRIVATE Freetype::Freetype
 	PRIVATE harfbuzz::harfbuzz
 	PRIVATE OpenSSL::Crypto
-	PRIVATE ebur128
+	PRIVATE PkgConfig::ebur128
 	PRIVATE libcoro
 	PRIVATE unofficial::sqlite3::sqlite3
 	PRIVATE Vulkan::Headers
