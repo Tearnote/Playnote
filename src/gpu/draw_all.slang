@@ -23,8 +23,16 @@ RWTexture2D<float4> i_target;
 
 [SpecializationConstant] let ViewportWidth = 0u;
 [SpecializationConstant] let ViewportHeight = 0u;
+[SpecializationConstant] let SubpixelRendering = 0u;
 static let ViewportSize = int2(ViewportWidth, ViewportHeight);
 static let TileBound = (ViewportSize + TILE_SIZE - 1) / TILE_SIZE;
+static let SubpixelSamples = SubpixelRendering > 0? 3 : 1;
+
+static let SubpixelLayoutRGB: float2[] = {
+	{0.166, 0.5},
+	{0.500, 0.5},
+	{0.833, 0.5},
+};
 
 func msdfMedian(r: float, g: float, b: float) -> float
 { return max(min(r, g), min(max(r, g), b)); }
@@ -63,29 +71,38 @@ void computeMain(int2 threadId: SV_DispatchThreadID)
 	var color = i_target.Load(threadId);
 	color = float4(srgbDecode(color.rgb), color.a);
 
-	for (int i = 0; i < worklistSize; i += 1) {
-		let item = b_worklists[worklistOffset + i];
-		let primitive = readPrimitive(b_primitives, item.primitive_idx);
-		let params = readPrimitiveParams(b_primitives, item.primitive_idx);
-		var coverage = 0.0;
-		let center = self_pos - primitive.position;
-		switch (primitive.type) {
-		case Primitive::Type::Circle:
-			let circleParams = reinterpret<Primitive::CircleParams>(params);
-			coverage = sdf::aa(sdf::circle(center, circleParams.radius));
-			break;
-		case Primitive::Type::Rect:
-			let rectParams = reinterpret<Primitive::RectParams>(params);
-			coverage = sdf::aa(sdf::rect(center, rectParams.size));
-			break;
-		case Primitive::Type::Glyph:
-			let glyphParams = reinterpret<Primitive::GlyphParams>(params);
-			coverage = sdf::aa(sampleGlyphDistance(center, glyphParams));
-			break;
+	var results: float4[3] = {};
+	for (int j = 0; j < SubpixelSamples; j += 1) {
+		for (int i = 0; i < worklistSize; i += 1) {
+			let item = b_worklists[worklistOffset + i];
+			let primitive = readPrimitive(b_primitives, item.primitive_idx);
+			let params = readPrimitiveParams(b_primitives, item.primitive_idx);
+			var coverage = 0.0;
+			let center = self_pos - primitive.position + (SubpixelLayoutRGB[j] - float2(0.5, 0.5));
+			switch (primitive.type) {
+			case Primitive::Type::Circle:
+				let circleParams = reinterpret<Primitive::CircleParams>(params);
+				coverage = sdf::aa(sdf::circle(center, circleParams.radius));
+				break;
+			case Primitive::Type::Rect:
+				let rectParams = reinterpret<Primitive::RectParams>(params);
+				coverage = sdf::aa(sdf::rect(center, rectParams.size));
+				break;
+			case Primitive::Type::Glyph:
+				let glyphParams = reinterpret<Primitive::GlyphParams>(params);
+				coverage = sdf::aa(sampleGlyphDistance(center, glyphParams));
+				break;
+			}
+			results[j] = blend(results[j], float4(primitive.color.rgb, primitive.color.a * coverage));
 		}
-		color = blend(color, float4(primitive.color.rgb, primitive.color.a * coverage));
 	}
+	var result = float4(0.0, 0.0, 0.0, 1.0);
+	if (SubpixelRendering > 0)
+		result = float4(results[0].r, results[1].g, results[2].b, (results[0].a + results[1].a + results[2].a) / 3.0);
+	else
+		result = results[0];
 
+	color = blend(color, result);
 	color = float4(srgbEncode(color.rgb), color.a);
 #if WORKLIST_DEBUG
 	color.r += 0.08 * worklistSize;

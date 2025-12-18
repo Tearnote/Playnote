@@ -138,19 +138,29 @@ void Config::create_defaults()
 	});
 
 	entries.emplace_back(Entry{
-		.category = "vulkan",
+		.category = "graphics",
 		.name = "swapchain_image_count",
 		.value = 2,
 	});
 	entries.emplace_back(Entry{
-		.category = "vulkan",
+		.category = "graphics",
 		.name = "low_latency",
 		.value = true,
 	});
 	entries.emplace_back(Entry{
-		.category = "vulkan",
+		.category = "graphics",
 		.name = "validation_enabled",
 		.value = false,
+	});
+	entries.emplace_back(Entry{
+		.category = "graphics",
+		.name = "subpixel_rendering",
+		.value = false,
+	});
+	entries.emplace_back(Entry{
+		.category = "graphics",
+		.name = "subpixel_layout",
+		.value = "RGB",
 	});
 
 	entries.emplace_back(Entry{

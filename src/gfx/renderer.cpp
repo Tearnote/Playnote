@@ -57,6 +57,11 @@ auto draw_all(dev::GPU& gpu, lib::vuk::ManagedImage&& dest,
 			VUK_IA(lib::vuk::Access::eComputeSampled) atlas_ia
 		)
 	{
+		auto subpixel_rendering = 0;
+		if (globals::config->get_entry<bool>("graphics", "subpixel_rendering")) {
+			auto const layout = globals::config->get_entry<string>("graphics", "subpixel_layout");
+			if (layout == "RGB") subpixel_rendering = 1;
+		}
 		cmd
 			.bind_compute_pipeline("draw_all")
 			.bind_buffer(0, 0, primitives_buf)
@@ -65,6 +70,7 @@ auto draw_all(dev::GPU& gpu, lib::vuk::ManagedImage&& dest,
 			.bind_image(0, 3, atlas_ia).bind_sampler(0, 3, LinearSampler)
 			.bind_image(0, 4, target)
 			.specialize_constants(0, window_size.x()).specialize_constants(1, window_size.y())
+			.specialize_constants(2, subpixel_rendering)
 			.dispatch_invocations(window_size.x(), window_size.y(), 1);
 		return target;
 	});

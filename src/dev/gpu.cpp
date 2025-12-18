@@ -63,7 +63,7 @@ auto GPU::create_swapchain(lib::vuk::Allocator& allocator, Device& device, int2 
 	optional<lib::vuk::Swapchain> old) const -> lib::vuk::Swapchain
 {
 	auto const recreating = old.has_value();
-	auto const requested_images = globals::config->get_entry<int>("vulkan", "swapchain_image_count");
+	auto const requested_images = globals::config->get_entry<int>("graphics", "swapchain_image_count");
 	auto swapchain = lib::vuk::create_swapchain(allocator, device.device, size, requested_images, move(old));
 	if (!recreating)
 		DEBUG_AS(cat, "Created swapchain, size {}", size);
@@ -90,7 +90,7 @@ GPU::GPU(dev::Window& window, Logger::Category cat):
 
 auto GPU::estimate_frame_sleep() -> nanoseconds
 {
-	if (!globals::config->get_entry<bool>("vulkan", "low_latency")) return 0ns;
+	if (!globals::config->get_entry<bool>("graphics", "low_latency")) return 0ns;
 	auto sleep = last_submit - 2ms; // Leave 2ms for rendergraph and Vulkan overhead
 	if (sleep < 2ms) return 0ns; // Don't sleep at all if gain is too small
 	if (sleep > 16ms) {
