@@ -112,7 +112,7 @@ auto create_texture(Allocator& allocator, const_multi_array_ref<T, 3> data, Form
 {
 	auto ia = ImageAttachment{
 		.usage = ImageUsageFlagBits::eSampled | ImageUsageFlagBits::eTransferDst,
-		.extent = {data.shape()[0], data.shape()[1], 1},
+		.extent = {static_cast<uint>(data.shape()[0]), static_cast<uint>(data.shape()[1]), 1},
 		.format = format,
 		.sample_count = Samples::e1,
 		.view_type = ImageViewType::e2D,
