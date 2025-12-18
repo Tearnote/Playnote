@@ -1,122 +1,177 @@
 {
-  "name" : "playnote",
-  "version-string" : "1.0.0",
-  "builtin-baseline" : "e24f21eb8f1d84ef56ef7703afa36c372cc6f4ce",
-  "dependencies" : [ {
-    "name" : "openssl",
-    "version>=" : "3.5.2"
-  }, {
-    "name" : "icu",
-    "version>=" : "74.2#6"
-  }, {
-    "name" : "glfw3",
-    "version>=" : "3.4#1"
-  }, {
-    "name" : "boost-range",
-    "version>=" : "1.88.0"
-  }, {
-    "name" : "boost-container",
-    "version>=" : "1.88.0"
-  }, {
-    "name" : "boost-unordered",
-    "version>=" : "1.88.0"
-  }, {
-    "name" : "boost-rational",
-    "version>=" : "1.88.0"
-  }, {
-    "name" : "boost-algorithm",
-    "version>=" : "1.88.0"
-  }, {
-    "name" : "boost-lexical-cast",
-    "version>=" : "1.88.0"
-  }, {
-    "name" : "boost-scope",
-    "version>=" : "1.88.0"
-  }, {
-	  "name" : "boost-multi-array",
-	  "version>=" : "1.88.0"
-	}, {
-    "name" : "ffmpeg",
-    "version>=" : "7.1.1#4",
-    "default-features" : false,
-    "features" : [ "avcodec", "avformat", "swresample", "aom", "mp3lame", "openh264", "opus", "soxr", "theora", "vorbis", "vpx" ]
-  }, {
-    "name" : "libarchive",
-    "version>=" : "3.8.1",
-    "default-features" : false,
-    "features" : [ "bzip2", "lz4", "lzma", "lzo", "zstd" ]
-  }, {
-    "name" : "vulkan-headers",
-    "version>=" : "1.4.309.0"
-  }, {
-    "name" : "sqlite3",
-    "version>=" : "3.50.4"
-  }, {
-    "name" : "zstd",
-    "version>=" : "1.5.7"
-  }, {
-    "name" : "freetype",
-    "version>=" : "2.13.3",
-    "features" : [ "error-strings" ]
-  }, {
-    "name" : "libpng",
-    "version>=" : "1.6.50"
-  }, {
-    "name" : "harfbuzz",
-    "version>=" : "11.3.3"
-  }, {
-    "name" : "magic-enum",
-    "version>=" : "0.9.7"
-  }, {
-    "name" : "libassert",
-    "version>=" : "2.2.1"
-  }, {
-    "name" : "mio",
-    "version>=" : "2023-03-03"
-  }, {
-    "name" : "quill",
-    "version>=" : "11.0.1"
-  }, {
-    "name" : "volk",
-    "version>=" : "1.4.328.0"
-  }, {
-    "name" : "libebur128",
-    "version>=" : "1.2.6#3"
-  }, {
-    "name" : "vk-bootstrap",
-    "version>=" : "1.4.328"
-  }, {
-    "name" : "imgui",
-    "version>=" : "1.91.9",
-    "features" : [ "freetype", "glfw-binding" ]
-  }, {
-    "name" : "implot",
-    "version>=" : "0.16"
-  }, {
-    "name" : "tomlplusplus",
-    "version>=" : "3.4.0"
-  }, {
-    "name" : "zpp-bits",
-    "version>=" : "4.5"
-  }, {
-    "name" : "readerwriterqueue",
-    "version>=" : "1.0.7"
-  }, {
-    "name" : "concurrentqueue",
-    "version>=" : "1.0.4"
-  }, {
-    "name" : "plf-colony",
-    "version>=" : "7.5.25"
-  }, {
-    "name" : "libpng",
-    "version>=" : "1.6.53"
-  }, {
-    "name" : "mimalloc",
-    "version>=" : "2.2.4",
-    "features": [ "override" ]
-  }, {
-    "name" : "skia",
-    "version>=" : "140",
-    "default-features": false
-  } ]
+	"name": "playnote",
+	"version-string": "1.0.0",
+	"builtin-baseline": "e24f21eb8f1d84ef56ef7703afa36c372cc6f4ce",
+	"dependencies": [
+		{
+			"name": "openssl",
+			"version>=": "3.5.2"
+		},
+		{
+			"name": "icu",
+			"version>=": "74.2#6"
+		},
+		{
+			"name": "glfw3",
+			"version>=": "3.4#1"
+		},
+		{
+			"name": "boost-range",
+			"version>=": "1.88.0"
+		},
+		{
+			"name": "boost-container",
+			"version>=": "1.88.0"
+		},
+		{
+			"name": "boost-unordered",
+			"version>=": "1.88.0"
+		},
+		{
+			"name": "boost-rational",
+			"version>=": "1.88.0"
+		},
+		{
+			"name": "boost-algorithm",
+			"version>=": "1.88.0"
+		},
+		{
+			"name": "boost-lexical-cast",
+			"version>=": "1.88.0"
+		},
+		{
+			"name": "boost-scope",
+			"version>=": "1.88.0"
+		},
+		{
+			"name": "boost-multi-array",
+			"version>=": "1.88.0"
+		},
+		{
+			"name": "ffmpeg",
+			"version>=": "7.1.1#4",
+			"default-features": false,
+			"features": [
+				"avcodec",
+				"avformat",
+				"swresample",
+				"aom",
+				"mp3lame",
+				"openh264",
+				"opus",
+				"soxr",
+				"theora",
+				"vorbis",
+				"vpx"
+			]
+		},
+		{
+			"name": "libarchive",
+			"version>=": "3.8.1",
+			"default-features": false,
+			"features": ["bzip2", "lz4", "lzma", "lzo", "zstd"]
+		},
+		{
+			"name": "vulkan-headers",
+			"version>=": "1.4.309.0"
+		},
+		{
+			"name": "sqlite3",
+			"version>=": "3.50.4"
+		},
+		{
+			"name": "zstd",
+			"version>=": "1.5.7"
+		},
+		{
+			"name": "freetype",
+			"version>=": "2.13.3",
+			"features": ["error-strings"]
+		},
+		{
+			"name": "libpng",
+			"version>=": "1.6.50"
+		},
+		{
+			"name": "harfbuzz",
+			"version>=": "11.3.3"
+		},
+		{
+			"name": "magic-enum",
+			"version>=": "0.9.7"
+		},
+		{
+			"name": "libassert",
+			"version>=": "2.2.1"
+		},
+		{
+			"name": "mio",
+			"version>=": "2023-03-03"
+		},
+		{
+			"name": "quill",
+			"version>=": "11.0.1"
+		},
+		{
+			"name": "volk",
+			"version>=": "1.4.328.0"
+		},
+		{
+			"name": "libebur128",
+			"version>=": "1.2.6#3"
+		},
+		{
+			"name": "vk-bootstrap",
+			"version>=": "1.4.328"
+		},
+		{
+			"name": "imgui",
+			"version>=": "1.91.9",
+			"features": ["freetype", "glfw-binding"]
+		},
+		{
+			"name": "implot",
+			"version>=": "0.16"
+		},
+		{
+			"name": "tomlplusplus",
+			"version>=": "3.4.0"
+		},
+		{
+			"name": "zpp-bits",
+			"version>=": "4.5"
+		},
+		{
+			"name": "readerwriterqueue",
+			"version>=": "1.0.7"
+		},
+		{
+			"name": "concurrentqueue",
+			"version>=": "1.0.4"
+		},
+		{
+			"name": "plf-colony",
+			"version>=": "7.5.25"
+		},
+		{
+			"name": "libpng",
+			"version>=": "1.6.53"
+		},
+		{
+			"name": "mimalloc",
+			"version>=": "2.2.4",
+			"features": ["override"],
+			"platform": "!windows"
+		},
+		{
+			"name": "mimalloc",
+			"version>=": "2.2.4",
+			"platform": "windows"
+		},
+		{
+			"name": "skia",
+			"version>=": "140",
+			"default-features": false
+		}
+	]
 }
