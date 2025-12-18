@@ -16,6 +16,7 @@ or distributed except according to those terms.
 #include <hb-ft.h>
 #include "preamble.hpp"
 #include "utils/assert.hpp"
+#include "utils/logger.hpp"
 #include "io/file.hpp"
 
 namespace playnote::lib::harfbuzz {
@@ -56,18 +57,22 @@ auto create_font(Context& ctx, shared_ptr<io::ReadFile> file, int weight) -> Fon
 
 	// Set font metrics
 	auto* mm_var = static_cast<FT_MM_Var*>(nullptr);
-	ft_ret_check(FT_Get_MM_Var(face, &mm_var));
-	ASSUME(mm_var);
-	auto coords = vector<FT_Fixed>{};
-	coords.reserve(mm_var->num_axis);
-	auto axes = span{mm_var->axis, mm_var->num_axis};
-	transform(axes, back_inserter(coords), [&](auto const& axis) {
-		if (axis.tag == FT_MAKE_TAG('w', 'g', 'h', 't'))
-			return clamp(static_cast<FT_Fixed>(weight) << 16, axis.minimum, axis.maximum);
-		return axis.def;
-	});
-	ft_ret_check(FT_Set_Var_Design_Coordinates(face, coords.size(), coords.data()));
-	FT_Done_MM_Var(ctx.get(), mm_var);
+	try {
+		ft_ret_check(FT_Get_MM_Var(face, &mm_var));
+		ASSUME(mm_var);
+		auto coords = vector<FT_Fixed>{};
+		coords.reserve(mm_var->num_axis);
+		auto axes = span{mm_var->axis, mm_var->num_axis};
+		transform(axes, back_inserter(coords), [&](auto const& axis) {
+			if (axis.tag == FT_MAKE_TAG('w', 'g', 'h', 't'))
+				return clamp(static_cast<FT_Fixed>(weight) << 16, axis.minimum, axis.maximum);
+			return axis.def;
+		});
+		ft_ret_check(FT_Set_Var_Design_Coordinates(face, coords.size(), coords.data()));
+		FT_Done_MM_Var(ctx.get(), mm_var);
+	} catch (exception const& e) {
+		WARN("Font \"{}\" does not have variable weight", file->path);
+	}
 	ft_ret_check(FT_Set_Char_Size(face, face->units_per_EM << 6, 0, 0, 0));
 
 	auto* font = hb_ft_font_create_referenced(face);
