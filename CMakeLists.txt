@@ -95,8 +95,8 @@ target_link_libraries(Playnote
 	PRIVATE volk::volk_headers
 	PRIVATE volk::volk
 	PRIVATE glfw
-	PRIVATE PkgConfig::icu-i18n
-	PRIVATE PkgConfig::icu-uc
+	PRIVATE ICU::i18n
+	PRIVATE ICU::uc
 	PRIVATE mio::mio-headers
 	PRIVATE mio::mio
 	PRIVATE vuk

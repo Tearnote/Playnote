@@ -23,8 +23,8 @@ find_package(OpenSSL REQUIRED) # MD5 hash
 find_package(unofficial-sqlite3 CONFIG REQUIRED) # Local database
 find_package(zstd CONFIG REQUIRED) # Lossless compression
 find_package(VulkanHeaders CONFIG REQUIRED)
-pkg_search_module(icu-i18n REQUIRED IMPORTED_TARGET icu-i18n) # Charset detection and conversion
-pkg_search_module(icu-uc REQUIRED IMPORTED_TARGET icu-uc)
+find_package(ICU REQUIRED # Charset detection and conversion, grapheme cluster iteration
+	COMPONENTS uc i18n)
 find_package(glfw3 CONFIG REQUIRED) # Windowing support
 find_package(Boost CONFIG REQUIRED # Rational numbers, improved containers, string algorithms, resource wrapper
 	COMPONENTS container)
