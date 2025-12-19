@@ -17,8 +17,8 @@ namespace playnote::gfx {
 TextShaper::TextShaper(Logger::Category cat):
 	cat{cat},
 	ctx{lib::harfbuzz::init()},
-	atlas{1024}
-{}
+	atlas{2048}
+{ atlas.atlasGenerator().setThreadCount(max(1u, jthread::hardware_concurrency() - 2u)); }
 
 void TextShaper::load_font(FontID font_id, io::ReadFile&& file, initializer_list<int> weights)
 {

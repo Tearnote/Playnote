@@ -14,6 +14,7 @@ or distributed except according to those terms.
 #include "lib/vuk.hpp"
 #include "io/file.hpp"
 #include "gpu/shaders.hpp"
+#include "gfx/prewarm.hpp"
 
 namespace playnote::gfx {
 
@@ -245,6 +246,8 @@ Renderer::Renderer(dev::Window& window, Logger::Category cat):
 	text_shaper.load_font("Pretendard"_id, io::read_file(PretendardFontPath), {500, 800});
 	text_shaper.define_style("SansMedium"_id, {"Mplus2"_id, "Pretendard"_id}, 500);
 	text_shaper.define_style("SansBold"_id, {"Mplus2"_id, "Pretendard"_id}, 800);
+	for (auto chars: AtlasPrewarmChars)
+		text_shaper.shape("SansMedium"_id, chars);
 
 	lib::vuk::create_compute_pipeline(context, "worklist_gen", gpu::worklist_gen_spv);
 	DEBUG_AS(cat, "Compiled worklist_gen pipeline");
