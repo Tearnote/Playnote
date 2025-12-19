@@ -12,6 +12,7 @@ or distributed except according to those terms.
 import lib;
 #include "shared/primitive.slang.h"
 #include "shared/worklist.slang.h"
+#include "shared/config.slang.h"
 
 #define WORKLIST_DEBUG 0
 
@@ -23,10 +24,10 @@ RWTexture2D<float4> i_target;
 
 [SpecializationConstant] let ViewportWidth = 0u;
 [SpecializationConstant] let ViewportHeight = 0u;
-[SpecializationConstant] let SubpixelRendering = 0u;
+[SpecializationConstant] let SubpixelRenderingRaw = 0u;
 static let ViewportSize = int2(ViewportWidth, ViewportHeight);
 static let TileBound = (ViewportSize + TILE_SIZE - 1) / TILE_SIZE;
-static let SubpixelSamples = SubpixelRendering > 0? 3 : 1;
+static let SubpixelRendering = SubpixelRenderingMode(SubpixelRenderingRaw);
 
 static let SubpixelLayoutRGB: float2[] = {
 	{0.166, 0.5},
@@ -56,6 +57,23 @@ func sampleGlyphDistance(p: float2, params: Primitive::GlyphParams) -> float
 	return (dist + dist_outside) * params.size;
 }
 
+func primitiveCoverage(primitive: Primitive, params: int[8], at: float2) -> float
+{
+	let center = at - primitive.position;
+	switch (primitive.type) {
+	case Primitive::Type::Circle:
+		let circleParams = reinterpret<Primitive::CircleParams>(params);
+		return sdf::aa(sdf::circle(center, circleParams.radius));
+	case Primitive::Type::Rect:
+		let rectParams = reinterpret<Primitive::RectParams>(params);
+		return sdf::aa(sdf::rect(center, rectParams.size));
+	case Primitive::Type::Glyph:
+		let glyphParams = reinterpret<Primitive::GlyphParams>(params);
+		return sdf::aa(sampleGlyphDistance(center, glyphParams));
+	default: return 0.0;
+	}
+}
+
 [shader("compute")]
 [numthreads(16, 16)]
 void computeMain(int2 threadId: SV_DispatchThreadID)
@@ -71,38 +89,29 @@ void computeMain(int2 threadId: SV_DispatchThreadID)
 	var color = i_target.Load(threadId);
 	color = float4(srgbDecode(color.rgb), color.a);
 
-	var results: float4[3] = {};
-	for (int j = 0; j < SubpixelSamples; j += 1) {
+	if (SubpixelRendering == SubpixelRenderingMode::None) {
 		for (int i = 0; i < worklistSize; i += 1) {
 			let item = b_worklists[worklistOffset + i];
 			let primitive = readPrimitive(b_primitives, item.primitive_idx);
 			let params = readPrimitiveParams(b_primitives, item.primitive_idx);
-			var coverage = 0.0;
-			let center = self_pos - primitive.position + (SubpixelLayoutRGB[j] - float2(0.5, 0.5));
-			switch (primitive.type) {
-			case Primitive::Type::Circle:
-				let circleParams = reinterpret<Primitive::CircleParams>(params);
-				coverage = sdf::aa(sdf::circle(center, circleParams.radius));
-				break;
-			case Primitive::Type::Rect:
-				let rectParams = reinterpret<Primitive::RectParams>(params);
-				coverage = sdf::aa(sdf::rect(center, rectParams.size));
-				break;
-			case Primitive::Type::Glyph:
-				let glyphParams = reinterpret<Primitive::GlyphParams>(params);
-				coverage = sdf::aa(sampleGlyphDistance(center, glyphParams));
-				break;
-			}
-			results[j] = blend(results[j], float4(primitive.color.rgb, primitive.color.a * coverage));
+			let coverage = primitiveCoverage(primitive, params, self_pos);
+			color = blend(color, float4(primitive.color.rgb, primitive.color.a * coverage));
 		}
+	} else {
+		var results: float2[3] = {};
+		for (int j = 0; j < 3; j += 1) {
+			for (int i = 0; i < worklistSize; i += 1) {
+				let item = b_worklists[worklistOffset + i];
+				let primitive = readPrimitive(b_primitives, item.primitive_idx);
+				let params = readPrimitiveParams(b_primitives, item.primitive_idx);
+				let coverage = primitiveCoverage(primitive, params, self_pos + (SubpixelLayoutRGB[j] - float2(0.5, 0.5)));
+				float colorComponent = primitive.color[j];
+				results[j] = blend(results[j], float2(colorComponent, primitive.color.a * coverage));
+			}
+		}
+		color = blend(color, float4(results[0].r, results[1].r, results[2].r, (results[0].g + results[1].g + results[2].g) / 3.0));
 	}
-	var result = float4(0.0, 0.0, 0.0, 1.0);
-	if (SubpixelRendering > 0)
-		result = float4(results[0].r, results[1].g, results[2].b, (results[0].a + results[1].a + results[2].a) / 3.0);
-	else
-		result = results[0];
 
-	color = blend(color, result);
 	color = float4(srgbEncode(color.rgb), color.a);
 #if WORKLIST_DEBUG
 	color.r += 0.08 * worklistSize;
