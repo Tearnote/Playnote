@@ -48,6 +48,13 @@ find_package(concurrentqueue CONFIG REQUIRED) # Lock-free MPMC queue
 find_path(PLF_COLONY_INCLUDE_DIRS "plf_colony.h") # Memory-stable unordered container
 find_package(mimalloc CONFIG REQUIRED) # High performance allocator
 
+# Fix ebur128 on Windows
+if(WIN32)
+	get_target_property(EBUR128_LIBS PkgConfig::ebur128 INTERFACE_LINK_LIBRARIES)
+	list(REMOVE_ITEM EBUR128_LIBS "m")
+	set_target_properties(PkgConfig::ebur128 PROPERTIES INTERFACE_LINK_LIBRARIES "${EBUR128_LIBS}")
+endif()
+
 # Remote dependencies
 
 set(VUK_LINK_TO_LOADER OFF CACHE BOOL "" FORCE)
