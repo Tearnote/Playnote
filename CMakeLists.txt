@@ -120,8 +120,6 @@ target_include_directories(Playnote
 target_link_directories(Playnote PRIVATE ${FFMPEG_LIBRARY_DIRS})
 target_compile_definitions(imgui::imgui INTERFACE "IMGUI_USER_CONFIG=\"${PROJECT_SOURCE_DIR}/src/lib/imconfig.h\"")
 
-include(cmake/Shaders.cmake)
-add_dependencies(Playnote Playnote_Shaders)
+include(cmake/PlaynoteAssets.cmake)
+add_dependencies(Playnote PlaynoteAssets)
 target_include_directories(Playnote PRIVATE ${PROJECT_BINARY_DIR}/$<CONFIG>/generated)
-include(cmake/Assets.cmake)
-add_dependencies(Playnote Playnote_Assets)
