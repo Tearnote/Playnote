@@ -35,26 +35,28 @@ static let SubpixelLayoutRGB: float2[] = {
 	{0.833, 0.5},
 };
 
+groupshared var worklist: WorklistItem[WORKLIST_MAX_SIZE];
+
 func msdfMedian(r: float, g: float, b: float) -> float
 { return max(min(r, g), min(max(r, g), b)); }
 
 func sampleGlyphDistance(p: float2, params: Primitive::GlyphParams) -> float
 {
-	let min_rect = params.atlas_bounds.top_left;
-	let max_rect = params.atlas_bounds.bottom_right;
-	let atlas_dims = max_rect - min_rect;
-	let screen_dims = atlas_dims * params.size;
-	let texel_offset = p * (atlas_dims / screen_dims);
-	let texel = float2(min_rect.x + texel_offset.x, max_rect.y - texel_offset.y);
-	let clamped_texel = clamp(texel, min_rect + 0.5, max_rect - 0.5);
+	let minRect = params.atlas_bounds.top_left;
+	let maxRect = params.atlas_bounds.bottom_right;
+	let atlasDims = maxRect - minRect;
+	let screenDims = atlasDims * params.size;
+	let texelOffset = p * (atlasDims / screenDims);
+	let texel = float2(minRect.x + texelOffset.x, maxRect.y - texelOffset.y);
+	let clampedTexel = clamp(texel, minRect + 0.5, maxRect - 0.5);
 	uint w, h;
 	s_atlas.GetDimensions(w, h);
-	let uv = clamped_texel / float2(w, h);
+	let uv = clampedTexel / float2(w, h);
 	let s = s_atlas.SampleLevel(uv, 0).rgb;
 	let sd = msdfMedian(s.r, s.g, s.b);
 	let dist = (0.5 - sd) * 8.0;
-	let dist_outside = length(texel - clamped_texel);
-	return (dist + dist_outside) * params.size;
+	let distOutside = length(texel - clampedTexel);
+	return (dist + distOutside) * params.size;
 }
 
 func primitiveCoverage(primitive: Primitive, params: int[8], at: float2) -> float
@@ -75,36 +77,41 @@ func primitiveCoverage(primitive: Primitive, params: int[8], at: float2) -> floa
 }
 
 [shader("compute")]
-[numthreads(16, 16)]
-void computeMain(int2 threadId: SV_DispatchThreadID)
+[numthreads(TILE_SIZE, TILE_SIZE)]
+void computeMain(int2 threadId: SV_DispatchThreadID, uint3 groupThreadId: SV_GroupThreadID)
 {
-	if (any(threadId >= ViewportSize)) return;
+	// Retrieve tile worklist from buffer
 	let tile = threadId / TILE_SIZE;
 	let tileIdx = tile.y * TileBound.x + tile.x;
-	let worklistOffset = tileIdx * WORKLIST_MAX_SIZE;
 	let worklistSize = b_worklistSizes[tileIdx];
 	if (worklistSize <= 0) return;
+	let worklistOffset = tileIdx * WORKLIST_MAX_SIZE;
+	let flatGroupThreadId = groupThreadId.y * TILE_SIZE + groupThreadId.x;
+	if (flatGroupThreadId < worklistSize)
+		worklist[flatGroupThreadId] = b_worklists[worklistOffset + flatGroupThreadId];
+	GroupMemoryBarrierWithGroupSync();
 
-	let self_pos = float2(threadId) + 0.5;
+	if (any(threadId >= ViewportSize)) return;
+	let selfPos = float2(threadId) + 0.5;
 	var color = i_target.Load(threadId);
 	color = float4(srgbDecode(color.rgb), color.a);
 
 	if (SubpixelRendering == SubpixelRenderingMode::None) {
 		for (int i = 0; i < worklistSize; i += 1) {
-			let item = b_worklists[worklistOffset + i];
+			let item = worklist[i];
 			let primitive = readPrimitive(b_primitives, item.primitive_idx);
 			let params = readPrimitiveParams(b_primitives, item.primitive_idx);
-			let coverage = primitiveCoverage(primitive, params, self_pos);
+			let coverage = primitiveCoverage(primitive, params, selfPos);
 			color = blend(color, float4(primitive.color.rgb, primitive.color.a * coverage));
 		}
 	} else {
 		var results: float2[3] = {};
 		for (int j = 0; j < 3; j += 1) {
 			for (int i = 0; i < worklistSize; i += 1) {
-				let item = b_worklists[worklistOffset + i];
+				let item = worklist[i];
 				let primitive = readPrimitive(b_primitives, item.primitive_idx);
 				let params = readPrimitiveParams(b_primitives, item.primitive_idx);
-				let coverage = primitiveCoverage(primitive, params, self_pos + (SubpixelLayoutRGB[j] - float2(0.5, 0.5)));
+				let coverage = primitiveCoverage(primitive, params, selfPos + (SubpixelLayoutRGB[j] - float2(0.5, 0.5)));
 				float colorComponent = primitive.color[j];
 				results[j] = blend(results[j], float2(colorComponent, primitive.color.a * coverage));
 			}
