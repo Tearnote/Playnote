@@ -35,6 +35,7 @@ function(add_slang_shader)
 			${ARG_INPUT}
 		DEPENDS ${ARG_INPUT}
 		DEPFILE ${ARG_OUTPUT}.d
-		VERBATIM COMMAND_EXPAND_LISTS
+		COMMENT "Compiling Slang shader ${ARG_INPUT}"
+		VERBATIM
 	)
 endfunction()

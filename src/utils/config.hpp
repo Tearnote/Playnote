@@ -45,11 +45,6 @@ inline constexpr auto ConfigPath = "config.toml"sv;
 inline constexpr auto LibraryPath = "library"sv;
 inline constexpr auto LibraryDBPath = "library.db"sv;
 
-// Asset locations
-
-inline constexpr auto Mplus2FontPath = "assets/Mplus2.ttf"sv;
-inline constexpr auto PretendardFontPath = "assets/Pretendard.ttf"sv;
-
 // Global runtime configuration, kept in sync with the config file.
 class Config {
 public:

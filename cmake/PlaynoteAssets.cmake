@@ -8,6 +8,7 @@
 include_guard()
 
 include(cmake/AddSlangShader.cmake)
+include(cmake/AddProcessedFont.cmake)
 
 set(PLAYNOTE_SHADER_PREFIX src/gpu)
 set(PLAYNOTE_SHADER_SOURCES
@@ -17,10 +18,10 @@ set(PLAYNOTE_SHADER_SOURCES
 	imgui.slang
 )
 
-set(ASSET_PATHS
-	assets/unifont-16.0.03.ttf
-	assets/Mplus2.ttf
-	assets/Pretendard.ttf
+set(PLAYNOTE_FONT_PREFIX fonts)
+set(PLAYNOTE_FONTS
+	Mplus2-Medium.ttf
+	Pretendard-Medium.ttf
 )
 
 # Compile shaders
@@ -31,16 +32,32 @@ foreach(SHADER_PATH ${PLAYNOTE_SHADER_SOURCES})
 	list(APPEND PLAYNOTE_SHADER_OUTPUTS ${OUTPUT_PATH})
 endforeach()
 
-foreach(ASSET_PATH ${PLAYNOTE_ASSET_PATHS})
-	set(ASSET_OUTPUT ${PROJECT_BINARY_DIR}/$<CONFIG>/assets/${ASSET_PATH})
+# Process fonts
+foreach(FONT_PATH ${PLAYNOTE_FONTS})
+	set(INPUT_PATH ${PROJECT_SOURCE_DIR}/${PLAYNOTE_FONT_PREFIX}/${FONT_PATH})
+	set(OUTPUT_PATH ${PROJECT_BINARY_DIR}/$<CONFIG>/generated/ttf/${FONT_PATH})
+	add_processed_font(INPUT ${INPUT_PATH} OUTPUT ${OUTPUT_PATH})
+	list(APPEND PLAYNOTE_FONT_OUTPUTS ${OUTPUT_PATH})
+endforeach()
+
+# Copy finished assets
+set(PLAYNOTE_ASSETS
+	${PLAYNOTE_FONT_OUTPUTS}
+	${PROJECT_SOURCE_DIR}/fonts/unifont-16.0.03.ttf
+)
+foreach(ASSET_PATH ${PLAYNOTE_ASSETS})
+	set(OUTPUT_DIR ${PROJECT_BINARY_DIR}/$<CONFIG>/assets)
+	get_filename_component(ASSET_FILENAME ${ASSET_PATH} NAME)
+	set(OUTPUT_PATH ${OUTPUT_DIR}/${ASSET_FILENAME})
 	add_custom_command(
-		OUTPUT ${ASSET_OUTPUT}
-		COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/$<CONFIG>/assets
-		COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/${ASSET_PATH} ${ASSET_OUTPUT}
+		OUTPUT ${OUTPUT_PATH}
+		COMMAND ${CMAKE_COMMAND} -E make_directory ${OUTPUT_DIR}
+		COMMAND ${CMAKE_COMMAND} -E copy ${ASSET_PATH} ${OUTPUT_PATH}
 		DEPENDS ${ASSET_PATH}
-		VERBATIM COMMAND_EXPAND_LISTS
+		COMMENT "Copying ${ASSET_PATH} to assets"
+		VERBATIM
 	)
-	list(APPEND PLAYNOTE_ASSET_OUTPUTS ${PLAYNOTE_ASSET_OUTPUT})
+	list(APPEND PLAYNOTE_ASSET_OUTPUTS ${OUTPUT_PATH})
 endforeach()
 
 add_custom_target(PlaynoteAssets DEPENDS ${PLAYNOTE_SHADER_OUTPUTS} ${PLAYNOTE_ASSET_OUTPUTS})

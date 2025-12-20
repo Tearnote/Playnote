@@ -242,12 +242,11 @@ Renderer::Renderer(dev::Window& window, Logger::Category cat):
 {
 	auto& context = gpu.get_global_allocator().get_context();
 
-	text_shaper.load_font("Mplus2"_id, io::read_file(Mplus2FontPath), {500, 800});
-	text_shaper.load_font("Pretendard"_id, io::read_file(PretendardFontPath), {500, 800});
-	text_shaper.define_style("SansMedium"_id, {"Mplus2"_id, "Pretendard"_id}, 500);
-	text_shaper.define_style("SansBold"_id, {"Mplus2"_id, "Pretendard"_id}, 800);
+	text_shaper.load_font("Mplus2"_id, io::read_file("assets/Mplus2-Medium.ttf"), {500});
+	text_shaper.load_font("Pretendard"_id, io::read_file("assets/Pretendard-Medium.ttf"), {500});
+	text_shaper.define_style("Sans-Medium"_id, {"Mplus2"_id, "Pretendard"_id}, 500);
 	for (auto chars: AtlasPrewarmChars)
-		text_shaper.shape("SansMedium"_id, chars);
+		text_shaper.shape("Sans-Medium"_id, chars);
 
 	lib::vuk::create_compute_pipeline(context, "worklist_gen", gpu::worklist_gen_spv);
 	DEBUG_AS(cat, "Compiled worklist_gen pipeline");
@@ -263,8 +262,8 @@ auto Renderer::prepare_text(TextStyle style, string_view text) -> Text
 {
 	auto const style_id = [&] {
 		switch (style) {
-		case TextStyle::SansMedium: return "SansMedium"_id;
-		case TextStyle::SansBold:   return "SansBold"_id;
+		case TextStyle::SansMedium: return "Sans-Medium"_id;
+		case TextStyle::SansBold:   return "Sans-Bold"_id;
 		};
 	}();
 	// return text_shaper.shape(style_id, text);
