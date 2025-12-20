@@ -242,8 +242,8 @@ Renderer::Renderer(dev::Window& window, Logger::Category cat):
 {
 	auto& context = gpu.get_global_allocator().get_context();
 
-	text_shaper.load_font("Mplus2"_id, io::read_file("assets/Mplus2-Medium.ttf"), {500});
-	text_shaper.load_font("Pretendard"_id, io::read_file("assets/Pretendard-Medium.ttf"), {500});
+	text_shaper.load_font("Mplus2"_id, io::read_file("assets/Mplus2-Medium.ttf"), 500);
+	text_shaper.load_font("Pretendard"_id, io::read_file("assets/Pretendard-Medium.ttf"), 500);
 	text_shaper.define_style("Sans-Medium"_id, {"Mplus2"_id, "Pretendard"_id}, 500);
 	for (auto chars: AtlasPrewarmChars)
 		text_shaper.shape("Sans-Medium"_id, chars);

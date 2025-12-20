@@ -39,7 +39,7 @@ using Font = unique_resource<Font_t*, detail::FontDeleter>;
 auto init() -> Context;
 
 // Open a font file for reading.
-auto create_font(Context&, shared_ptr<io::ReadFile>, int weight = 500) -> Font;
+auto create_font(Context&, shared_ptr<io::ReadFile>) -> Font;
 
 // Return the units-per-em of a font; useful for normalization.
 auto units_per_em(Font const&) -> float;
