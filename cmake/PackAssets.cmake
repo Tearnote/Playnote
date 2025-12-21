@@ -9,7 +9,6 @@ include_guard()
 
 include(cmake/Dependencies.cmake)
 
-# Build the packer itself
 add_executable(PackAssets
 	src/lib/sqlite.cpp
 	src/io/file.cpp
@@ -24,7 +23,6 @@ target_link_libraries(PackAssets
 	PRIVATE Boost::container
 	PRIVATE Boost::boost
 )
-target_precompile_headers(PackAssets PRIVATE src/preamble.hpp)
 target_include_directories(PackAssets PRIVATE src)
 
 function(pack_assets)

@@ -42,6 +42,7 @@ public:
 	// Add a style, which is a font fallback cascade at a specified weight. The fonts must all
 	// have been previously added with that exact weight.
 	void define_style(StyleID, initializer_list<FontID>, int weight = 500);
+	void define_style(StyleID, span<FontID const>, int weight = 500);
 
 	// Shape text into glyphs using the specified style. The returned object can be used repeatedly.
 	auto shape(StyleID, string_view) -> Text;
@@ -54,6 +55,15 @@ public:
 
 	// Save the atlas to a file for debugging purposes.
 	void dump_atlas(fs::path const&) const;
+
+	// Turn atlas state into a binary representation, which can later be restored with deserialize().
+	// The two return types are the bitmap and the layout, respectively.
+	// The state does not include loaded fonts or created styles.
+	auto serialize() -> pair<vector<byte>, vector<byte>>;
+
+	// Restore the atlas state from a previously serialized binary.
+	// The same fonts and styles must have been created as what existed as serialization time.
+	void deserialize(span<byte const> bitmap, span<byte const> layout);
 
 private:
 	using FontRef = reference_wrapper<lib::harfbuzz::Font>;

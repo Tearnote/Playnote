@@ -11,6 +11,7 @@ or distributed except according to those terms.
 #include <type_traits>
 #include <concepts>
 #include <numbers>
+#include <zpp_bits.h>
 #include "preamble/algorithm.hpp"
 #include "preamble/container.hpp"
 #include "preamble/concepts.hpp"
@@ -60,6 +61,9 @@ template<arithmetic T>
 // Generic math vector, of any dimension between 2 to 4 and any underlying type
 template<ssize_t Dim, arithmetic T>
 class vec {
+	friend zpp::bits::access;
+	using serialize = zpp::bits::members<1>;
+
 public:
 	static_assert(Dim >= 2 && Dim <= 4, "Vectors need to have 2, 3 or 4 components");
 	using self_t = vec;

@@ -8,6 +8,7 @@ or distributed except according to those terms.
 */
 
 #pragma once
+#include <zpp_bits.h>
 #include "preamble/string.hpp"
 #include "preamble/types.hpp"
 
@@ -15,6 +16,9 @@ namespace playnote {
 
 // A hash value generated from a string, possibly at compile-time.
 class id {
+	friend zpp::bits::access;
+	using serialize = zpp::bits::members<1>;
+
 public:
 	id() = default;
 

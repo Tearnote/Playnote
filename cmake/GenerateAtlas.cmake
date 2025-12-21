@@ -1,0 +1,66 @@
+# Copyright (c) 2025 Tearnote (Hubert Maraszek)
+#
+# Licensed under the Mozilla Public License Version 2.0 <LICENSE-MPL-2.0.txt
+# or https://www.mozilla.org/en-US/MPL/2.0/> or the Boost Software License <LICENSE-BSL-1.0.txt
+# or https://www.boost.org/LICENSE_1_0.txt>, at your option. This file may not be copied, modified,
+# or distributed except according to those terms.
+
+include_guard()
+
+include(cmake/Dependencies.cmake)
+
+add_executable(GenerateAtlas
+	src/lib/harfbuzz.cpp
+	src/lib/msdf.cpp
+	src/lib/icu.cpp
+	src/io/file.cpp
+	src/gfx/text.cpp
+	src/utils/logger.cpp
+	tools/generate_atlas.cpp
+)
+target_link_libraries(GenerateAtlas
+	PRIVATE readerwriterqueue::readerwriterqueue
+	PRIVATE concurrentqueue::concurrentqueue
+	PRIVATE msdf-atlas-gen::msdf-atlas-gen
+	PRIVATE magic_enum::magic_enum
+	PRIVATE libassert::assert
+	PRIVATE Freetype::Freetype
+	PRIVATE harfbuzz::harfbuzz
+	PRIVATE libcoro
+	PRIVATE Boost::container
+	PRIVATE Boost::boost
+	PRIVATE quill::quill
+	PRIVATE ICU::i18n
+	PRIVATE ICU::uc
+)
+target_include_directories(Playnote
+	PRIVATE ${ZPP_BITS_INCLUDE_DIRS}
+)
+target_include_directories(GenerateAtlas PRIVATE src)
+
+function(generate_atlas)
+	cmake_parse_arguments(ARG "" "BITMAP;LAYOUT" "FONTS" ${ARGN})
+	if(NOT ARG_BITMAP OR NOT ARG_LAYOUT OR NOT ARG_FONTS)
+		message(FATAL_ERROR "Usage: generate_atlas(BITMAP <file> LAYOUT <file> FONTS <fonts...>)")
+	endif()
+
+	get_filename_component(BITMAP_DIR ${ARG_BITMAP} DIRECTORY)
+	get_filename_component(LAYOUT_DIR ${ARG_LAYOUT} DIRECTORY)
+
+	# Resolve inputs to absolute paths
+	set(ABS_INPUTS)
+	foreach(INPUT IN LISTS ARG_FONTS)
+		get_filename_component(ABS_INPUT "${INPUT}" ABSOLUTE)
+		list(APPEND ABS_INPUTS "${ABS_INPUT}")
+	endforeach()
+
+	add_custom_command(
+		OUTPUT ${ARG_BITMAP} ${ARG_LAYOUT}
+		COMMAND ${CMAKE_COMMAND} -E make_directory ${BITMAP_DIR}
+		COMMAND ${CMAKE_COMMAND} -E make_directory ${LAYOUT_DIR}
+		COMMAND GenerateAtlas ${ARG_BITMAP} ${ARG_LAYOUT} ${ABS_INPUTS}
+		DEPENDS ${ARG_FONTS} $<TARGET_FILE:GenerateAtlas>
+		COMMENT "Generating font atlas"
+		VERBATIM
+	)
+endfunction()

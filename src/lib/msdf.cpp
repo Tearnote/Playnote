@@ -71,6 +71,26 @@ auto get_atlas_contents(MTSDFAtlas const& atlas) -> AtlasView
 	};
 }
 
+void set_atlas_contents(MTSDFAtlas& atlas, AtlasView view)
+{
+	auto const height = view.shape()[0];
+	auto const width = view.shape()[1];
+	auto const channels = view.shape()[2];
+
+	if (channels != 4)
+		throw runtime_error("Atlas must have 4 channels");
+
+	auto& current_storage = atlas.atlasGenerator().atlasStorage();
+	auto const current_bitmap = static_cast<msdfgen::BitmapConstRef<msdf_atlas::byte, 4>>(current_storage);
+
+	if (current_bitmap.width != width || current_bitmap.height != height)
+		atlas.atlasGenerator().resize(width, height);
+
+	auto& storage = atlas.atlasGenerator().atlasStorage();
+	auto bitmap = static_cast<msdfgen::BitmapRef<msdf_atlas::byte, 4>>(const_cast<msdf_atlas::BitmapAtlasStorage<msdf_atlas::byte, 4>&>(storage));
+	memcpy(bitmap.pixels, view.data(), view.num_elements());
+}
+
 void atlas_to_image(MTSDFAtlas const& atlas, fs::path const& path)
 {
 	if (!msdf_atlas::saveImage(

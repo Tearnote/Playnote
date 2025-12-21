@@ -73,6 +73,9 @@ auto add_glyphs(MTSDFAtlas&, span<GlyphGeometry>) -> vector<GlyphLayout>;
 // Return atlas contents as a read-only view.
 auto get_atlas_contents(MTSDFAtlas const&) -> AtlasView;
 
+// Set atlas contents from a read-only view.
+void set_atlas_contents(MTSDFAtlas&, AtlasView);
+
 // Save atlas contents to a file.
 void atlas_to_image(MTSDFAtlas const&, fs::path const&);
 

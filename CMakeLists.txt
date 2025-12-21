@@ -117,7 +117,8 @@ endif()
 target_include_directories(Playnote
 	PRIVATE ${FFMPEG_INCLUDE_DIRS}
 	PRIVATE ${ZPP_BITS_INCLUDE_DIRS}
-	PRIVATE ${PLF_COLONY_INCLUDE_DIRS})
+	PRIVATE ${PLF_COLONY_INCLUDE_DIRS}
+)
 target_link_directories(Playnote PRIVATE ${FFMPEG_LIBRARY_DIRS})
 target_compile_definitions(imgui::imgui INTERFACE "IMGUI_USER_CONFIG=\"${PROJECT_SOURCE_DIR}/src/lib/imconfig.h\"")
 

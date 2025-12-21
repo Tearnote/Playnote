@@ -7,8 +7,9 @@
 
 include_guard()
 
-include(cmake/AddSlangShader.cmake)
 include(cmake/AddProcessedFont.cmake)
+include(cmake/AddSlangShader.cmake)
+include(cmake/GenerateAtlas.cmake)
 include(cmake/PackAssets.cmake)
 
 set(PLAYNOTE_SHADER_PREFIX src/gpu)
@@ -41,9 +42,17 @@ foreach(FONT_PATH ${PLAYNOTE_FONTS})
 	list(APPEND PLAYNOTE_FONT_OUTPUTS ${OUTPUT_PATH})
 endforeach()
 
+# Build the initial font atlas
+set(PLAYNOTE_FONT_ATLAS_BITMAP ${PROJECT_BINARY_DIR}/$<CONFIG>/generated/font_atlas_bitmap.bin)
+set(PLAYNOTE_FONT_ATLAS_LAYOUT ${PROJECT_BINARY_DIR}/$<CONFIG>/generated/font_atlas_layout.bin)
+generate_atlas(BITMAP ${PLAYNOTE_FONT_ATLAS_BITMAP} LAYOUT ${PLAYNOTE_FONT_ATLAS_LAYOUT} FONTS
+	${PLAYNOTE_FONT_OUTPUTS})
+
+# Pack into an asset database
 set(PLAYNOTE_ASSET_DB ${PROJECT_BINARY_DIR}/$<CONFIG>/assets.db)
 pack_assets(OUTPUT ${PLAYNOTE_ASSET_DB} INPUTS
 	${PLAYNOTE_FONT_OUTPUTS}
+	${PLAYNOTE_FONT_ATLAS_BITMAP} ${PLAYNOTE_FONT_ATLAS_LAYOUT}
 	${PROJECT_SOURCE_DIR}/fonts/unifont-16.0.03.ttf
 )
 

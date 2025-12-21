@@ -13,9 +13,7 @@ or distributed except according to those terms.
 #include "utils/config.hpp"
 #include "utils/assets.hpp"
 #include "lib/vuk.hpp"
-#include "io/file.hpp"
 #include "gpu/shaders.hpp"
-#include "gfx/prewarm.hpp"
 
 namespace playnote::gfx {
 
@@ -246,8 +244,7 @@ Renderer::Renderer(dev::Window& window, Logger::Category cat):
 	text_shaper.load_font("Mplus2"_id, globals::assets->get("Mplus2-Medium.ttf"_id), 500);
 	text_shaper.load_font("Pretendard"_id, globals::assets->get("Pretendard-Medium.ttf"_id), 500);
 	text_shaper.define_style("Sans-Medium"_id, {"Mplus2"_id, "Pretendard"_id}, 500);
-	for (auto chars: AtlasPrewarmChars)
-		text_shaper.shape("Sans-Medium"_id, chars);
+	text_shaper.deserialize(globals::assets->get("font_atlas_bitmap.bin"_id), globals::assets->get("font_atlas_layout.bin"_id));
 
 	lib::vuk::create_compute_pipeline(context, "worklist_gen", gpu::worklist_gen_spv);
 	DEBUG_AS(cat, "Compiled worklist_gen pipeline");

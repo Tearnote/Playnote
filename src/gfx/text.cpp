@@ -10,6 +10,7 @@ or distributed except according to those terms.
 #include "gfx/text.hpp"
 
 #include "preamble.hpp"
+#include "lib/bits.hpp"
 #include "lib/icu.hpp"
 
 namespace playnote::gfx {
@@ -27,6 +28,9 @@ void TextShaper::load_font(FontID font_id, vector<byte>&& data, int weight)
 }
 
 void TextShaper::define_style(StyleID style_id, initializer_list<FontID> fonts, int weight)
+{ define_style(style_id, {fonts.begin(), fonts.end()}, weight); }
+
+void TextShaper::define_style(StyleID style_id, span<FontID const> fonts, int weight)
 {
 	auto style_fonts = vector<FontID>{};
 	style_fonts.reserve(fonts.size());
@@ -118,6 +122,37 @@ try {
 	INFO_AS(cat, "Exported font atlas to \"{}\"", path);
 } catch (exception const&) {
 	WARN_AS(cat, "Failed to export font atlas");
+}
+
+auto TextShaper::serialize() -> pair<vector<byte>, vector<byte>>
+{
+	auto bitmap = vector<byte>{};
+	auto atlas_view = lib::msdf::get_atlas_contents(atlas);
+	bitmap.reserve(atlas_view.num_elements());
+	copy(span{atlas_view.data(), atlas_view.num_elements()}, back_inserter(bitmap));
+
+	auto layout = vector<byte>{};
+	auto [data, out] = lib::bits::data_out();
+	out(atlas_cache).or_throw();
+	layout.reserve(data.size());
+	copy(data, back_inserter(layout));
+
+	return {move(bitmap), move(layout)};
+}
+
+void TextShaper::deserialize(span<byte const> bitmap, span<byte const> layout)
+{
+	//TODO Serialize atlas extent
+	auto view = lib::msdf::AtlasView{
+		bitmap.data(),
+		boost::extents[2048][2048][4]
+	};
+	lib::msdf::set_atlas_contents(atlas, view);
+
+	auto in = lib::bits::in(layout);
+	in(atlas_cache).or_throw();
+
+	atlas_dirty = true;
 }
 
 auto TextShaper::itemize(string_view text, span<FontRef const> fonts) -> generator<Run>
