@@ -12,6 +12,7 @@ or distributed except according to those terms.
 #include "lib/imgui.hpp"
 #include "lib/vuk.hpp"
 #include "dev/gpu.hpp"
+#include "utils/assets.hpp"
 
 namespace playnote::gfx {
 
@@ -19,7 +20,8 @@ namespace playnote::gfx {
 class Imgui {
 public:
 	explicit Imgui(dev::GPU& gpu):
-		context{lib::imgui::init(gpu.get_window().handle(), gpu.get_global_allocator())}
+		context{lib::imgui::init(gpu.get_window().handle(), gpu.get_global_allocator(),
+			playnote::globals::assets->get("unifont-16.0.03.ttf"_id))}
 	{}
 
 	// Prepare Imgui to accept commands.

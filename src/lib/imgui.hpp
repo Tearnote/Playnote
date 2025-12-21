@@ -25,9 +25,9 @@ struct ContextDeleter {
 
 using Context = unique_ptr<Context_t, detail::ContextDeleter>;
 
-// Initialize Imgui and relevant GPU resources.
+// Initialize Imgui and relevant GPU resources. font_data should be the contents of a TTF font.
 // Throws if vuk throws.
-auto init(glfw::Window window, vuk::Allocator& global_allocator) -> Context;
+auto init(glfw::Window window, vuk::Allocator& global_allocator, vector<byte>&& font_data) -> Context;
 
 // Mark the start of a new frame for Imgui. All Imgui commands must come after this is called.
 void begin();

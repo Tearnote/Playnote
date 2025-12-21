@@ -19,6 +19,7 @@ or distributed except according to those terms.
 namespace playnote::lib::imgui {
 
 struct Context_t {
+	vector<byte> font_ttf_data;
 	vuk::Unique<vuk::Image> font_image;
 	vuk::Unique<vuk::ImageView> font_image_view;
 	vuk::SamplerCreateInfo font_sci;
@@ -31,7 +32,7 @@ void detail::ContextDeleter::operator()(Context_t* ctx) noexcept
 	delete ctx;
 }
 
-auto init(glfw::Window window, vuk::Allocator& global_allocator) -> Context
+auto init(glfw::Window window, vuk::Allocator& global_allocator, vector<byte>&& font_data) -> Context
 {
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
@@ -50,13 +51,14 @@ auto init(glfw::Window window, vuk::Allocator& global_allocator) -> Context
 	config.PixelSnapH = true;
 	config.OversampleH = 1;
 	config.OversampleV = 1;
+	config.FontDataOwnedByAtlas = false;
 	auto ranges = ImVector<ImWchar>{};
 	auto builder = ImFontGlyphRangesBuilder{};
 	builder.AddRanges(io.Fonts->GetGlyphRangesJapanese());
 	builder.AddRanges(io.Fonts->GetGlyphRangesKorean());
 	builder.AddRanges(io.Fonts->GetGlyphRangesChineseFull());
 	builder.BuildRanges(&ranges);
-	ASSERT(io.Fonts->AddFontFromFileTTF("assets/unifont-16.0.03.ttf", 16.0f, &config, ranges.Data));
+	ASSERT(io.Fonts->AddFontFromMemoryTTF(font_data.data(), font_data.size(), 16.0f, &config, ranges.Data));
 	auto* pixels = static_cast<unsigned char*>(nullptr);
 	auto width = 0;
 	auto height = 0;
@@ -79,6 +81,7 @@ auto init(glfw::Window window, vuk::Allocator& global_allocator) -> Context
 		.addressModeW = vuk::SamplerAddressMode::eRepeat,
 	};
 	auto imgui_ctx = Context(new Context_t{
+		.font_ttf_data = move(font_data),
 		.font_image = move(image),
 		.font_image_view = move(view),
 		.font_sci = sci,
