@@ -23,10 +23,10 @@ Assets::Assets(fs::path const& db_path)
 	INFO("Opened asset database at \"{}\"", db_path);
 }
 
-auto Assets::get(id asset_id) -> span<byte const>
+auto Assets::get(id asset_id) -> vector<byte>
 {
 	for (auto [data]: lib::sqlite::query(select_asset, +asset_id))
-		return data;
+		return {data.begin(), data.end()};
 	throw runtime_error_fmt("Asset ID {} not found", +asset_id);
 }
 

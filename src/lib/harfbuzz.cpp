@@ -15,7 +15,6 @@ or distributed except according to those terms.
 #include <hb-ft.h>
 #include "preamble.hpp"
 #include "utils/assert.hpp"
-#include "io/file.hpp"
 
 namespace playnote::lib::harfbuzz {
 
@@ -46,18 +45,18 @@ auto init() -> Context
 	return Context{ctx};
 }
 
-auto create_font(Context& ctx, shared_ptr<io::ReadFile> file) -> Font
+auto create_font(Context& ctx, span<byte const> file) -> Font
 {
 	auto* face = FT_Face{nullptr};
 	ft_ret_check(FT_New_Memory_Face(ctx.get(),
-		reinterpret_cast<unsigned char const*>(file->contents.data()), file->contents.size(),
+		reinterpret_cast<unsigned char const*>(file.data()), file.size(),
 		0, &face));
 
 	ft_ret_check(FT_Set_Char_Size(face, face->units_per_EM << 6, 0, 0, 0));
 	auto* font = hb_ft_font_create_referenced(face);
 	hb_ft_font_set_load_flags(font, FT_LOAD_NO_HINTING | FT_LOAD_NO_BITMAP);
 	hb_ft_font_set_funcs(font);
-	return Font{new Font_t{move(file), face, font}};
+	return Font{new Font_t{face, font}};
 }
 
 auto units_per_em(Font const& font) -> float

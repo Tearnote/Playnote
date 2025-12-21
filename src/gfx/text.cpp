@@ -20,11 +20,10 @@ TextShaper::TextShaper(Logger::Category cat):
 	atlas{2048}
 { atlas.atlasGenerator().setThreadCount(max(1u, jthread::hardware_concurrency() - 2u)); }
 
-void TextShaper::load_font(FontID font_id, io::ReadFile&& file, int weight)
+void TextShaper::load_font(FontID font_id, vector<byte>&& data, int weight)
 {
-	auto file_ptr = make_shared<io::ReadFile>(move(file));
-	fonts.emplace(make_pair(font_id, weight), lib::harfbuzz::create_font(ctx, file_ptr));
-	INFO_AS(cat, "Loaded font at \"{}\"", file_ptr->path);
+	auto const& font_data = this->font_data.emplace_back(move(data));
+	fonts.emplace(make_pair(font_id, weight), lib::harfbuzz::create_font(ctx, font_data));
 }
 
 void TextShaper::define_style(StyleID style_id, initializer_list<FontID> fonts, int weight)

@@ -18,7 +18,7 @@ class Assets {
 public:
 	explicit Assets(fs::path const& db_path);
 
-	auto get(id) -> span<byte const>;
+	auto get(id) -> vector<byte>;
 
 private:
 	struct SelectAsset {

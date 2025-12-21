@@ -13,7 +13,6 @@ or distributed except according to those terms.
 #include "utils/logger.hpp"
 #include "lib/harfbuzz.hpp"
 #include "lib/msdf.hpp"
-#include "io/file.hpp"
 
 namespace playnote::gfx {
 
@@ -38,7 +37,7 @@ public:
 	explicit TextShaper(Logger::Category);
 
 	// Add a font file into available fonts at the specified weight.
-	void load_font(FontID, io::ReadFile&&, int weight);
+	void load_font(FontID, vector<byte>&&, int weight);
 
 	// Add a style, which is a font fallback cascade at a specified weight. The fonts must all
 	// have been previously added with that exact weight.
@@ -64,6 +63,7 @@ private:
 
 	Logger::Category cat;
 	lib::harfbuzz::Context ctx;
+	vector<vector<byte>> font_data;
 	unordered_map<pair<FontID, int>, lib::harfbuzz::Font> fonts; // key: font id, weight
 	unordered_map<StyleID, pair<vector<FontID>, int>> styles; // value: font cascade by id, weight
 	lib::msdf::MTSDFAtlas atlas;

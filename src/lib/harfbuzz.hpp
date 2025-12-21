@@ -9,7 +9,6 @@ or distributed except according to those terms.
 
 #pragma once
 #include "preamble.hpp"
-#include "io/file.hpp"
 
 struct FT_LibraryRec_;
 struct FT_FaceRec_;
@@ -18,7 +17,6 @@ struct hb_font_t;
 namespace playnote::lib::harfbuzz {
 
 struct Font_t {
-	shared_ptr<io::ReadFile> file;
 	FT_FaceRec_* face;
 	hb_font_t* font;
 };
@@ -38,8 +36,8 @@ using Font = unique_resource<Font_t*, detail::FontDeleter>;
 // Create a Freetype context, required for font loading.
 auto init() -> Context;
 
-// Open a font file for reading.
-auto create_font(Context&, shared_ptr<io::ReadFile>) -> Font;
+// Open a font file for reading. The data must live as long as the Font exists.
+auto create_font(Context&, span<byte const>) -> Font;
 
 // Return the units-per-em of a font; useful for normalization.
 auto units_per_em(Font const&) -> float;

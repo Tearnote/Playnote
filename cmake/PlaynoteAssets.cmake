@@ -43,7 +43,6 @@ endforeach()
 
 # Copy finished assets
 set(PLAYNOTE_ASSETS
-	${PLAYNOTE_FONT_OUTPUTS}
 	${PROJECT_SOURCE_DIR}/fonts/unifont-16.0.03.ttf
 )
 foreach(ASSET_PATH ${PLAYNOTE_ASSETS})
