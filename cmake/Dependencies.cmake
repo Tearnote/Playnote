@@ -85,11 +85,13 @@ FetchContent_Declare(signalsmith-basics # Audio processing
 )
 FetchContent_MakeAvailable(signalsmith-basics)
 
+set(LIBCORO_FEATURE_NETWORKING OFF CACHE BOOL "" FORCE)
+set(LIBCORO_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(LIBCORO_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 FetchContent_Declare(libcoro # Coroutine primitives
 	GIT_REPOSITORY https://github.com/jbaldwin/libcoro
 	GIT_TAG 7e0ce982405fb26b6ca8af97f40a8eaa2b78c4fa
 )
-set(LIBCORO_FEATURE_NETWORKING OFF CACHE BOOL "")
 FetchContent_MakeAvailable(libcoro)
 
 set(MSDF_ATLAS_BUILD_STANDALONE OFF CACHE BOOL "" FORCE)
