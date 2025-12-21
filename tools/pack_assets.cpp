@@ -7,13 +7,11 @@ or https://www.boost.org/LICENSE_1_0.txt>, at your option. This file may not be 
 or distributed except according to those terms.
 */
 
-#include <cstdlib>
-
 #include "preamble.hpp"
 #include "io/file.hpp"
 #include "lib/sqlite.hpp"
 
-using namespace playnote;
+namespace playnote {
 
 struct InsertAsset {
 	static constexpr auto Query = R"sql(
@@ -22,9 +20,8 @@ struct InsertAsset {
 	using Params = tuple<uint, span<byte const>>;
 };
 
-auto main(int argc, char** argv) -> int
+auto pack_assets(span<char const* const> args)
 try {
-	auto args = span{argv, static_cast<size_t>(argc)};
 	if (args.size() < 3) {
 		print(stderr, "Usage: {} <output database> <input assets>...\n", args[0]);
 		return EXIT_FAILURE;
@@ -49,8 +46,14 @@ try {
 		auto file = io::read_file(path);
 		lib::sqlite::execute(stmt, +filename_id, file.contents);
 	}
-
-} catch (exception const& e) {
+	return EXIT_SUCCESS;
+}
+catch (exception const& e) {
 	print(stderr, "Uncaught exception: {}", e.what());
 	return EXIT_FAILURE;
 }
+
+}
+
+auto main(int argc, char** argv) -> int
+{ return playnote::pack_assets({argv, static_cast<std::size_t>(argc)}); }
