@@ -28,7 +28,8 @@ inline constexpr auto AppVersion = to_array({0u, 0u, 4u});
 #error Unknown target platform
 #endif
 
-// Logfile location
+// Filesystem locations
+
 #ifdef BUILD_DEBUG
 inline constexpr auto LogfilePath = "playnote-debug.log"sv;
 #elifdef BUILD_RELDEB
@@ -36,14 +37,10 @@ inline constexpr auto LogfilePath = "playnote-reldeb.log"sv;
 #else
 inline constexpr auto LogfilePath = "playnote.log"sv;
 #endif
-
-// Config file location
 inline constexpr auto ConfigPath = "config.toml"sv;
-
-// Song library database locations
-
 inline constexpr auto LibraryPath = "library"sv;
 inline constexpr auto LibraryDBPath = "library.db"sv;
+inline constexpr auto AssetDBPath = "assets.db"sv;
 
 // Global runtime configuration, kept in sync with the config file.
 class Config {

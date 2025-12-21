@@ -12,6 +12,7 @@ except according to those terms.
 #include "utils/broadcaster.hpp"
 #include "utils/task_pool.hpp"
 #include "utils/logger.hpp"
+#include "utils/assets.hpp"
 #include "utils/config.hpp"
 #include "lib/imgui.hpp"
 #include "lib/os.hpp"
@@ -307,6 +308,7 @@ static void run_render(Broadcaster& broadcaster, dev::Window& window, Logger::Ca
 		},
 	}));
 	DEBUG_AS(cat, "Task pools initialized");
+	auto assets_stub = globals::assets.provide(AssetDBPath);
 	auto audio_cat =  globals::logger->create_category("Audio",
 		*enum_cast<Logger::Level>(globals::config->get_entry<string>("logging", "audio")));
 	auto mixer_stub = globals::mixer.provide(audio_cat);

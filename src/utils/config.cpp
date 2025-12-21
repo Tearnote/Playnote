@@ -7,7 +7,7 @@ or https://www.boost.org/LICENSE_1_0.txt>, at your option. This file may not be 
 or distributed except according to those terms.
 */
 
-#include "config.hpp"
+#include "utils/config.hpp"
 
 #include <toml++/toml.hpp>
 #include <sstream>
