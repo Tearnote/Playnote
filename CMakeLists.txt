@@ -123,3 +123,6 @@ target_compile_definitions(imgui::imgui INTERFACE "IMGUI_USER_CONFIG=\"${PROJECT
 include(cmake/PlaynoteAssets.cmake)
 add_dependencies(Playnote PlaynoteAssets)
 target_include_directories(Playnote PRIVATE ${PROJECT_BINARY_DIR}/$<CONFIG>/generated)
+
+include(cmake/PackAssets.cmake)
+add_dependencies(Playnote PackAssets)

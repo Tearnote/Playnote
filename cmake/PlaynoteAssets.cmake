@@ -9,6 +9,7 @@ include_guard()
 
 include(cmake/AddSlangShader.cmake)
 include(cmake/AddProcessedFont.cmake)
+include(cmake/PackAssets.cmake)
 
 set(PLAYNOTE_SHADER_PREFIX src/gpu)
 set(PLAYNOTE_SHADER_SOURCES
@@ -60,4 +61,10 @@ foreach(ASSET_PATH ${PLAYNOTE_ASSETS})
 	list(APPEND PLAYNOTE_ASSET_OUTPUTS ${OUTPUT_PATH})
 endforeach()
 
-add_custom_target(PlaynoteAssets DEPENDS ${PLAYNOTE_SHADER_OUTPUTS} ${PLAYNOTE_ASSET_OUTPUTS})
+set(PLAYNOTE_ASSET_DB ${PROJECT_BINARY_DIR}/$<CONFIG>/assets.db)
+pack_assets(OUTPUT ${PLAYNOTE_ASSET_DB} INPUTS
+	${PLAYNOTE_FONT_OUTPUTS}
+	${PROJECT_SOURCE_DIR}/fonts/unifont-16.0.03.ttf
+)
+
+add_custom_target(PlaynoteAssets DEPENDS ${PLAYNOTE_SHADER_OUTPUTS} ${PLAYNOTE_ASSET_DB})
