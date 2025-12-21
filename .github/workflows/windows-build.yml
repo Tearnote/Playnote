@@ -57,4 +57,4 @@ jobs:
           name: playnote-windows-build
           path: |
             ${{github.workspace}}/build/${{env.BUILD_TYPE}}/Playnote.exe
-            ${{github.workspace}}/build/${{env.BUILD_TYPE}}/assets
+            ${{github.workspace}}/build/${{env.BUILD_TYPE}}/assets.db
