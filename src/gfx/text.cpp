@@ -18,7 +18,7 @@ namespace playnote::gfx {
 TextShaper::TextShaper(Logger::Category cat):
 	cat{cat},
 	ctx{lib::harfbuzz::init()},
-	dynamic_atlas{256}
+	dynamic_atlas{1024}
 { dynamic_atlas.atlasGenerator().setThreadCount(max(1u, jthread::hardware_concurrency() - 2u)); }
 
 void TextShaper::load_font(FontID font_id, vector<byte>&& data, int weight)
@@ -90,7 +90,7 @@ auto TextShaper::shape(id style_id, string_view text) -> Text
 	sort(missing_keys);
 	auto removed = unique(missing_keys);
 	missing_keys.erase(removed.begin(), removed.end());
-	cache_glyphs(missing_keys);
+	if (!missing_keys.empty()) cache_glyphs(missing_keys);
 
 	// Collect results
 	auto result = Text{};
