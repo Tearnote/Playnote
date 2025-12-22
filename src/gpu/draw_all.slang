@@ -15,6 +15,7 @@ import lib;
 #include "shared/config.slang.h"
 
 #define WORKLIST_DEBUG 0
+#define ATLAS_DEBUG 0
 
 RWByteAddressBuffer b_primitives;
 StructuredBuffer<WorklistItem> b_worklists;
@@ -111,7 +112,11 @@ void computeMain(int2 threadId: SV_DispatchThreadID, uint3 groupThreadId: SV_Gro
 			let primitive = readPrimitive(b_primitives, item.primitive_idx);
 			let params = readPrimitiveParams(b_primitives, item.primitive_idx);
 			let coverage = primitiveCoverage(primitive, params, selfPos);
-			color = blend(color, float4(primitive.color.rgb, primitive.color.a * coverage));
+			color = blend(color, float4(primitive.color.rgb
+#if ATLAS_DEBUG
+			* (primitive.type == Primitive::Type::Glyph && reinterpret<Primitive::GlyphParams>(params).page == 1? float3(1.0, 0.5, 0.5) : float3(1.0, 1.0, 1.0))
+#endif
+			, primitive.color.a * coverage));
 		}
 	} else {
 		var results: float2[3] = {};
@@ -121,8 +126,12 @@ void computeMain(int2 threadId: SV_DispatchThreadID, uint3 groupThreadId: SV_Gro
 				let primitive = readPrimitive(b_primitives, item.primitive_idx);
 				let params = readPrimitiveParams(b_primitives, item.primitive_idx);
 				let coverage = primitiveCoverage(primitive, params, selfPos + (SubpixelLayoutRGB[j] - float2(0.5, 0.5)));
-				float colorComponent = primitive.color[j];
-				results[j] = blend(results[j], float2(colorComponent, primitive.color.a * coverage));
+				let colorComponent = primitive.color[j];
+				results[j] = blend(results[j], float2(colorComponent
+#if ATLAS_DEBUG
+				* (j == 0 && primitive.type == Primitive::Type::Glyph && reinterpret<Primitive::GlyphParams>(params).page == 1? 1.0 : 0.5)
+#endif
+				, primitive.color.a * coverage));
 			}
 		}
 		color = blend(color, float4(results[0].r, results[1].r, results[2].r, (results[0].g + results[1].g + results[2].g) / 3.0));

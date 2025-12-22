@@ -268,6 +268,7 @@ void TextShaper::cache_glyphs(span<CacheKey const> glyph_keys)
 		atlas_cache.emplace(key, pair{1, layout});
 
 	atlas_dirty = true;
+	TRACE_AS(cat, "Rasterized {} glyphs", glyphs.size());
 }
 
 }
