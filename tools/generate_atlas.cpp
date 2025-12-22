@@ -29,9 +29,15 @@ try {
 	auto font_ids = vector<id>{};
 	font_ids.reserve(font_filenames.size());
 	for (auto font_path_sv: font_filenames) {
+		static constexpr auto WeightSuffixes = to_array({
+			"-Medium"sv,
+		});
+
 		auto font_path = fs::path{font_path_sv};
-		auto font_filename = font_path.filename().string();
-		auto font_id = id{font_filename};
+		auto font_name = font_path.filename().replace_extension().string();
+		for (auto suffix: WeightSuffixes)
+			if (font_name.ends_with(suffix)) font_name.resize(font_name.size() - suffix.size());
+		auto font_id = id{font_name};
 		auto font_file = io::read_file(font_path);
 		shaper.load_font(font_id, {font_file.contents.begin(), font_file.contents.end()}, 500);
 		font_ids.emplace_back(font_id);
