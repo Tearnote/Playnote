@@ -19,6 +19,7 @@ target_link_libraries(PackAssets
 	PRIVATE concurrentqueue::concurrentqueue
 	PRIVATE unofficial::sqlite3::sqlite3
 	PRIVATE magic_enum::magic_enum
+	PRIVATE libassert::assert
 	PRIVATE libcoro
 	PRIVATE Boost::container
 	PRIVATE Boost::boost
