@@ -47,6 +47,8 @@ try {
 	for (auto chars: gfx::AtlasPrewarmChars)
 		shaper.shape("Sans-Medium"_id, chars);
 
+	auto debug_filename = fs::path{output_filename}.replace_extension(".png");
+	shaper.dump_atlas(debug_filename);
 	auto output = shaper.serialize();
 	io::write_file(output_filename, output);
 	return EXIT_SUCCESS;
