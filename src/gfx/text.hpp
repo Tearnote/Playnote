@@ -34,8 +34,9 @@ public:
 		AABB<float> bounds; // can extend to the left of origin, or even not contain origin at all
 	};
 
-	// Initialize with an empty atlas.
-	explicit TextShaper(Logger::Category);
+	// Initialize with an empty atlas. The optional initial size is the size of both of the atlas'
+	// sides, in pixels.
+	explicit TextShaper(Logger::Category, int initial_size = 256);
 
 	// Add a font file into available fonts at the specified weight.
 	void load_font(FontID, vector<byte>&&, int weight);

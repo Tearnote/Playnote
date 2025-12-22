@@ -15,10 +15,10 @@ or distributed except according to those terms.
 
 namespace playnote::gfx {
 
-TextShaper::TextShaper(Logger::Category cat):
+TextShaper::TextShaper(Logger::Category cat, int initial_size):
 	cat{cat},
 	ctx{lib::harfbuzz::init()},
-	dynamic_atlas{1024}
+	dynamic_atlas{initial_size}
 { dynamic_atlas.atlasGenerator().setThreadCount(max(1u, jthread::hardware_concurrency() - 2u)); }
 
 void TextShaper::load_font(FontID font_id, vector<byte>&& data, int weight)
