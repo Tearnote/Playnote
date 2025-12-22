@@ -19,7 +19,8 @@ import lib;
 RWByteAddressBuffer b_primitives;
 StructuredBuffer<WorklistItem> b_worklists;
 StructuredBuffer<int> b_worklistSizes;
-Sampler2D<float4> s_atlas;
+Sampler2D<float4> s_staticAtlas;
+Sampler2D<float4> s_dynamicAtlas;
 RWTexture2D<float4> i_target;
 
 [SpecializationConstant] let ViewportWidth = 0u;
@@ -49,10 +50,18 @@ func sampleGlyphDistance(p: float2, params: Primitive::GlyphParams) -> float
 	let texelOffset = p * (atlasDims / screenDims);
 	let texel = float2(minRect.x + texelOffset.x, maxRect.y - texelOffset.y);
 	let clampedTexel = clamp(texel, minRect + 0.5, maxRect - 0.5);
-	uint w, h;
-	s_atlas.GetDimensions(w, h);
+	var w: uint;
+	var h: uint;
+	if (params.page == 0)
+		s_staticAtlas.GetDimensions(w, h);
+	else
+		s_dynamicAtlas.GetDimensions(w, h);
 	let uv = clampedTexel / float2(w, h);
-	let s = s_atlas.SampleLevel(uv, 0).rgb;
+	var s: float3;
+	if (params.page == 0)
+		s = s_staticAtlas.SampleLevel(uv, 0).rgb;
+	else
+		s = s_dynamicAtlas.SampleLevel(uv, 0).rgb;
 	let sd = msdfMedian(s.r, s.g, s.b);
 	let dist = (0.5 - sd) * 8.0;
 	let distOutside = length(texel - clampedTexel);

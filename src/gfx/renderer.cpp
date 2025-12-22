@@ -14,6 +14,7 @@ or distributed except according to those terms.
 #include "utils/assets.hpp"
 #include "lib/vuk.hpp"
 #include "gpu/shaders.hpp"
+#include "vuk/Types.hpp"
 
 namespace playnote::gfx {
 
@@ -42,40 +43,6 @@ auto generate_transform(int2 window_size, float window_scale) -> float4
 	auto const virtual_viewport_size_physical = Renderer::VirtualViewportSize * float2{scale, scale};
 	auto const margin = (float2{window_size} - virtual_viewport_size_physical) / float2{2.0f, 2.0f};
 	return {margin.x(), margin.y(), scale, scale};
-}
-
-auto draw_all(dev::GPU& gpu, lib::vuk::ManagedImage&& dest,
-	lib::vuk::ManagedBuffer&& primitives_buf, lib::vuk::ManagedBuffer&& worklists_buf,
-	lib::vuk::ManagedBuffer&& worklist_sizes_buf, lib::vuk::ManagedImage&& atlas_ia) -> lib::vuk::ManagedImage
-{
-	auto pass = lib::vuk::make_pass("draw_all",
-		[window_size = gpu.get_window().size()] (
-			lib::vuk::CommandBuffer& cmd,
-			VUK_IA(lib::vuk::Access::eComputeRW) target,
-			VUK_BA(lib::vuk::Access::eComputeRead) primitives_buf,
-			VUK_BA(lib::vuk::Access::eComputeRead) worklists_buf,
-			VUK_BA(lib::vuk::Access::eComputeRead) worklist_sizes_buf,
-			VUK_IA(lib::vuk::Access::eComputeSampled) atlas_ia
-		)
-	{
-		auto subpixel_rendering = SubpixelRenderingMode::None;
-		if (globals::config->get_entry<bool>("graphics", "subpixel_rendering")) {
-			auto const layout = globals::config->get_entry<string>("graphics", "subpixel_layout");
-			if (layout == "RGB") subpixel_rendering = SubpixelRenderingMode::RGB;
-		}
-		cmd
-			.bind_compute_pipeline("draw_all")
-			.bind_buffer(0, 0, primitives_buf)
-			.bind_buffer(0, 1, worklists_buf)
-			.bind_buffer(0, 2, worklist_sizes_buf)
-			.bind_image(0, 3, atlas_ia).bind_sampler(0, 3, LinearSampler)
-			.bind_image(0, 4, target)
-			.specialize_constants(0, window_size.x()).specialize_constants(1, window_size.y())
-			.specialize_constants(2, +subpixel_rendering)
-			.dispatch_invocations(window_size.x(), window_size.y(), 1);
-		return target;
-	});
-	return pass(move(dest), move(primitives_buf), move(worklists_buf), move(worklist_sizes_buf), move(atlas_ia));
 }
 
 auto generate_worklists(dev::GPU& gpu, lib::vuk::Allocator& allocator, span<Renderer::Primitive const> primitives,
@@ -137,6 +104,42 @@ auto generate_worklists(dev::GPU& gpu, lib::vuk::Allocator& allocator, span<Rend
 	return make_tuple(primitives_buf_processed, worklists_buf_sorted, worklist_sizes_buf_sorted);
 }
 
+auto draw_all(dev::GPU& gpu, lib::vuk::ManagedImage&& dest,
+	lib::vuk::ManagedBuffer&& primitives_buf, lib::vuk::ManagedBuffer&& worklists_buf,
+	lib::vuk::ManagedBuffer&& worklist_sizes_buf, lib::vuk::ImageView static_atlas_iv,
+	lib::vuk::ManagedImage&& dynamic_atlas_ia) -> lib::vuk::ManagedImage
+{
+	auto pass = lib::vuk::make_pass("draw_all",
+		[window_size = gpu.get_window().size(), static_atlas_iv] (
+			lib::vuk::CommandBuffer& cmd,
+			VUK_IA(lib::vuk::Access::eComputeRW) target,
+			VUK_BA(lib::vuk::Access::eComputeRead) primitives_buf,
+			VUK_BA(lib::vuk::Access::eComputeRead) worklists_buf,
+			VUK_BA(lib::vuk::Access::eComputeRead) worklist_sizes_buf,
+			VUK_IA(lib::vuk::Access::eComputeSampled) dynamic_atlas_ia
+		)
+	{
+		auto subpixel_rendering = SubpixelRenderingMode::None;
+		if (globals::config->get_entry<bool>("graphics", "subpixel_rendering")) {
+			auto const layout = globals::config->get_entry<string>("graphics", "subpixel_layout");
+			if (layout == "RGB") subpixel_rendering = SubpixelRenderingMode::RGB;
+		}
+		cmd
+			.bind_compute_pipeline("draw_all")
+			.bind_buffer(0, 0, primitives_buf)
+			.bind_buffer(0, 1, worklists_buf)
+			.bind_buffer(0, 2, worklist_sizes_buf)
+			.bind_image(0, 3, static_atlas_iv).bind_sampler(0, 3, LinearSampler)
+			.bind_image(0, 4, dynamic_atlas_ia).bind_sampler(0, 4, LinearSampler)
+			.bind_image(0, 5, target)
+			.specialize_constants(0, window_size.x()).specialize_constants(1, window_size.y())
+			.specialize_constants(2, +subpixel_rendering)
+			.dispatch_invocations(window_size.x(), window_size.y(), 1);
+		return target;
+	});
+	return pass(move(dest), move(primitives_buf), move(worklists_buf), move(worklist_sizes_buf), move(dynamic_atlas_ia));
+}
+
 auto Renderer::Queue::physical_to_logical(float2 pos) -> float2
 {
 	return (pos + float2{inv_transform.x(), inv_transform.y()}) * float2{inv_transform.z(), inv_transform.w()};
@@ -181,6 +184,7 @@ auto Renderer::Queue::text(Text const& text, Drawable common, TextParams params)
 		}, GlyphParams{
 			.atlas_bounds = glyph.atlas_bounds,
 			.size = params.size,
+			.page = glyph.page,
 		}, group_depths.size() - 1);
 		group_depths.back().second = common.depth;
 	}
@@ -227,7 +231,11 @@ auto Renderer::Queue::to_primitive_list() const -> vector<Primitive>
 			.position = common.position,
 			.velocity = common.velocity,
 			.color = common.color,
-			.glyph_params = Primitive::GlyphParams{.atlas_bounds = glyph.atlas_bounds, .size = glyph.size},
+			.glyph_params = Primitive::GlyphParams{
+				.atlas_bounds = glyph.atlas_bounds,
+				.size = glyph.size,
+				.page = glyph.page,
+			},
 		});
 	}
 	return primitives;
@@ -244,7 +252,11 @@ Renderer::Renderer(dev::Window& window, Logger::Category cat):
 	text_shaper.load_font("Mplus2"_id, globals::assets->get("Mplus2-Medium.ttf"_id), 500);
 	text_shaper.load_font("Pretendard"_id, globals::assets->get("Pretendard-Medium.ttf"_id), 500);
 	text_shaper.define_style("Sans-Medium"_id, {"Mplus2"_id, "Pretendard"_id}, 500);
-	text_shaper.deserialize(globals::assets->get("font_atlas_bitmap.bin"_id), globals::assets->get("font_atlas_layout.bin"_id));
+	text_shaper.deserialize(globals::assets->get("font_atlas.zpp"_id));
+	auto [new_atlas, atlas_upload] = lib::vuk::create_texture(gpu.get_global_allocator(), text_shaper.get_atlas(0), vuk::Format::eR8G8B8A8Unorm);
+	auto compiler = lib::vuk::Compiler{};
+	atlas_upload.as_released(lib::vuk::Access::eComputeSampled).wait(gpu.get_global_allocator(), compiler);
+	static_atlas = move(new_atlas);
 
 	lib::vuk::create_compute_pipeline(context, "worklist_gen", gpu::worklist_gen_spv);
 	DEBUG_AS(cat, "Compiled worklist_gen pipeline");
@@ -289,16 +301,16 @@ void Renderer::draw_frame(Queue&& queue)
 		auto atlas = lib::vuk::ManagedImage{};
 		if (text_shaper.is_atlas_dirty()) {
 			auto [new_atlas, atlas_upload] = lib::vuk::create_texture(gpu.get_global_allocator(), text_shaper.get_atlas(), vuk::Format::eR8G8B8A8Unorm);
-			font_atlas = move(new_atlas);
+			dynamic_atlas = move(new_atlas);
 			atlas = move(atlas_upload);
 		} else {
-			atlas = lib::vuk::acquire_ia("atlas", font_atlas.attachment, lib::vuk::Access::eComputeSampled);
+			atlas = lib::vuk::acquire_ia("atlas", dynamic_atlas.attachment, lib::vuk::Access::eComputeSampled);
 		}
 
 		auto next = lib::vuk::clear_image(move(target), {0.0f, 0.0f, 0.0f, 1.0f});
 		if (!primitives.empty()) {
 			auto [primitives_buf, worklists_buf, worklist_sizes_buf] = generate_worklists(gpu, allocator, primitives, queue.transform);
-			next = draw_all(gpu, move(next), move(primitives_buf), move(worklists_buf), move(worklist_sizes_buf), move(atlas));
+			next = draw_all(gpu, move(next), move(primitives_buf), move(worklists_buf), move(worklist_sizes_buf), static_atlas.view.get(), move(atlas));
 		}
 		return imgui.draw(allocator, move(next));
 	});

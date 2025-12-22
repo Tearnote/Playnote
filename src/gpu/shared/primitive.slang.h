@@ -23,7 +23,8 @@ struct Primitive {
 	struct GlyphParams {
 		AABB<float> atlas_bounds;
 		float size;
-		int _pad0[3];
+		int page;
+		int _pad0[2];
 	};
 
 	enum class Type: int {

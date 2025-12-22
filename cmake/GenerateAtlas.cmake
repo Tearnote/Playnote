@@ -39,13 +39,12 @@ target_include_directories(Playnote
 target_include_directories(GenerateAtlas PRIVATE src)
 
 function(generate_atlas)
-	cmake_parse_arguments(ARG "" "BITMAP;LAYOUT" "FONTS" ${ARGN})
-	if(NOT ARG_BITMAP OR NOT ARG_LAYOUT OR NOT ARG_FONTS)
-		message(FATAL_ERROR "Usage: generate_atlas(BITMAP <file> LAYOUT <file> FONTS <fonts...>)")
+	cmake_parse_arguments(ARG "" "OUTPUT" "FONTS" ${ARGN})
+	if(NOT ARG_OUTPUT OR NOT ARG_FONTS)
+		message(FATAL_ERROR "Usage: generate_atlas(OUTPUT <file> FONTS <fonts...>)")
 	endif()
 
-	get_filename_component(BITMAP_DIR ${ARG_BITMAP} DIRECTORY)
-	get_filename_component(LAYOUT_DIR ${ARG_LAYOUT} DIRECTORY)
+	get_filename_component(OUTPUT_DIR ${ARG_OUTPUT} DIRECTORY)
 
 	# Resolve inputs to absolute paths
 	set(ABS_INPUTS)
@@ -55,12 +54,11 @@ function(generate_atlas)
 	endforeach()
 
 	add_custom_command(
-		OUTPUT ${ARG_BITMAP} ${ARG_LAYOUT}
-		COMMAND ${CMAKE_COMMAND} -E make_directory ${BITMAP_DIR}
-		COMMAND ${CMAKE_COMMAND} -E make_directory ${LAYOUT_DIR}
-		COMMAND GenerateAtlas ${ARG_BITMAP} ${ARG_LAYOUT} ${ABS_INPUTS}
+		OUTPUT ${ARG_OUTPUT}
+		COMMAND ${CMAKE_COMMAND} -E make_directory ${OUTPUT_DIR}
+		COMMAND GenerateAtlas ${ARG_OUTPUT} ${ABS_INPUTS}
 		DEPENDS ${ARG_FONTS} $<TARGET_FILE:GenerateAtlas>
-		COMMENT "Generating font atlas"
+		COMMENT "Generating font atlas cache at ${ARG_OUTPUT}"
 		VERBATIM
 	)
 endfunction()

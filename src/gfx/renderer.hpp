@@ -78,6 +78,7 @@ public:
 		struct GlyphParams {
 			AABB<float> atlas_bounds;
 			float size;
+			int page;
 		};
 
 		bool inside_group = false;
@@ -109,7 +110,8 @@ private:
 	dev::GPU gpu;
 	Imgui imgui;
 	TextShaper text_shaper;
-	lib::vuk::Texture font_atlas;
+	lib::vuk::Texture static_atlas;
+	lib::vuk::Texture dynamic_atlas;
 
 	auto create_queue() -> Queue;
 	void draw_frame(Queue&&);

@@ -17,13 +17,12 @@ namespace playnote {
 
 auto generate_atlas(span<char const* const> args)
 try {
-	if (args.size() < 4) {
-		print(stderr, "Usage: {} <output bitmap> <output layout> <fonts>...\n", args[0]);
+	if (args.size() < 3) {
+		print(stderr, "Usage: {} <output> <fonts>...\n", args[0]);
 		return EXIT_FAILURE;
 	}
-	auto* bitmap_filename = args[1];
-	auto* layout_filename = args[2];
-	auto font_filenames = args.subspan(3);
+	auto* output_filename = args[1];
+	auto font_filenames = args.subspan(2);
 
 	auto logger_stub = globals::logger.provide("generate_atlas.log", Logger::Level::Debug);
 	auto shaper = gfx::TextShaper{globals::logger->global};
@@ -42,9 +41,8 @@ try {
 	for (auto chars: gfx::AtlasPrewarmChars)
 		shaper.shape("Sans-Medium"_id, chars);
 
-	auto [bitmap, layout] = shaper.serialize();
-	io::write_file(bitmap_filename, bitmap);
-	io::write_file(layout_filename, layout);
+	auto output = shaper.serialize();
+	io::write_file(output_filename, output);
 	return EXIT_SUCCESS;
 }
 catch (exception const& e) {

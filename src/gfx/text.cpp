@@ -18,8 +18,8 @@ namespace playnote::gfx {
 TextShaper::TextShaper(Logger::Category cat):
 	cat{cat},
 	ctx{lib::harfbuzz::init()},
-	atlas{2048}
-{ atlas.atlasGenerator().setThreadCount(max(1u, jthread::hardware_concurrency() - 2u)); }
+	dynamic_atlas{256}
+{ dynamic_atlas.atlasGenerator().setThreadCount(max(1u, jthread::hardware_concurrency() - 2u)); }
 
 void TextShaper::load_font(FontID font_id, vector<byte>&& data, int weight)
 {
@@ -100,57 +100,68 @@ auto TextShaper::shape(id style_id, string_view text) -> Text
 	result.bounds.bottom_right.y() = numeric_limits<float>::lowest();
 	result.glyphs.reserve(pending_glyphs.size());
 	for (auto const& pending: pending_glyphs) {
-		auto const& cached = atlas_cache.at(pending.key);
-		if (cached.atlas_bounds.size() == float2{0.0f, 0.0f}) continue; // whitespace
-		auto const offset = pending.position - cached.bearing;
-		result.glyphs.emplace_back(cached.atlas_bounds, offset);
+		auto [page, layout] = atlas_cache.at(pending.key);
+		if (layout.atlas_bounds.size() == float2{0.0f, 0.0f}) continue; // whitespace
+		auto const offset = pending.position - layout.bearing;
+		result.glyphs.emplace_back(layout.atlas_bounds, offset, page);
 		result.bounds.top_left = min(result.bounds.top_left, offset);
-		result.bounds.bottom_right = max(result.bounds.bottom_right, offset + cached.atlas_bounds.size());
+		result.bounds.bottom_right = max(result.bounds.bottom_right, offset + layout.atlas_bounds.size());
 	}
 	return result;
 }
 
-auto TextShaper::get_atlas() -> lib::msdf::AtlasView
+auto TextShaper::get_atlas(ssize_t page) -> lib::msdf::AtlasView
 {
+	if (page == 0) return static_atlas;
+
 	atlas_dirty = false;
-	return lib::msdf::get_atlas_contents(atlas);
+	return lib::msdf::get_atlas_contents(dynamic_atlas);
 }
 
 void TextShaper::dump_atlas(fs::path const& path) const
 try {
-	lib::msdf::atlas_to_image(atlas, path);
+	lib::msdf::atlas_to_image(dynamic_atlas, path);
 	INFO_AS(cat, "Exported font atlas to \"{}\"", path);
-} catch (exception const&) {
+}
+catch (exception const&) {
 	WARN_AS(cat, "Failed to export font atlas");
 }
 
-auto TextShaper::serialize() -> pair<vector<byte>, vector<byte>>
+auto TextShaper::serialize() -> vector<byte>
 {
-	auto bitmap = vector<byte>{};
-	auto atlas_view = lib::msdf::get_atlas_contents(atlas);
-	bitmap.reserve(atlas_view.num_elements());
-	copy(span{atlas_view.data(), atlas_view.num_elements()}, back_inserter(bitmap));
+	// Binary archive contents are:
+	// 1. bitmap dimensions
+	// 2. raw bitmap bytes
+	// 3. layout cache
 
-	auto layout = vector<byte>{};
-	auto [data, out] = lib::bits::data_out();
+	auto data = vector<byte>{};
+	auto out = lib::bits::out{data};
+	auto view = lib::msdf::get_atlas_contents(dynamic_atlas);
+
+	auto const* shape = view.shape();
+	out(shape[0], shape[1], shape[2]).or_throw();
+	out(span{view.data(), view.num_elements()}).or_throw();
 	out(atlas_cache).or_throw();
-	layout.reserve(data.size());
-	copy(data, back_inserter(layout));
 
-	return {move(bitmap), move(layout)};
+	return data;
 }
 
-void TextShaper::deserialize(span<byte const> bitmap, span<byte const> layout)
+void TextShaper::deserialize(span<byte const> data)
 {
-	//TODO Serialize atlas extent
-	auto view = lib::msdf::AtlasView{
-		bitmap.data(),
-		boost::extents[2048][2048][4]
-	};
-	lib::msdf::set_atlas_contents(atlas, view);
+	auto in = lib::bits::in{data};
 
-	auto in = lib::bits::in(layout);
+	using size_type = decltype(static_atlas)::size_type;
+	auto width = size_type{};
+	auto height = size_type{};
+	auto channels = size_type{};
+	in(width, height, channels).or_throw();
+
+	static_atlas.resize(extents[width][height][channels]);
+	in(span{static_atlas.data(), static_atlas.num_elements()}).or_throw();
 	in(atlas_cache).or_throw();
+
+	// Rewrite page index
+	for (auto& [_, value]: atlas_cache) value.first = 0;
 
 	atlas_dirty = true;
 }
@@ -244,17 +255,17 @@ void TextShaper::cache_glyphs(span<CacheKey const> glyph_keys)
 				keys.emplace_back(key);
 			} else {
 				// Failed to load; cache as empty to prevent re-loading attempts
-				atlas_cache.emplace(key, lib::msdf::GlyphLayout{});
+				atlas_cache.emplace(key, pair{1, lib::msdf::GlyphLayout{}});
 			}
 		}
 	}
 
 	// Rasterize and pack
-	auto layouts = lib::msdf::add_glyphs(atlas, glyphs);
+	auto layouts = lib::msdf::add_glyphs(dynamic_atlas, glyphs);
 
 	// Update cache
 	for (auto [layout, key]: views::zip(layouts, keys))
-		atlas_cache.emplace(key, layout);
+		atlas_cache.emplace(key, pair{1, layout});
 
 	atlas_dirty = true;
 }

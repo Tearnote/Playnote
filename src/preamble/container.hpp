@@ -42,8 +42,10 @@ template<typename Key, typename Hash = boost::hash<Key>>
 using unordered_set = boost::unordered_flat_set<Key, Hash, std::equal_to<>>;
 using boost::unordered_node_map;
 using std::span;
+using boost::multi_array;
 using boost::multi_array_ref;
 using boost::const_multi_array_ref;
+using boost::extents;
 
 // Lock-free containers
 template<typename T>

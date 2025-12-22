@@ -27,6 +27,7 @@ public:
 		struct Glyph {
 			AABB<float> atlas_bounds;
 			float2 offset; // from origin at (0, 0), the start of the baseline
+			int page;
 		};
 
 		vector<Glyph> glyphs;
@@ -47,23 +48,24 @@ public:
 	// Shape text into glyphs using the specified style. The returned object can be used repeatedly.
 	auto shape(StyleID, string_view) -> Text;
 
-	// Return true if the atlas bitmap has changed since the last call to get_atlas().
+	// Return true if the dynamic atlas bitmap has changed since the last call to get_atlas().
 	auto is_atlas_dirty() const noexcept -> bool { return atlas_dirty; }
 
-	// Return the current atlas bitmap.
-	auto get_atlas() -> lib::msdf::AtlasView;
+	// Return the current atlas bitmap. The optional page number selects the atlas; the static atlas
+	// is page 0, and dynamic one page 1. The static atlas can only change by a call to deserialize().
+	auto get_atlas(ssize_t page = 1) -> lib::msdf::AtlasView;
 
-	// Save the atlas to a file for debugging purposes.
+	// Save the dynamic atlas to a file, for debugging purposes.
 	void dump_atlas(fs::path const&) const;
 
-	// Turn atlas state into a binary representation, which can later be restored with deserialize().
-	// The two return types are the bitmap and the layout, respectively.
-	// The state does not include loaded fonts or created styles.
-	auto serialize() -> pair<vector<byte>, vector<byte>>;
+	// Turn dynamic atlas state into a binary representation, which can later be restored with
+	// deserialize() into the static atlas to accelerate atlas generation of the most common glyphs.
+	auto serialize() -> vector<byte>;
 
 	// Restore the atlas state from a previously serialized binary.
 	// The same fonts and styles must have been created as what existed as serialization time.
-	void deserialize(span<byte const> bitmap, span<byte const> layout);
+	// This call is invalid if any text has been shaped and the dynamic atlas is not empty.
+	void deserialize(span<byte const>);
 
 private:
 	using FontRef = reference_wrapper<lib::harfbuzz::Font>;
@@ -76,8 +78,9 @@ private:
 	vector<vector<byte>> font_data;
 	unordered_map<pair<FontID, int>, lib::harfbuzz::Font> fonts; // key: font id, weight
 	unordered_map<StyleID, pair<vector<FontID>, int>> styles; // value: font cascade by id, weight
-	lib::msdf::MTSDFAtlas atlas;
-	unordered_map<CacheKey, lib::msdf::GlyphLayout> atlas_cache;
+	multi_array<byte, 3> static_atlas;
+	lib::msdf::MTSDFAtlas dynamic_atlas;
+	unordered_map<CacheKey, pair<ssize_t, lib::msdf::GlyphLayout>> atlas_cache; // value: atlas page (0 = static), glyph layout
 	bool atlas_dirty = true;
 
 	using Run = pair<string_view, ssize_t>;
