@@ -8,10 +8,10 @@ or distributed except according to those terms.
 */
 
 #include "preamble.hpp"
+#include "utils/logger.hpp"
 #include "io/file.hpp"
 #include "gfx/prewarm.hpp"
 #include "gfx/text.hpp"
-#include "utils/logger.hpp"
 
 namespace playnote {
 

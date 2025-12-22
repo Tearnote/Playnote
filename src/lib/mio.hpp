@@ -8,6 +8,9 @@ or distributed except according to those terms.
 */
 
 #pragma once
+#if defined(_WIN32) && !defined(NOMINMAX) // mio includes windows.h without using this macro
+#define NOMINMAX
+#endif
 #include "mio/mmap.hpp"
 #include "preamble.hpp"
 
