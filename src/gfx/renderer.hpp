@@ -98,7 +98,7 @@ public:
 	Renderer(dev::Window&, Logger::Category);
 
 	// Create a text renderable from a string. Store and reuse.
-	auto prepare_text(TextStyle, string_view) -> Text;
+	auto prepare_text(TextStyle, string_view, optional<float> max_width = nullopt) -> Text;
 
 	// Provide a queue to the function argument, and then draw contents of the queue to the screen.
 	// Each call will wait block until the next frame begins.

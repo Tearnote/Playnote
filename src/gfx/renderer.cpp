@@ -9,6 +9,7 @@ or distributed except according to those terms.
 
 #include "gfx/renderer.hpp"
 
+#include "gfx/text.hpp"
 #include "preamble.hpp"
 #include "utils/config.hpp"
 #include "utils/assets.hpp"
@@ -271,7 +272,7 @@ Renderer::Renderer(dev::Window& window, Logger::Category cat):
 	INFO_AS(cat, "Renderer initialized");
 }
 
-auto Renderer::prepare_text(TextStyle style, string_view text) -> Text
+auto Renderer::prepare_text(TextStyle style, string_view text, optional<float> max_width) -> Text
 {
 	auto const style_id = [&] {
 		switch (style) {
@@ -279,9 +280,7 @@ auto Renderer::prepare_text(TextStyle style, string_view text) -> Text
 		case TextStyle::SansBold:   return "Sans-Bold"_id;
 		};
 	}();
-	// return text_shaper.shape(style_id, text);
-	auto result = text_shaper.shape(style_id, text);
-	return result;
+	return text_shaper.shape(style_id, text, max_width.transform([&](auto w) { return w * TextShaper::PixelsPerEm; }));
 }
 
 auto Renderer::create_queue() -> Queue

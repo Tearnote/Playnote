@@ -53,7 +53,8 @@ public:
 	void define_style(StyleID, span<FontID const>, int weight = 500);
 
 	// Shape text into glyphs using the specified style. The returned object can be used repeatedly.
-	auto shape(StyleID, string_view) -> Text;
+	// If max_width is set, lines will be wrapped to fit within that width.
+	auto shape(StyleID, string_view, optional<float> max_width = nullopt) -> Text;
 
 	// Return true if the dynamic atlas bitmap has changed since the last call to get_atlas().
 	auto is_atlas_dirty() const noexcept -> bool { return atlas_dirty; }
@@ -95,8 +96,9 @@ private:
 	bool atlas_dirty = true;
 
 	using Run = pair<string_view, ssize_t>;
-	auto generate_lines(string_view, StyleID) -> generator<vector<PendingGlyph>>;
-	auto shape_paragraph(string_view, int weight, span<FontID const>, span<FontRef const>) -> generator<vector<PendingGlyph>>;
+	auto generate_lines(string_view, StyleID, optional<float> max_width) -> generator<vector<PendingGlyph>>;
+	auto shape_paragraph(string_view, int weight, span<FontID const>, span<FontRef const>,
+		optional<float> max_width) -> generator<vector<PendingGlyph>>;
 	auto itemize(string_view, span<FontRef const>) -> generator<Run>;
 	auto itemize(string&&, span<FontRef const>) -> generator<Run> = delete;
 	void cache_glyphs(span<CacheKey const>);
