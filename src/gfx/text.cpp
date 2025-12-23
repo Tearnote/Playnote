@@ -182,7 +182,7 @@ auto TextShaper::shape_paragraph(string_view text, int weight, span<FontID const
 	pending_glyphs.reserve(fold_left(runs, 0z, [](auto acc, auto const& run) { return acc + run.shaped_run.glyphs.size(); }));
 	for (auto const& run: runs) {
 		for (auto const& glyph: run.shaped_run.glyphs)
-			pending_glyphs.emplace_back(CacheKey{run.font_id, weight, glyph.idx}, run.position + glyph.offset);
+			pending_glyphs.emplace_back(CacheKey{run.font_id, weight, glyph.idx}, glyph.cluster, run.position + glyph.offset);
 	}
 	co_yield move(pending_glyphs);
 }

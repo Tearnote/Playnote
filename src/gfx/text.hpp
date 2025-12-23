@@ -80,6 +80,7 @@ private:
 
 	struct PendingGlyph {
 		CacheKey key;
+		uint cluster;
 		float2 position;
 	};
 

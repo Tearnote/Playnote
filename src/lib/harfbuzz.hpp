@@ -47,7 +47,8 @@ auto has_glyph(Font const&, char32_t) -> bool;
 
 struct ShapedRun {
 	struct Glyph {
-		uint32_t idx;
+		uint idx;
+		uint cluster;
 		float2 offset;
 	};
 	vector<Glyph> glyphs;

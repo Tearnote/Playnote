@@ -98,7 +98,7 @@ auto shape(string_view context, string_view run, Font const& font) -> ShapedRun
 	for (auto [info, position]: views::zip(infos, positions)) {
 		auto const offset  = float2{position.x_offset  * scale, position.y_offset  * scale};
 		auto const advance = float2{position.x_advance * scale, position.y_advance * scale};
-		result.glyphs.emplace_back(info.codepoint, cursor + offset);
+		result.glyphs.emplace_back(info.codepoint, info.cluster, cursor + offset);
 		cursor += advance;
 	}
 	result.advance = cursor;
