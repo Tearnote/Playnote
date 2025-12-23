@@ -38,6 +38,10 @@ static void handle_icu_error(UErrorCode err)
 	throw runtime_error_fmt("ICU error: {}", u_errorName(err));
 }
 
+// RAII helpers
+
+using UTextResource = unique_resource<UText*, decltype([](UText* ut) noexcept { utext_close(ut); })>;
+
 auto detect_encoding(span<byte const> input, initializer_list<string_view> charsets) -> optional<string>
 {
 	using Detector = unique_resource<UCharsetDetector*, decltype([](auto* d) {
@@ -89,10 +93,10 @@ auto to_utf8(span<byte const> input, string_view input_charset) -> string
 
 auto grapheme_clusters(string_view input) -> generator<string_view>
 {
-	using UTextResource = unique_resource<UText*, decltype([](UText* ut) noexcept { utext_close(ut); })>;
 	auto err = U_ZERO_ERROR;
 	auto uinput = UTextResource{utext_openUTF8(nullptr, input.data(), input.size(), &err)};
 	handle_icu_error(err);
+
 	auto iter = unique_ptr<::icu::BreakIterator>{
 		::icu::BreakIterator::createCharacterInstance(::icu::Locale::getRoot(), err)
 	};
@@ -106,6 +110,27 @@ auto grapheme_clusters(string_view input) -> generator<string_view>
 		co_yield input.substr(current, next - current);
 		current = next;
 	}
+}
+
+auto last_break_point(string_view input) -> optional<ssize_t>
+{
+	auto err = U_ZERO_ERROR;
+	auto uinput = UTextResource{utext_openUTF8(nullptr, input.data(), input.size(), &err)};
+	handle_icu_error(err);
+
+	auto iter = unique_ptr<::icu::BreakIterator>{
+		::icu::BreakIterator::createLineInstance(::icu::Locale::getRoot(), err)
+	};
+	handle_icu_error(err);
+	iter->setText(uinput.get(), err);
+	handle_icu_error(err);
+
+	auto const end = static_cast<int32_t>(input.size());
+	auto const boundary = iter->preceding(end);
+	if (boundary == ::icu::BreakIterator::DONE || boundary == 0)
+		return nullopt;
+	else
+		return boundary;
 }
 
 auto scalars(string_view input) -> generator<char32_t>

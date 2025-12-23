@@ -28,6 +28,9 @@ auto to_utf8(span<byte const> input, string_view input_charset) -> string;
 auto grapheme_clusters(string_view) -> generator<string_view>;
 auto grapheme_clusters(string&&) -> generator<string_view> = delete; // Prevent dangling views
 
+// Return the index of the furthest point the provided line can be broken.
+auto last_break_point(string_view) -> optional<ssize_t>;
+
 // Iterate over a UTF-8 string, returning all scalars. Invalid UTF-8 is replaced by U+FFFD.
 auto scalars(string_view) -> generator<char32_t>;
 auto scalars(string&&) -> generator<char32_t> = delete; // Prevent dangling views
