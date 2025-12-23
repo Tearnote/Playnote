@@ -12,6 +12,7 @@ or distributed except according to those terms.
 #include "preamble.hpp"
 #include "lib/bits.hpp"
 #include "lib/icu.hpp"
+#include "preamble/algorithm.hpp"
 
 namespace playnote::gfx {
 
@@ -38,74 +39,44 @@ void TextShaper::define_style(StyleID style_id, span<FontID const> fonts, int we
 	styles.emplace(style_id, pair{move(style_fonts), weight});
 }
 
-auto TextShaper::shape(id style_id, string_view text) -> Text
+auto TextShaper::shape(StyleID style_id, string_view text) -> Text
 {
-	auto const [style_font_ids, weight] = styles.at(style_id);
-	auto style_font_refs = vector<FontRef>{};
-	style_font_refs.reserve(style_font_ids.size());
-	transform(style_font_ids, back_inserter(style_font_refs), [&](auto fid) { return ref(fonts.at({fid, weight})); });
-
-	// Collect shaping results
-	struct Run {
-		lib::harfbuzz::ShapedRun shaped_run;
-		FontID font_id;
-		float2 position;
-	};
-	auto runs = vector<Run>{};
-	auto cursor = float2{0.0f, 0.0f};
-	for (auto [run_str, font_idx]: itemize(text, style_font_refs)) {
-		auto const& font = style_font_refs[font_idx];
-		auto shaped_run = lib::harfbuzz::shape(text, run_str, font);
-		auto& run = runs.emplace_back(move(shaped_run), style_font_ids[font_idx], cursor);
-
-		// Scale to atlas pixels
-		auto const scale = PixelsPerEm / lib::harfbuzz::units_per_em(font);
-		for (auto& glyph: run.shaped_run.glyphs)
-			glyph.offset *= scale;
-		run.shaped_run.advance *= scale;
-
-		cursor += run.shaped_run.advance;
-	}
-
-	// Flatten shaping results to a list of glyphs
-	struct PendingGlyph {
-		CacheKey key;
-		float2 position;
-	};
-	auto pending_glyphs = vector<PendingGlyph>{};
-	pending_glyphs.reserve(fold_left(runs, 0z, [](auto acc, auto const& run) { return acc + run.shaped_run.glyphs.size(); }));
-	for (auto const& run: runs) {
-		for (auto const& glyph: run.shaped_run.glyphs)
-			pending_glyphs.emplace_back(CacheKey{run.font_id, weight, glyph.idx}, run.position + glyph.offset);
-	}
+	// Collect shaped lines
+	auto pending_lines = vector<vector<PendingGlyph>>{};
+	for (auto&& line: generate_lines(text, style_id))
+		pending_lines.emplace_back(move(line));
 
 	// Update atlas with missing glyphs
 	auto missing_keys = vector<CacheKey>{};
-	missing_keys.reserve(pending_glyphs.size());
-	transform(
-		pending_glyphs | views::filter([&](auto const& g) { return !atlas_cache.contains(g.key); }),
-		back_inserter(missing_keys),
-		[](auto const& g) { return g.key; }
-	);
-	sort(missing_keys);
-	auto removed = unique(missing_keys);
-	missing_keys.erase(removed.begin(), removed.end());
-	if (!missing_keys.empty()) cache_glyphs(missing_keys);
+	for (auto const& line: pending_lines) {
+		for (auto const& glyph: line) {
+			if (atlas_cache.contains(glyph.key)) continue;
+			missing_keys.push_back(glyph.key);
+		}
+	}
+	if (!missing_keys.empty()) {
+		sort(missing_keys);
+		auto removed = unique(missing_keys);
+		missing_keys.erase(removed.begin(), removed.end());
+		cache_glyphs(missing_keys);
+	}
 
-	// Collect results
+	// Resolve results into atlas glyphs
 	auto result = Text{};
-	result.bounds.top_left.x() = numeric_limits<float>::max();
-	result.bounds.top_left.y() = numeric_limits<float>::max();
-	result.bounds.bottom_right.x() = numeric_limits<float>::lowest();
-	result.bounds.bottom_right.y() = numeric_limits<float>::lowest();
-	result.glyphs.reserve(pending_glyphs.size());
-	for (auto const& pending: pending_glyphs) {
-		auto [page, layout] = atlas_cache.at(pending.key);
-		if (layout.atlas_bounds.size() == float2{0.0f, 0.0f}) continue; // whitespace
-		auto const offset = pending.position - layout.bearing;
-		result.glyphs.emplace_back(layout.atlas_bounds, offset, page);
-		result.bounds.top_left = min(result.bounds.top_left, offset);
-		result.bounds.bottom_right = max(result.bounds.bottom_right, offset + layout.atlas_bounds.size());
+	result.lines.reserve(pending_lines.size());
+	for (auto& pending_line: pending_lines) {
+		auto& line = result.lines.emplace_back();
+		line.bounds.top_left = {numeric_limits<float>::max(), numeric_limits<float>::max()};
+		line.bounds.bottom_right = {numeric_limits<float>::lowest(), numeric_limits<float>::lowest()};
+		line.glyphs.reserve(pending_line.size());
+		for (auto const& pending: pending_line) {
+			auto [page, layout] = atlas_cache.at(pending.key);
+			if (layout.atlas_bounds.size() == float2{0.0f, 0.0f}) continue; // whitespace
+			auto const offset = pending.position - layout.bearing;
+			line.glyphs.emplace_back(layout.atlas_bounds, offset, page);
+			line.bounds.top_left = min(line.bounds.top_left, offset);
+			line.bounds.bottom_right = max(line.bounds.bottom_right, offset + layout.atlas_bounds.size());
+		}
 	}
 	return result;
 }
@@ -164,6 +135,56 @@ void TextShaper::deserialize(span<byte const> data)
 	for (auto& [_, value]: atlas_cache) value.first = 0;
 
 	atlas_dirty = true;
+}
+
+auto TextShaper::generate_lines(string_view text, StyleID style_id) -> generator<vector<PendingGlyph>>
+{
+	// Retrieve font cascade
+	auto const [style_font_ids, style_weight] = styles.at(style_id);
+	auto style_font_refs = vector<FontRef>{};
+	style_font_refs.reserve(style_font_ids.size());
+	transform(style_font_ids, back_inserter(style_font_refs), [&](auto fid) {
+		return ref(fonts.at({fid, style_weight}));
+	});
+
+	// Shape and join each paragraph
+	for (auto line: text | views::split('\n') | views::to_sv)
+		co_yield elements_of(shape_paragraph(line, style_weight, style_font_ids, style_font_refs));
+}
+
+auto TextShaper::shape_paragraph(string_view text, int weight, span<FontID const> font_ids,
+	span<FontRef const> font_refs) -> generator<vector<PendingGlyph>>
+{
+	// Collect shaping results
+	struct Run {
+		lib::harfbuzz::ShapedRun shaped_run;
+		FontID font_id;
+		float2 position;
+	};
+	auto runs = vector<Run>{};
+	auto cursor = float2{0.0f, 0.0f};
+	for (auto [run_str, font_idx]: itemize(text, font_refs)) {
+		auto const& font = font_refs[font_idx];
+		auto shaped_run = lib::harfbuzz::shape(text, run_str, font);
+		auto& run = runs.emplace_back(move(shaped_run), font_ids[font_idx], cursor);
+
+		// Scale to atlas pixels
+		auto const scale = PixelsPerEm / lib::harfbuzz::units_per_em(font);
+		for (auto& glyph: run.shaped_run.glyphs)
+			glyph.offset *= scale;
+		run.shaped_run.advance *= scale;
+
+		cursor += run.shaped_run.advance;
+	}
+
+	// Flatten shaping results to a list of glyphs
+	auto pending_glyphs = vector<PendingGlyph>{};
+	pending_glyphs.reserve(fold_left(runs, 0z, [](auto acc, auto const& run) { return acc + run.shaped_run.glyphs.size(); }));
+	for (auto const& run: runs) {
+		for (auto const& glyph: run.shaped_run.glyphs)
+			pending_glyphs.emplace_back(CacheKey{run.font_id, weight, glyph.idx}, run.position + glyph.offset);
+	}
+	co_yield move(pending_glyphs);
 }
 
 auto TextShaper::itemize(string_view text, span<FontRef const> fonts) -> generator<Run>

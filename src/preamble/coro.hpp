@@ -8,6 +8,7 @@ or distributed except according to those terms.
 */
 
 #pragma once
+#include <generator>
 #include "coro/coro.hpp"
 
 namespace playnote {
@@ -15,7 +16,7 @@ namespace playnote {
 template<typename T = void>
 using task = coro::task<T>;
 using task_container = coro::task_container<coro::thread_pool>;
-using coro::generator;
+using std::generator;
 using coro::when_all;
 using coro::sync_wait;
 using coro::thread_pool;

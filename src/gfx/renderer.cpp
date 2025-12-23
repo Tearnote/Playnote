@@ -174,19 +174,22 @@ auto Renderer::Queue::circle(Drawable common, CircleParams params) -> Queue&
 
 auto Renderer::Queue::text(Text const& text, Drawable common, TextParams params) -> Queue&
 {
-	for (auto const& glyph: text.glyphs) {
-		if (!inside_group) group_depths.emplace_back(group_depths.size(), -1);
-		glyphs.emplace_back(Drawable{
-			.position = common.position + glyph.offset * params.size,
-			.velocity = common.velocity,
-			.color = common.color,
-			.depth = common.depth,
-		}, GlyphParams{
-			.atlas_bounds = glyph.atlas_bounds,
-			.size = params.size,
-			.page = glyph.page,
-		}, group_depths.size() - 1);
-		group_depths.back().second = common.depth;
+	for (auto [line_idx, line]: text.lines | views::enumerate) {
+		auto const line_offset = float2{0.0f, params.line_height * params.size * TextShaper::PixelsPerEm * line_idx};
+		for (auto const& glyph: line.glyphs) {
+			if (!inside_group) group_depths.emplace_back(group_depths.size(), -1);
+			glyphs.emplace_back(Drawable{
+				.position = common.position + glyph.offset * params.size + line_offset,
+				.velocity = common.velocity,
+				.color = common.color,
+				.depth = common.depth,
+			}, GlyphParams{
+				.atlas_bounds = glyph.atlas_bounds,
+				.size = params.size,
+				.page = glyph.page,
+			}, group_depths.size() - 1);
+			group_depths.back().second = common.depth;
+		}
 	}
 	return *this;
 }

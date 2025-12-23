@@ -43,7 +43,8 @@ public:
 	};
 
 	struct TextParams {
-		float size; // em-height
+		float size = 1.0f; // em-height
+		float line_height = 1.0f; // in size-scaled ems
 	};
 
 	enum class TextStyle {

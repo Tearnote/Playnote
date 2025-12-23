@@ -19,6 +19,8 @@ namespace playnote::gfx {
 // Performs text shaping and manages a glyph atlas.
 class TextShaper {
 public:
+	static constexpr auto PixelsPerEm = 32.0f;
+
 	using FontID = id;
 	using StyleID = id;
 
@@ -30,8 +32,12 @@ public:
 			int page;
 		};
 
-		vector<Glyph> glyphs;
-		AABB<float> bounds; // can extend to the left of origin, or even not contain origin at all
+		struct Line {
+			vector<Glyph> glyphs;
+			AABB<float> bounds; // can extend to the left of origin, or even not contain origin at all
+		};
+
+		vector<Line> lines;
 	};
 
 	// Initialize with an empty atlas. The optional initial size is the size of both of the atlas'
@@ -72,7 +78,10 @@ private:
 	using FontRef = reference_wrapper<lib::harfbuzz::Font>;
 	using CacheKey = tuple<FontID, int, ssize_t>; // font id, weight, glyph index
 
-	static constexpr auto PixelsPerEm = 32.0f;
+	struct PendingGlyph {
+		CacheKey key;
+		float2 position;
+	};
 
 	Logger::Category cat;
 	lib::harfbuzz::Context ctx;
@@ -85,6 +94,8 @@ private:
 	bool atlas_dirty = true;
 
 	using Run = pair<string_view, ssize_t>;
+	auto generate_lines(string_view, StyleID) -> generator<vector<PendingGlyph>>;
+	auto shape_paragraph(string_view, int weight, span<FontID const>, span<FontRef const>) -> generator<vector<PendingGlyph>>;
 	auto itemize(string_view, span<FontRef const>) -> generator<Run>;
 	auto itemize(string&&, span<FontRef const>) -> generator<Run> = delete;
 	void cache_glyphs(span<CacheKey const>);

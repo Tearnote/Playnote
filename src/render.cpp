@@ -53,6 +53,7 @@ struct SelectContext {
 	gfx::TransformRef mouse;
 	gfx::Text some_text;
 	gfx::Text dynamic_text;
+	gfx::Text multiline_text;
 };
 
 struct GameplayContext {
@@ -212,6 +213,13 @@ static void render_select(gfx::Renderer::Queue& queue, GameState& state)
 	}, {
 		.size = 2,
 	});
+	queue.text(context.multiline_text, {
+		.position = {500.0f, 32.0f},
+		.color = {1.0f, 1.0f, 1.0f, 1.0f},
+		.depth = 5,
+	}, {
+		.size = 0.75,
+	});
 	queue.text(context.some_text, {
 		.position = {10.0f, 180.0f},
 		.color = {1.0f, 1.0f, 1.0f, 1.0f},
@@ -344,6 +352,7 @@ static void run_render(Broadcaster& broadcaster, dev::Window& window, Logger::Ca
 			state.select_context().mouse = gfx::globals::create_transform();
 			state.select_context().some_text = renderer.prepare_text(gfx::Renderer::TextStyle::SansMedium, "Hello World! こんにちは、世界！ 안녕하세요, 세상!");
 			state.select_context().dynamic_text = renderer.prepare_text(gfx::Renderer::TextStyle::SansMedium, "吾輩は猫であ");
+			state.select_context().multiline_text = renderer.prepare_text(gfx::Renderer::TextStyle::SansMedium, "First line\nSecond line\n\nThird line");
 			state.select_context().library_reload_result = pollable_fg(
 				[](shared_ptr<bms::Library> library) -> task<vector<bms::Library::ChartEntry>> {
 					co_return co_await library->list_charts();
