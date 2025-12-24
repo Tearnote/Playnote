@@ -55,7 +55,6 @@ using std::ranges::fold_left;
 using std::ranges::any_of;
 using std::ranges::min_element;
 using std::ranges::max_element;
-using std::ranges::elements_of;
 
 using std::distance;
 using std::function;

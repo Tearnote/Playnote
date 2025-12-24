@@ -214,7 +214,7 @@ static void render_select(gfx::Renderer::Queue& queue, GameState& state)
 		.size = 2,
 	});
 	queue.text(context.multiline_text, {
-		.position = {500.0f, 32.0f},
+		.position = {500.0f, 24.0f},
 		.color = {1.0f, 1.0f, 1.0f, 1.0f},
 		.depth = 5,
 	}, {
@@ -222,28 +222,28 @@ static void render_select(gfx::Renderer::Queue& queue, GameState& state)
 		.line_height = 1.3,
 	});
 	queue.text(context.some_text, {
-		.position = {10.0f, 180.0f},
+		.position = {10.0f, 240.0f},
 		.color = {1.0f, 1.0f, 1.0f, 1.0f},
 		.depth = 5,
 	}, {
 		.size = 0.25,
 	});
 	queue.text(context.some_text, {
-		.position = {10.0f, 200.0f},
+		.position = {10.0f, 260.0f},
 		.color = {1.0f, 1.0f, 1.0f, 1.0f},
 		.depth = 5,
 	}, {
 		.size = 0.4,
 	});
 	queue.text(context.some_text, {
-		.position = {10.0f, 240.0f},
+		.position = {10.0f, 300.0f},
 		.color = {1.0f, 1.0f, 1.0f, 1.0f},
 		.depth = 5,
 	}, {
 		.size = 1.25,
 	});
 	queue.text(context.some_text, {
-		.position = {-1600.0f, 400.0f},
+		.position = {-1600.0f, 460.0f},
 		.color = {1.0f, 1.0f, 1.0f, 1.0f},
 		.depth = 5,
 	}, {
@@ -354,7 +354,7 @@ static void run_render(Broadcaster& broadcaster, dev::Window& window, Logger::Ca
 			state.select_context().some_text = renderer.prepare_text(gfx::Renderer::TextStyle::SansMedium, "Hello World! こんにちは、世界！ 안녕하세요, 세상!");
 			state.select_context().dynamic_text = renderer.prepare_text(gfx::Renderer::TextStyle::SansMedium, "吾輩は猫であ");
 			state.select_context().multiline_text = renderer.prepare_text(gfx::Renderer::TextStyle::SansMedium,
-				"This is a long line that will be wrapped into several lines due to its excessive length that overflows the width limit.\nManual newline.\nThislinewillbewrappedmidwordduetotheremovalofspaceseliminatinganymorenaturalbreakpoints.", 18.0f);
+				"This is a long line that will be wrapped into several lines due to its excessive length that overflows the width limit.\nManual newline.\nThislinewillbewrappedmidwordduetotheremovalofspaceseliminatinganymorenaturalbreakpoints.\nLine-breaking Japanese text: こんにちは、世界！\nLine-breaking Korean text: 안녕하세요, 세상!", 18.0f);
 			state.select_context().library_reload_result = pollable_fg(
 				[](shared_ptr<bms::Library> library) -> task<vector<bms::Library::ChartEntry>> {
 					co_return co_await library->list_charts();

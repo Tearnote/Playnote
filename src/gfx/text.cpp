@@ -150,8 +150,10 @@ auto TextShaper::generate_lines(string_view text, StyleID style_id,
 	});
 
 	// Shape and join each paragraph
+	//TODO use std::ranges::elements_of if/when https://github.com/jbaldwin/libcoro/issues/431 is implemented
 	for (auto line: text | views::split('\n') | views::to_sv)
-		co_yield elements_of(shape_paragraph(line, style_weight, style_font_ids, style_font_refs, max_width));
+		for (auto&& pline: shape_paragraph(line, style_weight, style_font_ids, style_font_refs, max_width))
+			co_yield move(pline);
 }
 
 auto TextShaper::shape_paragraph(string_view text, int weight, span<FontID const> font_ids,
