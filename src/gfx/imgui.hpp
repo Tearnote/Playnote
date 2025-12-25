@@ -21,7 +21,7 @@ class Imgui {
 public:
 	explicit Imgui(dev::GPU& gpu):
 		context{lib::imgui::init(gpu.get_window().handle(), gpu.get_global_allocator(),
-			playnote::globals::assets->get("unifont-16.0.03.ttf"_id))}
+			playnote::globals::assets->get("unifont-16.0.04.ttf"_id))}
 	{}
 
 	// Prepare Imgui to accept commands.

@@ -105,6 +105,13 @@ FetchContent_MakeAvailable(msdf-atlas-gen)
 
 # Remote assets
 
+FetchContent_Declare(Unifont # Wide-coverage Imgui font
+	URL https://github.com/multitheftauto/unifont/releases/download/v16.0.04/unifont-16.0.04.ttf
+	URL_HASH SHA256=6b18fdcf0f61f3df2e61db9737af6de9f37048ec93083621d41504ebf8cb18f4
+	DOWNLOAD_NO_EXTRACT ON
+)
+FetchContent_MakeAvailable(Unifont)
+
 FetchContent_Declare(Mplus-fonts # Latin + Japanese scripts
 	GIT_REPOSITORY https://github.com/coz-m/MPLUS_FONTS
 	GIT_TAG 80ac404d0c80442781b6f4c6119a8c9e71770806
