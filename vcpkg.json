@@ -13,7 +13,14 @@
 		},
 		{
 			"name": "glfw3",
-			"version>=": "3.4#1"
+			"version>=": "3.4#1",
+			"platform": "windows"
+		},
+		{
+			"name": "glfw3",
+			"version>=": "3.4#1",
+			"features": ["wayland"],
+			"platform": "!windows"
 		},
 		{
 			"name": "boost-range",
