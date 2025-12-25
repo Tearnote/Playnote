@@ -23,7 +23,7 @@ set(PLAYNOTE_SHADER_SOURCES
 
 set(PLAYNOTE_FONTS
 	${mplus-fonts_SOURCE_DIR}/fonts/ttf/Mplus2-Medium.ttf
-	${PROJECT_SOURCE_DIR}/fonts/Pretendard-Medium.ttf
+	${pretendard_SOURCE_DIR}/packages/pretendard/dist/public/static/alternative/Pretendard-Medium.ttf
 )
 
 # Compile shaders

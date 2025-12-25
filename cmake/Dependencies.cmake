@@ -105,8 +105,14 @@ FetchContent_MakeAvailable(msdf-atlas-gen)
 
 # Remote assets
 
-FetchContent_Declare(Mplus-fonts
+FetchContent_Declare(Mplus-fonts # Latin + Japanese scripts
 	GIT_REPOSITORY https://github.com/coz-m/MPLUS_FONTS
 	GIT_TAG 80ac404d0c80442781b6f4c6119a8c9e71770806
 )
 FetchContent_MakeAvailable(Mplus-fonts)
+
+FetchContent_Declare(Pretendard # Korean script
+	GIT_REPOSITORY https://github.com/orioncactus/pretendard
+	GIT_TAG 7aeb0698819be2b4097dae8ec8fe6a795e5cf3ae
+)
+FetchContent_MakeAvailable(Pretendard)
