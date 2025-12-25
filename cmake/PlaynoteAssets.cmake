@@ -10,6 +10,7 @@ include_guard()
 include(cmake/AddProcessedFont.cmake)
 include(cmake/AddSlangShader.cmake)
 include(cmake/GenerateAtlas.cmake)
+include(cmake/Dependencies.cmake)
 include(cmake/PackAssets.cmake)
 
 set(PLAYNOTE_SHADER_PREFIX src/gpu)
@@ -20,10 +21,9 @@ set(PLAYNOTE_SHADER_SOURCES
 	imgui.slang
 )
 
-set(PLAYNOTE_FONT_PREFIX fonts)
 set(PLAYNOTE_FONTS
-	Mplus2-Medium.ttf
-	Pretendard-Medium.ttf
+	${mplus-fonts_SOURCE_DIR}/fonts/ttf/Mplus2-Medium.ttf
+	${PROJECT_SOURCE_DIR}/fonts/Pretendard-Medium.ttf
 )
 
 # Compile shaders
@@ -36,9 +36,9 @@ endforeach()
 
 # Process fonts
 foreach(FONT_PATH ${PLAYNOTE_FONTS})
-	set(INPUT_PATH ${PROJECT_SOURCE_DIR}/${PLAYNOTE_FONT_PREFIX}/${FONT_PATH})
-	set(OUTPUT_PATH ${PROJECT_BINARY_DIR}/$<CONFIG>/generated/ttf/${FONT_PATH})
-	add_processed_font(INPUT ${INPUT_PATH} OUTPUT ${OUTPUT_PATH})
+	get_filename_component(FONT_NAME ${FONT_PATH} NAME)
+	set(OUTPUT_PATH ${PROJECT_BINARY_DIR}/$<CONFIG>/generated/ttf/${FONT_NAME})
+	add_processed_font(INPUT ${FONT_PATH} OUTPUT ${OUTPUT_PATH})
 	list(APPEND PLAYNOTE_FONT_OUTPUTS ${OUTPUT_PATH})
 endforeach()
 

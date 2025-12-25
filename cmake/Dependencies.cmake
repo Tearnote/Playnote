@@ -102,3 +102,11 @@ FetchContent_Declare(msdf-atlas-gen # Font atlas generation
 	GIT_TAG v1.3
 )
 FetchContent_MakeAvailable(msdf-atlas-gen)
+
+# Remote assets
+
+FetchContent_Declare(Mplus-fonts
+	GIT_REPOSITORY https://github.com/coz-m/MPLUS_FONTS
+	GIT_TAG 80ac404d0c80442781b6f4c6119a8c9e71770806
+)
+FetchContent_MakeAvailable(Mplus-fonts)
