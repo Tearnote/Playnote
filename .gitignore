@@ -1,17 +1,9 @@
 # IDE config
-.idea/**
 .zed/**
 .clangd
 
 # Build artifacts
-build*/**
+build/**
 
 # Test data
 songs/**
-
-# Runtime files, if running the executable in the project folder
-imgui.ini
-playnote*.log
-config.toml
-library/**
-library.db*

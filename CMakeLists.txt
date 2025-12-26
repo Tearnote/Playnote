@@ -4,6 +4,7 @@
 # or https://www.mozilla.org/en-US/MPL/2.0/>. This file may not be copied, modified, or distributed
 # except according to those terms.
 
+# Define project
 cmake_minimum_required(VERSION 3.28)
 project(Playnote
 	VERSION 0.0.4
@@ -13,6 +14,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 include(cmake/Flags.cmake)
 include(cmake/Dependencies.cmake)
 
+# Define target
 add_executable(Playnote WIN32
 	src/lib/signalsmith.cpp
 	src/lib/harfbuzz.cpp
@@ -64,11 +66,13 @@ else()
 		src/lib/wasapi.cpp)
 endif()
 
+# Configure target
 target_precompile_headers(Playnote PRIVATE src/preamble.hpp)
 target_include_directories(Playnote PRIVATE src) # All includes start from src as root
 # Communicate build type to the project
 target_compile_definitions(Playnote PRIVATE "$<$<CONFIG:Debug>:BUILD_DEBUG>$<$<CONFIG:RelWithDebInfo>:BUILD_RELDEB>$<$<CONFIG:Release>:BUILD_RELEASE>")
 
+# Add dependencies
 target_link_libraries(Playnote
 	PRIVATE signalsmith-basics
 	PRIVATE readerwriterqueue::readerwriterqueue
@@ -122,9 +126,32 @@ target_include_directories(Playnote
 target_link_directories(Playnote PRIVATE ${FFMPEG_LIBRARY_DIRS})
 target_compile_definitions(imgui::imgui INTERFACE "IMGUI_USER_CONFIG=\"${PROJECT_SOURCE_DIR}/src/lib/imconfig.h\"")
 
+# Prepare assets
 include(cmake/PlaynoteAssets.cmake)
 add_dependencies(Playnote PlaynoteAssets)
 target_include_directories(Playnote PRIVATE ${PROJECT_BINARY_DIR}/$<CONFIG>/generated)
-
 include(cmake/PackAssets.cmake)
 add_dependencies(Playnote PackAssets)
+
+# Package the finished build
+set(CMAKE_INSTALL_PREFIX "${PROJECT_BINARY_DIR}/install")
+set(CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS_SKIP ON)
+set(CMAKE_INSTALL_DEBUG_LIBRARIES ON)
+install(TARGETS Playnote RUNTIME
+	DESTINATION $<CONFIG>)
+install(FILES "${PROJECT_BINARY_DIR}/$<CONFIG>/assets.db"
+	DESTINATION $<CONFIG>)
+if(WIN32)
+	include(InstallRequiredSystemLibraries)
+	set(MSVC_DEBUG_LIBS ${CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS})
+	list(FILTER MSVC_DEBUG_LIBS INCLUDE REGEX ".*[dD](_.*)?\\.dll$")
+	set(MSVC_RELEASE_LIBS ${CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS})
+	list(FILTER MSVC_RELEASE_LIBS EXCLUDE REGEX ".*[dD](_.*)?\\.dll$")
+
+	install(FILES ${MSVC_DEBUG_LIBS}
+		DESTINATION $<CONFIG>
+		CONFIGURATIONS Debug)
+	install(FILES ${MSVC_RELEASE_LIBS}
+		DESTINATION $<CONFIG>
+		CONFIGURATIONS Release RelWithDebInfo)
+endif()
