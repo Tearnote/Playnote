@@ -171,11 +171,6 @@
 			"platform": "!windows"
 		},
 		{
-			"name": "mimalloc",
-			"version>=": "2.2.4",
-			"platform": "windows"
-		},
-		{
 			"name": "pkgconf",
 			"version>=": "2.5.1"
 		}

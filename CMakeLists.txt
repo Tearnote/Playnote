@@ -70,7 +70,6 @@ target_include_directories(Playnote PRIVATE src) # All includes start from src a
 target_compile_definitions(Playnote PRIVATE "$<$<CONFIG:Debug>:BUILD_DEBUG>$<$<CONFIG:RelWithDebInfo>:BUILD_RELDEB>$<$<CONFIG:Release>:BUILD_RELEASE>")
 
 target_link_libraries(Playnote
-	PRIVATE $<IF:$<TARGET_EXISTS:mimalloc-static>,mimalloc-static,mimalloc>
 	PRIVATE signalsmith-basics
 	PRIVATE readerwriterqueue::readerwriterqueue
 	PRIVATE concurrentqueue::concurrentqueue
@@ -106,6 +105,7 @@ target_link_libraries(Playnote
 if(UNIX)
 	target_link_libraries(Playnote
 		PRIVATE PkgConfig::PipeWire
+		PRIVATE mimalloc-static
 	)
 else()
 	target_link_libraries(Playnote PRIVATE
