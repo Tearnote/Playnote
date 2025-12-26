@@ -18,7 +18,7 @@ permissions:
 
 env:
   BUILD_TYPE: Release
-  VCPKG_TARGET_TRIPLET: x64-windows-static
+  VCPKG_TARGET_TRIPLET: x64-windows-static-md
   USERNAME: Tearnote
   FEED_URL: https://nuget.pkg.github.com/Tearnote/index.json
   VCPKG_BINARY_SOURCES: "clear;nuget,https://nuget.pkg.github.com/Tearnote/index.json,readwrite"
