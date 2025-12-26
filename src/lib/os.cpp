@@ -26,9 +26,9 @@ or distributed except according to those terms.
 #include <pthread.h>
 #include <unistd.h>
 #include <sched.h>
-#include "mimalloc.h"
 #endif
 #include <cstdlib>
+#include "mimalloc.h"
 #include "preamble.hpp"
 #include "utils/logger.hpp"
 
@@ -36,7 +36,6 @@ namespace playnote::lib::os {
 
 void check_mimalloc()
 {
-#ifdef TARGET_LINUX
 	if (mi_version() <= 0) {
 		WARN("mimalloc is not loaded");
 		return;
@@ -50,7 +49,6 @@ void check_mimalloc()
 		WARN("mimalloc override is not active (new: {}, malloc: {})", new_ok, malloc_ok);
 	free(q);
 	delete p;
-#endif
 }
 
 void name_current_thread(string_view name)

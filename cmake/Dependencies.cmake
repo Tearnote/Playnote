@@ -49,9 +49,7 @@ find_path(ZPP_BITS_INCLUDE_DIRS "zpp_bits.h") # Serialization
 find_package(readerwriterqueue CONFIG REQUIRED) # Lock-free SPSC queue
 find_package(concurrentqueue CONFIG REQUIRED) # Lock-free MPMC queue
 find_path(PLF_COLONY_INCLUDE_DIRS "plf_colony.h") # Memory-stable unordered container
-if(UNIX)
-    find_package(mimalloc CONFIG REQUIRED) # High performance allocator
-endif()
+find_package(mimalloc CONFIG REQUIRED) # High performance allocator
 
 # Fix ebur128 on Windows
 if(WIN32)

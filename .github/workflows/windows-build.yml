@@ -46,7 +46,7 @@ jobs:
 
       - name: Configure CMake
         shell: cmd
-        run: cmake -B ${{github.workspace}}/build -T ClangCL -DCMAKE_TOOLCHAIN_FILE=%VCPKG_INSTALLATION_ROOT%/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=${{env.VCPKG_TARGET_TRIPLET}}
+        run: cmake -B ${{github.workspace}}/build -T ClangCL -DCMAKE_TOOLCHAIN_FILE=%VCPKG_INSTALLATION_ROOT%/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=${{env.VCPKG_TARGET_TRIPLET}} -DVCPKG_OVERLAY_TRIPLETS=${{github.workspace}}/cmake/triplets
 
       - name: Build
         run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}

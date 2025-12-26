@@ -6,6 +6,7 @@
 
 # Define project
 cmake_minimum_required(VERSION 3.28)
+set(X_VCPKG_APPLOCAL_DEPS_INSTALL ON)
 project(Playnote
 	VERSION 0.0.4
 	DESCRIPTION "A BMS player hobby project"
@@ -113,6 +114,7 @@ if(UNIX)
 	)
 else()
 	target_link_libraries(Playnote PRIVATE
+	    PRIVATE mimalloc
 		PRIVATE ksuser
 		PRIVATE winmm
 		PRIVATE avrt
