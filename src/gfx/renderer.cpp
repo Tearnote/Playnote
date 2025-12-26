@@ -80,6 +80,7 @@ auto generate_worklists(dev::GPU& gpu, lib::vuk::Allocator& allocator, span<Rend
 			.push_constants(lib::vuk::ShaderStageFlagBits::eCompute, 0, transform)
 			.push_constants(lib::vuk::ShaderStageFlagBits::eCompute, sizeof(float4), static_cast<int>(primitives_count))
 			.specialize_constants(0, window_size.x()).specialize_constants(1, window_size.y())
+			.specialize_constants(2, TextShaper::PixelsPerEm)
 			.dispatch_invocations(primitives_count, 1, 1);
 		return make_tuple(primitives_buf, worklists_buf, worklist_sizes_buf);
 	});
@@ -176,11 +177,11 @@ auto Renderer::Queue::circle(Drawable common, CircleParams params) -> Queue&
 auto Renderer::Queue::text(Text const& text, Drawable common, TextParams params) -> Queue&
 {
 	for (auto [line_idx, line]: text.lines | views::enumerate) {
-		auto const line_offset = float2{0.0f, params.line_height * params.size * TextShaper::PixelsPerEm * line_idx};
+		auto const line_offset = float2{0.0f, params.line_height * params.size * line_idx};
 		for (auto const& glyph: line.glyphs) {
 			if (!inside_group) group_depths.emplace_back(group_depths.size(), -1);
 			glyphs.emplace_back(Drawable{
-				.position = common.position + glyph.offset * params.size + line_offset,
+				.position = common.position + glyph.offset * params.size / TextShaper::PixelsPerEm + line_offset,
 				.velocity = common.velocity,
 				.color = common.color,
 				.depth = common.depth,

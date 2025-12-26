@@ -43,7 +43,7 @@ public:
 	};
 
 	struct TextParams {
-		float size = 1.0f; // em-height
+		float size = 12.0f; // em-height, in units
 		float line_height = 1.0f; // in size-scaled ems
 	};
 

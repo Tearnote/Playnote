@@ -211,14 +211,14 @@ static void render_select(gfx::Renderer::Queue& queue, GameState& state)
 		.color = {1.0f, 1.0f, 1.0f, 1.0f},
 		.depth = 5,
 	}, {
-		.size = 2,
+		.size = 64.0f,
 	});
 	queue.text(context.multiline_text, {
 		.position = {500.0f, 24.0f},
 		.color = {1.0f, 1.0f, 1.0f, 1.0f},
 		.depth = 5,
 	}, {
-		.size = 0.5,
+		.size = 16.0f,
 		.line_height = 1.3,
 	});
 	queue.text(context.some_text, {
@@ -226,28 +226,28 @@ static void render_select(gfx::Renderer::Queue& queue, GameState& state)
 		.color = {1.0f, 1.0f, 1.0f, 1.0f},
 		.depth = 5,
 	}, {
-		.size = 0.25,
+		.size = 8.0f,
 	});
 	queue.text(context.some_text, {
 		.position = {10.0f, 260.0f},
 		.color = {1.0f, 1.0f, 1.0f, 1.0f},
 		.depth = 5,
 	}, {
-		.size = 0.4,
+		.size = 12.8f,
 	});
 	queue.text(context.some_text, {
 		.position = {10.0f, 300.0f},
 		.color = {1.0f, 1.0f, 1.0f, 1.0f},
 		.depth = 5,
 	}, {
-		.size = 1.25,
+		.size = 40.0f,
 	});
 	queue.text(context.some_text, {
 		.position = {-1600.0f, 460.0f},
 		.color = {1.0f, 1.0f, 1.0f, 1.0f},
 		.depth = 5,
 	}, {
-		.size = 6,
+		.size = 192.0f,
 	});
 }
 

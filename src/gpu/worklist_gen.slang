@@ -19,6 +19,7 @@ RWStructuredBuffer<Atomic<int>> b_worklistCounts;
 
 [SpecializationConstant] let ViewportWidth = 0u;
 [SpecializationConstant] let ViewportHeight = 0u;
+[SpecializationConstant] let AtlasPixelsPerEm = 0.0;
 static let ViewportSize = int2(ViewportWidth, ViewportHeight);
 static let TileBound = (ViewportSize + TILE_SIZE - 1) / TILE_SIZE;
 
@@ -95,7 +96,7 @@ void computeMain(
 		break;
 	case Primitive::Type::Glyph:
 		var glyphParams = reinterpret<Primitive::GlyphParams>(params);
-		glyphParams.size = mul(transform, float3(glyphParams.size, 0.0, 0.0)).x;
+		glyphParams.size = mul(transform, float3(glyphParams.size / AtlasPixelsPerEm, 0.0, 0.0)).x;
 		params = reinterpret<int[8]>(glyphParams);
 		break;
 	}
