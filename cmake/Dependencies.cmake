@@ -70,6 +70,7 @@ set(VUK_EXTRA_INIT OFF CACHE BOOL "" FORCE)
 FetchContent_Declare(vuk # Vulkan rendergraph
 	GIT_REPOSITORY https://github.com/martty/vuk
 	GIT_TAG f3af1ba601532f93f07dcef49f25d9469e4cd1f6
+	EXCLUDE_FROM_ALL
 )
 FetchContent_MakeAvailable(vuk)
 if(UNIX)
@@ -93,6 +94,7 @@ set(LIBCORO_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 FetchContent_Declare(libcoro # Coroutine primitives
 	GIT_REPOSITORY https://github.com/jbaldwin/libcoro
 	GIT_TAG 7e0ce982405fb26b6ca8af97f40a8eaa2b78c4fa
+	EXCLUDE_FROM_ALL
 )
 FetchContent_MakeAvailable(libcoro)
 
