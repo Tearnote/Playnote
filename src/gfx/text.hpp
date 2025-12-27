@@ -19,7 +19,7 @@ namespace playnote::gfx {
 // Performs text shaping and manages a glyph atlas.
 class TextShaper {
 public:
-	static constexpr auto PixelsPerEm = 32.0f;
+	static constexpr auto PixelsPerEm = 64.0f;
 
 	using FontID = id;
 	using StyleID = id;

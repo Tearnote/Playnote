@@ -25,7 +25,7 @@ try {
 	auto font_filenames = args.subspan(2);
 
 	auto logger_stub = globals::logger.provide("generate_atlas.log", Logger::Level::Debug);
-	auto shaper = gfx::TextShaper{globals::logger->global, 2048};
+	auto shaper = gfx::TextShaper{globals::logger->global, 4096};
 	auto font_ids = vector<id>{};
 	font_ids.reserve(font_filenames.size());
 	for (auto font_path_sv: font_filenames) {
