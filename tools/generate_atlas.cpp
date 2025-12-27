@@ -30,7 +30,7 @@ try {
 	font_ids.reserve(font_filenames.size());
 	for (auto font_path_sv: font_filenames) {
 		static constexpr auto WeightSuffixes = to_array({
-			"-Medium"sv,
+			"-Regular"sv,
 		});
 
 		auto font_path = fs::path{font_path_sv};
@@ -42,10 +42,10 @@ try {
 		shaper.load_font(font_id, {font_file.contents.begin(), font_file.contents.end()}, 500);
 		font_ids.emplace_back(font_id);
 	}
-	shaper.define_style("Sans-Medium"_id, font_ids);
+	shaper.define_style("Sans-Regular"_id, font_ids);
 
 	for (auto chars: gfx::AtlasPrewarmChars)
-		shaper.shape("Sans-Medium"_id, chars);
+		shaper.shape("Sans-Regular"_id, chars);
 
 	auto debug_filename = fs::path{output_filename}.replace_extension(".png");
 	shaper.dump_atlas(debug_filename);

@@ -254,9 +254,9 @@ Renderer::Renderer(dev::Window& window, Logger::Category cat):
 {
 	auto& context = gpu.get_global_allocator().get_context();
 
-	text_shaper.load_font("Mplus2"_id, globals::assets->get("Mplus2-Medium.ttf"_id), 500);
-	text_shaper.load_font("Pretendard"_id, globals::assets->get("Pretendard-Medium.ttf"_id), 500);
-	text_shaper.define_style("Sans-Medium"_id, {"Mplus2"_id, "Pretendard"_id}, 500);
+	text_shaper.load_font("Mplus2"_id, globals::assets->get("Mplus2-Regular.ttf"_id), 500);
+	text_shaper.load_font("Pretendard"_id, globals::assets->get("Pretendard-Regular.ttf"_id), 500);
+	text_shaper.define_style("Sans-Regular"_id, {"Mplus2"_id, "Pretendard"_id}, 500);
 	text_shaper.deserialize(globals::assets->get("font_atlas.zpp"_id));
 	auto [new_atlas, atlas_upload] = lib::vuk::create_texture(gpu.get_global_allocator(), text_shaper.get_atlas(0), vuk::Format::eR8G8B8A8Unorm);
 	auto compiler = lib::vuk::Compiler{};
@@ -277,8 +277,7 @@ auto Renderer::prepare_text(TextStyle style, string_view text, optional<float> m
 {
 	auto const style_id = [&] {
 		switch (style) {
-		case TextStyle::SansMedium: return "Sans-Medium"_id;
-		case TextStyle::SansBold:   return "Sans-Bold"_id;
+		case TextStyle::SansRegular: return "Sans-Regular"_id;
 		};
 	}();
 	return text_shaper.shape(style_id, text, max_width.transform([&](auto w) { return w * TextShaper::PixelsPerEm; }));

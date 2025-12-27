@@ -48,8 +48,7 @@ public:
 	};
 
 	enum class TextStyle {
-		SansMedium,
-		SansBold,
+		SansRegular,
 	};
 
 	// An accumulator of primitives to draw.

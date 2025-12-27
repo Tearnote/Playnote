@@ -351,9 +351,9 @@ static void run_render(Broadcaster& broadcaster, dev::Window& window, Logger::Ca
 			}
 			state.context.emplace<SelectContext>();
 			state.select_context().mouse = gfx::globals::create_transform();
-			state.select_context().some_text = renderer.prepare_text(gfx::Renderer::TextStyle::SansMedium, "Hello World! こんにちは、世界！ 안녕하세요, 세상!");
-			state.select_context().dynamic_text = renderer.prepare_text(gfx::Renderer::TextStyle::SansMedium, "吾輩は猫であ");
-			state.select_context().multiline_text = renderer.prepare_text(gfx::Renderer::TextStyle::SansMedium,
+			state.select_context().some_text = renderer.prepare_text(gfx::Renderer::TextStyle::SansRegular, "Hello World! こんにちは、世界！ 안녕하세요, 세상!");
+			state.select_context().dynamic_text = renderer.prepare_text(gfx::Renderer::TextStyle::SansRegular, "吾輩は猫であ");
+			state.select_context().multiline_text = renderer.prepare_text(gfx::Renderer::TextStyle::SansRegular,
 				"This is a long line that will be wrapped into several lines due to its excessive length that overflows the width limit.\nManual newline.\nThislinewillbewrappedmidwordduetotheremovalofspaceseliminatinganymorenaturalbreakpoints.\nLine-breaking Japanese text: こんにちは、世界！\nLine-breaking Korean text: 안녕하세요, 세상!", 18.0f);
 			state.select_context().library_reload_result = pollable_fg(
 				[](shared_ptr<bms::Library> library) -> task<vector<bms::Library::ChartEntry>> {
