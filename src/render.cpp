@@ -51,9 +51,6 @@ struct SelectContext {
 	optional<future<vector<bms::Library::ChartEntry>>> library_reload_result;
 	optional<future<shared_ptr<bms::Chart const>>> chart_load_result;
 	gfx::TransformRef mouse;
-	gfx::Text some_text;
-	gfx::Text dynamic_text;
-	gfx::Text multiline_text;
 };
 
 struct GameplayContext {
@@ -206,49 +203,6 @@ static void render_select(gfx::Renderer::Queue& queue, GameState& state)
 	}, {
 		.radius = 8.0f,
 	});
-	queue.text(context.dynamic_text, {
-		.position = {10.0f, 140.0f},
-		.color = {1.0f, 1.0f, 1.0f, 1.0f},
-		.depth = 5,
-	}, {
-		.size = 64.0f,
-	});
-	queue.text(context.multiline_text, {
-		.position = {500.0f, 24.0f},
-		.color = {1.0f, 1.0f, 1.0f, 1.0f},
-		.depth = 5,
-	}, {
-		.size = 16.0f,
-		.line_height = 1.3,
-	});
-	queue.text(context.some_text, {
-		.position = {10.0f, 240.0f},
-		.color = {1.0f, 1.0f, 1.0f, 1.0f},
-		.depth = 5,
-	}, {
-		.size = 8.0f,
-	});
-	queue.text(context.some_text, {
-		.position = {10.0f, 260.0f},
-		.color = {1.0f, 1.0f, 1.0f, 1.0f},
-		.depth = 5,
-	}, {
-		.size = 12.8f,
-	});
-	queue.text(context.some_text, {
-		.position = {10.0f, 300.0f},
-		.color = {1.0f, 1.0f, 1.0f, 1.0f},
-		.depth = 5,
-	}, {
-		.size = 40.0f,
-	});
-	queue.text(context.some_text, {
-		.position = {-1600.0f, 460.0f},
-		.color = {1.0f, 1.0f, 1.0f, 1.0f},
-		.depth = 5,
-	}, {
-		.size = 192.0f,
-	});
 }
 
 static void render_gameplay(gfx::Renderer::Queue& queue, GameState& state)
@@ -351,10 +305,6 @@ static void run_render(Broadcaster& broadcaster, dev::Window& window, Logger::Ca
 			}
 			state.context.emplace<SelectContext>();
 			state.select_context().mouse = gfx::globals::create_transform();
-			state.select_context().some_text = renderer.prepare_text(gfx::Renderer::TextStyle::SansRegular, "Hello World! こんにちは、世界！ 안녕하세요, 세상!");
-			state.select_context().dynamic_text = renderer.prepare_text(gfx::Renderer::TextStyle::SansRegular, "吾輩は猫であ");
-			state.select_context().multiline_text = renderer.prepare_text(gfx::Renderer::TextStyle::SansRegular,
-				"This is a long line that will be wrapped into several lines due to its excessive length that overflows the width limit.\nManual newline.\nThislinewillbewrappedmidwordduetotheremovalofspaceseliminatinganymorenaturalbreakpoints.\nLine-breaking Japanese text: こんにちは、世界！\nLine-breaking Korean text: 안녕하세요, 세상!", 18.0f);
 			state.select_context().library_reload_result = pollable_fg(
 				[](shared_ptr<bms::Library> library) -> task<vector<bms::Library::ChartEntry>> {
 					co_return co_await library->list_charts();
