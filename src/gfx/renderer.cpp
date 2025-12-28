@@ -183,7 +183,6 @@ auto Renderer::Queue::text(Text const& text, Drawable common, TextParams params)
 			if (!inside_group) group_depths.emplace_back(group_depths.size(), -1);
 			glyphs.emplace_back(Drawable{
 				.position = common.position + glyph.offset * params.size / TextShaper::PixelsPerEm + line_offset,
-				.velocity = common.velocity,
 				.color = common.color,
 				.depth = common.depth,
 			}, GlyphParams{
@@ -215,7 +214,6 @@ auto Renderer::Queue::to_primitive_list() const -> vector<Primitive>
 			.type = Primitive::Type::Rect,
 			.group_id = group_remapping[group],
 			.position = common.position,
-			.velocity = common.velocity,
 			.color = common.color,
 			.rect_params = Primitive::RectParams{.size = rect.size},
 		});
@@ -225,7 +223,6 @@ auto Renderer::Queue::to_primitive_list() const -> vector<Primitive>
 			.type = Primitive::Type::Circle,
 			.group_id = group_remapping[group],
 			.position = common.position,
-			.velocity = common.velocity,
 			.color = common.color,
 			.circle_params = Primitive::CircleParams{.radius = circle.radius},
 		});
@@ -235,7 +232,6 @@ auto Renderer::Queue::to_primitive_list() const -> vector<Primitive>
 			.type = Primitive::Type::Glyph,
 			.group_id = group_remapping[group],
 			.position = common.position,
-			.velocity = common.velocity,
 			.color = common.color,
 			.glyph_params = Primitive::GlyphParams{
 				.atlas_bounds = glyph.atlas_bounds,

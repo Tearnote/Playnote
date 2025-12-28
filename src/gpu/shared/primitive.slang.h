@@ -35,8 +35,6 @@ struct Primitive {
 	Type type;
 	int group_id;
 	float2 position;
-	float2 velocity;
-	int _pad0[2];
 	float4 color;
 #ifndef __cplusplus
 	int[8] params; // Space containing one of the union members below, as per the type

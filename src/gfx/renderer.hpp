@@ -28,7 +28,6 @@ public:
 	// Properties shared by all shapes.
 	struct Drawable {
 		float2 position; // Center of the shape
-		float2 velocity; // Delta from previous frame's position
 		float4 color;    // [0.0-1.0] RGBA, in sRGB
 		int depth;       // 0 or higher; smaller depth value = in front. If depth is equal to
 		                 // another overlapping shape, the order is unspecified and might flicker.

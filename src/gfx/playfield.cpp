@@ -88,7 +88,6 @@ void Playfield::enqueue(Renderer::Queue& queue, float scroll_speed, nanoseconds 
 		auto const width = lane_width(lane_to_note_type(lane_type));
 		queue.rect_tl({
 			.position = lane_transform->global_position(),
-			.velocity = lane_transform->global_velocity(),
 			.color = lane_background_color(lane_type),
 			.depth = 200,
 		}, {
@@ -97,7 +96,6 @@ void Playfield::enqueue(Renderer::Queue& queue, float scroll_speed, nanoseconds 
 		if (cursor.is_pressed(lane_type)) {
 			queue.rect_tl({
 				.position = lane_transform->global_position() + float2{LanePressedMargin, size.y() + LanePressedMargin * 2.0f},
-				.velocity = lane_transform->global_velocity(),
 				.color = {1.000f, 1.000f, 1.000f, 1.000f},
 				.depth = 80,
 			}, {
@@ -110,7 +108,6 @@ void Playfield::enqueue(Renderer::Queue& queue, float scroll_speed, nanoseconds 
 	for (auto [idx, field]: fields | views::enumerate) {
 		queue.rect_tl({
 			.position = transform->global_position() + float2{field.start, size.y() - JudgmentLineHeight},
-			.velocity = transform->global_velocity(),
 			.color = {1.000f, 0.200f, 0.200f, 1.000f},
 			.depth = 180,
 		}, {
@@ -156,7 +153,6 @@ void Playfield::enqueue(Renderer::Queue& queue, float scroll_speed, nanoseconds 
 			auto const ln_overflow = max(0.0f, note.transform->position.y() - this->size.y());
 			queue.rect_tl({
 				.position = note.transform->global_position() - float2{0.0f, size.y()},
-				.velocity = note.transform->global_velocity(),
 				.color = note_color(note.type),
 				.depth = note.type == Note::Type::MeasureLine? 190 : 100,
 			}, {

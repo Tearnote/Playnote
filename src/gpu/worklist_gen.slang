@@ -80,7 +80,6 @@ void computeMain(
 	// Initial processing
 	let transform = unpackTransform(Transform);
 	primitive.position = mul(transform, float3(primitive.position, 1.0)).xy;
-	primitive.velocity = mul(transform, float3(primitive.velocity, 0.0)).xy;
 	primitive.color.rgb = srgbDecode(primitive.color.rgb);
 
 	switch (primitive.type) {
@@ -102,29 +101,18 @@ void computeMain(
 	}
 
 	// Calculate AABB
-	let halfVelocity = primitive.velocity / 2.0;
-	let head = primitive.position + halfVelocity;
-	let tail = primitive.position - halfVelocity * 3.0;
-	var headAabb = AABB<float>();
-	var tailAabb = AABB<float>();
+	var aabb = AABB<float>();
 	switch (primitive.type) {
 	case Primitive::Type::Rect:
-		headAabb = rectAabb(head, reinterpret<Primitive::RectParams>(params));
-		tailAabb = rectAabb(tail, reinterpret<Primitive::RectParams>(params));
+		aabb = rectAabb(primitive.position, reinterpret<Primitive::RectParams>(params));
 		break;
 	case Primitive::Type::Circle:
-		headAabb = circleAabb(head, reinterpret<Primitive::CircleParams>(params));
-		tailAabb = circleAabb(tail, reinterpret<Primitive::CircleParams>(params));
+		aabb = circleAabb(primitive.position, reinterpret<Primitive::CircleParams>(params));
 		break;
 	case Primitive::Type::Glyph:
-		headAabb = glyphAabb(head, reinterpret<Primitive::GlyphParams>(params));
-		tailAabb = glyphAabb(tail, reinterpret<Primitive::GlyphParams>(params));
+		aabb = glyphAabb(primitive.position, reinterpret<Primitive::GlyphParams>(params));
 		break;
 	}
-	let aabb = AABB<float>(
-		min(headAabb.top_left, tailAabb.top_left),
-		max(headAabb.bottom_right, tailAabb.bottom_right)
-	);
 	let tileAabb = AABB<int>(
 		max(int2(aabb.top_left) / TILE_SIZE, 0),
 		min(int2(aabb.bottom_right) / TILE_SIZE + 1, TileBound)

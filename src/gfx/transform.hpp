@@ -25,17 +25,10 @@ public:
 	auto set_parent(Transform& parent) -> Transform& { this->parent = parent; return *this; }
 	auto unset_parent() -> Transform& { parent = nullopt; return *this; }
 
-	// Run between frames to properly track velocity.
-	auto update() -> Transform&;
-
 	// Return position, taking into account parent transforms.
 	auto global_position() const -> float2;
 
-	// Return velocity, taking into account parent transforms.
-	auto global_velocity() const -> float2;
-
 private:
-	float2 prev_position = position;
 	optional<reference_wrapper<Transform>> parent = nullopt;
 };
 
@@ -63,20 +56,10 @@ auto create_child_transform(TransformRef const& parent, Args&&... args) -> Trans
 	return t;
 }
 
-// Update all transforms in the pool. Run once between frames.
-inline void update_transforms()
-{ for(auto& t: *transform_pool) t.update(); }
-
 }
 
 // A RAII handle to a transform on the global pool.
 using TransformRef = globals::TransformRef;
-
-inline auto Transform::update() -> Transform&
-{
-	prev_position = position;
-	return *this;
-}
 
 inline auto Transform::global_position() const -> float2
 {
@@ -84,14 +67,6 @@ inline auto Transform::global_position() const -> float2
 		return position + parent->get().global_position();
 	else
 		return position;
-}
-
-inline auto Transform::global_velocity() const -> float2
-{
-	if (parent)
-		return position - prev_position + parent->get().global_velocity();
-	else
-		return position - prev_position;
 }
 
 }
