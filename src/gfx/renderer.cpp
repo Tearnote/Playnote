@@ -136,6 +136,7 @@ auto draw_all(dev::GPU& gpu, lib::vuk::ManagedImage&& dest,
 			.bind_image(0, 5, target)
 			.specialize_constants(0, window_size.x()).specialize_constants(1, window_size.y())
 			.specialize_constants(2, +subpixel_rendering)
+			.specialize_constants(3, TextShaper::DistanceRange)
 			.dispatch_invocations(window_size.x(), window_size.y(), 1);
 		return target;
 	});

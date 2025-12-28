@@ -27,6 +27,7 @@ RWTexture2D<float4> i_target;
 [SpecializationConstant] let ViewportWidth = 0u;
 [SpecializationConstant] let ViewportHeight = 0u;
 [SpecializationConstant] let SubpixelRenderingRaw = 0u;
+[SpecializationConstant] let AtlasDistanceRange = 0.0;
 static let ViewportSize = int2(ViewportWidth, ViewportHeight);
 static let TileBound = (ViewportSize + TILE_SIZE - 1) / TILE_SIZE;
 static let SubpixelRendering = SubpixelRenderingMode(SubpixelRenderingRaw);
@@ -64,7 +65,7 @@ func sampleGlyphDistance(p: float2, params: Primitive::GlyphParams) -> float
 	else
 		s = s_dynamicAtlas.SampleLevel(uv, 0).rgb;
 	let sd = msdfMedian(s.r, s.g, s.b);
-	let dist = (0.5 - sd) * 8.0;
+	let dist = (0.5 - sd) * AtlasDistanceRange;
 	let distOutside = length(texel - clampedTexel);
 	return (dist + distOutside) * params.size;
 }

@@ -42,7 +42,8 @@ class GlyphLoader {
 public:
 	// Create the loader. Font resource must exist for its entire lifetime.
 	// pixels_per_em controls the scale of extracted glyph geometry.
-	GlyphLoader(lib::harfbuzz::Font const&, float pixels_per_em);
+	// Distance values will be in the range of [-distance_range / 2, distance_range /2].
+	GlyphLoader(lib::harfbuzz::Font const&, float pixels_per_em, float distance_range);
 	~GlyphLoader() noexcept;
 
 	// Load a glyph with the specified index. Returns nullopt on error. Whitespace will return
@@ -58,6 +59,7 @@ private:
 	lib::harfbuzz::Font const& ft_font;
 	msdfgen::FontHandle* font;
 	float pixels_per_em;
+	float distance_range;
 };
 
 // How a glyph is positioned within the atlas.

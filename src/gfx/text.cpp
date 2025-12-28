@@ -8,7 +8,6 @@ or distributed except according to those terms.
 */
 
 #include "gfx/text.hpp"
-#include <limits>
 
 #include "preamble.hpp"
 #include "lib/bits.hpp"
@@ -324,7 +323,7 @@ void TextShaper::cache_glyphs(span<CacheKey const> glyph_keys)
 	})) {
 		auto [font_id, weight, _] = chunk.front();
 		auto const& font_resource = fonts.at({font_id, weight});
-		auto loader = lib::msdf::GlyphLoader{font_resource, PixelsPerEm};
+		auto loader = lib::msdf::GlyphLoader{font_resource, PixelsPerEm, DistanceRange};
 		for (auto const& key: chunk) {
 			auto const glyph_idx = get<ssize_t>(key);
 			if (auto glyph = loader.load_glyph(glyph_idx)) {

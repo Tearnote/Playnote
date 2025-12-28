@@ -15,10 +15,11 @@ or distributed except according to those terms.
 
 namespace playnote::lib::msdf {
 
-GlyphLoader::GlyphLoader(lib::harfbuzz::Font const& ft_font, float pixels_per_em):
+GlyphLoader::GlyphLoader(lib::harfbuzz::Font const& ft_font, float pixels_per_em, float distance_range):
 	ft_font{ft_font},
 	font{msdfgen::adoptFreetypeFont(ft_font->face)},
-	pixels_per_em{pixels_per_em}
+	pixels_per_em{pixels_per_em},
+	distance_range{distance_range}
 {}
 
 GlyphLoader::~GlyphLoader() noexcept
@@ -30,7 +31,7 @@ auto GlyphLoader::load_glyph(ssize_t glyph_idx) -> optional<GlyphGeometry>
 	auto const scale = 1.0 / lib::harfbuzz::units_per_em(ft_font);
 	if (glyph.load(font, scale, msdfgen::GlyphIndex{static_cast<uint>(glyph_idx)})) {
 		glyph.edgeColoring(&msdfgen::edgeColoringSimple, 3.0, 0);
-		glyph.wrapBox(pixels_per_em, 8.0 / pixels_per_em, 1.0);
+		glyph.wrapBox(pixels_per_em, distance_range / pixels_per_em, 1.0);
 		return glyph;
 	}
 	return nullopt;
