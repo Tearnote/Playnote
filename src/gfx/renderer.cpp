@@ -187,6 +187,8 @@ auto Renderer::Queue::text(Text const& text, Drawable common, TextParams params)
 				.depth = common.depth,
 				.outline_width = common.outline_width,
 				.outline_color = common.outline_color,
+				.glow_width = common.glow_width,
+				.glow_color = common.glow_color,
 			}, GlyphParams{
 				.atlas_bounds = glyph.atlas_bounds,
 				.size = params.size,
@@ -218,7 +220,9 @@ auto Renderer::Queue::to_primitive_list() const -> vector<Primitive>
 			.position = common.position,
 			.color = common.color,
 			.outline_color = common.outline_color,
+			.glow_color = common.glow_color,
 			.outline_width = common.outline_width,
+			.glow_width = common.glow_width,
 			.rect_params = Primitive::RectParams{.size = rect.size},
 		});
 	}
@@ -229,7 +233,9 @@ auto Renderer::Queue::to_primitive_list() const -> vector<Primitive>
 			.position = common.position,
 			.color = common.color,
 			.outline_color = common.outline_color,
+			.glow_color = common.glow_color,
 			.outline_width = common.outline_width,
+			.glow_width = common.glow_width,
 			.circle_params = Primitive::CircleParams{.radius = circle.radius},
 		});
 	}
@@ -240,7 +246,9 @@ auto Renderer::Queue::to_primitive_list() const -> vector<Primitive>
 			.position = common.position,
 			.color = common.color,
 			.outline_color = common.outline_color,
+			.glow_color = common.glow_color,
 			.outline_width = common.outline_width,
+			.glow_width = common.glow_width,
 			.glyph_params = Primitive::GlyphParams{
 				.atlas_bounds = glyph.atlas_bounds,
 				.size = glyph.size,

@@ -207,28 +207,32 @@ static void render_select(gfx::Renderer::Queue& queue, GameState& state)
 
 	queue.circle({
 		.position = {100.0f, 200.0f},
-		.color = {},
+		.color = {0.0f, 0.0f, 0.0f, 0.0f},
 		.depth = 10,
-		.outline_width = 2.0f,
+		.outline_width = 4.0f,
 		.outline_color = {1.0f, 1.0f, 1.0f, 1.0f},
+		.glow_width = 24.0f,
+		.glow_color = {1.0f, 1.0f, 0.0f, 1.0f},
 	}, {
 		.radius = 20.0f,
 	});
 	queue.rect({
 		.position = {180.0f, 200.0f},
-		.color = {1.0f, 0.2f, 0.2f, 1.0f},
+		.color = {0.3f, 0.1f, 0.1f, 0.5f},
 		.depth = 10,
 		.outline_width = 5.0f,
-		.outline_color = {0.2f, 1.0f, 0.2f, 0.3f},
+		.outline_color = {0.7f, 0.3f, 0.3f, 1.0f},
+		.glow_width = 40.0f,
+		.glow_color = {0.0f, 0.0f, 1.0f, 0.8f},
 	}, {
-		.size = {40.0f, 20.0f},
+		.size = {60.0f, 30.0f},
 	});
 	queue.text(context.some_text, {
 		.position = {80.0f, 260.0f},
-		.color = {0.2f, 0.2f, 1.0f, 0.5f},
+		.color = {0.0f, 0.0f, 0.0f, 1.0f},
 		.depth = 10,
-		.outline_width = 0.8f,
-		.outline_color = {1.0f, 1.0f, 1.0f, 1.0f},
+		.glow_width = 8.0f,
+		.glow_color = {0.9f, 0.9f, 1.0f, 1.0f},
 	}, {
 		.size = 36.0f,
 	});

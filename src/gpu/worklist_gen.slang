@@ -113,8 +113,9 @@ void computeMain(
 		aabb = glyphAabb(primitive.position, reinterpret<Primitive::GlyphParams>(params));
 		break;
 	}
-	aabb.top_left -= primitive.outline_width / 2.0;
-	aabb.bottom_right += primitive.outline_width / 2.0;
+	let edgeExtend = max(primitive.outline_width / 2.0, primitive.glow_width);
+	aabb.top_left -= edgeExtend;
+	aabb.bottom_right += edgeExtend;
 	let tileAabb = AABB<int>(
 		max(int2(aabb.top_left) / TILE_SIZE, 0),
 		min(int2(aabb.bottom_right) / TILE_SIZE + 1, TileBound)

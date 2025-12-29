@@ -33,8 +33,14 @@ public:
 		                 // another overlapping shape, the order is unspecified and might flicker.
 
 		// The optional outline is drawn expanding in both directions from the shape's edge.
+		// Value is equal to total width of the outline.
 		float outline_width = 0.0f;
 		float4 outline_color;
+
+		// The optional glow extends from the edge of the fill silhouette outwards and inwards.
+		// Value is equal to the width of each side.
+		float glow_width = 0.0f;
+		float4 glow_color;
 	};
 
 	struct RectParams {

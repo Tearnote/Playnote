@@ -15,7 +15,6 @@ import lib;
 #include "shared/config.slang.h"
 
 #define WORKLIST_DEBUG 0
-#define ATLAS_DEBUG 0
 
 RWByteAddressBuffer b_primitives;
 StructuredBuffer<WorklistItem> b_worklists;
@@ -43,7 +42,7 @@ groupshared var worklist: WorklistItem[WORKLIST_MAX_SIZE];
 func msdfMedian(r: float, g: float, b: float) -> float
 { return max(min(r, g), min(max(r, g), b)); }
 
-func sampleGlyphDistance(p: float2, params: Primitive::GlyphParams) -> float
+func sampleGlyphDistance(p: float2, params: Primitive::GlyphParams) -> float2
 {
 	let minRect = params.atlas_bounds.top_left;
 	let maxRect = params.atlas_bounds.bottom_right;
@@ -59,27 +58,31 @@ func sampleGlyphDistance(p: float2, params: Primitive::GlyphParams) -> float
 	else
 		s_dynamicAtlas.GetDimensions(w, h);
 	let uv = clampedTexel / float2(w, h);
-	var s: float3;
+	var s: float4;
 	if (params.page == 0)
-		s = s_staticAtlas.SampleLevel(uv, 0).rgb;
+		s = s_staticAtlas.SampleLevel(uv, 0);
 	else
-		s = s_dynamicAtlas.SampleLevel(uv, 0).rgb;
+		s = s_dynamicAtlas.SampleLevel(uv, 0);
 	let sd = msdfMedian(s.r, s.g, s.b);
-	let dist = (0.5 - sd) * AtlasDistanceRange;
+	let sds = float2(sd, s.a);
+	let dists = (0.5 - sds) * AtlasDistanceRange;
 	let distOutside = length(texel - clampedTexel);
-	return (dist + distOutside) * params.size;
+	return (dists + distOutside) * params.size;
 }
 
-func distanceToPrimitive(primitive: Primitive, params: int[8], at: float2) -> float
+func distanceToPrimitive(primitive: Primitive, params: int[8], at: float2) -> float2
 {
 	let center = at - primitive.position;
+	var dist: float;
 	switch (primitive.type) {
 	case Primitive::Type::Circle:
 		let circleParams = reinterpret<Primitive::CircleParams>(params);
-		return sdf::circle(center, circleParams.radius);
+		dist = sdf::circle(center, circleParams.radius);
+		return float2(dist, dist);
 	case Primitive::Type::Rect:
 		let rectParams = reinterpret<Primitive::RectParams>(params);
-		return sdf::rect(center, rectParams.size);
+		dist = sdf::rect(center, rectParams.size);
+		return float2(dist, dist);
 	case Primitive::Type::Glyph:
 		let glyphParams = reinterpret<Primitive::GlyphParams>(params);
 		return sampleGlyphDistance(center, glyphParams);
@@ -113,15 +116,15 @@ void computeMain(int2 threadId: SV_DispatchThreadID, uint3 groupThreadId: SV_Gro
 			let primitive = readPrimitive(b_primitives, item.primitive_idx);
 			let params = readPrimitiveParams(b_primitives, item.primitive_idx);
 			let distance = distanceToPrimitive(primitive, params, selfPos);
-			let outlineCoverage = sdf::aa(distance - primitive.outline_width) * sdf::aa(-(distance + primitive.outline_width));
-			let fillCoverage = max(sdf::aa(distance) - outlineCoverage, 0.0);
-			let finalColor = lerp(float4(0.0f, 0.0f, 0.0f, 0.0f), primitive.color, fillCoverage)
-				+ lerp(float4(0.0f, 0.0f, 0.0f, 0.0f), primitive.outline_color, outlineCoverage);
-			color = blend(color, finalColor
-#if ATLAS_DEBUG
-			* (primitive.type == Primitive::Type::Glyph && reinterpret<Primitive::GlyphParams>(params).page == 1? float4(1.0, 0.5, 0.5, 1.0) : float4(1.0, 1.0, 1.0, 1.0))
-#endif
-			);
+
+			let outlineCoverage = sdf::aa(distance.x - primitive.outline_width / 2.0) * sdf::aa(-(distance.x + primitive.outline_width / 2.0));
+			let fillCoverage = sdf::aa(distance.x);
+			var glowPower = saturate(1.0 - abs(distance.y) / primitive.glow_width);
+			glowPower = glowPower * glowPower * glowPower;
+
+			color = blend(color, primitive.glow_color * glowPower);
+			color = blend(color, primitive.color * fillCoverage);
+			color = blend(color, primitive.outline_color * outlineCoverage);
 		}
 	} else {
 		var results: float2[3] = {};
@@ -131,17 +134,19 @@ void computeMain(int2 threadId: SV_DispatchThreadID, uint3 groupThreadId: SV_Gro
 				let primitive = readPrimitive(b_primitives, item.primitive_idx);
 				let params = readPrimitiveParams(b_primitives, item.primitive_idx);
 				let distance = distanceToPrimitive(primitive, params, selfPos + (SubpixelLayoutRGB[j] - float2(0.5, 0.5)));
-				let outlineCoverage = sdf::aa(distance - primitive.outline_width) * sdf::aa(-(distance + primitive.outline_width));
-				let fillCoverage = max(sdf::aa(distance) - outlineCoverage, 0.0);
+
+				let outlineCoverage = sdf::aa(distance.x - primitive.outline_width / 2.0) * sdf::aa(-(distance.x + primitive.outline_width / 2.0));
+				let fillCoverage = sdf::aa(distance.x);
+				var glowPower = saturate(1.0 - abs(distance.y) / primitive.glow_width);
+				glowPower = glowPower * glowPower * glowPower;
+
 				let fillColorComponent = float2(primitive.color[j], primitive.color.a);
 				let outlineColorComponent = float2(primitive.outline_color[j], primitive.outline_color.a);
-				let finalColorComponent = lerp(float2(0.0f, 0.0f), fillColorComponent, fillCoverage)
-					+ lerp(float2(0.0f, 0.0f), outlineColorComponent, outlineCoverage);
-				results[j] = blend(results[j], finalColorComponent
-#if ATLAS_DEBUG
-				* (j == 0 && primitive.type == Primitive::Type::Glyph && reinterpret<Primitive::GlyphParams>(params).page == 1? float2(1.0, 1.0) : float2(0.5, 1.0))
-#endif
-				);
+				let glowColorComponent = float2(primitive.glow_color[j], primitive.glow_color.a);
+
+				results[j] = blend(results[j], glowColorComponent * glowPower);
+				results[j] = blend(results[j], fillColorComponent * fillCoverage);
+				results[j] = blend(results[j], outlineColorComponent * outlineCoverage);
 			}
 		}
 		color = blend(color, float4(results[0].r, results[1].r, results[2].r, (results[0].g + results[1].g + results[2].g) / 3.0));
