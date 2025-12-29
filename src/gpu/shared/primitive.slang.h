@@ -36,8 +36,11 @@ struct Primitive {
 	int group_id;
 	float2 position;
 	float4 color;
+	float4 outline_color;
+	float outline_width;
+	int _pad0[3];
 #ifndef __cplusplus
-	int[8] params; // Space containing one of the union members below, as per the type
+	int params[8]; // Space containing one of the union members below, as per the type
 #else
 	union {
 		RectParams rect_params;

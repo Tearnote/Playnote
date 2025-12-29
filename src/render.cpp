@@ -8,6 +8,7 @@ except according to those terms.
 
 #include "render.hpp"
 
+#include "gfx/text.hpp"
 #include "preamble.hpp"
 #include "utils/broadcaster.hpp"
 #include "utils/task_pool.hpp"
@@ -51,6 +52,7 @@ struct SelectContext {
 	optional<future<vector<bms::Library::ChartEntry>>> library_reload_result;
 	optional<future<shared_ptr<bms::Chart const>>> chart_load_result;
 	gfx::TransformRef mouse;
+	gfx::Text some_text;
 };
 
 struct GameplayContext {
@@ -202,6 +204,34 @@ static void render_select(gfx::Renderer::Queue& queue, GameState& state)
 	}, {
 		.radius = 8.0f,
 	});
+
+	queue.circle({
+		.position = {100.0f, 200.0f},
+		.color = {},
+		.depth = 10,
+		.outline_width = 2.0f,
+		.outline_color = {1.0f, 1.0f, 1.0f, 1.0f},
+	}, {
+		.radius = 20.0f,
+	});
+	queue.rect({
+		.position = {180.0f, 200.0f},
+		.color = {1.0f, 0.2f, 0.2f, 1.0f},
+		.depth = 10,
+		.outline_width = 5.0f,
+		.outline_color = {0.2f, 1.0f, 0.2f, 0.3f},
+	}, {
+		.size = {40.0f, 20.0f},
+	});
+	queue.text(context.some_text, {
+		.position = {80.0f, 260.0f},
+		.color = {0.2f, 0.2f, 1.0f, 0.5f},
+		.depth = 10,
+		.outline_width = 0.8f,
+		.outline_color = {1.0f, 1.0f, 1.0f, 1.0f},
+	}, {
+		.size = 36.0f,
+	});
 }
 
 static void render_gameplay(gfx::Renderer::Queue& queue, GameState& state)
@@ -302,6 +332,7 @@ static void run_render(Broadcaster& broadcaster, dev::Window& window, Logger::Ca
 			}
 			state.context.emplace<SelectContext>();
 			state.select_context().mouse = gfx::globals::create_transform();
+			state.select_context().some_text = renderer.prepare_text(gfx::Renderer::TextStyle::SansRegular, "Hello World! こんにちは、世界！ 안녕하세요, 세상!");
 			state.select_context().library_reload_result = pollable_fg(
 				[](shared_ptr<bms::Library> library) -> task<vector<bms::Library::ChartEntry>> {
 					co_return co_await library->list_charts();

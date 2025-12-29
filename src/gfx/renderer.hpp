@@ -28,9 +28,13 @@ public:
 	// Properties shared by all shapes.
 	struct Drawable {
 		float2 position; // Center of the shape
-		float4 color;    // [0.0-1.0] RGBA, in sRGB
+		float4 color;    // Shape fill color. [0.0-1.0] RGBA, in sRGB
 		int depth;       // 0 or higher; smaller depth value = in front. If depth is equal to
 		                 // another overlapping shape, the order is unspecified and might flicker.
+
+		// The optional outline is drawn expanding in both directions from the shape's edge.
+		float outline_width = 0.0f;
+		float4 outline_color;
 	};
 
 	struct RectParams {

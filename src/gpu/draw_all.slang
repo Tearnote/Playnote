@@ -70,19 +70,19 @@ func sampleGlyphDistance(p: float2, params: Primitive::GlyphParams) -> float
 	return (dist + distOutside) * params.size;
 }
 
-func primitiveCoverage(primitive: Primitive, params: int[8], at: float2) -> float
+func distanceToPrimitive(primitive: Primitive, params: int[8], at: float2) -> float
 {
 	let center = at - primitive.position;
 	switch (primitive.type) {
 	case Primitive::Type::Circle:
 		let circleParams = reinterpret<Primitive::CircleParams>(params);
-		return sdf::aa(sdf::circle(center, circleParams.radius));
+		return sdf::circle(center, circleParams.radius);
 	case Primitive::Type::Rect:
 		let rectParams = reinterpret<Primitive::RectParams>(params);
-		return sdf::aa(sdf::rect(center, rectParams.size));
+		return sdf::rect(center, rectParams.size);
 	case Primitive::Type::Glyph:
 		let glyphParams = reinterpret<Primitive::GlyphParams>(params);
-		return sdf::aa(sampleGlyphDistance(center, glyphParams));
+		return sampleGlyphDistance(center, glyphParams);
 	default: return 0.0;
 	}
 }
@@ -112,12 +112,16 @@ void computeMain(int2 threadId: SV_DispatchThreadID, uint3 groupThreadId: SV_Gro
 			let item = worklist[i];
 			let primitive = readPrimitive(b_primitives, item.primitive_idx);
 			let params = readPrimitiveParams(b_primitives, item.primitive_idx);
-			let coverage = primitiveCoverage(primitive, params, selfPos);
-			color = blend(color, float4(primitive.color.rgb
+			let distance = distanceToPrimitive(primitive, params, selfPos);
+			let outlineCoverage = sdf::aa(distance - primitive.outline_width) * sdf::aa(-(distance + primitive.outline_width));
+			let fillCoverage = max(sdf::aa(distance) - outlineCoverage, 0.0);
+			let finalColor = lerp(float4(0.0f, 0.0f, 0.0f, 0.0f), primitive.color, fillCoverage)
+				+ lerp(float4(0.0f, 0.0f, 0.0f, 0.0f), primitive.outline_color, outlineCoverage);
+			color = blend(color, finalColor
 #if ATLAS_DEBUG
-			* (primitive.type == Primitive::Type::Glyph && reinterpret<Primitive::GlyphParams>(params).page == 1? float3(1.0, 0.5, 0.5) : float3(1.0, 1.0, 1.0))
+			* (primitive.type == Primitive::Type::Glyph && reinterpret<Primitive::GlyphParams>(params).page == 1? float4(1.0, 0.5, 0.5, 1.0) : float4(1.0, 1.0, 1.0, 1.0))
 #endif
-			, primitive.color.a * coverage));
+			);
 		}
 	} else {
 		var results: float2[3] = {};
@@ -126,13 +130,18 @@ void computeMain(int2 threadId: SV_DispatchThreadID, uint3 groupThreadId: SV_Gro
 				let item = worklist[i];
 				let primitive = readPrimitive(b_primitives, item.primitive_idx);
 				let params = readPrimitiveParams(b_primitives, item.primitive_idx);
-				let coverage = primitiveCoverage(primitive, params, selfPos + (SubpixelLayoutRGB[j] - float2(0.5, 0.5)));
-				let colorComponent = primitive.color[j];
-				results[j] = blend(results[j], float2(colorComponent
+				let distance = distanceToPrimitive(primitive, params, selfPos + (SubpixelLayoutRGB[j] - float2(0.5, 0.5)));
+				let outlineCoverage = sdf::aa(distance - primitive.outline_width) * sdf::aa(-(distance + primitive.outline_width));
+				let fillCoverage = max(sdf::aa(distance) - outlineCoverage, 0.0);
+				let fillColorComponent = float2(primitive.color[j], primitive.color.a);
+				let outlineColorComponent = float2(primitive.outline_color[j], primitive.outline_color.a);
+				let finalColorComponent = lerp(float2(0.0f, 0.0f), fillColorComponent, fillCoverage)
+					+ lerp(float2(0.0f, 0.0f), outlineColorComponent, outlineCoverage);
+				results[j] = blend(results[j], finalColorComponent
 #if ATLAS_DEBUG
-				* (j == 0 && primitive.type == Primitive::Type::Glyph && reinterpret<Primitive::GlyphParams>(params).page == 1? 1.0 : 0.5)
+				* (j == 0 && primitive.type == Primitive::Type::Glyph && reinterpret<Primitive::GlyphParams>(params).page == 1? float2(1.0, 1.0) : float2(0.5, 1.0))
 #endif
-				, primitive.color.a * coverage));
+				);
 			}
 		}
 		color = blend(color, float4(results[0].r, results[1].r, results[2].r, (results[0].g + results[1].g + results[2].g) / 3.0));
