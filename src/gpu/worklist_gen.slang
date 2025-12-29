@@ -80,7 +80,11 @@ void computeMain(
 	// Initial processing
 	let transform = unpackTransform(Transform);
 	primitive.position = mul(transform, float3(primitive.position, 1.0)).xy;
+	primitive.outline_width = mul(transform, float3(primitive.outline_width, 0.0, 0.0)).x;
+	primitive.glow_width = mul(transform, float3(primitive.glow_width, 0.0, 0.0)).x;
 	primitive.color.rgb = srgbDecode(primitive.color.rgb);
+	primitive.outline_color.rgb = srgbDecode(primitive.outline_color.rgb);
+	primitive.glow_color.rgb = srgbDecode(primitive.glow_color.rgb);
 
 	switch (primitive.type) {
 	case Primitive::Type::Rect:

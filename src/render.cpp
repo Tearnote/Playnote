@@ -211,7 +211,7 @@ static void render_select(gfx::Renderer::Queue& queue, GameState& state)
 		.depth = 10,
 		.outline_width = 4.0f,
 		.outline_color = {1.0f, 1.0f, 1.0f, 1.0f},
-		.glow_width = 24.0f,
+		.glow_width = 16.0f,
 		.glow_color = {1.0f, 1.0f, 0.0f, 1.0f},
 	}, {
 		.radius = 20.0f,
@@ -222,7 +222,7 @@ static void render_select(gfx::Renderer::Queue& queue, GameState& state)
 		.depth = 10,
 		.outline_width = 5.0f,
 		.outline_color = {0.7f, 0.3f, 0.3f, 1.0f},
-		.glow_width = 40.0f,
+		.glow_width = 32.0f,
 		.glow_color = {0.0f, 0.0f, 1.0f, 0.8f},
 	}, {
 		.size = {60.0f, 30.0f},
