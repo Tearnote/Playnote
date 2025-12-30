@@ -11,6 +11,7 @@ or distributed except according to those terms.
 
 #include "preamble.hpp"
 #include "lib/sqlite.hpp"
+#include "lib/zstd.hpp"
 #include "utils/logger.hpp"
 
 namespace playnote {
@@ -25,8 +26,8 @@ Assets::Assets(fs::path const& db_path)
 
 auto Assets::get(id asset_id) -> vector<byte>
 {
-	for (auto [data]: lib::sqlite::query(select_asset, +asset_id))
-		return {data.begin(), data.end()};
+	for (auto [compressed, data]: lib::sqlite::query(select_asset, +asset_id))
+		return compressed? lib::zstd::decompress(data) : vector<byte>{data.begin(), data.end()};
 	throw runtime_error_fmt("Asset ID {} not found", +asset_id);
 }
 

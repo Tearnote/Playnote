@@ -23,10 +23,10 @@ public:
 private:
 	struct SelectAsset {
 		static constexpr auto Query = R"sql(
-			SELECT data FROM assets WHERE id = ?1
+			SELECT compressed, data FROM assets WHERE id = ?1
 		)sql";
 		using Params = tuple<uint>;
-		using Row = tuple<span<byte const>>;
+		using Row = tuple<int, span<byte const>>;
 	};
 
 	lib::sqlite::DB db;

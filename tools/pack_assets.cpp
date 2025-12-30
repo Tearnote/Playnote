@@ -10,20 +10,29 @@ or distributed except according to those terms.
 #include "preamble.hpp"
 #include "io/file.hpp"
 #include "lib/sqlite.hpp"
+#include "lib/zstd.hpp"
 
 namespace playnote {
 
+static constexpr auto AssetsSchema = R"sql(
+	CREATE TABLE assets(
+		id INTEGER PRIMARY KEY,
+		compressed INTEGER NOT NULL,
+		data BLOB NOT NULL
+	)
+)sql";
+
 struct InsertAsset {
 	static constexpr auto Query = R"sql(
-		INSERT INTO assets(id, data) VALUES(?1, ?2)
+		INSERT INTO assets(id, compressed, data) VALUES(?1, ?2, ?3)
 	)sql";
-	using Params = tuple<uint, span<byte const>>;
+	using Params = tuple<uint, int, span<byte const>>;
 };
 
 auto pack_assets(span<char const* const> args)
 try {
 	if (args.size() < 3) {
-		print(stderr, "Usage: {} <output database> <input assets>...\n", args[0]);
+		print(stderr, "Usage: {} <output database> <input assets>...\nInput asset: <path>[:z]", args[0]);
 		return EXIT_FAILURE;
 	}
 	auto* out_filename = args[1];
@@ -31,20 +40,22 @@ try {
 
 	if (fs::exists(out_filename)) fs::remove(out_filename);
 	auto db = lib::sqlite::open(out_filename);
-	lib::sqlite::execute(db, R"sql(
-		CREATE TABLE IF NOT EXISTS assets(
-			id INTEGER PRIMARY KEY,
-			data BLOB NOT NULL
-		)
-	)sql");
+	lib::sqlite::execute(db, AssetsSchema);
 
 	auto stmt = lib::sqlite::prepare<InsertAsset>(db);
-	for (auto path_sv: in_filenames) {
+	for (auto path_cstr: in_filenames) {
+		auto path_sv = string_view{path_cstr};
+		auto compress = false;
+		if (path_sv.ends_with(":z")) {
+			compress = true;
+			path_sv.remove_suffix(2);
+		}
 		auto path = fs::path{path_sv};
 		auto filename = path.filename().string();
 		auto filename_id = id{filename};
 		auto file = io::read_file(path);
-		lib::sqlite::execute(stmt, +filename_id, file.contents);
+		lib::sqlite::execute(stmt, +filename_id, compress,
+			compress? lib::zstd::compress(file.contents) : file.contents);
 	}
 	return EXIT_SUCCESS;
 }
