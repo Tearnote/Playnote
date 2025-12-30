@@ -55,7 +55,7 @@ try {
 		auto filename_id = id{filename};
 		auto file = io::read_file(path);
 		lib::sqlite::execute(stmt, +filename_id, compress,
-			compress? lib::zstd::compress(file.contents) : file.contents);
+			compress? lib::zstd::compress(file.contents, lib::zstd::CompressionLevel::Ultra) : file.contents);
 	}
 	return EXIT_SUCCESS;
 }

@@ -22,11 +22,11 @@ auto ret_check(size_t ret) -> size_t
 	return ret;
 }
 
-auto compress(span<byte const> data) -> vector<byte>
+auto compress(span<byte const> data, CompressionLevel level) -> vector<byte>
 {
 	auto result = vector<byte>{};
 	result.resize(ZSTD_compressBound(data.size()));
-	auto const size = ret_check(ZSTD_compress(result.data(), result.size(), data.data(), data.size(), 9));
+	auto const size = ret_check(ZSTD_compress(result.data(), result.size(), data.data(), data.size(), +level));
 	result.resize(size);
 	return result;
 }

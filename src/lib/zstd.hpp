@@ -12,8 +12,13 @@ or distributed except according to those terms.
 
 namespace playnote::lib::zstd {
 
+enum class CompressionLevel {
+	Normal = 9,
+	Ultra = 22,
+};
+
 // Compress arbitrary data.
-auto compress(span<byte const> data) -> vector<byte>;
+auto compress(span<byte const> data, CompressionLevel = CompressionLevel::Normal) -> vector<byte>;
 
 // Decompress arbitrary data.
 auto decompress(span<byte const> data) -> vector<byte>;
