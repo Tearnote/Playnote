@@ -20,6 +20,8 @@ or distributed except according to those terms.
 #include <Windows.h>
 #include <timeapi.h>
 #include <shellapi.h>
+#include <dwrite.h>
+#include <wrl/client.h>
 #elifdef TARGET_LINUX
 #include <fontconfig/fontconfig.h>
 #include <linux/ioprio.h>
@@ -34,6 +36,14 @@ or distributed except according to those terms.
 #include "utils/logger.hpp"
 
 namespace playnote::lib::os {
+
+#ifdef TARGET_WINDOWS
+template<typename T>
+using ComPtr = unique_resource<T*, decltype([](auto* p) { if (p) p->Release(); })>;
+
+static void ret_check(HRESULT hr, string_view message = "DirectWrite error")
+{ if (FAILED(hr)) throw runtime_error_fmt("{}: {:#x}", message, hr); }
+#endif
 
 void check_mimalloc()
 {
@@ -103,8 +113,25 @@ void block_with_message([[maybe_unused]] string_view message)
 auto get_subpixel_layout() -> SubpixelLayout
 {
 #ifdef TARGET_WINDOWS
-	//TODO
-	return SubpixelLayout::Unknown;
+	auto* factory_raw = static_cast<IDWriteFactory*>(nullptr);
+	ret_check(DWriteCreateFactory(
+		DWRITE_FACTORY_TYPE_SHARED,
+		__uuidof(IDWriteFactory),
+		reinterpret_cast<IUnknown**>(&factory_raw)
+	));
+	auto factory = ComPtr<IDWriteFactory>{factory_raw};
+
+	auto* params_raw = static_cast<IDWriteRenderingParams*>(nullptr);
+	ret_check(factory->CreateRenderingParams(&params_raw));
+	auto params = ComPtr<IDWriteRenderingParams>{params_raw};
+
+	switch (params->GetPixelGeometry()) {
+	case DWRITE_PIXEL_GEOMETRY_FLAT: return SubpixelLayout::None;
+	case DWRITE_PIXEL_GEOMETRY_RGB:  return SubpixelLayout::HorizontalRGB;
+	case DWRITE_PIXEL_GEOMETRY_BGR:  return SubpixelLayout::HorizontalBGR;
+	default:                         return SubpixelLayout::Unknown;
+	}
+
 #elifdef TARGET_LINUX
 	using Pattern = unique_resource<FcPattern*, decltype([](auto* p) { FcPatternDestroy(p); })>;
 

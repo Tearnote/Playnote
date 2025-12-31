@@ -116,6 +116,7 @@ if(NOT WIN32)
 else()
 	target_link_libraries(Playnote PRIVATE
 		PRIVATE mimalloc
+		PRIVATE dwrite
 		PRIVATE ksuser
 		PRIVATE winmm
 		PRIVATE avrt
