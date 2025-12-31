@@ -15,7 +15,7 @@ find_package(PkgConfig REQUIRED)
 # Local dependencies
 
 find_package(Python3 COMPONENTS Interpreter REQUIRED) # For build-time scripts
-if(UNIX)
+if(NOT WIN32)
 	pkg_search_module(PipeWire REQUIRED IMPORTED_TARGET libpipewire-0.3) # Low latency Linux audio
 endif()
 
@@ -50,6 +50,9 @@ find_package(readerwriterqueue CONFIG REQUIRED) # Lock-free SPSC queue
 find_package(concurrentqueue CONFIG REQUIRED) # Lock-free MPMC queue
 find_path(PLF_COLONY_INCLUDE_DIRS "plf_colony.h") # Memory-stable unordered container
 find_package(mimalloc CONFIG REQUIRED) # High performance allocator
+if(NOT WIN32)
+	find_package(Fontconfig REQUIRED) # Subpixel layout detection
+endif()
 
 # Fix ebur128 on Windows
 if(WIN32)
@@ -71,7 +74,7 @@ FetchContent_Declare(vuk # Vulkan rendergraph
 	EXCLUDE_FROM_ALL
 )
 FetchContent_MakeAvailable(vuk)
-if(UNIX)
+if(NOT WIN32)
 	target_compile_options(vuk PRIVATE -g0) # Work around bug in Embed module
 endif()
 target_compile_definitions(vuk PUBLIC VUK_CUSTOM_VULKAN_HEADER=<volk.h>)

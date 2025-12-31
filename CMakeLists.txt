@@ -59,7 +59,7 @@ add_executable(Playnote WIN32
 	src/input.cpp
 	src/main.cpp
 )
-if(UNIX)
+if(NOT WIN32)
 	target_sources(Playnote PRIVATE
 		src/lib/pipewire.cpp)
 else()
@@ -107,14 +107,15 @@ target_link_libraries(Playnote
 	PRIVATE vuk
 	${FFMPEG_LIBRARIES}
 )
-if(UNIX)
+if(NOT WIN32)
 	target_link_libraries(Playnote
+		PRIVATE Fontconfig::Fontconfig
 		PRIVATE PkgConfig::PipeWire
 		PRIVATE mimalloc-static
 	)
 else()
 	target_link_libraries(Playnote PRIVATE
-	    PRIVATE mimalloc
+		PRIVATE mimalloc
 		PRIVATE ksuser
 		PRIVATE winmm
 		PRIVATE avrt

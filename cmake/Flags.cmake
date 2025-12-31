@@ -16,7 +16,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Global build settings
 
 set(BUILD_SHARED_LIBS OFF)
-if(UNIX)
+if(NOT WIN32)
 	add_compile_options("-Wall;-Wextra;-Wno-unqualified-std-cast-call;-Wno-missing-field-initializers")
 	add_compile_options("-march=x86-64-v3;-ffast-math")
 	add_compile_options("-fno-strict-aliasing;$<$<COMPILE_LANGUAGE:CXX>:-fexceptions;-frtti>")
