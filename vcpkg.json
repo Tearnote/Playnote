@@ -96,10 +96,6 @@
 			"features": ["error-strings"]
 		},
 		{
-			"name": "libpng",
-			"version>=": "1.6.50"
-		},
-		{
 			"name": "harfbuzz",
 			"version>=": "11.3.3"
 		},
