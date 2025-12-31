@@ -268,13 +268,19 @@ Renderer::Renderer(dev::Window& window, Logger::Category cat):
 	cat{cat},
 	gpu{window, cat},
 	imgui{gpu},
-	text_shaper{cat},
-	subpixel_layout{lib::os::get_subpixel_layout()}
+	text_shaper{cat}
 {
+	auto subpixel_layout_override = globals::config->get_entry<string>("graphics", "subpixel_layout_override");
+	if (!subpixel_layout_override.empty()) {
+		subpixel_layout = *enum_cast<lib::os::SubpixelLayout>(subpixel_layout_override);
+	} else {
+		subpixel_layout = lib::os::get_subpixel_layout();
+		INFO_AS(cat, "Detected subpixel layout: {}", enum_name(subpixel_layout));
+	}
 	if (subpixel_layout == lib::os::SubpixelLayout::Unknown)
 		subpixel_layout = lib::os::SubpixelLayout::None;
+
 	auto& context = gpu.get_global_allocator().get_context();
-	INFO_AS(cat, "Detected subpixel layout: {}", enum_name(subpixel_layout));
 
 	text_shaper.load_font("Mplus2"_id, globals::assets->get("Mplus2-Regular.ttf"_id), 500);
 	text_shaper.load_font("Pretendard"_id, globals::assets->get("Pretendard-Regular.ttf"_id), 500);

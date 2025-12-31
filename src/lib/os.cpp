@@ -21,7 +21,6 @@ or distributed except according to those terms.
 #include <timeapi.h>
 #include <shellapi.h>
 #include <dwrite.h>
-#include <wrl/client.h>
 #elifdef TARGET_LINUX
 #include <fontconfig/fontconfig.h>
 #include <linux/ioprio.h>
