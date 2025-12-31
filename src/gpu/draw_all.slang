@@ -21,7 +21,7 @@ StructuredBuffer<WorklistItem> b_worklists;
 StructuredBuffer<int> b_worklistSizes;
 Sampler2D<float4> s_staticAtlas;
 Sampler2D<float4> s_dynamicAtlas;
-RWTexture2D<float4> i_target;
+WTexture2D<float4> i_target;
 
 [SpecializationConstant] let ViewportWidth = 0u;
 [SpecializationConstant] let ViewportHeight = 0u;
@@ -107,8 +107,7 @@ void computeMain(int2 threadId: SV_DispatchThreadID, uint3 groupThreadId: SV_Gro
 
 	if (any(threadId >= ViewportSize)) return;
 	let selfPos = float2(threadId) + 0.5;
-	var color = i_target.Load(threadId);
-	color = float4(srgbDecode(color.rgb), color.a);
+	var color = float4(0.0, 0.0, 0.0, 0.0);
 
 	if (SubpixelRendering == SubpixelRenderingMode::None) {
 		for (int i = 0; i < worklistSize; i += 1) {

@@ -114,7 +114,7 @@ auto draw_all(dev::GPU& gpu, lib::vuk::ManagedImage&& dest,
 	auto pass = lib::vuk::make_pass("draw_all",
 		[window_size = gpu.get_window().size(), static_atlas_iv] (
 			lib::vuk::CommandBuffer& cmd,
-			VUK_IA(lib::vuk::Access::eComputeRW) target,
+			VUK_IA(lib::vuk::Access::eComputeWrite) target,
 			VUK_BA(lib::vuk::Access::eComputeRead) primitives_buf,
 			VUK_BA(lib::vuk::Access::eComputeRead) worklists_buf,
 			VUK_BA(lib::vuk::Access::eComputeRead) worklist_sizes_buf,
