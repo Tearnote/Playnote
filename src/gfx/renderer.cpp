@@ -272,7 +272,11 @@ Renderer::Renderer(dev::Window& window, Logger::Category cat):
 {
 	auto subpixel_layout_override = globals::config->get_entry<string>("graphics", "subpixel_layout_override");
 	if (!subpixel_layout_override.empty()) {
-		subpixel_layout = *enum_cast<lib::os::SubpixelLayout>(subpixel_layout_override);
+		subpixel_layout = *enum_cast<lib::os::SubpixelLayout>(subpixel_layout_override).or_else(
+			[&] -> optional<lib::os::SubpixelLayout> {
+				throw runtime_error_fmt("Invalid subpixel layout: {}", subpixel_layout_override);
+			}
+		);
 	} else {
 		subpixel_layout = lib::os::get_subpixel_layout();
 		INFO_AS(cat, "Detected subpixel layout: {}", enum_name(subpixel_layout));

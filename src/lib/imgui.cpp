@@ -292,7 +292,7 @@ void plot(char const* label, initializer_list<PlotValues> values,
 		ssize_t idx;
 	};
 
-	auto const value_func = [&]() -> ImPlotGetter {
+	auto const value_func = [&] -> ImPlotGetter {
 		if (!stacked) {
 			return [](int idx, void* userdata) -> ImPlotPoint {
 				auto const& value_ref = *static_cast<ValueRef*>(userdata);

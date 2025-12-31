@@ -195,7 +195,7 @@ auto init(Logger::Category cat, bool exclusive_mode, function<void(span<Sample>)
 		.dwChannelMask = SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT,
 		.SubFormat = KSDATAFORMAT_SUBTYPE_PCM,
 	};
-	auto& format = [&]() -> WAVEFORMATEXTENSIBLE& {
+	auto& format = [&] -> WAVEFORMATEXTENSIBLE& {
 		switch (sample_format) {
 		case SampleFormat::Float32: return f32;
 		case SampleFormat::Int16: return i16;
@@ -287,7 +287,7 @@ auto init(Logger::Category cat, bool exclusive_mode, function<void(span<Sample>)
 		.processor = move(processor),
 	};
 	auto* ctx_addr = ctx.get();
-	ctx->buffer_thread = jthread{[=]() { buffer_thread(ctx_addr, buffer_event); }};
+	ctx->buffer_thread = jthread{[=] { buffer_thread(ctx_addr, buffer_event); }};
 
 	return ctx;
 }

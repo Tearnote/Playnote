@@ -48,8 +48,12 @@ try {
 	auto config_stub = globals::config.provide();
 	globals::config->load_from_file();
 	if (globals::config->get_entry<bool>("system", "attach_console")) lib::dbg::attach_console();
+	auto global_log_level = globals::config->get_entry<string>("logging", "global");
 	auto logger_stub = globals::logger.provide(LogfilePath,
-		*enum_cast<Logger::Level>(globals::config->get_entry<string>("logging", "global")));
+		*enum_cast<Logger::Level>(global_log_level).or_else([&] -> optional<Logger::Level> {
+			throw runtime_error_fmt("Invalid log level: {}", global_log_level);
+		}
+	));
 	INFO("{} {}.{}.{} starting up", AppTitle, AppVersion[0], AppVersion[1], AppVersion[2]);
 	lib::os::check_mimalloc();
 	return run();

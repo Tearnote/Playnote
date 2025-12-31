@@ -77,8 +77,12 @@ try {
 	broadcaster.subscribe<RegisterInputQueue>();
 	broadcaster.subscribe<UnregisterInputQueue>();
 	barriers.startup.arrive_and_wait();
-	auto cat = globals::logger->create_category("Input",
-		*enum_cast<Logger::Level>(globals::config->get_entry<string>("logging", "input")));
+	auto input_log_level = globals::config->get_entry<string>("logging", "input");
+	auto cat = globals::logger->create_category("Input", *enum_cast<Logger::Level>(input_log_level).or_else(
+		[&] -> optional<Logger::Level> {
+			throw runtime_error_fmt("Invalid log level: {}", input_log_level);
+		}
+	));
 	run_input(broadcaster, window, cat);
 	barriers.shutdown.arrive_and_wait();
 }

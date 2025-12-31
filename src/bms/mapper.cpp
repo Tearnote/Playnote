@@ -19,7 +19,7 @@ Mapper::Mapper()
 {
 	auto get_key = [](string_view conf) -> KeyInput::Code {
 		auto conf_entry = globals::config->get_entry<string>("controls", conf);
-		return *enum_cast<KeyInput::Code>(conf_entry).or_else([&]() -> optional<KeyInput::Code> {
+		return *enum_cast<KeyInput::Code>(conf_entry).or_else([&] -> optional<KeyInput::Code> {
 			throw runtime_error_fmt("Unknown keycode: {}", conf_entry);
 		});
 	};

@@ -642,7 +642,7 @@ auto Builder::build(unique_ptr<thread_pool>& pool, span<byte const> bms_raw, io:
 			result.key, result.scratch, result.ln))
 		{
 			for (Note const& note: notes_around(notes_keys, cursor)) {
-				auto& target = [&]() -> float& {
+				auto& target = [&] -> float& {
 					if (note.type_is<Note::LN>()) return ln;
 					return key;
 				}();
@@ -995,7 +995,7 @@ void Builder::handle_channel_bgm(ChannelCommand cmd, Chart&, State& state)
 void Builder::handle_channel_note(ChannelCommand cmd, Chart&, State& state)
 {
 	if (cmd.value == "00") return; // Rest note
-	auto const lane = [&]() {
+	auto const lane = [&] {
 		if (cmd.channel == "11") return Lane::Type::P1_Key1;
 		if (cmd.channel == "12") return Lane::Type::P1_Key2;
 		if (cmd.channel == "13") return Lane::Type::P1_Key3;
@@ -1033,7 +1033,7 @@ void Builder::handle_channel_note(ChannelCommand cmd, Chart&, State& state)
 void Builder::handle_channel_ln(ChannelCommand cmd, Chart&, State& state)
 {
 	if (cmd.value == "00") return; // Rest note
-	auto const lane = [&]() {
+	auto const lane = [&] {
 		if (cmd.channel == "51") return Lane::Type::P1_Key1;
 		if (cmd.channel == "52") return Lane::Type::P1_Key2;
 		if (cmd.channel == "53") return Lane::Type::P1_Key3;

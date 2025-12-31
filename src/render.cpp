@@ -315,16 +315,24 @@ static void run_render(Broadcaster& broadcaster, dev::Window& window, Logger::Ca
 	}));
 	DEBUG_AS(cat, "Task pools initialized");
 	auto assets_stub = globals::assets.provide(AssetDBPath);
+	auto audio_log_level = globals::config->get_entry<string>("logging", "audio");
 	auto audio_cat =  globals::logger->create_category("Audio",
-		*enum_cast<Logger::Level>(globals::config->get_entry<string>("logging", "audio")));
+		*enum_cast<Logger::Level>(audio_log_level).or_else([&] -> optional<Logger::Level> {
+			throw runtime_error_fmt("Invalid log level: {}", audio_log_level);
+		}
+	));
 	auto mixer_stub = globals::mixer.provide(audio_cat);
 	auto transform_pool_stub = gfx::globals::transform_pool.provide();
 	auto renderer = gfx::Renderer{window, cat};
 
 	// Init game state
 	auto state = GameState{ .window = window };
+	auto library_log_level = globals::config->get_entry<string>("logging", "library");
 	auto library_cat = globals::logger->create_category("Library",
-		*enum_cast<Logger::Level>(globals::config->get_entry<string>("logging", "library")));
+		*enum_cast<Logger::Level>(library_log_level).or_else([&] -> optional<Logger::Level> {
+			throw runtime_error_fmt("Invalid log level: {}", library_log_level);
+		}
+	));
 	state.library = make_shared<bms::Library>(library_cat, *globals::bg_pool, LibraryDBPath);
 	state.requested = State::Select;
 
@@ -436,8 +444,12 @@ try {
 	broadcaster.register_as_endpoint();
 	broadcaster.subscribe<FileDrop>();
 	barriers.startup.arrive_and_wait();
+	auto render_log_level = globals::config->get_entry<string>("logging", "render");
 	auto cat = globals::logger->create_category("Render",
-		*enum_cast<Logger::Level>(globals::config->get_entry<string>("logging", "render")));
+		*enum_cast<Logger::Level>(render_log_level).or_else([&] -> optional<Logger::Level> {
+			throw runtime_error_fmt("Invalid log level: {}", render_log_level);
+		}
+	));
 	run_render(broadcaster, window, cat);
 	barriers.shutdown.arrive_and_wait();
 }

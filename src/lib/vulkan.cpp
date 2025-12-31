@@ -28,7 +28,7 @@ static auto debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT severity_code,
 	ASSERT(data);
 	auto logger = static_cast<Logger::Category>(logger_ptr);
 
-	auto const type = [type_code]() {
+	auto const type = [type_code] {
 		if (type_code & VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT) return "[VulkanPerf]";
 		if (type_code & VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT) return "[VulkanSpec]";
 		if (type_code & VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT) return "[Vulkan]";
@@ -105,7 +105,7 @@ void detail::PhysicalDeviceDeleter::operator()(vkb::PhysicalDevice* pdev) noexce
 
 auto select_physical_device(Instance const& instance, Surface surface) -> PhysicalDevice
 {
-	auto const features = []() {
+	auto const features = [] {
 		auto features = VkPhysicalDeviceFeatures{};
 		if (globals::config->get_entry<bool>("graphics", "validation_enabled")) {
 			features.robustBufferAccess = VK_TRUE;

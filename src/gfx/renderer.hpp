@@ -143,7 +143,7 @@ template<callable<void(Renderer::Queue&)> Func>
 void Renderer::frame(Func&& func)
 {
 	auto queue = create_queue();
-	imgui.enqueue([&]() { func(queue); });
+	imgui.enqueue([&] { func(queue); });
 	draw_frame(move(queue));
 }
 

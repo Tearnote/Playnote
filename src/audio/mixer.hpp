@@ -66,8 +66,8 @@ template<implements<Generator> T>
 void Mixer::add_generator(T& generator) {
 	auto lock = lock_guard{generator_lock};
 	generators.emplace(&generator, GeneratorOps{
-		[&]() { generator.begin_buffer(); },
-		[&]() { return generator.next_sample(); },
+		[&] { generator.begin_buffer(); },
+		[&] { return generator.next_sample(); },
 	});
 	TRACE_AS(cat, "Added generator to the mixer");
 }
