@@ -15,3 +15,15 @@ public struct AABB<T:IArithmetic> {
 	public vector<T, 2> top_left;
 	public vector<T, 2> bottom_right;
 };
+
+// Rotate a point clockwise around the origin. Angle in radians.
+public func rotate(float2 p, float angle) -> float2
+{
+	let c = cos(angle);
+	let s = sin(angle);
+	return float2(p.x * c - p.y * s, p.x * s + p.y * c);
+}
+
+// Rotate a point clockwise around an arbitrary point. Angle in radians.
+public func rotateAround(float2 p, float2 origin, float angle) -> float2
+{ return rotate(p - origin, angle) + origin; }

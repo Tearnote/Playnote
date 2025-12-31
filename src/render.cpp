@@ -218,21 +218,23 @@ static void render_select(gfx::Renderer::Queue& queue, GameState& state)
 	});
 	queue.rect({
 		.position = {180.0f, 200.0f},
+		.rotation = -45.0f,
 		.color = {0.3f, 0.1f, 0.1f, 0.5f},
-		.depth = 10,
+		.depth = 9,
 		.outline_width = 5.0f,
 		.outline_color = {0.7f, 0.3f, 0.3f, 1.0f},
 		.glow_width = 32.0f,
 		.glow_color = {0.0f, 0.0f, 1.0f, 0.8f},
 	}, {
-		.size = {60.0f, 30.0f},
+		.size = {160.0f, 30.0f},
 	});
 	queue.text(context.some_text, {
 		.position = {80.0f, 260.0f},
+		.rotation = 5.0f,
 		.color = {0.0f, 0.0f, 0.0f, 1.0f},
-		.depth = 10,
+		.depth = 8,
 		.glow_width = 8.0f,
-		.glow_color = {0.9f, 0.9f, 1.0f, 1.0f},
+		.glow_color = {1.0f, 1.0f, 1.0f, 1.0f},
 	}, {
 		.size = 36.0f,
 	});
@@ -336,7 +338,7 @@ static void run_render(Broadcaster& broadcaster, dev::Window& window, Logger::Ca
 			}
 			state.context.emplace<SelectContext>();
 			state.select_context().mouse = gfx::globals::create_transform();
-			state.select_context().some_text = renderer.prepare_text(gfx::Renderer::TextStyle::SansRegular, "Hello World! こんにちは、世界！ 안녕하세요, 세상!");
+			state.select_context().some_text = renderer.prepare_text(gfx::Renderer::TextStyle::SansRegular, "Hello World!\nこんにちは、世界！\n안녕하세요, 세상!");
 			state.select_context().library_reload_result = pollable_fg(
 				[](shared_ptr<bms::Library> library) -> task<vector<bms::Library::ChartEntry>> {
 					co_return co_await library->list_charts();

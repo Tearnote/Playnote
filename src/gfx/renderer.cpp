@@ -178,11 +178,18 @@ auto Renderer::Queue::circle(Drawable common, CircleParams params) -> Queue&
 auto Renderer::Queue::text(Text const& text, Drawable common, TextParams params) -> Queue&
 {
 	for (auto [line_idx, line]: text.lines | views::enumerate) {
-		auto const line_offset = float2{0.0f, params.line_height * params.size * line_idx};
+		auto const rotation = -radians(common.rotation); // Counterclockwise
+		auto line_offset = float2{0.0f, params.line_height * params.size * line_idx};
+		line_offset = float2{-line_offset.y() * sin(rotation), line_offset.y() * cos(rotation)};
 		for (auto const& glyph: line.glyphs) {
 			if (!inside_group) group_depths.emplace_back(group_depths.size(), -1);
+			auto const rotated_offset = float2{
+				glyph.offset.x() * cos(rotation) - glyph.offset.y() * sin(rotation),
+				glyph.offset.x() * sin(rotation) + glyph.offset.y() * cos(rotation)
+			};
 			glyphs.emplace_back(Drawable{
-				.position = common.position + glyph.offset * params.size / TextShaper::PixelsPerEm + line_offset,
+				.position = common.position + rotated_offset * params.size / TextShaper::PixelsPerEm + line_offset,
+				.rotation = common.rotation,
 				.color = common.color,
 				.depth = common.depth,
 				.outline_width = common.outline_width,
@@ -221,6 +228,7 @@ auto Renderer::Queue::to_primitive_list() const -> vector<Primitive>
 			.color = common.color,
 			.outline_color = common.outline_color,
 			.glow_color = common.glow_color,
+			.rotation = common.rotation,
 			.outline_width = common.outline_width,
 			.glow_width = common.glow_width,
 			.rect_params = Primitive::RectParams{.size = rect.size},
@@ -234,6 +242,7 @@ auto Renderer::Queue::to_primitive_list() const -> vector<Primitive>
 			.color = common.color,
 			.outline_color = common.outline_color,
 			.glow_color = common.glow_color,
+			.rotation = common.rotation,
 			.outline_width = common.outline_width,
 			.glow_width = common.glow_width,
 			.circle_params = Primitive::CircleParams{.radius = circle.radius},
@@ -247,6 +256,7 @@ auto Renderer::Queue::to_primitive_list() const -> vector<Primitive>
 			.color = common.color,
 			.outline_color = common.outline_color,
 			.glow_color = common.glow_color,
+			.rotation = common.rotation,
 			.outline_width = common.outline_width,
 			.glow_width = common.glow_width,
 			.glyph_params = Primitive::GlyphParams{

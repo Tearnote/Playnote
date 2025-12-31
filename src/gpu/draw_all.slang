@@ -115,7 +115,10 @@ void computeMain(int2 threadId: SV_DispatchThreadID, uint3 groupThreadId: SV_Gro
 			let item = worklist[i];
 			let primitive = readPrimitive(b_primitives, item.primitive_idx);
 			let params = readPrimitiveParams(b_primitives, item.primitive_idx);
-			let distance = distanceToPrimitive(primitive, params, selfPos);
+
+			// Rotate the primitive counterclockwise by rotating the sample point clockwise
+			let rotatedPos = rotateAround(selfPos, primitive.position, primitive.rotation);
+			let distance = distanceToPrimitive(primitive, params, rotatedPos);
 
 			let outlineCoverage = sdf::aa(distance.x - primitive.outline_width / 2.0) * sdf::aa(-(distance.x + primitive.outline_width / 2.0));
 			let fillCoverage = sdf::aa(distance.x);
@@ -133,7 +136,11 @@ void computeMain(int2 threadId: SV_DispatchThreadID, uint3 groupThreadId: SV_Gro
 				let item = worklist[i];
 				let primitive = readPrimitive(b_primitives, item.primitive_idx);
 				let params = readPrimitiveParams(b_primitives, item.primitive_idx);
-				let distance = distanceToPrimitive(primitive, params, selfPos + (SubpixelLayoutRGB[j] - float2(0.5, 0.5)));
+
+				let subpixPos = selfPos + (SubpixelLayoutRGB[j] - float2(0.5, 0.5));
+				// Rotate the primitive counterclockwise by rotating the sample point clockwise
+				let rotatedPos = rotateAround(subpixPos, primitive.position, primitive.rotation);
+				let distance = distanceToPrimitive(primitive, params, rotatedPos);
 
 				let outlineCoverage = sdf::aa(distance.x - primitive.outline_width / 2.0) * sdf::aa(-(distance.x + primitive.outline_width / 2.0));
 				let fillCoverage = sdf::aa(distance.x);

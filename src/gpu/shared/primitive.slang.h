@@ -38,9 +38,10 @@ struct Primitive {
 	float4 color;
 	float4 outline_color;
 	float4 glow_color;
+	float rotation;
 	float outline_width;
 	float glow_width;
-	int _pad0[2];
+	int _pad0[1];
 #ifndef __cplusplus
 	int params[8]; // Space containing one of the union members below, as per the type
 #else
