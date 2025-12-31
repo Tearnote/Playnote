@@ -115,11 +115,8 @@ func distanceToPrimitive(primitive: Primitive, params: int[8], at: float2) -> fl
 	}
 }
 
-func samplePrimitive<T, C: IColorOps<T>>(at: float2, primitive_idx: int, ctx: C) -> T
+func samplePrimitive<T, C: IColorOps<T>>(at: float2, primitive: Primitive, params: int[8], ctx: C) -> T
 {
-	let primitive = readPrimitive(b_primitives, primitive_idx);
-	let params = readPrimitiveParams(b_primitives, primitive_idx);
-
 	// Rotate the primitive counterclockwise by rotating the sample point clockwise
 	let rotatedPos = rotateAround(at, primitive.position, primitive.rotation);
 	let distance = distanceToPrimitive(primitive, params, rotatedPos);
@@ -134,6 +131,14 @@ func samplePrimitive<T, C: IColorOps<T>>(at: float2, primitive_idx: int, ctx: C)
 	result = ctx.blend(result, ctx.mul(ctx.extract(primitive.color), fillCoverage));
 	result = ctx.blend(result, ctx.mul(ctx.extract(primitive.outline_color), outlineCoverage));
 	return result;
+}
+
+// Convenience overload
+func samplePrimitive<T, C: IColorOps<T>>(at: float2, primitive_idx: int, ctx: C) -> T
+{
+	let primitive = readPrimitive(b_primitives, primitive_idx);
+	let params = readPrimitiveParams(b_primitives, primitive_idx);
+	return samplePrimitive(at, primitive, params, ctx);
 }
 
 [shader("compute")]
@@ -165,11 +170,13 @@ void computeMain(int2 threadId: SV_DispatchThreadID, uint3 groupThreadId: SV_Gro
 	} else {
 		// Per-subpixel coverage
 		var results: float2[3] = {};
-		for (int j = 0; j < 3; j += 1) {
-			let subpixPos = selfPos + (SubpixelLayoutRGB[j] - float2(0.5, 0.5));
-			let ctx = SubpixelColorOps(j);
-			for (int i = 0; i < worklistSize; i += 1) {
-				let primColor = samplePrimitive(subpixPos, worklist[i].primitive_idx, ctx);
+		for (int i = 0; i < worklistSize; i += 1) {
+			let primitive = readPrimitive(b_primitives, worklist[i].primitive_idx);
+			let params = readPrimitiveParams(b_primitives, worklist[i].primitive_idx);
+			for (int j = 0; j < 3; j += 1) {
+				let subpixPos = selfPos + (SubpixelLayoutRGB[j] - float2(0.5, 0.5));
+				let ctx = SubpixelColorOps(j);
+				let primColor = samplePrimitive(subpixPos, primitive, params, ctx);
 				results[j] = blend(results[j], primColor);
 			}
 		}
