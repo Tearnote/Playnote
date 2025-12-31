@@ -10,6 +10,7 @@ or distributed except according to those terms.
 #include "gfx/renderer.hpp"
 
 #include "gfx/text.hpp"
+#include "lib/os.hpp"
 #include "preamble.hpp"
 #include "utils/config.hpp"
 #include "utils/assets.hpp"
@@ -20,7 +21,6 @@ or distributed except according to those terms.
 namespace playnote::gfx {
 
 #include "gpu/shared/worklist.slang.h"
-#include "gpu/shared/config.slang.h"
 
 static constexpr auto LinearSampler = lib::vuk::SamplerCreateInfo{
 	.magFilter = lib::vuk::Filter::eLinear,
@@ -109,10 +109,10 @@ auto generate_worklists(dev::GPU& gpu, lib::vuk::Allocator& allocator, span<Rend
 auto draw_all(dev::GPU& gpu, lib::vuk::ManagedImage&& dest,
 	lib::vuk::ManagedBuffer&& primitives_buf, lib::vuk::ManagedBuffer&& worklists_buf,
 	lib::vuk::ManagedBuffer&& worklist_sizes_buf, lib::vuk::ImageView static_atlas_iv,
-	lib::vuk::ManagedImage&& dynamic_atlas_ia) -> lib::vuk::ManagedImage
+	lib::vuk::ManagedImage&& dynamic_atlas_ia, lib::os::SubpixelLayout subpixel_layout) -> lib::vuk::ManagedImage
 {
 	auto pass = lib::vuk::make_pass("draw_all",
-		[window_size = gpu.get_window().size(), static_atlas_iv] (
+		[window_size = gpu.get_window().size(), static_atlas_iv, subpixel_layout] (
 			lib::vuk::CommandBuffer& cmd,
 			VUK_IA(lib::vuk::Access::eComputeWrite) target,
 			VUK_BA(lib::vuk::Access::eComputeRead) primitives_buf,
@@ -121,11 +121,6 @@ auto draw_all(dev::GPU& gpu, lib::vuk::ManagedImage&& dest,
 			VUK_IA(lib::vuk::Access::eComputeSampled) dynamic_atlas_ia
 		)
 	{
-		auto subpixel_rendering = SubpixelRenderingMode::None;
-		if (globals::config->get_entry<bool>("graphics", "subpixel_rendering")) {
-			auto const layout = globals::config->get_entry<string>("graphics", "subpixel_layout");
-			if (layout == "RGB") subpixel_rendering = SubpixelRenderingMode::RGB;
-		}
 		cmd
 			.bind_compute_pipeline("draw_all")
 			.bind_buffer(0, 0, primitives_buf)
@@ -135,7 +130,7 @@ auto draw_all(dev::GPU& gpu, lib::vuk::ManagedImage&& dest,
 			.bind_image(0, 4, dynamic_atlas_ia).bind_sampler(0, 4, LinearSampler)
 			.bind_image(0, 5, target)
 			.specialize_constants(0, window_size.x()).specialize_constants(1, window_size.y())
-			.specialize_constants(2, +subpixel_rendering)
+			.specialize_constants(2, +subpixel_layout)
 			.specialize_constants(3, TextShaper::DistanceRange)
 			.dispatch_invocations(window_size.x(), window_size.y(), 1);
 		return target;
@@ -273,9 +268,13 @@ Renderer::Renderer(dev::Window& window, Logger::Category cat):
 	cat{cat},
 	gpu{window, cat},
 	imgui{gpu},
-	text_shaper{cat}
+	text_shaper{cat},
+	subpixel_layout{lib::os::get_subpixel_layout()}
 {
+	if (subpixel_layout == lib::os::SubpixelLayout::Unknown)
+		subpixel_layout = lib::os::SubpixelLayout::None;
 	auto& context = gpu.get_global_allocator().get_context();
+	INFO_AS(cat, "Detected subpixel layout: {}", enum_name(subpixel_layout));
 
 	text_shaper.load_font("Mplus2"_id, globals::assets->get("Mplus2-Regular.ttf"_id), 500);
 	text_shaper.load_font("Pretendard"_id, globals::assets->get("Pretendard-Regular.ttf"_id), 500);
@@ -335,7 +334,7 @@ void Renderer::draw_frame(Queue&& queue)
 		auto next = lib::vuk::clear_image(move(target), {0.0f, 0.0f, 0.0f, 1.0f});
 		if (!primitives.empty()) {
 			auto [primitives_buf, worklists_buf, worklist_sizes_buf] = generate_worklists(gpu, allocator, primitives, queue.transform);
-			next = draw_all(gpu, move(next), move(primitives_buf), move(worklists_buf), move(worklist_sizes_buf), static_atlas.view.get(), move(atlas));
+			next = draw_all(gpu, move(next), move(primitives_buf), move(worklists_buf), move(worklist_sizes_buf), static_atlas.view.get(), move(atlas), subpixel_layout);
 		}
 		return imgui.draw(allocator, move(next));
 	});

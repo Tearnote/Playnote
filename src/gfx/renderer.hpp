@@ -10,6 +10,7 @@ or distributed except according to those terms.
 #pragma once
 #include "preamble.hpp"
 #include "utils/logger.hpp"
+#include "lib/os.hpp"
 #include "dev/window.hpp"
 #include "dev/gpu.hpp"
 #include "gfx/imgui.hpp"
@@ -122,6 +123,7 @@ private:
 	TextShaper text_shaper;
 	lib::vuk::Texture static_atlas;
 	lib::vuk::Texture dynamic_atlas;
+	lib::os::SubpixelLayout subpixel_layout;
 
 	auto create_queue() -> Queue;
 	void draw_frame(Queue&&);

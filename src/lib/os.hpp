@@ -35,4 +35,17 @@ void end_scheduler_period([[maybe_unused]] milliseconds period) noexcept;
 // Windows-only; on Linux use stderr output, as the console is always available there.
 void block_with_message(string_view message);
 
+// OS subpixel layout setting value.
+enum class SubpixelLayout {
+	None,
+	HorizontalRGB,
+	HorizontalBGR,
+	VerticalRGB,
+	VerticalBGR,
+	Unknown,
+};
+
+// Retrieve the OS-wide subpixel layout setting.
+auto get_subpixel_layout() -> SubpixelLayout;
+
 }

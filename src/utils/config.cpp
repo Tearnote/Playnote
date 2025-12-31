@@ -152,16 +152,6 @@ void Config::create_defaults()
 		.name = "validation_enabled",
 		.value = false,
 	});
-	entries.emplace_back(Entry{
-		.category = "graphics",
-		.name = "subpixel_rendering",
-		.value = false,
-	});
-	entries.emplace_back(Entry{
-		.category = "graphics",
-		.name = "subpixel_layout",
-		.value = "RGB",
-	});
 
 	entries.emplace_back(Entry{
 		.category = "controls",

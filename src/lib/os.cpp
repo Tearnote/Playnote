@@ -21,6 +21,7 @@ or distributed except according to those terms.
 #include <timeapi.h>
 #include <shellapi.h>
 #elifdef TARGET_LINUX
+#include <fontconfig/fontconfig.h>
 #include <linux/ioprio.h>
 #include <sys/syscall.h>
 #include <pthread.h>
@@ -96,6 +97,33 @@ void block_with_message([[maybe_unused]] string_view message)
 {
 #ifdef TARGET_WINDOWS
 	MessageBoxA(nullptr, string{message}.c_str(), AppTitle, MB_OK);
+#endif
+}
+
+auto get_subpixel_layout() -> SubpixelLayout
+{
+#ifdef TARGET_WINDOWS
+	//TODO
+	return SubpixelLayout::Unknown;
+#elifdef TARGET_LINUX
+	using Pattern = unique_resource<FcPattern*, decltype([](auto* p) { FcPatternDestroy(p); })>;
+
+	auto pattern = Pattern{FcPatternCreate()};
+	if (!pattern) throw runtime_error{"Failed to create Fontconfig pattern"};
+	FcConfigSubstitute(nullptr, pattern.get(), FcMatchPattern);
+	FcDefaultSubstitute(pattern.get());
+
+	auto rgba = FC_RGBA_UNKNOWN;
+	if (FcPatternGetInteger(pattern.get(), FC_RGBA, 0, &rgba) != FcResultMatch)
+		return SubpixelLayout::Unknown;
+	switch (rgba) {
+		case FC_RGBA_RGB:  return SubpixelLayout::HorizontalRGB;
+		case FC_RGBA_BGR:  return SubpixelLayout::HorizontalBGR;
+		case FC_RGBA_VRGB: return SubpixelLayout::VerticalRGB;
+		case FC_RGBA_VBGR: return SubpixelLayout::VerticalBGR;
+		case FC_RGBA_NONE: return SubpixelLayout::None;
+		default: return SubpixelLayout::Unknown;
+	}
 #endif
 }
 

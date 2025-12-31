@@ -12,7 +12,6 @@ or distributed except according to those terms.
 import lib;
 #include "shared/primitive.slang.h"
 #include "shared/worklist.slang.h"
-#include "shared/config.slang.h"
 
 #define WORKLIST_DEBUG 0
 
@@ -23,15 +22,24 @@ Sampler2D<float4> s_staticAtlas;
 Sampler2D<float4> s_dynamicAtlas;
 WTexture2D<float4> i_target;
 
+// Matching the enum in lib/os.hpp
+enum class SubpixelLayout {
+	None,
+	HorizontalRGB,
+	HorizontalBGR,
+	VerticalRGB,
+	VerticalBGR,
+};
+
 [SpecializationConstant] let ViewportWidth = 0u;
 [SpecializationConstant] let ViewportHeight = 0u;
-[SpecializationConstant] let SubpixelRenderingRaw = 0u;
+[SpecializationConstant] let SubpixelLayoutRaw = 0u;
 [SpecializationConstant] let AtlasDistanceRange = 0.0;
 static let ViewportSize = int2(ViewportWidth, ViewportHeight);
 static let TileBound = (ViewportSize + TILE_SIZE - 1) / TILE_SIZE;
-static let SubpixelRendering = SubpixelRenderingMode(SubpixelRenderingRaw);
+static let SubpixelLayoutType = SubpixelLayout(SubpixelLayoutRaw);
 
-static let SubpixelLayoutRGB: float2[] = {
+static let SubpixelsHorizontalRGB: float2[] = {
 	{0.166, 0.5},
 	{0.500, 0.5},
 	{0.833, 0.5},
@@ -160,7 +168,7 @@ void computeMain(int2 threadId: SV_DispatchThreadID, uint3 groupThreadId: SV_Gro
 	let selfPos = float2(threadId) + 0.5;
 	var color = float4(0.0, 0.0, 0.0, 0.0);
 
-	if (SubpixelRendering == SubpixelRenderingMode::None) {
+	if (SubpixelLayoutType == SubpixelLayout::None) {
 		// Per-pixel coverage
 		let ctx = StandardColorOps();
 		for (int i = 0; i < worklistSize; i += 1) {
@@ -174,7 +182,7 @@ void computeMain(int2 threadId: SV_DispatchThreadID, uint3 groupThreadId: SV_Gro
 			let primitive = readPrimitive(b_primitives, worklist[i].primitive_idx);
 			let params = readPrimitiveParams(b_primitives, worklist[i].primitive_idx);
 			for (int j = 0; j < 3; j += 1) {
-				let subpixPos = selfPos + (SubpixelLayoutRGB[j] - float2(0.5, 0.5));
+				let subpixPos = selfPos + (SubpixelsHorizontalRGB[j] - float2(0.5, 0.5));
 				let ctx = SubpixelColorOps(j);
 				let primColor = samplePrimitive(subpixPos, primitive, params, ctx);
 				results[j] = blend(results[j], primColor);
