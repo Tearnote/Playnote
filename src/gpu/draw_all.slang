@@ -37,10 +37,35 @@ static let SubpixelLayoutRGB: float2[] = {
 	{0.833, 0.5},
 };
 
+// Worklist cache for the current tile.
 groupshared var worklist: WorklistItem[WORKLIST_MAX_SIZE];
 
-func msdfMedian(r: float, g: float, b: float) -> float
-{ return max(min(r, g), min(max(r, g), b)); }
+// Abstraction over color operations to allow for transparent subpixel handling.
+interface IColorOps<T> {
+	// Convert standard color to the type used by the rest of the interface.
+	func extract(c: float4) -> T;
+
+	// Alpha-blend color onto destination.
+	func blend(onto: T, color: T) -> T;
+
+	// Multiply color by scalar.
+	func mul(c: T, n: float) -> T;
+};
+
+// Color operations on all subpixels.
+struct StandardColorOps: IColorOps<float4> {
+	func extract(c: float4) -> float4 { return c; }
+	func blend(onto: float4, color: float4) -> float4 { return ::blend(onto, color); }
+	func mul(c: float4, n: float) -> float4 { return c * n; }
+};
+
+// Color operations on one subpixel.
+struct SubpixelColorOps: IColorOps<float2> {
+	int subpixel_idx;
+	func extract(c: float4) -> float2 { return float2(c[subpixel_idx], c.a); }
+	func blend(onto: float2, color: float2) -> float2 { return ::blend(onto, color); }
+	func mul(c: float2, n: float) -> float2 { return c * n; }
+};
 
 func sampleGlyphDistance(p: float2, params: Primitive::GlyphParams) -> float2
 {
@@ -63,7 +88,7 @@ func sampleGlyphDistance(p: float2, params: Primitive::GlyphParams) -> float2
 		s = s_staticAtlas.SampleLevel(uv, 0);
 	else
 		s = s_dynamicAtlas.SampleLevel(uv, 0);
-	let sd = msdfMedian(s.r, s.g, s.b);
+	let sd = median(s.r, s.g, s.b);
 	let sds = float2(sd, s.a);
 	let dists = (0.5 - sds) * AtlasDistanceRange;
 	let distOutside = length(texel - clampedTexel);
@@ -90,6 +115,27 @@ func distanceToPrimitive(primitive: Primitive, params: int[8], at: float2) -> fl
 	}
 }
 
+func samplePrimitive<T, C: IColorOps<T>>(at: float2, primitive_idx: int, ctx: C) -> T
+{
+	let primitive = readPrimitive(b_primitives, primitive_idx);
+	let params = readPrimitiveParams(b_primitives, primitive_idx);
+
+	// Rotate the primitive counterclockwise by rotating the sample point clockwise
+	let rotatedPos = rotateAround(at, primitive.position, primitive.rotation);
+	let distance = distanceToPrimitive(primitive, params, rotatedPos);
+
+	let outlineCoverage = sdf::aa(distance.x - primitive.outline_width / 2.0) * sdf::aa(-(distance.x + primitive.outline_width / 2.0));
+	let fillCoverage = sdf::aa(distance.x);
+	var glowPower = saturate(1.0 - abs(distance.y) / primitive.glow_width);
+	glowPower = glowPower * glowPower * glowPower;
+
+	// Composite the primitive layers
+	var result = ctx.mul(ctx.extract(primitive.glow_color), glowPower);
+	result = ctx.blend(result, ctx.mul(ctx.extract(primitive.color), fillCoverage));
+	result = ctx.blend(result, ctx.mul(ctx.extract(primitive.outline_color), outlineCoverage));
+	return result;
+}
+
 [shader("compute")]
 [numthreads(TILE_SIZE, TILE_SIZE)]
 void computeMain(int2 threadId: SV_DispatchThreadID, uint3 groupThreadId: SV_GroupThreadID)
@@ -110,49 +156,21 @@ void computeMain(int2 threadId: SV_DispatchThreadID, uint3 groupThreadId: SV_Gro
 	var color = float4(0.0, 0.0, 0.0, 0.0);
 
 	if (SubpixelRendering == SubpixelRenderingMode::None) {
+		// Per-pixel coverage
+		let ctx = StandardColorOps();
 		for (int i = 0; i < worklistSize; i += 1) {
-			let item = worklist[i];
-			let primitive = readPrimitive(b_primitives, item.primitive_idx);
-			let params = readPrimitiveParams(b_primitives, item.primitive_idx);
-
-			// Rotate the primitive counterclockwise by rotating the sample point clockwise
-			let rotatedPos = rotateAround(selfPos, primitive.position, primitive.rotation);
-			let distance = distanceToPrimitive(primitive, params, rotatedPos);
-
-			let outlineCoverage = sdf::aa(distance.x - primitive.outline_width / 2.0) * sdf::aa(-(distance.x + primitive.outline_width / 2.0));
-			let fillCoverage = sdf::aa(distance.x);
-			var glowPower = saturate(1.0 - abs(distance.y) / primitive.glow_width);
-			glowPower = glowPower * glowPower * glowPower;
-
-			color = blend(color, primitive.glow_color * glowPower);
-			color = blend(color, primitive.color * fillCoverage);
-			color = blend(color, primitive.outline_color * outlineCoverage);
+			let primColor = samplePrimitive(selfPos, worklist[i].primitive_idx, ctx);
+			color = blend(color, primColor);
 		}
 	} else {
+		// Per-subpixel coverage
 		var results: float2[3] = {};
 		for (int j = 0; j < 3; j += 1) {
+			let subpixPos = selfPos + (SubpixelLayoutRGB[j] - float2(0.5, 0.5));
+			let ctx = SubpixelColorOps(j);
 			for (int i = 0; i < worklistSize; i += 1) {
-				let item = worklist[i];
-				let primitive = readPrimitive(b_primitives, item.primitive_idx);
-				let params = readPrimitiveParams(b_primitives, item.primitive_idx);
-
-				let subpixPos = selfPos + (SubpixelLayoutRGB[j] - float2(0.5, 0.5));
-				// Rotate the primitive counterclockwise by rotating the sample point clockwise
-				let rotatedPos = rotateAround(subpixPos, primitive.position, primitive.rotation);
-				let distance = distanceToPrimitive(primitive, params, rotatedPos);
-
-				let outlineCoverage = sdf::aa(distance.x - primitive.outline_width / 2.0) * sdf::aa(-(distance.x + primitive.outline_width / 2.0));
-				let fillCoverage = sdf::aa(distance.x);
-				var glowPower = saturate(1.0 - abs(distance.y) / primitive.glow_width);
-				glowPower = glowPower * glowPower * glowPower;
-
-				let fillColorComponent = float2(primitive.color[j], primitive.color.a);
-				let outlineColorComponent = float2(primitive.outline_color[j], primitive.outline_color.a);
-				let glowColorComponent = float2(primitive.glow_color[j], primitive.glow_color.a);
-
-				results[j] = blend(results[j], glowColorComponent * glowPower);
-				results[j] = blend(results[j], fillColorComponent * fillCoverage);
-				results[j] = blend(results[j], outlineColorComponent * outlineCoverage);
+				let primColor = samplePrimitive(subpixPos, worklist[i].primitive_idx, ctx);
+				results[j] = blend(results[j], primColor);
 			}
 		}
 		color = blend(color, float4(results[0].r, results[1].r, results[2].r, (results[0].g + results[1].g + results[2].g) / 3.0));

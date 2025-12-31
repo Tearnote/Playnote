@@ -134,6 +134,7 @@ void computeMain(
 	aabb.top_left = min(top_left, min(bottom_right, min(top_right, bottom_left)));
 	aabb.bottom_right = max(top_left, max(bottom_right, max(top_right, bottom_left)));
 
+	// Compute tile coverage
 	let tileAabb = AABB<int>(
 		max(int2(aabb.top_left) / TILE_SIZE, 0),
 		min(int2(aabb.bottom_right) / TILE_SIZE + 1, TileBound)

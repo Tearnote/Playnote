@@ -17,6 +17,10 @@ public static let Pi = 3.14159265359;
 public func dot2(v: float2) -> float { return dot(v, v); }
 public func dot2(v: float3) -> float { return dot(v, v); }
 
+// Median of three values.
+public func median(a: float, b: float, c: float) -> float
+{ return max(min(a, c), min(max(a, c), b)); }
+
 // Antiderivative of the cosine shutter function.
 func cosShutterAntiderivative(t: float) -> float
 {
