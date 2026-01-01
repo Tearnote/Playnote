@@ -247,6 +247,167 @@ static void render_select(gfx::Renderer::Queue& queue, GameState& state)
 	}, {
 		.size = 36.0f,
 	});
+
+	// Line sequences
+
+	// Round
+	queue.line({
+		.position = {0.0f, 370.0f},
+		.color = {1.0f, 1.0f, 1.0f, 1.0f},
+		.depth = 5,
+	}, {
+		.end = {100.0f, 10.0f},
+		.width = 8.0f,
+		.cap = gfx::Renderer::LineParams::Cap::Round,
+	});
+	queue.line({
+		.position = {100.0f, 380.0f},
+		.color = {1.0f, 1.0f, 1.0f, 1.0f},
+		.depth = 5,
+	}, {
+		.end = {20.0f, -20.0f},
+		.width = 8.0f,
+		.cap = gfx::Renderer::LineParams::Cap::Round,
+	});
+	queue.line({
+		.position = {120.0f, 360.0f},
+		.color = {1.0f, 1.0f, 1.0f, 1.0f},
+		.depth = 5,
+	}, {
+		.end = {80.0f, -5.0f},
+		.width = 8.0f,
+		.cap = gfx::Renderer::LineParams::Cap::Round,
+	});
+
+	// Square
+	queue.line({
+		.position = {0.0f, 390.0f},
+		.color = {1.0f, 1.0f, 1.0f, 1.0f},
+		.depth = 5,
+	}, {
+		.end = {100.0f, 10.0f},
+		.width = 8.0f,
+		.cap = gfx::Renderer::LineParams::Cap::Square,
+	});
+	queue.line({
+		.position = {100.0f, 400.0f},
+		.color = {1.0f, 1.0f, 1.0f, 1.0f},
+		.depth = 5,
+	}, {
+		.end = {20.0f, -20.0f},
+		.width = 8.0f,
+		.cap = gfx::Renderer::LineParams::Cap::Square,
+	});
+	queue.line({
+		.position = {120.0f, 380.0f},
+		.color = {1.0f, 1.0f, 1.0f, 1.0f},
+		.depth = 5,
+	}, {
+		.end = {80.0f, -5.0f},
+		.width = 8.0f,
+		.cap = gfx::Renderer::LineParams::Cap::Square,
+	});
+
+	// Butt
+	queue.line({
+		.position = {0.0f, 410.0f},
+		.color = {1.0f, 1.0f, 1.0f, 1.0f},
+		.depth = 5,
+	}, {
+		.end = {100.0f, 10.0f},
+		.width = 8.0f,
+		.cap = gfx::Renderer::LineParams::Cap::Butt,
+	});
+	queue.line({
+		.position = {100.0f, 420.0f},
+		.color = {1.0f, 1.0f, 1.0f, 1.0f},
+		.depth = 5,
+	}, {
+		.end = {20.0f, -20.0f},
+		.width = 8.0f,
+		.cap = gfx::Renderer::LineParams::Cap::Butt,
+	});
+	queue.line({
+		.position = {120.0f, 400.0f},
+		.color = {1.0f, 1.0f, 1.0f, 1.0f},
+		.depth = 5,
+	}, {
+		.end = {80.0f, -5.0f},
+		.width = 8.0f,
+		.cap = gfx::Renderer::LineParams::Cap::Butt,
+	});
+
+	// Non-grouped outline
+	queue.line({
+		.position = {0.0f, 430.0f},
+		.color = {1.0f, 1.0f, 1.0f, 1.0f},
+		.depth = 5,
+		.outline_width = 2.0f,
+		.outline_color = {0.2f, 0.2f, 1.0f, 1.0f},
+	}, {
+		.end = {100.0f, 10.0f},
+		.width = 8.0f,
+		.cap = gfx::Renderer::LineParams::Cap::Round,
+	});
+	queue.line({
+		.position = {100.0f, 440.0f},
+		.color = {1.0f, 1.0f, 1.0f, 1.0f},
+		.depth = 5,
+		.outline_width = 2.0f,
+		.outline_color = {0.2f, 0.2f, 1.0f, 1.0f},
+	}, {
+		.end = {20.0f, -20.0f},
+		.width = 8.0f,
+		.cap = gfx::Renderer::LineParams::Cap::Round,
+	});
+	queue.line({
+		.position = {120.0f, 420.0f},
+		.color = {1.0f, 1.0f, 1.0f, 1.0f},
+		.depth = 5,
+		.outline_width = 2.0f,
+		.outline_color = {0.2f, 0.2f, 1.0f, 1.0f},
+	}, {
+		.end = {80.0f, -5.0f},
+		.width = 8.0f,
+		.cap = gfx::Renderer::LineParams::Cap::Round,
+	});
+
+	// Grouped outline
+	queue.group([&] {
+		queue.line({
+			.position = {0.0f, 450.0f},
+			.color = {1.0f, 1.0f, 1.0f, 1.0f},
+			.depth = 5,
+			.outline_width = 2.0f,
+			.outline_color = {0.2f, 0.2f, 1.0f, 1.0f},
+		}, {
+			.end = {100.0f, 10.0f},
+			.width = 8.0f,
+			.cap = gfx::Renderer::LineParams::Cap::Round,
+		});
+		queue.line({
+			.position = {100.0f, 460.0f},
+			.color = {1.0f, 1.0f, 1.0f, 1.0f},
+			.depth = 5,
+			.outline_width = 2.0f,
+			.outline_color = {0.2f, 0.2f, 1.0f, 1.0f},
+		}, {
+			.end = {20.0f, -20.0f},
+			.width = 8.0f,
+			.cap = gfx::Renderer::LineParams::Cap::Round,
+		});
+		queue.line({
+			.position = {120.0f, 440.0f},
+			.color = {1.0f, 1.0f, 1.0f, 1.0f},
+			.depth = 5,
+			.outline_width = 2.0f,
+			.outline_color = {0.2f, 0.2f, 1.0f, 1.0f},
+		}, {
+			.end = {80.0f, -5.0f},
+			.width = 8.0f,
+			.cap = gfx::Renderer::LineParams::Cap::Round,
+		});
+	});
 }
 
 static void render_gameplay(gfx::Renderer::Queue& queue, GameState& state)

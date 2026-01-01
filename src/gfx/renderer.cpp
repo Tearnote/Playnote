@@ -178,6 +178,52 @@ auto Renderer::Queue::capsule(Drawable common, CapsuleParams params) -> Queue&
 	return *this;
 }
 
+auto Renderer::Queue::line(Drawable common, LineParams params) -> Queue&
+{
+	auto const start = common.position + params.start;
+	auto const end = common.position + params.end;
+	auto const midpoint = start + (end - start) / float2{2.0f, 2.0f};
+	auto const angle = -degrees(atan2(end.y() - start.y(), end.x() - start.x()));
+	auto const len = length(end - start);
+
+	switch (params.cap) {
+	case LineParams::Cap::Butt:
+	case LineParams::Cap::Square:
+		rect({
+			.position = midpoint,
+			.rotation = angle,
+			.color = common.color,
+			.depth = common.depth,
+			.outline_width = common.outline_width,
+			.outline_color = common.outline_color,
+			.glow_width = common.glow_width,
+			.glow_color = common.glow_color,
+		}, {
+			.size = {
+				len + (params.cap == LineParams::Cap::Square? params.width : 0.0f),
+				params.width,
+			},
+		});
+		break;
+	case LineParams::Cap::Round:
+		capsule({
+			.position = midpoint,
+			.rotation = angle,
+			.color = common.color,
+			.depth = common.depth,
+			.outline_width = common.outline_width,
+			.outline_color = common.outline_color,
+			.glow_width = common.glow_width,
+			.glow_color = common.glow_color,
+		}, {
+			.width = len,
+			.radius = params.width / 2.0f,
+		});
+		break;
+	}
+	return *this;
+}
+
 auto Renderer::Queue::text(Text const& text, Drawable common, TextParams params) -> Queue&
 {
 	for (auto [line_idx, line]: text.lines | views::enumerate) {

@@ -58,11 +58,23 @@ public:
 		float radius;
 	};
 
+	struct LineParams {
+		enum class Cap {
+			Butt, // flat, ends exactly at start and end points
+			Square, // flat, extends beyond start/end by half width
+			Round,
+		};
+
+		float2 start = {}; // offsets from shape position
+		float2 end;        // start is optional
+		float width;
+		Cap cap;
+	};
+
 	struct TextParams {
 		float size = 12.0f; // em-height, in units
 		float line_height = 1.0f; // in size-scaled ems
 	};
-
 	enum class TextStyle {
 		SansRegular,
 	};
@@ -87,6 +99,7 @@ public:
 		auto rect(Drawable, RectParams) -> Queue&;
 		auto rect_tl(Drawable, RectParams) -> Queue&; // Position in top-left rather than center
 		auto capsule(Drawable, CapsuleParams) -> Queue&;
+		auto line(Drawable, LineParams) -> Queue&;
 		auto text(Text const&, Drawable, TextParams) -> Queue&;
 
 	private:

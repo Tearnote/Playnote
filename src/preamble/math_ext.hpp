@@ -25,14 +25,20 @@ namespace playnote {
 template<typename T>
 concept arithmetic = std::is_arithmetic_v<T>;
 
+using std::floating_point;
+
 // https://www.tauday.com/
-template<std::floating_point T>
+template<floating_point T>
 constexpr auto Tau_v = std::numbers::pi_v<T> * 2;
 constexpr auto Tau = Tau_v<float>;
 
 // degrees -> radians
-template<arithmetic T, std::floating_point Prec = float>
+template<arithmetic T, floating_point Prec = float>
 constexpr auto radians(T deg) -> Prec { return static_cast<Prec>(deg) * Tau_v<Prec> / 360; }
+
+// radians -> degrees
+template<arithmetic T, floating_point Prec = float>
+constexpr auto degrees(T rad) -> Prec { return static_cast<Prec>(rad) * 360 / Tau_v<Prec>; }
 
 // True modulo operation (as opposed to remainder, which is operator% in C++.)
 // The result is always positive and does not flip direction at zero.
@@ -416,7 +422,7 @@ constexpr auto operator>>(vec<Dim, T> const& left, T right) -> vec<Dim, T>
 }
 
 // Component-wise absolute value
-template<ssize_t Dim, std::floating_point T>
+template<ssize_t Dim, floating_point T>
 constexpr auto abs(vec<Dim, T> const& v) -> vec<Dim, T>
 {
 	auto result = vec<Dim, T>{};
@@ -445,6 +451,16 @@ static_assert(std::is_trivially_constructible_v<int4>);
 static_assert(std::is_trivially_constructible_v<uint2>);
 static_assert(std::is_trivially_constructible_v<uint3>);
 static_assert(std::is_trivially_constructible_v<uint4>);
+
+// Freestanding functions
+
+template<ssize_t Dim, floating_point T>
+constexpr auto length(const vec<Dim, T>& v) -> T {
+	auto result = T{0};
+	for (auto i: views::iota(0z, Dim))
+		result += v[i] * v[i];
+	return sqrt(result);
+}
 
 // Bounding box
 template<arithmetic T>

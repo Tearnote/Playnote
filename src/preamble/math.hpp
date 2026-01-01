@@ -24,6 +24,7 @@ using std::abs;
 using std::pow;
 using std::exp;
 using std::sqrt;
+using std::atan2;
 using std::numeric_limits;
 using boost::rational;
 using boost::rational_cast;
