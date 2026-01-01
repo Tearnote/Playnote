@@ -65,33 +65,6 @@ static let MaxDistance = 1e5;
 // Worklist cache for the current tile.
 groupshared var worklist: WorklistItem[WORKLIST_MAX_SIZE];
 
-// Abstraction over color operations to allow for transparent subpixel handling.
-interface IColorOps<T> {
-	// Convert standard color to the type used by the rest of the interface.
-	func extract(c: float4) -> T;
-
-	// Alpha-blend color onto destination.
-	func blend(onto: T, color: T) -> T;
-
-	// Multiply color by scalar.
-	func mul(c: T, n: float) -> T;
-};
-
-// Color operations on all subpixels.
-struct StandardColorOps: IColorOps<float4> {
-	func extract(c: float4) -> float4 { return c; }
-	func blend(onto: float4, color: float4) -> float4 { return ::blend(onto, color); }
-	func mul(c: float4, n: float) -> float4 { return c * n; }
-};
-
-// Color operations on one subpixel.
-struct SubpixelColorOps: IColorOps<float2> {
-	int subpixel_idx;
-	func extract(c: float4) -> float2 { return float2(c[subpixel_idx], c.a); }
-	func blend(onto: float2, color: float2) -> float2 { return ::blend(onto, color); }
-	func mul(c: float2, n: float) -> float2 { return c * n; }
-};
-
 func sampleGlyphDistance(p: float2, params: Primitive::GlyphParams) -> float2
 {
 	let minRect = params.atlas_bounds.top_left;
@@ -144,18 +117,22 @@ func distanceToPrimitive(primitive: Primitive, params: int[8], at: float2) -> fl
 	}
 }
 
-func shadePrimitiveDist<T, C: IColorOps<T>>(distance: float2, source: T, at: float2, primitive: Primitive, params: int[8], ctx: C) -> T
+func shadePrimitiveDist<int N>(
+	distance: float2, source: vector<float, N>, at: float2,
+	primitive: Primitive, params: int[8],
+	extractColor: IFunc<vector<float, N>, float4>
+) -> vector<float, N>
 {
 	let outlineCoverage = sdf::aa(distance.x - primitive.outline_width / 2.0) * sdf::aa(-(distance.x + primitive.outline_width / 2.0));
 	let fillCoverage = sdf::aa(distance.x);
 	let distRatio = saturate(abs(distance.y) / primitive.glow_width);
-	let glowPower = saturate(exp(-3.0 * distRatio * distRatio) * (1.0 - distRatio));
+	let glowPower = saturate(exp(-4.0 * distRatio * distRatio) * (1.0 - distRatio));
 
 	// Composite the primitive layers
 	var result = source;
-	result = ctx.blend(result, ctx.mul(ctx.extract(primitive.glow_color), glowPower));
-	result = ctx.blend(result, ctx.mul(ctx.extract(primitive.color), fillCoverage));
-	result = ctx.blend(result, ctx.mul(ctx.extract(primitive.outline_color), outlineCoverage));
+	result = blend(result, extractColor(primitive.glow_color) * glowPower);
+	result = blend(result, extractColor(primitive.color) * fillCoverage);
+	result = blend(result, extractColor(primitive.outline_color) * outlineCoverage);
 	return result;
 }
 
@@ -180,7 +157,6 @@ void computeMain(int2 threadId: SV_DispatchThreadID, uint3 groupThreadId: SV_Gro
 
 	if (SubpixelLayoutType == SubpixelLayout::None) {
 		// Per-pixel coverage
-		let ctx = StandardColorOps();
 		var distance = float2(MaxDistance, MaxDistance);
 		for (int i = 0; i < worklistSize; i += 1) {
 			let workItem = worklist[i];
@@ -193,7 +169,9 @@ void computeMain(int2 threadId: SV_DispatchThreadID, uint3 groupThreadId: SV_Gro
 			distance = min(distance, distanceToPrimitive(primitive, params, rotatedPos));
 
 			if (workItem.group_id != next_group) {
-				color = shadePrimitiveDist(distance, color, rotatedPos, primitive, params, ctx);
+				color = shadePrimitiveDist(distance, color, rotatedPos, primitive, params,
+					(float4 c) => c
+				);
 				distance = float2(MaxDistance, MaxDistance);
 			}
 		}
@@ -219,14 +197,15 @@ void computeMain(int2 threadId: SV_DispatchThreadID, uint3 groupThreadId: SV_Gro
 					default:                            subpixOffset = SubpixelsVerticalBGR[j]; break;
 				}
 				let subpixPos = selfPos + (subpixOffset - float2(0.5, 0.5));
-				let ctx = SubpixelColorOps(j);
 
 				// Rotate the primitive counterclockwise by rotating the sample point clockwise
 				let rotatedPos = rotateAround(subpixPos, primitive.position, primitive.rotation);
 				distance[j] = min(distance[j], distanceToPrimitive(primitive, params, rotatedPos));
 
 				if (workItem.group_id != next_group) {
-					results[j] = shadePrimitiveDist(distance[j], results[j], rotatedPos, primitive, params, ctx);
+					results[j] = shadePrimitiveDist(distance[j], results[j], rotatedPos, primitive, params,
+						(float4 c) => float2(c[j], c.a)
+					);
 					distance[j] = float2(MaxDistance, MaxDistance);
 				}
 			}
