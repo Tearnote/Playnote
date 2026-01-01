@@ -45,11 +45,16 @@ public:
 		float4 glow_color;
 	};
 
-	struct RectParams {
-		float2 size; // Total width and height
+	struct CircleParams {
+		float radius;
 	};
 
-	struct CircleParams {
+	struct RectParams {
+		float2 size; // total width and height
+	};
+
+	struct CapsuleParams {
+		float width; // distance between left and right end
 		float radius;
 	};
 
@@ -78,9 +83,10 @@ public:
 
 		// Enqueue shapes for drawing.
 
+		auto circle(Drawable, CircleParams) -> Queue&;
 		auto rect(Drawable, RectParams) -> Queue&;
 		auto rect_tl(Drawable, RectParams) -> Queue&; // Position in top-left rather than center
-		auto circle(Drawable, CircleParams) -> Queue&;
+		auto capsule(Drawable, CapsuleParams) -> Queue&;
 		auto text(Text const&, Drawable, TextParams) -> Queue&;
 
 	private:
@@ -93,8 +99,9 @@ public:
 		};
 
 		bool inside_group = false;
-		vector<tuple<Drawable, RectParams, int>> rects; // third: group id
 		vector<tuple<Drawable, CircleParams, int>> circles; // third: group id
+		vector<tuple<Drawable, RectParams, int>> rects; // third: group id
+		vector<tuple<Drawable, CapsuleParams, int>> capsules; // third: group id
 		vector<tuple<Drawable, GlyphParams, int>> glyphs; // third: group id
 		mutable vector<pair<int, int>> group_depths; // first: group id (initially equal to index), second: depth
 		float4 transform;

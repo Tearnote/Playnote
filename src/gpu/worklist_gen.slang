@@ -42,6 +42,14 @@ func enqueueItem(tile: int2, item: WorklistItem)
 	b_worklists[bufIdx] = item;
 }
 
+func circleAabb(float2 position, Primitive::CircleParams params) -> AABB<float>
+{
+	return AABB<float>(
+		floor(position - params.radius - 0.5),
+		ceil(position + params.radius + 0.5)
+	);
+}
+
 func rectAabb(float2 position, Primitive::RectParams params) -> AABB<float>
 {
 	return AABB<float>(
@@ -50,11 +58,11 @@ func rectAabb(float2 position, Primitive::RectParams params) -> AABB<float>
 	);
 }
 
-func circleAabb(float2 position, Primitive::CircleParams params) -> AABB<float>
+func capsuleAabb(float2 position, Primitive::CapsuleParams params) -> AABB<float>
 {
 	return AABB<float>(
-		floor(position - params.radius - 0.5),
-		ceil(position + params.radius + 0.5)
+		floor(position - params.width / 2.0 - params.radius - 0.5),
+		ceil(position + params.width / 2.0 + params.radius + 0.5)
 	);
 }
 
@@ -88,15 +96,21 @@ void computeMain(
 	primitive.glow_color.rgb = srgbDecode(primitive.glow_color.rgb);
 
 	switch (primitive.type) {
+	case Primitive::Type::Circle:
+		var circleParams = reinterpret<Primitive::CircleParams>(params);
+		circleParams.radius = mul(transform, float3(circleParams.radius, 0.0, 0.0)).x;
+		params = reinterpret<int[8]>(circleParams);
+		break;
 	case Primitive::Type::Rect:
 		var rectParams = reinterpret<Primitive::RectParams>(params);
 		rectParams.size = mul(transform, float3(rectParams.size, 0.0)).xy;
 		params = reinterpret<int[8]>(rectParams);
 		break;
-	case Primitive::Type::Circle:
-		var circleParams = reinterpret<Primitive::CircleParams>(params);
-		circleParams.radius = mul(transform, float3(circleParams.radius, 0.0, 0.0)).x;
-		params = reinterpret<int[8]>(circleParams);
+	case Primitive::Type::Capsule:
+		var capsuleParams = reinterpret<Primitive::CapsuleParams>(params);
+		capsuleParams.width = mul(transform, float3(capsuleParams.width, 0.0, 0.0)).x;
+		capsuleParams.radius = mul(transform, float3(capsuleParams.radius, 0.0, 0.0)).x;
+		params = reinterpret<int[8]>(capsuleParams);
 		break;
 	case Primitive::Type::Glyph:
 		var glyphParams = reinterpret<Primitive::GlyphParams>(params);
@@ -108,11 +122,14 @@ void computeMain(
 	// Calculate AABB
 	var aabb = AABB<float>();
 	switch (primitive.type) {
+	case Primitive::Type::Circle:
+		aabb = circleAabb(primitive.position, reinterpret<Primitive::CircleParams>(params));
+		break;
 	case Primitive::Type::Rect:
 		aabb = rectAabb(primitive.position, reinterpret<Primitive::RectParams>(params));
 		break;
-	case Primitive::Type::Circle:
-		aabb = circleAabb(primitive.position, reinterpret<Primitive::CircleParams>(params));
+	case Primitive::Type::Capsule:
+		aabb = capsuleAabb(primitive.position, reinterpret<Primitive::CapsuleParams>(params));
 		break;
 	case Primitive::Type::Glyph:
 		aabb = glyphAabb(primitive.position, reinterpret<Primitive::GlyphParams>(params));

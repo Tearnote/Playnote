@@ -148,6 +148,14 @@ auto Renderer::Queue::logical_to_physical(float2 pos) -> float2
 	return (pos + float2{transform.x(), transform.y()}) * float2{transform.z(), transform.w()};
 }
 
+auto Renderer::Queue::circle(Drawable common, CircleParams params) -> Queue&
+{
+	if (!inside_group) group_depths.emplace_back(group_depths.size(), -1);
+	circles.emplace_back(common, params, group_depths.size() - 1);
+	group_depths.back().second = common.depth;
+	return *this;
+}
+
 auto Renderer::Queue::rect(Drawable common, RectParams params) -> Queue&
 {
 	if (!inside_group) group_depths.emplace_back(group_depths.size(), -1);
@@ -162,10 +170,10 @@ auto Renderer::Queue::rect_tl(Drawable common, RectParams params) -> Queue&
 	return this->rect(common, params);
 }
 
-auto Renderer::Queue::circle(Drawable common, CircleParams params) -> Queue&
+auto Renderer::Queue::capsule(Drawable common, CapsuleParams params) -> Queue&
 {
 	if (!inside_group) group_depths.emplace_back(group_depths.size(), -1);
-	circles.emplace_back(common, params, group_depths.size() - 1);
+	capsules.emplace_back(common, params, group_depths.size() - 1);
 	group_depths.back().second = common.depth;
 	return *this;
 }
@@ -214,7 +222,21 @@ auto Renderer::Queue::to_primitive_list() const -> vector<Primitive>
 		group_remapping[val.first] = idx;
 
 	auto primitives = vector<Primitive>{};
-	primitives.reserve(rects.size() + circles.size());
+	primitives.reserve(rects.size() + circles.size() + capsules.size() + glyphs.size());
+	for (auto [common, circle, group]: circles) {
+		primitives.emplace_back(Primitive{
+			.type = Primitive::Type::Circle,
+			.group_id = group_remapping[group],
+			.position = common.position,
+			.color = common.color,
+			.outline_color = common.outline_color,
+			.glow_color = common.glow_color,
+			.rotation = common.rotation,
+			.outline_width = common.outline_width,
+			.glow_width = common.glow_width,
+			.circle_params = Primitive::CircleParams{.radius = circle.radius},
+		});
+	}
 	for (auto [common, rect, group]: rects) {
 		primitives.emplace_back(Primitive{
 			.type = Primitive::Type::Rect,
@@ -229,9 +251,9 @@ auto Renderer::Queue::to_primitive_list() const -> vector<Primitive>
 			.rect_params = Primitive::RectParams{.size = rect.size},
 		});
 	}
-	for (auto [common, circle, group]: circles) {
+	for (auto [common, capsule, group]: capsules) {
 		primitives.emplace_back(Primitive{
-			.type = Primitive::Type::Circle,
+			.type = Primitive::Type::Capsule,
 			.group_id = group_remapping[group],
 			.position = common.position,
 			.color = common.color,
@@ -240,7 +262,10 @@ auto Renderer::Queue::to_primitive_list() const -> vector<Primitive>
 			.rotation = common.rotation,
 			.outline_width = common.outline_width,
 			.glow_width = common.glow_width,
-			.circle_params = Primitive::CircleParams{.radius = circle.radius},
+			.capsule_params = Primitive::CapsuleParams{
+				.width = capsule.width,
+				.radius = capsule.radius,
+			},
 		});
 	}
 	for (auto [common, glyph, group]: glyphs) {

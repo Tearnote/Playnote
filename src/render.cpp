@@ -228,6 +228,15 @@ static void render_select(gfx::Renderer::Queue& queue, GameState& state)
 	}, {
 		.size = {160.0f, 30.0f},
 	});
+	queue.capsule({
+		.position = {120.0f, 150.0f},
+		.rotation = -2.0f,
+		.color = {0.0f, 1.0f, 0.2f, 1.0f},
+		.depth = 9,
+	}, {
+		.width = 80.0f,
+		.radius = 12.0f,
+	});
 	queue.text(context.some_text, {
 		.position = {80.0f, 260.0f},
 		.rotation = 5.0f,

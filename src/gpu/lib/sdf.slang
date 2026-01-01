@@ -20,6 +20,10 @@ public func aa(dist: float) -> float {
 
 // SDF functions adapted from https://iquilezles.org/articles/distfunctions2d/
 
+// Signed distance from the edge of a circle.
+public func circle(p: float2, radius: float) -> float
+{ return length(p) - radius; }
+
 // Signed distance from an axis-aligned rectangle.
 public func rect(p: float2, size: float2) -> float
 {
@@ -27,10 +31,11 @@ public func rect(p: float2, size: float2) -> float
 	return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0);
 }
 
-// Signed distance from the edge of a circle.
-public func circle(p: float2, radius: float) -> float
+// Signed distance from a horizontal capsule.
+public func capsule(p: float2, width: float, radius: float) -> float
 {
-	return length(p) - radius;
+	let qx = p.x - clamp(p.x, -width / 2.0, width / 2.0);
+	return length(float2(qx, p.y)) - radius;
 }
 
 }

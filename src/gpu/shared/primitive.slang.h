@@ -10,14 +10,20 @@ or distributed except according to those terms.
 #pragma once
 
 struct Primitive {
+	struct CircleParams {
+		float radius;
+		int _pad0[3];
+		int _pad1[4];
+	};
 	struct RectParams {
 		float2 size;
 		int _pad0[2];
 		int _pad1[4];
 	};
-	struct CircleParams {
+	struct CapsuleParams {
+		float width;
 		float radius;
-		int _pad0[3];
+		int _pad0[2];
 		int _pad1[4];
 	};
 	struct GlyphParams {
@@ -28,8 +34,9 @@ struct Primitive {
 	};
 
 	enum class Type: int {
-		Rect,
 		Circle,
+		Rect,
+		Capsule,
 		Glyph,
 	};
 	Type type;
@@ -48,6 +55,7 @@ struct Primitive {
 	union {
 		RectParams rect_params;
 		CircleParams circle_params;
+		CapsuleParams capsule_params;
 		GlyphParams glyph_params;
 	};
 #endif

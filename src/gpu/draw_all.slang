@@ -131,6 +131,10 @@ func distanceToPrimitive(primitive: Primitive, params: int[8], at: float2) -> fl
 		let rectParams = reinterpret<Primitive::RectParams>(params);
 		dist = sdf::rect(center, rectParams.size);
 		return float2(dist, dist);
+	case Primitive::Type::Capsule:
+		let capsuleParams = reinterpret<Primitive::CapsuleParams>(params);
+		dist = sdf::capsule(center, capsuleParams.width, capsuleParams.radius);
+		return float2(dist, dist);
 	case Primitive::Type::Glyph:
 		let glyphParams = reinterpret<Primitive::GlyphParams>(params);
 		return sampleGlyphDistance(center, glyphParams);
