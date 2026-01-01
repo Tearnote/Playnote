@@ -142,7 +142,7 @@ func distanceToPrimitive(primitive: Primitive, params: int[8], at: float2) -> fl
 	}
 }
 
-func samplePrimitive<T, C: IColorOps<T>>(at: float2, primitive: Primitive, params: int[8], ctx: C) -> T
+func applyPrimitive<T, C: IColorOps<T>>(source: T, at: float2, primitive: Primitive, params: int[8], ctx: C) -> T
 {
 	// Rotate the primitive counterclockwise by rotating the sample point clockwise
 	let rotatedPos = rotateAround(at, primitive.position, primitive.rotation);
@@ -154,18 +154,19 @@ func samplePrimitive<T, C: IColorOps<T>>(at: float2, primitive: Primitive, param
 	glowPower = glowPower * glowPower * glowPower;
 
 	// Composite the primitive layers
-	var result = ctx.mul(ctx.extract(primitive.glow_color), glowPower);
+	var result = source;
+	result = ctx.blend(result, ctx.mul(ctx.extract(primitive.glow_color), glowPower));
 	result = ctx.blend(result, ctx.mul(ctx.extract(primitive.color), fillCoverage));
 	result = ctx.blend(result, ctx.mul(ctx.extract(primitive.outline_color), outlineCoverage));
 	return result;
 }
 
 // Convenience overload
-func samplePrimitive<T, C: IColorOps<T>>(at: float2, primitive_idx: int, ctx: C) -> T
+func applyPrimitive<T, C: IColorOps<T>>(source: T, at: float2, primitive_idx: int, ctx: C) -> T
 {
 	let primitive = readPrimitive(b_primitives, primitive_idx);
 	let params = readPrimitiveParams(b_primitives, primitive_idx);
-	return samplePrimitive(at, primitive, params, ctx);
+	return applyPrimitive(source, at, primitive, params, ctx);
 }
 
 [shader("compute")]
@@ -191,8 +192,7 @@ void computeMain(int2 threadId: SV_DispatchThreadID, uint3 groupThreadId: SV_Gro
 		// Per-pixel coverage
 		let ctx = StandardColorOps();
 		for (int i = 0; i < worklistSize; i += 1) {
-			let primColor = samplePrimitive(selfPos, worklist[i].primitive_idx, ctx);
-			color = blend(color, primColor);
+			color = applyPrimitive(color, selfPos, worklist[i].primitive_idx, ctx);
 		}
 	} else {
 		// Per-subpixel coverage
@@ -210,8 +210,7 @@ void computeMain(int2 threadId: SV_DispatchThreadID, uint3 groupThreadId: SV_Gro
 				}
 				let subpixPos = selfPos + (subpixOffset - float2(0.5, 0.5));
 				let ctx = SubpixelColorOps(j);
-				let primColor = samplePrimitive(subpixPos, primitive, params, ctx);
-				results[j] = blend(results[j], primColor);
+				results[j] = applyPrimitive(results[j], subpixPos, primitive, params, ctx);
 			}
 		}
 		color = blend(color, float4(results[0].r, results[1].r, results[2].r, (results[0].g + results[1].g + results[2].g) / 3.0));
