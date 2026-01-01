@@ -20,7 +20,7 @@ namespace playnote::gfx {
 class TextShaper {
 public:
 	static constexpr auto PixelsPerEm = 64.0f;
-	static constexpr auto DistanceRange = 20.0f;
+	static constexpr auto DistanceRange = 32.0f;
 
 	using FontID = id;
 	using StyleID = id;
