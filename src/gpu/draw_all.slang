@@ -79,7 +79,7 @@ interface IColorOps<T> {
 struct StandardColorOps: IColorOps<float4> {
 	func extract(c: float4) -> float4 { return c; }
 	func blend(onto: float4, color: float4) -> float4 { return ::blend(onto, color); }
-	func mul(c: float4, n: float) -> float4 { return c * n; }
+	func mul(c: float4, n: float) -> float4 { return float4(c.rgb, c.a * n); }
 };
 
 // Color operations on one subpixel.
@@ -87,7 +87,7 @@ struct SubpixelColorOps: IColorOps<float2> {
 	int subpixel_idx;
 	func extract(c: float4) -> float2 { return float2(c[subpixel_idx], c.a); }
 	func blend(onto: float2, color: float2) -> float2 { return ::blend(onto, color); }
-	func mul(c: float2, n: float) -> float2 { return c * n; }
+	func mul(c: float2, n: float) -> float2 { return float2(c.x, c.y * n); }
 };
 
 func sampleGlyphDistance(p: float2, params: Primitive::GlyphParams) -> float2
