@@ -11,11 +11,9 @@ or distributed except according to those terms.
 
 implementing lib;
 
-// Perform a standard alpha blend of one color onto another.
+// Perform a standard alpha blend of one color onto another. Assumes premultiplied alpha.
 public func blend<int N>(onto: vector<float, N>, color: vector<float, N>) -> vector<float, N>
-{
-	return lerp(onto, color, color[color.elementCount - 1]);
-}
+{ return color + onto * (1.0 - color[color.elementCount - 1]); }
 
 // Encode a linear space color as sRGB.
 // http://www.java-gaming.org/topics/fast-srgb-conversion-glsl-snippet/37583/view.html

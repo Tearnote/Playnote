@@ -81,7 +81,7 @@ interface IColorOps<T> {
 struct StandardColorOps: IColorOps<float4> {
 	func extract(c: float4) -> float4 { return c; }
 	func blend(onto: float4, color: float4) -> float4 { return ::blend(onto, color); }
-	func mul(c: float4, n: float) -> float4 { return float4(c.rgb, c.a * n); }
+	func mul(c: float4, n: float) -> float4 { return c * n; }
 };
 
 // Color operations on one subpixel.
@@ -89,7 +89,7 @@ struct SubpixelColorOps: IColorOps<float2> {
 	int subpixel_idx;
 	func extract(c: float4) -> float2 { return float2(c[subpixel_idx], c.a); }
 	func blend(onto: float2, color: float2) -> float2 { return ::blend(onto, color); }
-	func mul(c: float2, n: float) -> float2 { return float2(c.x, c.y * n); }
+	func mul(c: float2, n: float) -> float2 { return c * n; }
 };
 
 func sampleGlyphDistance(p: float2, params: Primitive::GlyphParams) -> float2
@@ -176,7 +176,7 @@ void computeMain(int2 threadId: SV_DispatchThreadID, uint3 groupThreadId: SV_Gro
 
 	if (any(threadId >= ViewportSize)) return;
 	let selfPos = float2(threadId) + 0.5;
-	var color = float4(0.0, 0.0, 0.0, 0.0);
+	var color = float4(0.0, 0.0, 0.0, 1.0);
 
 	if (SubpixelLayoutType == SubpixelLayout::None) {
 		// Per-pixel coverage
