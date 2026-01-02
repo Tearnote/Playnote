@@ -63,13 +63,13 @@ struct Primitive {
 };
 
 #ifndef __cplusplus
-func readPrimitive(buf: RWByteAddressBuffer, idx: int) -> Primitive
+func readPrimitive(buf: IPhysicalBuffer, idx: int) -> Primitive
 { return buf.LoadByteOffset<Primitive>(idx * sizeof(Primitive)); }
 
 func writePrimitive(buf: RWByteAddressBuffer, idx: int, prim: Primitive)
 { buf.StoreByteOffset(idx * sizeof(Primitive), prim); }
 
-func readPrimitiveParams(buf: RWByteAddressBuffer, idx: int) -> int[8]
+func readPrimitiveParams(buf: IPhysicalBuffer, idx: int) -> int[8]
 { return buf.LoadByteOffset<int[8]>((idx + 1) * sizeof(Primitive) - sizeof(int[8])); }
 
 func writePrimitiveParams<T>(buf: RWByteAddressBuffer, idx: int, p: T)

@@ -15,7 +15,7 @@ import lib;
 
 #define WORKLIST_DEBUG 0
 
-RWByteAddressBuffer b_primitives;
+ByteAddressBuffer b_primitives;
 StructuredBuffer<WorklistItem> b_worklists;
 StructuredBuffer<int> b_worklistSizes;
 Sampler2D<float4> s_staticAtlas;
