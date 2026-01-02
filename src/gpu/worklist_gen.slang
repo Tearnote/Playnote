@@ -88,6 +88,8 @@ void computeMain(
 	// Initial processing
 	let transform = unpackTransform(Transform);
 	primitive.position = mul(transform, float3(primitive.position, 1.0)).xy;
+	primitive.scissor.top_left = mul(transform, float3(primitive.scissor.top_left, 1.0)).xy;
+	primitive.scissor.bottom_right = mul(transform, float3(primitive.scissor.bottom_right, 1.0)).xy;
 	primitive.rotation = radians(primitive.rotation);
 	primitive.outline_width = mul(transform, float3(primitive.outline_width, 0.0, 0.0)).x;
 	primitive.glow_width = mul(transform, float3(primitive.glow_width, 0.0, 0.0)).x;
@@ -150,6 +152,10 @@ void computeMain(
 	bottom_left = rotateAround(bottom_left, primitive.position, primitive.rotation);
 	aabb.top_left = min(top_left, min(bottom_right, min(top_right, bottom_left)));
 	aabb.bottom_right = max(top_left, max(bottom_right, max(top_right, bottom_left)));
+
+	// Apply scissor
+	aabb.top_left = max(aabb.top_left, primitive.scissor.top_left);
+	aabb.bottom_right = min(aabb.bottom_right, primitive.scissor.bottom_right);
 
 	// Compute tile coverage
 	let tileAabb = AABB<int>(

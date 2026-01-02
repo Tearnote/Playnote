@@ -118,7 +118,7 @@ func distanceToPrimitive(primitive: Primitive, params: int[8], at: float2) -> fl
 }
 
 func shadePrimitiveDist<int N>(
-	distance: float2, source: vector<float, N>, at: float2,
+	distance: float2, source: vector<float, N>, at: float2, extCoverage: float,
 	primitive: Primitive, params: int[8],
 	extractColor: IFunc<vector<float, N>, float4>
 ) -> vector<float, N>
@@ -130,9 +130,9 @@ func shadePrimitiveDist<int N>(
 
 	// Composite the primitive layers
 	var result = source;
-	result = blend(result, extractColor(primitive.glow_color) * glowPower);
-	result = blend(result, extractColor(primitive.color) * fillCoverage);
-	result = blend(result, extractColor(primitive.outline_color) * outlineCoverage);
+	result = blend(result, extractColor(primitive.glow_color) * glowPower * extCoverage);
+	result = blend(result, extractColor(primitive.color) * fillCoverage * extCoverage);
+	result = blend(result, extractColor(primitive.outline_color) * outlineCoverage * extCoverage);
 	return result;
 }
 
@@ -164,12 +164,17 @@ void computeMain(int2 threadId: SV_DispatchThreadID, uint3 groupThreadId: SV_Gro
 			let params = readPrimitiveParams(b_primitives, workItem.primitive_idx);
 			let next_group = i == worklistSize - 1 ? -1 : worklist[i + 1].group_id;
 
+			// Scissor clip
+			let scissorMidpoint = (primitive.scissor.top_left + primitive.scissor.bottom_right) / 2.0;
+			let scissorCoverage = sdf::aa(sdf::rect(selfPos - scissorMidpoint, primitive.scissor.bottom_right - primitive.scissor.top_left));
+			if (scissorCoverage <= 0.0) continue;
+
 			// Rotate the primitive counterclockwise by rotating the sample point clockwise
 			let rotatedPos = rotateAround(selfPos, primitive.position, primitive.rotation);
 			distance = min(distance, distanceToPrimitive(primitive, params, rotatedPos));
 
 			if (workItem.group_id != next_group) {
-				color = shadePrimitiveDist(distance, color, rotatedPos, primitive, params,
+				color = shadePrimitiveDist(distance, color, rotatedPos, scissorCoverage, primitive, params,
 					(float4 c) => c
 				);
 				distance = float2(MaxDistance, MaxDistance);
@@ -198,12 +203,17 @@ void computeMain(int2 threadId: SV_DispatchThreadID, uint3 groupThreadId: SV_Gro
 				}
 				let subpixPos = selfPos + (subpixOffset - float2(0.5, 0.5));
 
+				// Scissor clip
+				let scissorMidpoint = (primitive.scissor.top_left + primitive.scissor.bottom_right) / 2.0;
+				let scissorCoverage = sdf::aa(sdf::rect(subpixPos - scissorMidpoint, primitive.scissor.bottom_right - primitive.scissor.top_left));
+				if (scissorCoverage <= 0.0) continue;
+
 				// Rotate the primitive counterclockwise by rotating the sample point clockwise
 				let rotatedPos = rotateAround(subpixPos, primitive.position, primitive.rotation);
 				distance[j] = min(distance[j], distanceToPrimitive(primitive, params, rotatedPos));
 
 				if (workItem.group_id != next_group) {
-					results[j] = shadePrimitiveDist(distance[j], results[j], rotatedPos, primitive, params,
+					results[j] = shadePrimitiveDist(distance[j], results[j], rotatedPos, scissorCoverage, primitive, params,
 						(float4 c) => float2(c[j], c.a)
 					);
 					distance[j] = float2(MaxDistance, MaxDistance);

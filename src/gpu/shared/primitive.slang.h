@@ -42,6 +42,7 @@ struct Primitive {
 	Type type;
 	int group_id;
 	float2 position;
+	AABB<float> scissor;
 	float4 color;
 	float4 outline_color;
 	float4 glow_color;

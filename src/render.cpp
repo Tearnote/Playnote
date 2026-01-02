@@ -216,6 +216,21 @@ static void render_select(gfx::Renderer::Queue& queue, GameState& state)
 	}, {
 		.radius = 20.0f,
 	});
+	queue.circle({
+		.position = {400.0f, 200.0f},
+		.scissor = {
+			{380.0f, 100.0f},
+			{430.0f, 210.0f},
+		},
+		.color = {0.0f, 0.0f, 0.0f, 0.0f},
+		.depth = 10,
+		.outline_width = 4.0f,
+		.outline_color = {1.0f, 1.0f, 1.0f, 1.0f},
+		.glow_width = 16.0f,
+		.glow_color = {1.0f, 1.0f, 0.0f, 1.0f},
+	}, {
+		.radius = 20.0f,
+	});
 	queue.rect({
 		.position = {180.0f, 200.0f},
 		.rotation = -45.0f,
