@@ -278,9 +278,16 @@ auto Renderer::Queue::to_primitive_list() const -> vector<Primitive>
 
 	auto primitives = vector<Primitive>{};
 	primitives.reserve(rects.size() + circles.size() + capsules.size() + glyphs.size());
-	for (auto [common, circle, group]: circles) {
-		primitives.emplace_back(Primitive{
-			.type = Primitive::Type::Circle,
+	auto enqueue_primitive = [&]<typename T>(Drawable const& common, T const& params, int group) {
+		constexpr auto type = [] {
+			if constexpr(same_as<T, CircleParams>) return Primitive::Type::Circle;
+			if constexpr(same_as<T, RectParams>) return Primitive::Type::Rect;
+			if constexpr(same_as<T, CapsuleParams>) return Primitive::Type::Capsule;
+			if constexpr(same_as<T, GlyphParams>) return Primitive::Type::Glyph;
+			unreachable();
+		}();
+		auto& prim = primitives.emplace_back(Primitive{
+			.type = type,
 			.group_id = group_remapping[group],
 			.position = common.position,
 			.scissor = common.scissor,
@@ -290,61 +297,24 @@ auto Renderer::Queue::to_primitive_list() const -> vector<Primitive>
 			.rotation = common.rotation,
 			.outline_width = common.outline_width,
 			.glow_width = common.glow_width,
-			.circle_params = Primitive::CircleParams{.radius = circle.radius},
 		});
-	}
-	for (auto [common, rect, group]: rects) {
-		primitives.emplace_back(Primitive{
-			.type = Primitive::Type::Rect,
-			.group_id = group_remapping[group],
-			.position = common.position,
-			.scissor = common.scissor,
-			.color = common.color,
-			.outline_color = common.outline_color,
-			.glow_color = common.glow_color,
-			.rotation = common.rotation,
-			.outline_width = common.outline_width,
-			.glow_width = common.glow_width,
-			.rect_params = Primitive::RectParams{.size = rect.size},
-		});
-	}
-	for (auto [common, capsule, group]: capsules) {
-		primitives.emplace_back(Primitive{
-			.type = Primitive::Type::Capsule,
-			.group_id = group_remapping[group],
-			.position = common.position,
-			.scissor = common.scissor,
-			.color = common.color,
-			.outline_color = common.outline_color,
-			.glow_color = common.glow_color,
-			.rotation = common.rotation,
-			.outline_width = common.outline_width,
-			.glow_width = common.glow_width,
-			.capsule_params = Primitive::CapsuleParams{
-				.width = capsule.width,
-				.radius = capsule.radius,
-			},
-		});
-	}
-	for (auto [common, glyph, group]: glyphs) {
-		primitives.emplace_back(Primitive{
-			.type = Primitive::Type::Glyph,
-			.group_id = group_remapping[group],
-			.position = common.position,
-			.scissor = common.scissor,
-			.color = common.color,
-			.outline_color = common.outline_color,
-			.glow_color = common.glow_color,
-			.rotation = common.rotation,
-			.outline_width = common.outline_width,
-			.glow_width = common.glow_width,
-			.glyph_params = Primitive::GlyphParams{
-				.atlas_bounds = glyph.atlas_bounds,
-				.size = glyph.size,
-				.page = glyph.page,
-			},
-		});
-	}
+		if constexpr(same_as<T, CircleParams>) prim.circle_params = {.radius = params.radius};
+		else if constexpr(same_as<T, RectParams>) prim.rect_params = {.size = params.size};
+		else if constexpr(same_as<T, CapsuleParams>) prim.capsule_params = {
+			.width = params.width,
+			.radius = params.radius,
+		};
+		else if constexpr(same_as<T, GlyphParams>) prim.glyph_params = {
+			.atlas_bounds = params.atlas_bounds,
+			.size = params.size,
+			.page = params.page,
+		};
+		else unreachable();
+	};
+	for (auto const& circle: circles) apply(enqueue_primitive, circle);
+	for (auto const& rect: rects) apply(enqueue_primitive, rect);
+	for (auto const& capsule: capsules) apply(enqueue_primitive, capsule);
+	for (auto const& glyph: glyphs) apply(enqueue_primitive, glyph);
 	return primitives;
 }
 

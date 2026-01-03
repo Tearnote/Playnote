@@ -40,6 +40,7 @@ using std::pair;
 using std::make_pair;
 using std::tuple;
 using std::make_tuple;
+using std::apply;
 using std::reference_wrapper;
 using std::ref;
 using std::initializer_list;
