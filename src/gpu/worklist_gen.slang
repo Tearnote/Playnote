@@ -144,10 +144,10 @@ void computeMain(
 	var bottom_right = aabb.bottom_right;
 	var top_right = float2(bottom_right.x, top_left.y);
 	var bottom_left = float2(top_left.x, bottom_right.y);
-	top_left = rotateAround(top_left, primitive.position, primitive.rotation);
-	bottom_right = rotateAround(bottom_right, primitive.position, primitive.rotation);
-	top_right = rotateAround(top_right, primitive.position, primitive.rotation);
-	bottom_left = rotateAround(bottom_left, primitive.position, primitive.rotation);
+	top_left = rotateAround(top_left, primitive.position, -primitive.rotation);
+	bottom_right = rotateAround(bottom_right, primitive.position, -primitive.rotation);
+	top_right = rotateAround(top_right, primitive.position, -primitive.rotation);
+	bottom_left = rotateAround(bottom_left, primitive.position, -primitive.rotation);
 	aabb.top_left = min(top_left, min(bottom_right, min(top_right, bottom_left)));
 	aabb.bottom_right = max(top_left, max(bottom_right, max(top_right, bottom_left)));
 

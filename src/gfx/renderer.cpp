@@ -186,7 +186,7 @@ auto Renderer::Queue::line(Drawable common, LineParams params) -> Queue&
 	auto const start = common.position + params.start;
 	auto const end = common.position + params.end;
 	auto const midpoint = start + (end - start) / float2{2.0f, 2.0f};
-	auto const angle = -degrees(atan2(end.y() - start.y(), end.x() - start.x()));
+	auto const angle = degrees(atan2(end.y() - start.y(), end.x() - start.x()));
 	auto const len = length(end - start);
 
 	switch (params.cap) {
@@ -232,7 +232,7 @@ auto Renderer::Queue::line(Drawable common, LineParams params) -> Queue&
 auto Renderer::Queue::text(Text const& text, Drawable common, TextParams params) -> Queue&
 {
 	for (auto [line_idx, line]: text.lines | views::enumerate) {
-		auto const rotation = -radians(common.rotation); // Counterclockwise
+		auto const rotation = radians(common.rotation); // Counterclockwise
 		auto line_offset = float2{0.0f, params.line_height * params.size * line_idx};
 		line_offset = float2{-line_offset.y() * sin(rotation), line_offset.y() * cos(rotation)};
 		for (auto const& glyph: line.glyphs) {

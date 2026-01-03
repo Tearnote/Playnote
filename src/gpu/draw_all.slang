@@ -169,8 +169,7 @@ void computeMain(int2 threadId: SV_DispatchThreadID, uint3 groupThreadId: SV_Gro
 			let scissorCoverage = sdf::aa(sdf::rect(selfPos - scissorMidpoint, primitive.scissor.bottom_right - primitive.scissor.top_left));
 			if (scissorCoverage <= 0.0) continue;
 
-			// Rotate the primitive counterclockwise by rotating the sample point clockwise
-			let rotatedPos = rotateAround(selfPos, primitive.position, primitive.rotation);
+			let rotatedPos = rotateAround(selfPos, primitive.position, -primitive.rotation);
 			distance = min(distance, distanceToPrimitive(primitive, params, rotatedPos));
 
 			if (workItem.group_id != next_group) {
@@ -208,8 +207,7 @@ void computeMain(int2 threadId: SV_DispatchThreadID, uint3 groupThreadId: SV_Gro
 				let scissorCoverage = sdf::aa(sdf::rect(subpixPos - scissorMidpoint, primitive.scissor.bottom_right - primitive.scissor.top_left));
 				if (scissorCoverage <= 0.0) continue;
 
-				// Rotate the primitive counterclockwise by rotating the sample point clockwise
-				let rotatedPos = rotateAround(subpixPos, primitive.position, primitive.rotation);
+				let rotatedPos = rotateAround(subpixPos, primitive.position, -primitive.rotation);
 				distance[j] = min(distance[j], distanceToPrimitive(primitive, params, rotatedPos));
 
 				if (workItem.group_id != next_group) {

@@ -233,7 +233,7 @@ static void render_select(gfx::Renderer::Queue& queue, GameState& state)
 	});
 	queue.rect({
 		.position = {180.0f, 200.0f},
-		.rotation = -45.0f,
+		.rotation = 45.0f,
 		.color = {0.3f, 0.1f, 0.1f, 0.5f},
 		.depth = 9,
 		.outline_width = 5.0f,
@@ -245,7 +245,7 @@ static void render_select(gfx::Renderer::Queue& queue, GameState& state)
 	});
 	queue.capsule({
 		.position = {120.0f, 150.0f},
-		.rotation = -2.0f,
+		.rotation = 2.0f,
 		.color = {0.0f, 1.0f, 0.2f, 1.0f},
 		.depth = 9,
 	}, {
@@ -254,7 +254,7 @@ static void render_select(gfx::Renderer::Queue& queue, GameState& state)
 	});
 	queue.text(context.some_text, {
 		.position = {80.0f, 260.0f},
-		.rotation = 5.0f,
+		.rotation = -5.0f,
 		.color = {0.0f, 0.0f, 0.0f, 1.0f},
 		.depth = 8,
 		.glow_width = 8.0f,
