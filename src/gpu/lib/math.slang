@@ -11,7 +11,7 @@ or distributed except according to those terms.
 
 implementing lib;
 
-public static let Pi = 3.14159265359;
+public static let Tau = 6.28318530718;
 
 // Squared length.
 public func dot2(v: float2) -> float { return dot(v, v); }
@@ -26,7 +26,7 @@ func cosShutterAntiderivative(t: float) -> float
 {
     if (t < 0.0) return 0.0;
     if (t > 1.0) return 1.0;
-    return t - sin(2.0 * Pi * t) / (2.0 * Pi);
+    return t - sin(Tau * t) / Tau;
 }
 
 // Integral of the cosine shutter function within a time period.
