@@ -46,7 +46,7 @@ struct Primitive {
 	float4 color;
 	float4 outline_color;
 	float4 glow_color;
-	float rotation;
+	float rotation; // in radians
 	float outline_width;
 	float glow_width;
 	int _pad0[1];

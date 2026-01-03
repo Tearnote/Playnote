@@ -154,6 +154,7 @@ auto Renderer::Queue::logical_to_physical(float2 pos) -> float2
 auto Renderer::Queue::circle(Drawable common, CircleParams params) -> Queue&
 {
 	if (!inside_group) group_depths.emplace_back(group_depths.size(), -1);
+	common.rotation = radians(common.rotation);
 	circles.emplace_back(common, params, group_depths.size() - 1);
 	group_depths.back().second = common.depth;
 	return *this;
@@ -162,6 +163,7 @@ auto Renderer::Queue::circle(Drawable common, CircleParams params) -> Queue&
 auto Renderer::Queue::rect(Drawable common, RectParams params) -> Queue&
 {
 	if (!inside_group) group_depths.emplace_back(group_depths.size(), -1);
+	common.rotation = radians(common.rotation);
 	rects.emplace_back(common, params, group_depths.size() - 1);
 	group_depths.back().second = common.depth;
 	return *this;
@@ -176,6 +178,7 @@ auto Renderer::Queue::rect_tl(Drawable common, RectParams params) -> Queue&
 auto Renderer::Queue::capsule(Drawable common, CapsuleParams params) -> Queue&
 {
 	if (!inside_group) group_depths.emplace_back(group_depths.size(), -1);
+	common.rotation = radians(common.rotation);
 	capsules.emplace_back(common, params, group_depths.size() - 1);
 	group_depths.back().second = common.depth;
 	return *this;
@@ -232,7 +235,7 @@ auto Renderer::Queue::line(Drawable common, LineParams params) -> Queue&
 auto Renderer::Queue::text(Text const& text, Drawable common, TextParams params) -> Queue&
 {
 	for (auto [line_idx, line]: text.lines | views::enumerate) {
-		auto const rotation = radians(common.rotation); // Counterclockwise
+		auto const rotation = radians(common.rotation);
 		auto line_offset = float2{0.0f, params.line_height * params.size * line_idx};
 		line_offset = float2{-line_offset.y() * sin(rotation), line_offset.y() * cos(rotation)};
 		for (auto const& glyph: line.glyphs) {
@@ -243,7 +246,7 @@ auto Renderer::Queue::text(Text const& text, Drawable common, TextParams params)
 			};
 			glyphs.emplace_back(Drawable{
 				.position = common.position + rotated_offset * params.size / TextShaper::PixelsPerEm + line_offset,
-				.rotation = common.rotation,
+				.rotation = rotation,
 				.scissor = common.scissor,
 				.color = common.color,
 				.depth = common.depth,

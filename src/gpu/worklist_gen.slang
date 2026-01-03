@@ -88,7 +88,6 @@ void computeMain(
 	primitive.position = transformPoint(transform, primitive.position);
 	primitive.scissor.top_left = transformPoint(transform, primitive.scissor.top_left);
 	primitive.scissor.bottom_right = transformPoint(transform, primitive.scissor.bottom_right);
-	primitive.rotation = radians(primitive.rotation); //TODO move to CPU
 	primitive.outline_width = transformScalar(transform, primitive.outline_width);
 	primitive.glow_width = transformScalar(transform, primitive.glow_width);
 	primitive.color.rgb = srgbDecode(primitive.color.rgb);
