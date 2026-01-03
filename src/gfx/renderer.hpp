@@ -124,6 +124,8 @@ public:
 		Transform inv_transform;
 
 		Queue(Transform transform, Transform inv_transform): transform{transform}, inv_transform{inv_transform} {}
+		template<typename T>
+		void enqueue_into(vector<tuple<Drawable, T, int>>&, Drawable common, T params);
 		[[nodiscard]] auto to_primitive_list() const -> vector<Primitive>;
 	};
 

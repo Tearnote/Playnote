@@ -152,25 +152,13 @@ auto Renderer::Queue::logical_to_physical(float2 pos) -> float2
 
 auto Renderer::Queue::circle(Drawable common, CircleParams params) -> Queue&
 {
-	if (!inside_group) group_depths.emplace_back(group_depths.size(), -1);
-	common.rotation = radians(common.rotation);
-	common.color = srgb_decode(common.color);
-	common.outline_color = srgb_decode(common.outline_color);
-	common.glow_color = srgb_decode(common.glow_color);
-	circles.emplace_back(common, params, group_depths.size() - 1);
-	group_depths.back().second = common.depth;
+	enqueue_into(circles, common, params);
 	return *this;
 }
 
 auto Renderer::Queue::rect(Drawable common, RectParams params) -> Queue&
 {
-	if (!inside_group) group_depths.emplace_back(group_depths.size(), -1);
-	common.rotation = radians(common.rotation);
-	common.color = srgb_decode(common.color);
-	common.outline_color = srgb_decode(common.outline_color);
-	common.glow_color = srgb_decode(common.glow_color);
-	rects.emplace_back(common, params, group_depths.size() - 1);
-	group_depths.back().second = common.depth;
+	enqueue_into(rects, common, params);
 	return *this;
 }
 
@@ -182,13 +170,7 @@ auto Renderer::Queue::rect_tl(Drawable common, RectParams params) -> Queue&
 
 auto Renderer::Queue::capsule(Drawable common, CapsuleParams params) -> Queue&
 {
-	if (!inside_group) group_depths.emplace_back(group_depths.size(), -1);
-	common.rotation = radians(common.rotation);
-	common.color = srgb_decode(common.color);
-	common.outline_color = srgb_decode(common.outline_color);
-	common.glow_color = srgb_decode(common.glow_color);
-	capsules.emplace_back(common, params, group_depths.size() - 1);
-	group_depths.back().second = common.depth;
+	enqueue_into(capsules, common, params);
 	return *this;
 }
 
@@ -242,22 +224,18 @@ auto Renderer::Queue::line(Drawable common, LineParams params) -> Queue&
 
 auto Renderer::Queue::text(Text const& text, Drawable common, TextParams params) -> Queue&
 {
-	common.color = srgb_decode(common.color);
-	common.outline_color = srgb_decode(common.outline_color);
-	common.glow_color = srgb_decode(common.glow_color);
 	for (auto [line_idx, line]: text.lines | views::enumerate) {
 		auto const rotation = radians(common.rotation);
 		auto line_offset = float2{0.0f, params.line_height * params.size * line_idx};
 		line_offset = float2{-line_offset.y() * sin(rotation), line_offset.y() * cos(rotation)};
 		for (auto const& glyph: line.glyphs) {
-			if (!inside_group) group_depths.emplace_back(group_depths.size(), -1);
 			auto const rotated_offset = float2{
 				glyph.offset.x() * cos(rotation) - glyph.offset.y() * sin(rotation),
 				glyph.offset.x() * sin(rotation) + glyph.offset.y() * cos(rotation)
 			};
-			glyphs.emplace_back(Drawable{
+			enqueue_into(glyphs, Drawable{
 				.position = common.position + rotated_offset * params.size / TextShaper::PixelsPerEm + line_offset,
-				.rotation = rotation,
+				.rotation = common.rotation,
 				.scissor = common.scissor,
 				.color = common.color,
 				.depth = common.depth,
@@ -269,11 +247,22 @@ auto Renderer::Queue::text(Text const& text, Drawable common, TextParams params)
 				.atlas_bounds = glyph.atlas_bounds,
 				.size = params.size,
 				.page = glyph.page,
-			}, group_depths.size() - 1);
-			group_depths.back().second = common.depth;
+			});
 		}
 	}
 	return *this;
+}
+
+template<typename T>
+void Renderer::Queue::enqueue_into(vector<tuple<Drawable, T, int>>& into, Drawable common, T params)
+{
+	if (!inside_group) group_depths.emplace_back(group_depths.size(), -1);
+	common.rotation = radians(common.rotation);
+	common.color = srgb_decode(common.color);
+	common.outline_color = srgb_decode(common.outline_color);
+	common.glow_color = srgb_decode(common.glow_color);
+	into.emplace_back(common, params, group_depths.size() - 1);
+	group_depths.back().second = common.depth;
 }
 
 auto Renderer::Queue::to_primitive_list() const -> vector<Primitive>

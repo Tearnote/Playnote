@@ -43,9 +43,9 @@ struct Primitive {
 	int group_id;
 	float2 position;
 	AABB<float> scissor;
-	float4 color;
-	float4 outline_color;
-	float4 glow_color;
+	float4 color;         //
+	float4 outline_color; // in linear RGB
+	float4 glow_color;    //
 	float rotation; // in radians
 	float outline_width;
 	float glow_width;
