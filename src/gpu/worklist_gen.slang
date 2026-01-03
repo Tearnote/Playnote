@@ -90,9 +90,6 @@ void computeMain(
 	primitive.scissor.bottom_right = transformPoint(transform, primitive.scissor.bottom_right);
 	primitive.outline_width = transformScalar(transform, primitive.outline_width);
 	primitive.glow_width = transformScalar(transform, primitive.glow_width);
-	primitive.color.rgb = srgbDecode(primitive.color.rgb);
-	primitive.outline_color.rgb = srgbDecode(primitive.outline_color.rgb);
-	primitive.glow_color.rgb = srgbDecode(primitive.glow_color.rgb);
 
 	switch (primitive.type) {
 	case Primitive::Type::Circle:

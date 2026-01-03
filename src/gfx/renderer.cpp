@@ -9,14 +9,13 @@ or distributed except according to those terms.
 
 #include "gfx/renderer.hpp"
 
-#include "gfx/text.hpp"
-#include "lib/os.hpp"
 #include "preamble.hpp"
-#include "utils/config.hpp"
 #include "utils/assets.hpp"
+#include "utils/config.hpp"
+#include "lib/os.hpp"
 #include "lib/vuk.hpp"
 #include "gpu/shaders.hpp"
-#include "vuk/Types.hpp"
+#include "gfx/text.hpp"
 
 namespace playnote::gfx {
 
@@ -155,6 +154,9 @@ auto Renderer::Queue::circle(Drawable common, CircleParams params) -> Queue&
 {
 	if (!inside_group) group_depths.emplace_back(group_depths.size(), -1);
 	common.rotation = radians(common.rotation);
+	common.color = srgb_decode(common.color);
+	common.outline_color = srgb_decode(common.outline_color);
+	common.glow_color = srgb_decode(common.glow_color);
 	circles.emplace_back(common, params, group_depths.size() - 1);
 	group_depths.back().second = common.depth;
 	return *this;
@@ -164,6 +166,9 @@ auto Renderer::Queue::rect(Drawable common, RectParams params) -> Queue&
 {
 	if (!inside_group) group_depths.emplace_back(group_depths.size(), -1);
 	common.rotation = radians(common.rotation);
+	common.color = srgb_decode(common.color);
+	common.outline_color = srgb_decode(common.outline_color);
+	common.glow_color = srgb_decode(common.glow_color);
 	rects.emplace_back(common, params, group_depths.size() - 1);
 	group_depths.back().second = common.depth;
 	return *this;
@@ -179,6 +184,9 @@ auto Renderer::Queue::capsule(Drawable common, CapsuleParams params) -> Queue&
 {
 	if (!inside_group) group_depths.emplace_back(group_depths.size(), -1);
 	common.rotation = radians(common.rotation);
+	common.color = srgb_decode(common.color);
+	common.outline_color = srgb_decode(common.outline_color);
+	common.glow_color = srgb_decode(common.glow_color);
 	capsules.emplace_back(common, params, group_depths.size() - 1);
 	group_depths.back().second = common.depth;
 	return *this;
@@ -234,6 +242,9 @@ auto Renderer::Queue::line(Drawable common, LineParams params) -> Queue&
 
 auto Renderer::Queue::text(Text const& text, Drawable common, TextParams params) -> Queue&
 {
+	common.color = srgb_decode(common.color);
+	common.outline_color = srgb_decode(common.outline_color);
+	common.glow_color = srgb_decode(common.glow_color);
 	for (auto [line_idx, line]: text.lines | views::enumerate) {
 		auto const rotation = radians(common.rotation);
 		auto line_offset = float2{0.0f, params.line_height * params.size * line_idx};
