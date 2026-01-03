@@ -22,6 +22,7 @@ namespace playnote::gfx {
 class Renderer {
 public:
 #include "gpu/shared/primitive.slang.h"
+#include "gpu/shared/transform.slang.h"
 
 	static constexpr auto VirtualViewportSize = float2{900.0f, 480.0f};
 	static constexpr auto VirtualViewportMargin = 40.0f; // in logical pixels
@@ -119,10 +120,10 @@ public:
 		vector<tuple<Drawable, CapsuleParams, int>> capsules; // third: group id
 		vector<tuple<Drawable, GlyphParams, int>> glyphs; // third: group id
 		mutable vector<pair<int, int>> group_depths; // first: group id (initially equal to index), second: depth
-		float4 transform;
-		float4 inv_transform;
+		Transform transform;
+		Transform inv_transform;
 
-		Queue(float4 transform, float4 inv_transform): transform{transform}, inv_transform{inv_transform} {}
+		Queue(Transform transform, Transform inv_transform): transform{transform}, inv_transform{inv_transform} {}
 		[[nodiscard]] auto to_primitive_list() const -> vector<Primitive>;
 	};
 

@@ -11,6 +11,7 @@ or distributed except according to those terms.
 
 import lib;
 #include "shared/primitive.slang.h"
+#include "shared/transform.slang.h"
 #include "shared/worklist.slang.h"
 
 RWByteAddressBuffer b_primitives;
@@ -23,16 +24,14 @@ RWStructuredBuffer<Atomic<int>> b_worklistCounts;
 static let ViewportSize = int2(ViewportWidth, ViewportHeight);
 static let TileBound = (ViewportSize + TILE_SIZE - 1) / TILE_SIZE;
 
-func unpackTransform(float4 packed) -> float3x3
-{
-	let offset = packed.xy;
-	let scale = packed.zw;
-	return {
-		{scale.x,     0.0, offset.x},
-		{    0.0, scale.y, offset.y},
-		{    0.0,     0.0,      1.0}
-	};
-}
+func transformPoint(Transform t, float2 p) -> float2
+{ return p * t.scale + t.offset; }
+
+func transformScalar(Transform t, float s) -> float
+{ return s * t.scale; }
+
+func transformScalar(Transform t, float2 s) -> float2
+{ return s * t.scale; }
 
 func enqueueItem(tile: int2, item: WorklistItem)
 {
@@ -42,7 +41,7 @@ func enqueueItem(tile: int2, item: WorklistItem)
 	b_worklists[bufIdx] = item;
 }
 
-func circleAabb(float2 position, Primitive::CircleParams params) -> AABB<float>
+func circleAABB(float2 position, Primitive::CircleParams params) -> AABB<float>
 {
 	return AABB<float>(
 		floor(position - params.radius - 0.5),
@@ -50,7 +49,7 @@ func circleAabb(float2 position, Primitive::CircleParams params) -> AABB<float>
 	);
 }
 
-func rectAabb(float2 position, Primitive::RectParams params) -> AABB<float>
+func rectAABB(float2 position, Primitive::RectParams params) -> AABB<float>
 {
 	return AABB<float>(
 		floor(position - params.size / 2.0 - 0.5),
@@ -58,7 +57,7 @@ func rectAabb(float2 position, Primitive::RectParams params) -> AABB<float>
 	);
 }
 
-func capsuleAabb(float2 position, Primitive::CapsuleParams params) -> AABB<float>
+func capsuleAABB(float2 position, Primitive::CapsuleParams params) -> AABB<float>
 {
 	return AABB<float>(
 		floor(position - params.width / 2.0 - params.radius - 0.5),
@@ -66,7 +65,7 @@ func capsuleAabb(float2 position, Primitive::CapsuleParams params) -> AABB<float
 	);
 }
 
-func glyphAabb(float2 position, Primitive::GlyphParams params) -> AABB<float>
+func glyphAABB(float2 position, Primitive::GlyphParams params) -> AABB<float>
 {
 	return AABB<float>(
 		floor(position),
@@ -78,21 +77,20 @@ func glyphAabb(float2 position, Primitive::GlyphParams params) -> AABB<float>
 [numthreads(64)]
 void computeMain(
 	int threadId: SV_DispatchThreadID,
-	uniform float4 Transform,
-	uniform int PrimitiveCount
+	uniform Transform transform,
+	uniform int primitiveCount
 ) {
-	if (threadId >= PrimitiveCount) return;
+	if (threadId >= primitiveCount) return;
 	var primitive = readPrimitive(b_primitives, threadId);
 	var params = readPrimitiveParams(b_primitives, threadId);
 
 	// Initial processing
-	let transform = unpackTransform(Transform);
-	primitive.position = mul(transform, float3(primitive.position, 1.0)).xy;
-	primitive.scissor.top_left = mul(transform, float3(primitive.scissor.top_left, 1.0)).xy;
-	primitive.scissor.bottom_right = mul(transform, float3(primitive.scissor.bottom_right, 1.0)).xy;
-	primitive.rotation = radians(primitive.rotation);
-	primitive.outline_width = mul(transform, float3(primitive.outline_width, 0.0, 0.0)).x;
-	primitive.glow_width = mul(transform, float3(primitive.glow_width, 0.0, 0.0)).x;
+	primitive.position = transformPoint(transform, primitive.position);
+	primitive.scissor.top_left = transformPoint(transform, primitive.scissor.top_left);
+	primitive.scissor.bottom_right = transformPoint(transform, primitive.scissor.bottom_right);
+	primitive.rotation = radians(primitive.rotation); //TODO move to CPU
+	primitive.outline_width = transformScalar(transform, primitive.outline_width);
+	primitive.glow_width = transformScalar(transform, primitive.glow_width);
 	primitive.color.rgb = srgbDecode(primitive.color.rgb);
 	primitive.outline_color.rgb = srgbDecode(primitive.outline_color.rgb);
 	primitive.glow_color.rgb = srgbDecode(primitive.glow_color.rgb);
@@ -100,23 +98,23 @@ void computeMain(
 	switch (primitive.type) {
 	case Primitive::Type::Circle:
 		var circleParams = reinterpret<Primitive::CircleParams>(params);
-		circleParams.radius = mul(transform, float3(circleParams.radius, 0.0, 0.0)).x;
+		circleParams.radius = transformScalar(transform, circleParams.radius);
 		params = reinterpret<int[8]>(circleParams);
 		break;
 	case Primitive::Type::Rect:
 		var rectParams = reinterpret<Primitive::RectParams>(params);
-		rectParams.size = mul(transform, float3(rectParams.size, 0.0)).xy;
+		rectParams.size = transformScalar(transform, rectParams.size);
 		params = reinterpret<int[8]>(rectParams);
 		break;
 	case Primitive::Type::Capsule:
 		var capsuleParams = reinterpret<Primitive::CapsuleParams>(params);
-		capsuleParams.width = mul(transform, float3(capsuleParams.width, 0.0, 0.0)).x;
-		capsuleParams.radius = mul(transform, float3(capsuleParams.radius, 0.0, 0.0)).x;
+		capsuleParams.width = transformScalar(transform, capsuleParams.width);
+		capsuleParams.radius = transformScalar(transform, capsuleParams.radius);
 		params = reinterpret<int[8]>(capsuleParams);
 		break;
 	case Primitive::Type::Glyph:
 		var glyphParams = reinterpret<Primitive::GlyphParams>(params);
-		glyphParams.size = mul(transform, float3(glyphParams.size / AtlasPixelsPerEm, 0.0, 0.0)).x;
+		glyphParams.size = transformScalar(transform, glyphParams.size / AtlasPixelsPerEm);
 		params = reinterpret<int[8]>(glyphParams);
 		break;
 	}
@@ -125,16 +123,16 @@ void computeMain(
 	var aabb = AABB<float>();
 	switch (primitive.type) {
 	case Primitive::Type::Circle:
-		aabb = circleAabb(primitive.position, reinterpret<Primitive::CircleParams>(params));
+		aabb = circleAABB(primitive.position, reinterpret<Primitive::CircleParams>(params));
 		break;
 	case Primitive::Type::Rect:
-		aabb = rectAabb(primitive.position, reinterpret<Primitive::RectParams>(params));
+		aabb = rectAABB(primitive.position, reinterpret<Primitive::RectParams>(params));
 		break;
 	case Primitive::Type::Capsule:
-		aabb = capsuleAabb(primitive.position, reinterpret<Primitive::CapsuleParams>(params));
+		aabb = capsuleAABB(primitive.position, reinterpret<Primitive::CapsuleParams>(params));
 		break;
 	case Primitive::Type::Glyph:
-		aabb = glyphAabb(primitive.position, reinterpret<Primitive::GlyphParams>(params));
+		aabb = glyphAABB(primitive.position, reinterpret<Primitive::GlyphParams>(params));
 		break;
 	}
 	let edgeExtend = max(primitive.outline_width / 2.0, primitive.glow_width);

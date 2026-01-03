@@ -35,7 +35,7 @@ auto srgb_decode(float4 color) -> float4
 	return {static_cast<float>(r), static_cast<float>(g), static_cast<float>(b), color.a()};
 }
 
-auto generate_transform(int2 window_size, float window_scale) -> float4
+auto generate_transform(int2 window_size, float window_scale) -> Renderer::Transform
 {
 	auto const base_margin_physical = Renderer::VirtualViewportMargin * window_scale;
 	auto const playable_area = float2{window_size} - float2{base_margin_physical * 2.0f, base_margin_physical * 2.0f};
@@ -43,11 +43,14 @@ auto generate_transform(int2 window_size, float window_scale) -> float4
 	auto const scale = min(scale_wh.x(), scale_wh.y());
 	auto const virtual_viewport_size_physical = Renderer::VirtualViewportSize * float2{scale, scale};
 	auto const margin = (float2{window_size} - virtual_viewport_size_physical) / float2{2.0f, 2.0f};
-	return {margin.x(), margin.y(), scale, scale};
+	return Renderer::Transform{
+		.offset = {margin.x(), margin.y()},
+		.scale = scale,
+	};
 }
 
 auto generate_worklists(dev::GPU& gpu, lib::vuk::Allocator& allocator, span<Renderer::Primitive const> primitives,
-	float4 transform) -> tuple<lib::vuk::ManagedBuffer, lib::vuk::ManagedBuffer, lib::vuk::ManagedBuffer>
+	Renderer::Transform transform) -> tuple<lib::vuk::ManagedBuffer, lib::vuk::ManagedBuffer, lib::vuk::ManagedBuffer>
 {
 	auto const window_size = gpu.get_window().size();
 	auto const tile_bound = (window_size + int2{TILE_SIZE - 1, TILE_SIZE - 1}) / int2{TILE_SIZE, TILE_SIZE};
@@ -140,12 +143,12 @@ auto draw_all(dev::GPU& gpu, lib::vuk::ManagedImage&& dest,
 
 auto Renderer::Queue::physical_to_logical(float2 pos) -> float2
 {
-	return (pos + float2{inv_transform.x(), inv_transform.y()}) * float2{inv_transform.z(), inv_transform.w()};
+	return (pos + inv_transform.offset) * float2{inv_transform.scale, inv_transform.scale};
 }
 
 auto Renderer::Queue::logical_to_physical(float2 pos) -> float2
 {
-	return (pos + float2{transform.x(), transform.y()}) * float2{transform.z(), transform.w()};
+	return (pos + transform.offset) * float2{transform.scale, transform.scale};
 }
 
 auto Renderer::Queue::circle(Drawable common, CircleParams params) -> Queue&
@@ -396,11 +399,9 @@ auto Renderer::prepare_text(TextStyle style, string_view text, optional<float> m
 auto Renderer::create_queue() -> Queue
 {
 	auto const transform = generate_transform(gpu.get_window().size(), gpu.get_window().scale());
-	auto const inverse_transform = float4{
-		-transform.x(),
-		-transform.y(),
-		1.0f / transform.z(),
-		1.0f / transform.w(),
+	auto const inverse_transform = Transform{
+		.offset = transform.offset * float2{-1.0f, -1.0f},
+		.scale = 1.0f / transform.scale,
 	};
 	return Queue{transform, inverse_transform};
 }
