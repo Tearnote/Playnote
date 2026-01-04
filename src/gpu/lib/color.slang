@@ -11,9 +11,18 @@ or distributed except according to those terms.
 
 implementing lib;
 
-// Perform a standard alpha blend of one color onto another. Assumes premultiplied alpha.
+// Alpha-blend one color onto another. Assumes premultiplied alpha.
 public func blend<int N>(onto: vector<float, N>, color: vector<float, N>) -> vector<float, N>
 { return color + onto * (1.0 - color[color.elementCount - 1]); }
+
+// Additively blend one color onto another. Assumes premultiplied alpha.
+public func blendAdditive<int N>(onto: vector<float, N>, color: vector<float, N>) -> vector<float, N>
+{
+	var result = onto;
+	for (var i = 0; i < color.elementCount - 1; i += 1)
+		result[i] += color[i];
+	return result;
+}
 
 // Encode a linear space color as sRGB.
 // http://www.java-gaming.org/topics/fast-srgb-conversion-glsl-snippet/37583/view.html

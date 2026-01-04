@@ -125,12 +125,12 @@ func shadePrimitiveDist<int N>(
 {
 	let outlineCoverage = sdf::aa(distance.x - primitive.outline_width / 2.0) * sdf::aa(-(distance.x + primitive.outline_width / 2.0));
 	let fillCoverage = sdf::aa(distance.x);
-	let distRatio = saturate(abs(distance.y) / primitive.glow_width);
+	let distRatio = saturate((abs(distance.y) - primitive.outline_width / 2.0) / primitive.glow_width);
 	let glowPower = saturate(exp(-4.0 * distRatio * distRatio) * (1.0 - distRatio));
 
 	// Composite the primitive layers
 	var result = source;
-	result = blend(result, extractColor(primitive.glow_color) * glowPower * extCoverage);
+	result = blendAdditive(result, extractColor(primitive.glow_color) * glowPower * extCoverage);
 	result = blend(result, extractColor(primitive.color) * fillCoverage * extCoverage);
 	result = blend(result, extractColor(primitive.outline_color) * outlineCoverage * extCoverage);
 	return result;
