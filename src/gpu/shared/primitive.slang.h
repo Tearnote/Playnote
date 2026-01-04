@@ -10,9 +10,10 @@ or distributed except according to those terms.
 #pragma once
 
 struct Primitive {
-	struct CircleParams {
+	struct PieParams {
+		float2 aperture; // {sin(angle), cos(angle)}
 		float radius;
-		int _pad0[3];
+		int _pad0[1];
 		int _pad1[4];
 	};
 	struct RectParams {
@@ -34,7 +35,7 @@ struct Primitive {
 	};
 
 	enum class Type: int {
-		Circle,
+		Pie,
 		Rect,
 		Capsule,
 		Glyph,
@@ -54,8 +55,8 @@ struct Primitive {
 	int params[8]; // Space containing one of the union members below, as per the type
 #else
 	union {
+		PieParams pie_params;
 		RectParams rect_params;
-		CircleParams circle_params;
 		CapsuleParams capsule_params;
 		GlyphParams glyph_params;
 	};

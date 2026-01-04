@@ -17,6 +17,10 @@ public static let Tau = 6.28318530718;
 public func dot2(v: float2) -> float { return dot(v, v); }
 public func dot2(v: float3) -> float { return dot(v, v); }
 
+// Equality with an epsilon.
+public func almostEqual(a: float, b: float, epsilon: float = 1e-6) -> bool
+{ return abs(a - b) < epsilon; }
+
 // Median of three values.
 public func median(a: float, b: float, c: float) -> float
 { return max(min(a, c), min(max(a, c), b)); }

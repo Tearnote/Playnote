@@ -52,6 +52,12 @@ public:
 		float radius;
 	};
 
+	struct PieParams {
+		float radius;
+		float start_angle = 0.0f;
+		float end_angle;
+	};
+
 	struct RectParams {
 		float2 size; // total width and height
 	};
@@ -99,6 +105,7 @@ public:
 		// Enqueue shapes for drawing.
 
 		auto circle(Drawable, CircleParams) -> Queue&;
+		auto pie(Drawable, PieParams) -> Queue&;
 		auto rect(Drawable, RectParams) -> Queue&;
 		auto rect_tl(Drawable, RectParams) -> Queue&; // Position in top-left rather than center
 		auto capsule(Drawable, CapsuleParams) -> Queue&;
@@ -115,7 +122,7 @@ public:
 		};
 
 		bool inside_group = false;
-		vector<tuple<Drawable, CircleParams, int>> circles; // third: group id
+		vector<tuple<Drawable, PieParams, int>> pies; // third: group id
 		vector<tuple<Drawable, RectParams, int>> rects; // third: group id
 		vector<tuple<Drawable, CapsuleParams, int>> capsules; // third: group id
 		vector<tuple<Drawable, GlyphParams, int>> glyphs; // third: group id

@@ -41,7 +41,7 @@ func enqueueItem(tile: int2, item: WorklistItem)
 	b_worklists[bufIdx] = item;
 }
 
-func circleAABB(float2 position, Primitive::CircleParams params) -> AABB<float>
+func pieAABB(float2 position, Primitive::PieParams params) -> AABB<float>
 {
 	return AABB<float>(
 		floor(position - params.radius - 0.5),
@@ -92,10 +92,10 @@ void computeMain(
 	primitive.glow_width = transformScalar(transform, primitive.glow_width);
 
 	switch (primitive.type) {
-	case Primitive::Type::Circle:
-		var circleParams = reinterpret<Primitive::CircleParams>(params);
-		circleParams.radius = transformScalar(transform, circleParams.radius);
-		params = reinterpret<int[8]>(circleParams);
+	case Primitive::Type::Pie:
+		var pieParams = reinterpret<Primitive::PieParams>(params);
+		pieParams.radius = transformScalar(transform, pieParams.radius);
+		params = reinterpret<int[8]>(pieParams);
 		break;
 	case Primitive::Type::Rect:
 		var rectParams = reinterpret<Primitive::RectParams>(params);
@@ -118,8 +118,8 @@ void computeMain(
 	// Calculate AABB
 	var aabb = AABB<float>();
 	switch (primitive.type) {
-	case Primitive::Type::Circle:
-		aabb = circleAABB(primitive.position, reinterpret<Primitive::CircleParams>(params));
+	case Primitive::Type::Pie:
+		aabb = pieAABB(primitive.position, reinterpret<Primitive::PieParams>(params));
 		break;
 	case Primitive::Type::Rect:
 		aabb = rectAABB(primitive.position, reinterpret<Primitive::RectParams>(params));

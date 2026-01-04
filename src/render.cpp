@@ -247,7 +247,7 @@ static void render_select(gfx::Renderer::Queue& queue, GameState& state)
 		.position = {120.0f, 150.0f},
 		.rotation = 2.0f,
 		.color = {0.0f, 1.0f, 0.2f, 1.0f},
-		.depth = 9,
+		.depth = 8,
 	}, {
 		.width = 80.0f,
 		.radius = 12.0f,
@@ -434,6 +434,81 @@ static void render_select(gfx::Renderer::Queue& queue, GameState& state)
 			.width = 8.0f,
 			.cap = gfx::Renderer::LineParams::Cap::Round,
 		});
+	});
+
+	// Pies
+	queue.pie({
+		.position = {220.0f, 140.0f},
+		.color = {0.0f, 0.0f, 1.0f, 1.0f},
+		.depth = 10,
+	}, {
+		.radius = 12.0f,
+		.start_angle = 0.0f,
+		.end_angle = 84.0f,
+	});
+	queue.pie({
+		.position = {250.0f, 140.0f},
+		.color = {0.333f, 0.0f, 0.667f, 1.0f},
+		.depth = 10,
+	}, {
+		.radius = 12.0f,
+		.start_angle = 0.0f,
+		.end_angle = 181.0f,
+	});
+	queue.pie({
+		.position = {280.0f, 140.0f},
+		.color = {0.667f, 0.0f, 0.333f, 1.0f},
+		.depth = 10,
+	}, {
+		.radius = 12.0f,
+		.start_angle = 0.0f,
+		.end_angle = 260.0f,
+	});
+	queue.pie({
+		.position = {310.0f, 140.0f},
+		.color = {1.0f, 0.0f, 0.0f, 1.0f},
+		.depth = 10,
+	}, {
+		.radius = 12.0f,
+		.start_angle = 0.0f,
+		.end_angle = 355.0f,
+	});
+
+	queue.pie({
+		.position = {340.0f, 140.0f},
+		.color = {1.0f, 0.0f, 0.0f, 1.0f},
+		.depth = 10,
+	}, {
+		.radius = 12.0f,
+		.start_angle = -15.0f,
+		.end_angle = 15.0f,
+	});
+	queue.pie({
+		.position = {340.0f, 140.0f},
+		.color = {0.0f, 0.0f, 1.0f, 1.0f},
+		.depth = 10,
+	}, {
+		.radius = 12.0f,
+		.start_angle = 75.0f,
+		.end_angle = 105.0f,
+	});
+	queue.pie({
+		.position = {340.0f, 140.0f},
+		.color = {1.0f, 1.0f, 0.0f, 1.0f},
+		.depth = 10,
+	}, {
+		.radius = 12.0f,
+		.start_angle = 165.0f,
+		.end_angle = 195.0f,
+	});
+	queue.pie({
+		.position = {340.0f, 140.0f},
+		.color = {0.0f, 1.0f, 0.0f, 1.0f},
+		.depth = 10,
+	}, {
+		.radius = 12.0f,
+		.start_angle = 255.0f,
+		.end_angle = 285.0f,
 	});
 }
 

@@ -152,7 +152,18 @@ auto Renderer::Queue::logical_to_physical(float2 pos) -> float2
 
 auto Renderer::Queue::circle(Drawable common, CircleParams params) -> Queue&
 {
-	enqueue_into(circles, common, params);
+	pie(common, PieParams{
+		.radius = params.radius,
+		.end_angle = 360.0f,
+	});
+	return *this;
+}
+
+auto Renderer::Queue::pie(Drawable common, PieParams params) -> Queue&
+{
+	if (params.start_angle == params.end_angle) return *this;
+	common.rotation += 180.0f + (params.end_angle - params.start_angle) / 2.0f + params.start_angle;
+	enqueue_into(pies, common, params);
 	return *this;
 }
 
@@ -277,10 +288,10 @@ auto Renderer::Queue::to_primitive_list() const -> vector<Primitive>
 		group_remapping[val.first] = idx;
 
 	auto primitives = vector<Primitive>{};
-	primitives.reserve(rects.size() + circles.size() + capsules.size() + glyphs.size());
+	primitives.reserve(rects.size() + pies.size() + capsules.size() + glyphs.size());
 	auto enqueue_primitive = [&]<typename T>(Drawable const& common, T const& params, int group) {
 		constexpr auto type = [] {
-			if constexpr(same_as<T, CircleParams>) return Primitive::Type::Circle;
+			if constexpr(same_as<T, PieParams>) return Primitive::Type::Pie;
 			if constexpr(same_as<T, RectParams>) return Primitive::Type::Rect;
 			if constexpr(same_as<T, CapsuleParams>) return Primitive::Type::Capsule;
 			if constexpr(same_as<T, GlyphParams>) return Primitive::Type::Glyph;
@@ -298,7 +309,13 @@ auto Renderer::Queue::to_primitive_list() const -> vector<Primitive>
 			.outline_width = common.outline_width,
 			.glow_width = common.glow_width,
 		});
-		if constexpr(same_as<T, CircleParams>) prim.circle_params = {.radius = params.radius};
+		if constexpr(same_as<T, PieParams>) {
+			auto const angle = radians(params.end_angle - params.start_angle);
+			prim.pie_params = {
+				.aperture = {sin(angle / 2.0f), cos(angle / 2.0f)},
+				.radius = params.radius,
+			};
+		}
 		else if constexpr(same_as<T, RectParams>) prim.rect_params = {.size = params.size};
 		else if constexpr(same_as<T, CapsuleParams>) prim.capsule_params = {
 			.width = params.width,
@@ -311,7 +328,7 @@ auto Renderer::Queue::to_primitive_list() const -> vector<Primitive>
 		};
 		else unreachable();
 	};
-	for (auto const& circle: circles) apply(enqueue_primitive, circle);
+	for (auto const& pie: pies) apply(enqueue_primitive, pie);
 	for (auto const& rect: rects) apply(enqueue_primitive, rect);
 	for (auto const& capsule: capsules) apply(enqueue_primitive, capsule);
 	for (auto const& glyph: glyphs) apply(enqueue_primitive, glyph);
