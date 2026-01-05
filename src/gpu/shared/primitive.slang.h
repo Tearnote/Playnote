@@ -18,7 +18,8 @@ struct Primitive {
 	};
 	struct RectParams {
 		float2 size;
-		int _pad0[2];
+		float rounding;
+		int _pad0[1];
 		int _pad1[4];
 	};
 	struct CapsuleParams {

@@ -510,6 +510,38 @@ static void render_select(gfx::Renderer::Queue& queue, GameState& state)
 		.start_angle = 255.0f,
 		.end_angle = 285.0f,
 	});
+
+	// Rounded rects
+	queue.rect({
+		.position = {120.0f, 80.0f},
+		.color = {1.0f, 0.5f, 0.0f, 1.0f},
+		.depth = 10,
+		.outline_width = 2.5f,
+		.outline_color = {1.0f, 1.0f, 1.0f, 1.0f},
+	}, {
+		.size = {80.0f, 40.0f},
+		.rounding = 10.0f,
+	});
+	queue.rect({
+		.position = {220.0f, 80.0f},
+		.color = {0.0f, 1.0f, 0.5f, 1.0f},
+		.depth = 10,
+		.outline_width = 2.5f,
+		.outline_color = {1.0f, 1.0f, 1.0f, 1.0f},
+	}, {
+		.size = {80.0f, 40.0f},
+		.rounding = 20.0f,
+	});
+	queue.rect({
+		.position = {300.0f, 80.0f},
+		.color = {0.5f, 0.0f, 1.0f, 1.0f},
+		.depth = 10,
+		.outline_width = 2.5f,
+		.outline_color = {1.0f, 1.0f, 1.0f, 1.0f},
+	}, {
+		.size = {40.0f, 40.0f},
+		.rounding = 20.0f,
+	});
 }
 
 static void render_gameplay(gfx::Renderer::Queue& queue, GameState& state)

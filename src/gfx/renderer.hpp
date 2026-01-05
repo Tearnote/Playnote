@@ -60,6 +60,7 @@ public:
 
 	struct RectParams {
 		float2 size; // total width and height
+		float rounding; // corner radius. clamped to half the smaller dimension
 	};
 
 	struct CapsuleParams {

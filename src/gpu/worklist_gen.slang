@@ -100,6 +100,7 @@ void computeMain(
 	case Primitive::Type::Rect:
 		var rectParams = reinterpret<Primitive::RectParams>(params);
 		rectParams.size = transformScalar(transform, rectParams.size);
+		rectParams.rounding = transformScalar(transform, rectParams.rounding);
 		params = reinterpret<int[8]>(rectParams);
 		break;
 	case Primitive::Type::Capsule:

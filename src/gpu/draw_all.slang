@@ -107,7 +107,7 @@ func distanceToPrimitive(primitive: Primitive, params: int[8], at: float2) -> fl
 		return float2(dist, dist);
 	case Primitive::Type::Rect:
 		let rectParams = reinterpret<Primitive::RectParams>(params);
-		dist = sdf::rect(center, rectParams.size);
+		dist = sdf::rect(center, rectParams.size - rectParams.rounding * 2.0) - rectParams.rounding;
 		return float2(dist, dist);
 	case Primitive::Type::Capsule:
 		let capsuleParams = reinterpret<Primitive::CapsuleParams>(params);

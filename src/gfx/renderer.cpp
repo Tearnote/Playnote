@@ -162,6 +162,7 @@ auto Renderer::Queue::circle(Drawable common, CircleParams params) -> Queue&
 auto Renderer::Queue::pie(Drawable common, PieParams params) -> Queue&
 {
 	if (params.start_angle == params.end_angle) return *this;
+	ASSUME(params.end_angle > params.start_angle);
 	common.rotation += 180.0f + (params.end_angle - params.start_angle) / 2.0f + params.start_angle;
 	enqueue_into(pies, common, params);
 	return *this;
@@ -169,6 +170,7 @@ auto Renderer::Queue::pie(Drawable common, PieParams params) -> Queue&
 
 auto Renderer::Queue::rect(Drawable common, RectParams params) -> Queue&
 {
+	params.rounding = min(params.rounding, min(params.size.x() / 2.0f, params.size.y() / 2.0f));
 	enqueue_into(rects, common, params);
 	return *this;
 }
@@ -316,7 +318,10 @@ auto Renderer::Queue::to_primitive_list() const -> vector<Primitive>
 				.radius = params.radius,
 			};
 		}
-		else if constexpr(same_as<T, RectParams>) prim.rect_params = {.size = params.size};
+		else if constexpr(same_as<T, RectParams>) prim.rect_params = {
+			.size = params.size,
+			.rounding = params.rounding,
+		};
 		else if constexpr(same_as<T, CapsuleParams>) prim.capsule_params = {
 			.width = params.width,
 			.radius = params.radius,
