@@ -20,10 +20,6 @@ public func aa(dist: float) -> float {
 
 // SDF functions adapted from https://iquilezles.org/articles/distfunctions2d/
 
-// Signed distance from the edge of a circle.
-public func circle(p: float2, radius: float) -> float
-{ return length(p) - radius; }
-
 // Signed distance from the edge of a pie slice of a circle.
 // The pie grows from the bottom in both directions.
 // aperture = float2(sin(angle), cos(angle))

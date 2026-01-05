@@ -152,9 +152,9 @@ auto Renderer::Queue::logical_to_physical(float2 pos) -> float2
 
 auto Renderer::Queue::circle(Drawable common, CircleParams params) -> Queue&
 {
-	pie(common, PieParams{
-		.radius = params.radius,
-		.end_angle = 360.0f,
+	rect(common, RectParams{
+		.size = float2{params.radius * 2.0f, params.radius * 2.0f},
+		.rounding = params.radius,
 	});
 	return *this;
 }

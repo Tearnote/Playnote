@@ -100,10 +100,7 @@ func distanceToPrimitive(primitive: Primitive, params: int[8], at: float2) -> fl
 	switch (primitive.type) {
 	case Primitive::Type::Pie:
 		let pieParams = reinterpret<Primitive::PieParams>(params);
-		if (almostEqual(pieParams.aperture.x, 0.0) && almostEqual(pieParams.aperture.y, -1.0))
-			dist = sdf::circle(center, pieParams.radius);
-		else
-			dist = sdf::pie(center, pieParams.aperture, pieParams.radius);
+		dist = sdf::pie(center, pieParams.aperture, pieParams.radius);
 		return float2(dist, dist);
 	case Primitive::Type::Rect:
 		let rectParams = reinterpret<Primitive::RectParams>(params);
