@@ -57,14 +57,6 @@ func rectAABB(float2 position, Primitive::RectParams params) -> AABB<float>
 	);
 }
 
-func capsuleAABB(float2 position, Primitive::CapsuleParams params) -> AABB<float>
-{
-	return AABB<float>(
-		floor(position - params.width / 2.0 - params.radius - 0.5),
-		ceil(position + params.width / 2.0 + params.radius + 0.5)
-	);
-}
-
 func glyphAABB(float2 position, Primitive::GlyphParams params) -> AABB<float>
 {
 	return AABB<float>(
@@ -103,12 +95,6 @@ void computeMain(
 		rectParams.rounding = transformScalar(transform, rectParams.rounding);
 		params = reinterpret<int[8]>(rectParams);
 		break;
-	case Primitive::Type::Capsule:
-		var capsuleParams = reinterpret<Primitive::CapsuleParams>(params);
-		capsuleParams.width = transformScalar(transform, capsuleParams.width);
-		capsuleParams.radius = transformScalar(transform, capsuleParams.radius);
-		params = reinterpret<int[8]>(capsuleParams);
-		break;
 	case Primitive::Type::Glyph:
 		var glyphParams = reinterpret<Primitive::GlyphParams>(params);
 		glyphParams.size = transformScalar(transform, glyphParams.size / AtlasPixelsPerEm);
@@ -124,9 +110,6 @@ void computeMain(
 		break;
 	case Primitive::Type::Rect:
 		aabb = rectAABB(primitive.position, reinterpret<Primitive::RectParams>(params));
-		break;
-	case Primitive::Type::Capsule:
-		aabb = capsuleAABB(primitive.position, reinterpret<Primitive::CapsuleParams>(params));
 		break;
 	case Primitive::Type::Glyph:
 		aabb = glyphAABB(primitive.position, reinterpret<Primitive::GlyphParams>(params));

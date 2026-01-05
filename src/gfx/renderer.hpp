@@ -125,7 +125,6 @@ public:
 		bool inside_group = false;
 		vector<tuple<Drawable, PieParams, int>> pies; // third: group id
 		vector<tuple<Drawable, RectParams, int>> rects; // third: group id
-		vector<tuple<Drawable, CapsuleParams, int>> capsules; // third: group id
 		vector<tuple<Drawable, GlyphParams, int>> glyphs; // third: group id
 		mutable vector<pair<int, int>> group_depths; // first: group id (initially equal to index), second: depth
 		Transform transform;

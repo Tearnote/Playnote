@@ -42,11 +42,4 @@ public func rect(p: float2, size: float2) -> float
 	return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0);
 }
 
-// Signed distance from a horizontal capsule.
-public func capsule(p: float2, width: float, radius: float) -> float
-{
-	let qx = p.x - clamp(p.x, -width / 2.0, width / 2.0);
-	return length(float2(qx, p.y)) - radius;
-}
-
 }

@@ -183,7 +183,10 @@ auto Renderer::Queue::rect_tl(Drawable common, RectParams params) -> Queue&
 
 auto Renderer::Queue::capsule(Drawable common, CapsuleParams params) -> Queue&
 {
-	enqueue_into(capsules, common, params);
+	enqueue_into(rects, common, RectParams{
+		.size = {params.width + params.radius * 2.0f, params.radius * 2.0f},
+		.rounding = params.radius,
+	});
 	return *this;
 }
 
@@ -290,12 +293,11 @@ auto Renderer::Queue::to_primitive_list() const -> vector<Primitive>
 		group_remapping[val.first] = idx;
 
 	auto primitives = vector<Primitive>{};
-	primitives.reserve(rects.size() + pies.size() + capsules.size() + glyphs.size());
+	primitives.reserve(rects.size() + pies.size() + glyphs.size());
 	auto enqueue_primitive = [&]<typename T>(Drawable const& common, T const& params, int group) {
 		constexpr auto type = [] {
 			if constexpr(same_as<T, PieParams>) return Primitive::Type::Pie;
 			if constexpr(same_as<T, RectParams>) return Primitive::Type::Rect;
-			if constexpr(same_as<T, CapsuleParams>) return Primitive::Type::Capsule;
 			if constexpr(same_as<T, GlyphParams>) return Primitive::Type::Glyph;
 			unreachable();
 		}();
@@ -322,10 +324,6 @@ auto Renderer::Queue::to_primitive_list() const -> vector<Primitive>
 			.size = params.size,
 			.rounding = params.rounding,
 		};
-		else if constexpr(same_as<T, CapsuleParams>) prim.capsule_params = {
-			.width = params.width,
-			.radius = params.radius,
-		};
 		else if constexpr(same_as<T, GlyphParams>) prim.glyph_params = {
 			.atlas_bounds = params.atlas_bounds,
 			.size = params.size,
@@ -335,7 +333,6 @@ auto Renderer::Queue::to_primitive_list() const -> vector<Primitive>
 	};
 	for (auto const& pie: pies) apply(enqueue_primitive, pie);
 	for (auto const& rect: rects) apply(enqueue_primitive, rect);
-	for (auto const& capsule: capsules) apply(enqueue_primitive, capsule);
 	for (auto const& glyph: glyphs) apply(enqueue_primitive, glyph);
 	return primitives;
 }

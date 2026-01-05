@@ -22,12 +22,6 @@ struct Primitive {
 		int _pad0[1];
 		int _pad1[4];
 	};
-	struct CapsuleParams {
-		float width;
-		float radius;
-		int _pad0[2];
-		int _pad1[4];
-	};
 	struct GlyphParams {
 		AABB<float> atlas_bounds;
 		float size;
@@ -38,7 +32,6 @@ struct Primitive {
 	enum class Type: int {
 		Pie,
 		Rect,
-		Capsule,
 		Glyph,
 	};
 	Type type;
@@ -58,7 +51,6 @@ struct Primitive {
 	union {
 		PieParams pie_params;
 		RectParams rect_params;
-		CapsuleParams capsule_params;
 		GlyphParams glyph_params;
 	};
 #endif
