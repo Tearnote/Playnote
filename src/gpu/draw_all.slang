@@ -131,7 +131,7 @@ func shadePrimitiveDist<int N>(
 
 	// Composite the primitive layers
 	var result = source;
-	result = blendAdditive(result, extractColor(primitive.glow_color) * glowPower * extCoverage);
+	result = blendAdditive(result, extractColor(primitive.glow_color) * primitive.glow_color.a * glowPower * extCoverage);
 	result = blend(result, extractColor(primitive.color) * fillCoverage * extCoverage);
 	result = blend(result, extractColor(primitive.outline_color) * outlineCoverage * extCoverage);
 	return result;

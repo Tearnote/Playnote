@@ -548,7 +548,7 @@ static void render_select(gfx::Renderer::Queue& queue, GameState& state)
 		.position = {240.0f, 200.0f},
 		.color = {0.4f, 0.8f, 0.2f, 0.2f},
 		.depth = 5,
-		.outline_width = 2.0f,
+		.outline_width = 4.0f,
 		.outline_color = {1.0f, 0.8f, 0.8f, 0.5f},
 	}, {
 		{0.0f, 0.0f},
@@ -573,22 +573,42 @@ static void render_select(gfx::Renderer::Queue& queue, GameState& state)
 		{35.35f, -35.35f},
 	});
 	queue.polygon({
-		.position = {336.0f, 352.0f},
+		.position = {336.0f, 340.0f},
+		.rotation = 180.0f,
 		.color = {1.0f, 1.0f, 1.0f, 1.0f},
 		.depth = 5,
-		.glow_width = 12.0f,
-		.glow_color = {1.0f, 1.0f, 0.0f, 0.2f},
+		.glow_width = 10.0f,
+		.glow_color = {1.0f, 1.0f, 0.0f, 0.5f},
 	}, {
-		{0.0f, -50.0f},
-		{14.43f, -17.04f},
-		{47.55f, -17.04f},
-		{18.0f, 3.54f},
-		{28.85f, 35.96f},
-		{0.0f, 12.45f},
-		{-28.85f, 35.96f},
-		{-18.0f, 3.54f},
-		{-47.55f, -17.04f},
-		{-14.43f, -17.04f},
+		{0.0f, 30.0f},
+		{-6.7353f, 9.2706f},
+		{-28.5318f, 9.2706f},
+		{-10.8981f, -3.5409f},
+		{-17.6337f, -24.2706f},
+		{0.0f, -11.4591f},
+		{17.6337f, -24.2706f},
+		{10.8981f, -3.5409f},
+		{28.5318f, 9.2706f},
+		{6.7353f, 9.2706f}
+	});
+	queue.polygon({
+		.position = {380.0f, 336.0f},
+		.rotation = 180.0f,
+		.color = {1.0f, 1.0f, 1.0f, 1.0f},
+		.depth = 5,
+		.glow_width = 10.0f,
+		.glow_color = {1.0f, 1.0f, 0.0f, 0.5f},
+	}, {
+		{0.0f, 30.0f},
+		{-6.7353f, 9.2706f},
+		{-28.5318f, 9.2706f},
+		{-10.8981f, -3.5409f},
+		{-17.6337f, -24.2706f},
+		{0.0f, -11.4591f},
+		{17.6337f, -24.2706f},
+		{10.8981f, -3.5409f},
+		{28.5318f, 9.2706f},
+		{6.7353f, 9.2706f}
 	});
 }
 
