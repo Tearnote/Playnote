@@ -82,21 +82,30 @@ void create_compute_pipeline(Runtime& runtime, string_view name, span<uint const
 auto clear_image(ManagedImage&& input, float4 color) -> ManagedImage;
 
 // Create a host-visible buffer with the provided data. Memory is never freed, so use with
-// a frame allocator.
+// a frame allocator. The uploaded type must be default-constructible.
 // Throws if vuk throws.
 template<typename T>
 auto create_scratch_buffer(Allocator& allocator, span<T> data) -> Buffer
 {
+	if (data.empty()) {
+		static auto empty = T{};
+		return create_scratch_buffer(allocator, span{&empty, 1});
+	}
 	auto [buf, fut] = create_buffer(allocator, MemoryUsage::eCPUtoGPU, DomainFlagBits::eTransferOnGraphics, data);
 	return buf.release();
 }
 
 // Create a GPU-only buffer with the provided data. The returned value is a future of the data
-// upload. Memory is never freed, so use with a frame allocator.
+// upload. Memory is never freed, so use with a frame allocator. The uploaded type must
+// be default-constructible.
 // Throws if vuk throws.
 template<typename T>
 auto create_gpu_buffer(Allocator& allocator, span<T> data) -> ManagedBuffer
 {
+	if (data.empty()) {
+		static auto empty = T{};
+		return create_gpu_buffer(allocator, span{&empty, 1});
+	}
 	auto [buf, fut] = create_buffer(allocator, MemoryUsage::eGPUonly, DomainFlagBits::eTransferOnGraphics, data);
 	buf.release();
 	return fut;
