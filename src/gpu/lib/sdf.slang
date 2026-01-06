@@ -38,4 +38,20 @@ public func rect(p: float2, size: float2) -> float
 	return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0);
 }
 
+// Signed distance from a polygon of an arbitrary number of vertices.
+public func polygon(p: float2, vcount: int, load: IFunc<float2, int>) -> float
+{
+	var d = dot(p - load(0), p - load(0));
+	var s = 1.0;
+	for (int i = 0, j = vcount - 1; i < vcount; j = i, i++) {
+		let e = load(j) - load(i);
+		let w =       p - load(i);
+		let b = w - e * clamp(dot(w, e) / dot(e, e), 0.0, 1.0);
+		d = min(d, dot(b, b));
+		let c = bool3(p.y >= load(i).y, p.y < load(j).y, e.x * w.y > e.y * w.x);
+		if (all(c) || all(~c)) s *= -1.0;
+	}
+	return s * sqrt(d);
+}
+
 }

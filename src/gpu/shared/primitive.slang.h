@@ -22,6 +22,12 @@ struct Primitive {
 		int _pad0[1];
 		int _pad1[4];
 	};
+	struct PolygonParams {
+		int vertex_offset;
+		int vertex_count;
+		int _pad0[2];
+		int _pad1[4];
+	};
 	struct GlyphParams {
 		AABB<float> atlas_bounds;
 		float size;
@@ -32,6 +38,7 @@ struct Primitive {
 	enum class Type: int {
 		Pie,
 		Rect,
+		Polygon,
 		Glyph,
 	};
 	Type type;
@@ -51,10 +58,17 @@ struct Primitive {
 	union {
 		PieParams pie_params;
 		RectParams rect_params;
+		PolygonParams polygon_params;
 		GlyphParams glyph_params;
 	};
 #endif
 };
+
+#ifndef __cplusplus
+typealias PolygonVertex = float2;
+#else
+using PolygonVertex = float2;
+#endif
 
 #ifndef __cplusplus
 func readPrimitive(buf: IPhysicalBuffer, idx: int) -> Primitive

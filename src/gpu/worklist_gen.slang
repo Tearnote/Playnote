@@ -15,6 +15,7 @@ import lib;
 #include "shared/worklist.slang.h"
 
 RWByteAddressBuffer b_primitives;
+RWStructuredBuffer<PolygonVertex> b_vertices;
 RWStructuredBuffer<WorklistItem> b_worklists;
 RWStructuredBuffer<Atomic<int>> b_worklistCounts;
 
@@ -57,6 +58,19 @@ func rectAABB(float2 position, Primitive::RectParams params) -> AABB<float>
 	);
 }
 
+func polygonAABB(float2 position, Primitive::PolygonParams params) -> AABB<float>
+{
+	var minp = position + b_vertices[params.vertex_offset];
+	var maxp = minp;
+	for (var i = 1; i < params.vertex_count; i += 1)
+	{
+		let vertex = b_vertices[params.vertex_offset + i];
+		minp = min(minp, position + vertex);
+		maxp = max(maxp, position + vertex);
+	}
+	return AABB<float>(floor(minp - 0.5), ceil(maxp + 0.5));
+}
+
 func glyphAABB(float2 position, Primitive::GlyphParams params) -> AABB<float>
 {
 	return AABB<float>(
@@ -95,6 +109,14 @@ void computeMain(
 		rectParams.rounding = transformScalar(transform, rectParams.rounding);
 		params = reinterpret<int[8]>(rectParams);
 		break;
+	case Primitive::Type::Polygon:
+		var polygonParams = reinterpret<Primitive::PolygonParams>(params);
+		for (var i = 0; i < polygonParams.vertex_count; i += 1) {
+			let offset = polygonParams.vertex_offset + i;
+			let vertex = b_vertices[offset];
+			b_vertices[offset] = transformScalar(transform, vertex);
+		}
+		break;
 	case Primitive::Type::Glyph:
 		var glyphParams = reinterpret<Primitive::GlyphParams>(params);
 		glyphParams.size = transformScalar(transform, glyphParams.size / AtlasPixelsPerEm);
@@ -110,6 +132,9 @@ void computeMain(
 		break;
 	case Primitive::Type::Rect:
 		aabb = rectAABB(primitive.position, reinterpret<Primitive::RectParams>(params));
+		break;
+	case Primitive::Type::Polygon:
+		aabb = polygonAABB(primitive.position, reinterpret<Primitive::PolygonParams>(params));
 		break;
 	case Primitive::Type::Glyph:
 		aabb = glyphAABB(primitive.position, reinterpret<Primitive::GlyphParams>(params));

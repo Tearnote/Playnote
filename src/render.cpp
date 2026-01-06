@@ -542,6 +542,54 @@ static void render_select(gfx::Renderer::Queue& queue, GameState& state)
 		.size = {40.0f, 40.0f},
 		.rounding = 20.0f,
 	});
+
+	// Polygons
+	queue.polygon({
+		.position = {240.0f, 200.0f},
+		.color = {0.4f, 0.8f, 0.2f, 0.2f},
+		.depth = 5,
+		.outline_width = 2.0f,
+		.outline_color = {1.0f, 0.8f, 0.8f, 0.5f},
+	}, {
+		{0.0f, 0.0f},
+		{120.0f, -20.0f},
+		{140.0f, 80.0f},
+		{60.0f, 30.0f},
+		{50.0f, 90.0f},
+		{-5.0f, 100.0f},
+	});
+	queue.polygon({
+		.position = {400.0f, 80.0f},
+		.color = {0.4f, 0.2f, 1.0f, 1.0f},
+		.depth = 5,
+	}, {
+		{50.0f, 0.0f},
+		{35.35f, 35.35f},
+		{0.0f, 50.0f},
+		{-35.35f, 35.35f},
+		{-50.0f, 0.0f},
+		{-35.35f, -35.35f},
+		{0.0f, -50.0f},
+		{35.35f, -35.35f},
+	});
+	queue.polygon({
+		.position = {336.0f, 352.0f},
+		.color = {1.0f, 1.0f, 1.0f, 1.0f},
+		.depth = 5,
+		.glow_width = 12.0f,
+		.glow_color = {1.0f, 1.0f, 0.0f, 0.2f},
+	}, {
+		{0.0f, -50.0f},
+		{14.43f, -17.04f},
+		{47.55f, -17.04f},
+		{18.0f, 3.54f},
+		{28.85f, 35.96f},
+		{0.0f, 12.45f},
+		{-28.85f, 35.96f},
+		{-18.0f, 3.54f},
+		{-47.55f, -17.04f},
+		{-14.43f, -17.04f},
+	});
 }
 
 static void render_gameplay(gfx::Renderer::Queue& queue, GameState& state)

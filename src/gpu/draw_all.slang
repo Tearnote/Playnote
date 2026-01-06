@@ -16,6 +16,7 @@ import lib;
 #define WORKLIST_DEBUG 0
 
 ByteAddressBuffer b_primitives;
+StructuredBuffer<PolygonVertex> b_vertices;
 StructuredBuffer<WorklistItem> b_worklists;
 StructuredBuffer<int> b_worklistSizes;
 Sampler2D<float4> s_staticAtlas;
@@ -105,6 +106,10 @@ func distanceToPrimitive(primitive: Primitive, params: int[8], at: float2) -> fl
 	case Primitive::Type::Rect:
 		let rectParams = reinterpret<Primitive::RectParams>(params);
 		dist = sdf::rect(center, rectParams.size - rectParams.rounding * 2.0) - rectParams.rounding;
+		return float2(dist, dist);
+	case Primitive::Type::Polygon:
+		let polygonParams = reinterpret<Primitive::PolygonParams>(params);
+		dist = sdf::polygon(center, polygonParams.vertex_count, (int n) => b_vertices[polygonParams.vertex_offset + n]);
 		return float2(dist, dist);
 	case Primitive::Type::Glyph:
 		let glyphParams = reinterpret<Primitive::GlyphParams>(params);

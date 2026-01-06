@@ -49,13 +49,15 @@ auto generate_transform(int2 window_size, float window_scale) -> Renderer::Trans
 }
 
 auto generate_worklists(dev::GPU& gpu, lib::vuk::Allocator& allocator, span<Renderer::Primitive const> primitives,
-	Renderer::Transform transform) -> tuple<lib::vuk::ManagedBuffer, lib::vuk::ManagedBuffer, lib::vuk::ManagedBuffer>
+	span<Renderer::PolygonVertex const> vertices, Renderer::Transform transform)
+	-> tuple<lib::vuk::ManagedBuffer, lib::vuk::ManagedBuffer, lib::vuk::ManagedBuffer, lib::vuk::ManagedBuffer>
 {
 	auto const window_size = gpu.get_window().size();
 	auto const tile_bound = (window_size + int2{TILE_SIZE - 1, TILE_SIZE - 1}) / int2{TILE_SIZE, TILE_SIZE};
 	auto const tile_count = tile_bound.x() * tile_bound.y();
 
 	auto primitives_buf = lib::vuk::create_gpu_buffer(allocator, span{primitives});
+	auto vertices_buf = lib::vuk::create_gpu_buffer(allocator, span{vertices});
 
 	auto worklists_buf = lib::vuk::declare_buf("worklists");
 	worklists_buf->size = tile_count * sizeof(WorklistItem) * WORKLIST_MAX_SIZE;
@@ -70,6 +72,7 @@ auto generate_worklists(dev::GPU& gpu, lib::vuk::Allocator& allocator, span<Rend
 		[window_size, primitives_count = primitives.size(), transform] (
 			lib::vuk::CommandBuffer& cmd,
 			VUK_BA(lib::vuk::eComputeRW) primitives_buf,
+			VUK_BA(lib::vuk::eComputeRW) vertices_buf,
 			VUK_BA(lib::vuk::eComputeWrite) worklists_buf,
 			VUK_BA(lib::vuk::eComputeRW) worklist_sizes_buf
 		)
@@ -77,14 +80,15 @@ auto generate_worklists(dev::GPU& gpu, lib::vuk::Allocator& allocator, span<Rend
 		cmd
 			.bind_compute_pipeline("worklist_gen")
 			.bind_buffer(0, 0, primitives_buf)
-			.bind_buffer(0, 1, worklists_buf)
-			.bind_buffer(0, 2, worklist_sizes_buf)
+			.bind_buffer(0, 1, vertices_buf)
+			.bind_buffer(0, 2, worklists_buf)
+			.bind_buffer(0, 3, worklist_sizes_buf)
 			.push_constants(lib::vuk::ShaderStageFlagBits::eCompute, 0, transform)
 			.push_constants(lib::vuk::ShaderStageFlagBits::eCompute, sizeof(float4), static_cast<int>(primitives_count))
 			.specialize_constants(0, window_size.x()).specialize_constants(1, window_size.y())
 			.specialize_constants(2, TextShaper::PixelsPerEm)
 			.dispatch_invocations(primitives_count, 1, 1);
-		return make_tuple(primitives_buf, worklists_buf, worklist_sizes_buf);
+		return make_tuple(primitives_buf, vertices_buf, worklists_buf, worklist_sizes_buf);
 	});
 	auto sort_pass = lib::vuk::make_pass("worklist_sort",
 		[tile_count] (
@@ -101,23 +105,25 @@ auto generate_worklists(dev::GPU& gpu, lib::vuk::Allocator& allocator, span<Rend
 		return make_tuple(worklists_buf, worklist_sizes_buf);
 	});
 
-	auto [primitives_buf_processed, worklists_buf_generated, worklist_sizes_buf_generated] =
-		gen_pass(move(primitives_buf), move(worklists_buf), move(worklist_sizes_buf));
+	auto [primitives_buf_processed, vertices_buf_processed, worklists_buf_generated, worklist_sizes_buf_generated] =
+		gen_pass(move(primitives_buf), move(vertices_buf), move(worklists_buf), move(worklist_sizes_buf));
 	auto [worklists_buf_sorted, worklist_sizes_buf_sorted] =
 		sort_pass(move(worklists_buf_generated), move(worklist_sizes_buf_generated));
-	return make_tuple(primitives_buf_processed, worklists_buf_sorted, worklist_sizes_buf_sorted);
+	return make_tuple(primitives_buf_processed, vertices_buf_processed, worklists_buf_sorted, worklist_sizes_buf_sorted);
 }
 
 auto draw_all(dev::GPU& gpu, lib::vuk::ManagedImage&& dest,
-	lib::vuk::ManagedBuffer&& primitives_buf, lib::vuk::ManagedBuffer&& worklists_buf,
-	lib::vuk::ManagedBuffer&& worklist_sizes_buf, lib::vuk::ImageView static_atlas_iv,
-	lib::vuk::ManagedImage&& dynamic_atlas_ia, lib::os::SubpixelLayout subpixel_layout) -> lib::vuk::ManagedImage
+	lib::vuk::ManagedBuffer&& primitives_buf, lib::vuk::ManagedBuffer&& vertices_buf,
+	lib::vuk::ManagedBuffer&& worklists_buf, lib::vuk::ManagedBuffer&& worklist_sizes_buf,
+	lib::vuk::ImageView static_atlas_iv, lib::vuk::ManagedImage&& dynamic_atlas_ia,
+	lib::os::SubpixelLayout subpixel_layout) -> lib::vuk::ManagedImage
 {
 	auto pass = lib::vuk::make_pass("draw_all",
 		[window_size = gpu.get_window().size(), static_atlas_iv, subpixel_layout] (
 			lib::vuk::CommandBuffer& cmd,
 			VUK_IA(lib::vuk::Access::eComputeWrite) target,
 			VUK_BA(lib::vuk::Access::eComputeRead) primitives_buf,
+			VUK_BA(lib::vuk::Access::eComputeRead) vertices_buf,
 			VUK_BA(lib::vuk::Access::eComputeRead) worklists_buf,
 			VUK_BA(lib::vuk::Access::eComputeRead) worklist_sizes_buf,
 			VUK_IA(lib::vuk::Access::eComputeSampled) dynamic_atlas_ia
@@ -126,18 +132,20 @@ auto draw_all(dev::GPU& gpu, lib::vuk::ManagedImage&& dest,
 		cmd
 			.bind_compute_pipeline("draw_all")
 			.bind_buffer(0, 0, primitives_buf)
-			.bind_buffer(0, 1, worklists_buf)
-			.bind_buffer(0, 2, worklist_sizes_buf)
-			.bind_image(0, 3, static_atlas_iv).bind_sampler(0, 3, LinearSampler)
-			.bind_image(0, 4, dynamic_atlas_ia).bind_sampler(0, 4, LinearSampler)
-			.bind_image(0, 5, target)
+			.bind_buffer(0, 1, vertices_buf)
+			.bind_buffer(0, 2, worklists_buf)
+			.bind_buffer(0, 3, worklist_sizes_buf)
+			.bind_image(0, 4, static_atlas_iv).bind_sampler(0, 4, LinearSampler)
+			.bind_image(0, 5, dynamic_atlas_ia).bind_sampler(0, 5, LinearSampler)
+			.bind_image(0, 6, target)
 			.specialize_constants(0, window_size.x()).specialize_constants(1, window_size.y())
 			.specialize_constants(2, +subpixel_layout)
 			.specialize_constants(3, TextShaper::DistanceRange)
 			.dispatch_invocations(window_size.x(), window_size.y(), 1);
 		return target;
 	});
-	return pass(move(dest), move(primitives_buf), move(worklists_buf), move(worklist_sizes_buf), move(dynamic_atlas_ia));
+	return pass(move(dest), move(primitives_buf), move(vertices_buf),
+		move(worklists_buf), move(worklist_sizes_buf), move(dynamic_atlas_ia));
 }
 
 auto Renderer::Queue::physical_to_logical(float2 pos) -> float2
@@ -238,6 +246,16 @@ auto Renderer::Queue::line(Drawable common, LineParams params) -> Queue&
 	return *this;
 }
 
+auto Renderer::Queue::polygon(Drawable common, span<PolygonVertex const> verts) -> Queue&
+{
+	enqueue_into(polygons, common, PolygonParams{
+		.vertex_offset = static_cast<ssize_t>(polygon_vertices.size()),
+		.vertex_count = static_cast<ssize_t>(verts.size()),
+	});
+	polygon_vertices.insert(polygon_vertices.end(), verts.begin(), verts.end());
+	return *this;
+}
+
 auto Renderer::Queue::text(Text const& text, Drawable common, TextParams params) -> Queue&
 {
 	for (auto [line_idx, line]: text.lines | views::enumerate) {
@@ -293,11 +311,12 @@ auto Renderer::Queue::to_primitive_list() const -> vector<Primitive>
 		group_remapping[val.first] = idx;
 
 	auto primitives = vector<Primitive>{};
-	primitives.reserve(rects.size() + pies.size() + glyphs.size());
+	primitives.reserve(rects.size() + pies.size() + polygons.size() + glyphs.size());
 	auto enqueue_primitive = [&]<typename T>(Drawable const& common, T const& params, int group) {
 		constexpr auto type = [] {
 			if constexpr(same_as<T, PieParams>) return Primitive::Type::Pie;
 			if constexpr(same_as<T, RectParams>) return Primitive::Type::Rect;
+			if constexpr(same_as<T, PolygonParams>) return Primitive::Type::Polygon;
 			if constexpr(same_as<T, GlyphParams>) return Primitive::Type::Glyph;
 			unreachable();
 		}();
@@ -324,6 +343,10 @@ auto Renderer::Queue::to_primitive_list() const -> vector<Primitive>
 			.size = params.size,
 			.rounding = params.rounding,
 		};
+		else if constexpr(same_as<T, PolygonParams>) prim.polygon_params = {
+			.vertex_offset = static_cast<int>(params.vertex_offset),
+			.vertex_count = static_cast<int>(params.vertex_count),
+		};
 		else if constexpr(same_as<T, GlyphParams>) prim.glyph_params = {
 			.atlas_bounds = params.atlas_bounds,
 			.size = params.size,
@@ -333,6 +356,7 @@ auto Renderer::Queue::to_primitive_list() const -> vector<Primitive>
 	};
 	for (auto const& pie: pies) apply(enqueue_primitive, pie);
 	for (auto const& rect: rects) apply(enqueue_primitive, rect);
+	for (auto const& polygon: polygons) apply(enqueue_primitive, polygon);
 	for (auto const& glyph: glyphs) apply(enqueue_primitive, glyph);
 	return primitives;
 }
@@ -414,8 +438,11 @@ void Renderer::draw_frame(Queue&& queue)
 
 		auto next = lib::vuk::clear_image(move(target), {0.0f, 0.0f, 0.0f, 1.0f});
 		if (!primitives.empty()) {
-			auto [primitives_buf, worklists_buf, worklist_sizes_buf] = generate_worklists(gpu, allocator, primitives, queue.transform);
-			next = draw_all(gpu, move(next), move(primitives_buf), move(worklists_buf), move(worklist_sizes_buf), static_atlas.view.get(), move(atlas), subpixel_layout);
+			auto [primitives_buf, vertices_buf, worklists_buf, worklist_sizes_buf]
+				= generate_worklists(gpu, allocator, primitives, queue.polygon_vertices, queue.transform);
+			next = draw_all(gpu, move(next), move(primitives_buf), move(vertices_buf),
+				move(worklists_buf), move(worklist_sizes_buf), static_atlas.view.get(), move(atlas),
+				subpixel_layout);
 		}
 		return imgui.draw(allocator, move(next));
 	});

@@ -111,10 +111,17 @@ public:
 		auto rect_tl(Drawable, RectParams) -> Queue&; // Position in top-left rather than center
 		auto capsule(Drawable, CapsuleParams) -> Queue&;
 		auto line(Drawable, LineParams) -> Queue&;
+		auto polygon(Drawable, span<PolygonVertex const>) -> Queue&;
+		auto polygon(Drawable d, initializer_list<PolygonVertex> vs) -> Queue& { return polygon(d, span{vs}); }
 		auto text(Text const&, Drawable, TextParams) -> Queue&;
 
 	private:
 		friend class Renderer;
+
+		struct PolygonParams {
+			ssize_t vertex_offset;
+			ssize_t vertex_count;
+		};
 
 		struct GlyphParams {
 			AABB<float> atlas_bounds;
@@ -125,7 +132,9 @@ public:
 		bool inside_group = false;
 		vector<tuple<Drawable, PieParams, int>> pies; // third: group id
 		vector<tuple<Drawable, RectParams, int>> rects; // third: group id
+		vector<tuple<Drawable, PolygonParams, int>> polygons; // third: group id
 		vector<tuple<Drawable, GlyphParams, int>> glyphs; // third: group id
+		vector<PolygonVertex> polygon_vertices;
 		mutable vector<pair<int, int>> group_depths; // first: group id (initially equal to index), second: depth
 		Transform transform;
 		Transform inv_transform;
