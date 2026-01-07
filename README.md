@@ -1,3 +1,6 @@
+> [!WARNING]
+> The project has migrated to [Codeberg](https://codeberg.org/Tearnote/Playnote). All further development continues there.
+
 # Playnote
 
 The next generation [BMS](https://en.wikipedia.org/wiki/Be-Music_Source) player for Windows and Linux, in daily development. Not yet ready for general use.
